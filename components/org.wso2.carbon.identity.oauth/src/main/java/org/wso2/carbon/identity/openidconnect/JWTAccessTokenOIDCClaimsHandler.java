@@ -130,14 +130,21 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
         List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
 
-        if ((isLocalUser(requestMsgCtx.getAuthorizedUser()) && allowedClaims.isEmpty() &&
-                OAuthServerConfiguration.getInstance().isReturnOnlyAppAssociatedRolesInJWTToken())
-                || ((isOrganizationSwitchGrantType(requestMsgCtx)) && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) ) {
+        boolean isTokenRequestedClaimsEmpty = allowedClaims.isEmpty();
+        boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
+        boolean returnOnlyAppAssociatedClaims = OAuthServerConfiguration.getInstance()
+                .isReturnOnlyAppAssociatedRolesInJWTToken();
+        boolean isOrganizationSSO =  isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
+
+
+        if (userAttributes.isEmpty() && !returnOnlyAppAssociatedClaims) {
+            // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
             }
+            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
+        } else if (!isTokenRequestedClaimsEmpty && (isLocalUser || isOrganizationSSO)) {
             if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
                     requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
                     !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
