@@ -2980,6 +2980,10 @@ public class AuthzUtil {
                 // hence retrieving claims as a JSONObject
                 net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
                 params.setEssentialClaims(claims.toJSONString());
+            } else if (requestObject.getClaim(CLAIMS) instanceof Map) {
+                net.minidev.json.JSONObject claims =
+                        new net.minidev.json.JSONObject((Map<String, Object>) requestObject.getClaim(CLAIMS));
+                params.setEssentialClaims(claims.toJSONString());
             }
 
             if (isPkceSupportEnabled()) {
