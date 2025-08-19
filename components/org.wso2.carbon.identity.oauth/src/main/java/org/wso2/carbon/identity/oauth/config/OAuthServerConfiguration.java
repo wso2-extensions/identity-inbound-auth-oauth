@@ -182,6 +182,7 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean allowCrossTenantIntrospectionForSubOrgTokens = false;
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
@@ -327,6 +328,11 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+
+    // Property to determine whether the SP ID should be returned to the application. Marking it as true to
+    // preserve backward compatibility.
+    private boolean returnSpIdToApplication = true;
+
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
@@ -552,6 +558,9 @@ public class OAuthServerConfiguration {
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
 
+        // Read config for cross sub org allow.
+        parseAllowCrossTenantIntrospectionForSubOrgTokens(oauthElem);
+
         // Read config for using client id as sub claim for application tokens.
         parseUseClientIdAsSubClaimForAppTokens(oauthElem);
 
@@ -575,6 +584,9 @@ public class OAuthServerConfiguration {
 
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
+
+        // Read config for returning spId to application.
+        parseReturnSpIdToApplicationConfig(oauthElem);
     }
 
     /**
@@ -659,6 +671,15 @@ public class OAuthServerConfiguration {
         if (showAuthFailureReasonForPasswordGrantElement != null) {
             showAuthFailureReasonForPasswordGrant = Boolean.parseBoolean(
                     showAuthFailureReasonForPasswordGrantElement.getText().trim());
+        }
+    }
+
+    private void parseReturnSpIdToApplicationConfig(OMElement oauthElem) {
+
+        OMElement returnSpIdToApplicationElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETURN_SP_ID_TO_APPLICATION));
+        if (returnSpIdToApplicationElement != null) {
+            returnSpIdToApplication = Boolean.parseBoolean(returnSpIdToApplicationElement.getText().trim());
         }
     }
 
@@ -911,6 +932,18 @@ public class OAuthServerConfiguration {
 
         return skipOIDCClaimsForClientCredentialGrant;
     }
+
+    /**
+     * Returns the value of returnSpIdToApplication configuration. By configuring this, apps can receive spId in
+     * the query param.
+     *
+     * @return boolean value of returnSpIdToApplication configuration.
+     */
+    public boolean returnSpIdToApps() {
+
+        return returnSpIdToApplication;
+    }
+
 
     public boolean isShowAuthFailureReasonForPasswordGrant() {
 
@@ -3911,12 +3944,37 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * token introspection from other tenants.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowCrossTenantIntrospectionForSubOrgTokens(OMElement oauthConfigElem) {
+
+        OMElement allowCrossTenantIntrospectionForSubOrgTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS));
+        if (allowCrossTenantIntrospectionForSubOrgTokensElem != null) {
+            allowCrossTenantIntrospectionForSubOrgTokens = Boolean.parseBoolean(
+                    allowCrossTenantIntrospectionForSubOrgTokensElem.getText());
+        }
+    }
+
+    /**
      * This method returns the value of the property AllowCrossTenantTokenIntrospection for the OAuth configuration
      * in identity.xml.
      */
     public boolean isCrossTenantTokenIntrospectionAllowed() {
 
         return allowCrossTenantIntrospection;
+    }
+
+    /**
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * for the OAuth configuration in identity.xml.
+     */
+    public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
+
+        return allowCrossTenantIntrospectionForSubOrgTokens;
     }
 
     /**
@@ -4412,6 +4470,8 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS
+                = "AllowCrossTenantIntrospectionForSubOrgTokens";
 
         private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
@@ -4433,6 +4493,7 @@ public class OAuthServerConfiguration {
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
     }
 
 }
