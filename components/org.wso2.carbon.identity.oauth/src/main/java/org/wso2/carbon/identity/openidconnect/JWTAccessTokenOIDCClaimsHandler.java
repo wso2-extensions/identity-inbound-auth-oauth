@@ -138,7 +138,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         boolean isOrganizationSSO = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
-       if (isTokenRequestedClaimsEmpty) {
+        if (isTokenRequestedClaimsEmpty) {
+            // If there are no claims requested in JWT access token, no need to execute the rest of the flow.
             return new HashMap<>();
         }
 
@@ -149,7 +150,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
         } else if (returnOnlyAppAssociatedClaims && (isLocalUser || isOrganizationSSO)) {
-            // This is to handle the case where the user is a local user or an organization SSO user.
+            // This is to handle the case where the user is a local user, or an organization SSO user where this b2b
+            // user could be a federated user, but still exist in our userstore.
             setAttributesForB2B(requestMsgCtx);
             // Get claim in oidc dialect from user store.
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
