@@ -253,16 +253,36 @@ public class AuthzUtil {
     public static boolean isUserAuthorized(AuthenticatedUser authenticatedUser, List<String> requestedPermissions)
             throws IdentityOAuth2Exception {
 
+        List<String> permissions = getAuthorizedPermissions(authenticatedUser);
+        return new HashSet<>(permissions).containsAll(requestedPermissions);
+    }
+
+    /**
+     * Get authorized permissions of the authenticated user.
+     *
+     * @param authenticatedUser Authenticated user.
+     * @return List of authorized permissions.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving authorized permissions.
+     */
+    public static List<String> getAuthorizedPermissions(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
+
         // Application id is not required for basic authentication flow.
         List<String> roleIds = getUserRoles(authenticatedUser, null);
         List<String> permissions;
         /*
-         If the authenticatedUser contains an accessing organization, the the scopes should be checked against the
+         If the authenticatedUser contains an accessing organization, the scopes should be checked against the
          accessing organization.
         */
         if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
-            permissions = getAssociatedScopesForRoles(roleIds,
-                    authenticatedUser.getAccessingOrganization());
+            try {
+                String accessingOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+                permissions = getAssociatedScopesForRoles(roleIds, accessingOrgHandle);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain for accessing organization : "
+                        + authenticatedUser.getAccessingOrganization(), e);
+            }
         } else {
             permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
         }
@@ -275,7 +295,7 @@ public class AuthzUtil {
                 addNewScopesMappedToLegacyScopes(permissions, internalScopes);
             }
         }
-        return new HashSet<>(permissions).containsAll(requestedPermissions);
+        return permissions;
     }
 
     /**
