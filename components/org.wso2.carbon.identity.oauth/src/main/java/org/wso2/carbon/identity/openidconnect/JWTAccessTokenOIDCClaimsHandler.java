@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -134,28 +135,24 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
         boolean returnOnlyAppAssociatedClaims = OAuthServerConfiguration.getInstance()
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
-        boolean isOrganizationSSO =  isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationSSO = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
+       if (isTokenRequestedClaimsEmpty) {
+            return new HashMap<>();
+        }
 
-        if (userAttributes.isEmpty() && !returnOnlyAppAssociatedClaims) {
+        if (!returnOnlyAppAssociatedClaims &&
+                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser || isOrganizationSSO)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
-            if (log.isDebugEnabled()) {
-                log.debug("User attributes not found in cache against the access token or authorization code. " +
-                        "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
-            }
-            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
-        } else if (!isTokenRequestedClaimsEmpty && (isLocalUser || isOrganizationSSO)) {
-            if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
-                    requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
-                    !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
-                    StringUtils.isNotEmpty(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx.getAuthorizedUser()))) {
-                requestMsgCtx.getAuthorizedUser().setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx
-                        .getAuthorizedUser()));
-                requestMsgCtx.getAuthorizedUser().setUserSharedOrganizationId(requestMsgCtx.getAuthorizedUser()
-                        .getAccessingOrganization());
-            }
+            setAttributesForB2B(requestMsgCtx);
+            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
+                    requestMsgCtx.getAuthorizedUser(), allowedClaims);
+        } else if (isLocalUser || isOrganizationSSO) {
+            setAttributesForB2B(requestMsgCtx);
             // Get claim in oidc dialect from user store.
-            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
+            userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
+                    requestMsgCtx.getAuthorizedUser(), allowedClaims);
         } else {
             // Get claim map from the cached attributes
             userClaimsInOIDCDialect = getOIDCClaimsFromUserAttributes(userAttributes, requestMsgCtx);
@@ -172,6 +169,19 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return userClaimsInOIDCDialect;
         } else {
             return filterClaims(userClaimsInOIDCDialect, requestMsgCtx);
+        }
+    }
+
+    private void setAttributesForB2B(OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
+
+        if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
+                requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
+                !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME && StringUtils.isNotEmpty(
+                        AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx.getAuthorizedUser()))) {
+            requestMsgCtx.getAuthorizedUser().setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(
+                    requestMsgCtx.getAuthorizedUser()));
+            requestMsgCtx.getAuthorizedUser().setUserSharedOrganizationId(
+                    requestMsgCtx.getAuthorizedUser().getAccessingOrganization());
         }
     }
 
@@ -226,27 +236,28 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     /**
      * Get claims for local user form userstore.
      *
-     * @param requestMsgCtx OAuthTokenReqMessageContext
      * @return Local user claims
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception
      */
-    private Map<String, Object> retrieveClaimsForLocalUser(OAuthTokenReqMessageContext requestMsgCtx)
+    private Map<String, Object> retrieveClaimsForLocalUser(String spTenantDomain, String clientId,
+                                                           AuthenticatedUser authenticatedUser,
+                                                           List<String> allowedClaims)
             throws IdentityOAuth2Exception {
 
         try {
-            String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
-            String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-            AuthenticatedUser authenticatedUser = requestMsgCtx.getAuthorizedUser();
-
-            return getLocalUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser);
+            return getLocalUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser, allowedClaims);
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
-                log.error("Error occurred while getting claims for user: " + requestMsgCtx.getAuthorizedUser() +
-                        " from userstore.", e);
+                try {
+                    log.error("Error occurred while getting claims for user: " + authenticatedUser.getUserId() +
+                            " from userstore.", e);
+                } catch (UserIdNotFoundException ex) {
+                    throw new RuntimeException(ex);
+                }
             } else {
                 throw new IdentityOAuth2Exception("Error occurred while getting claims for user: " +
-                        requestMsgCtx.getAuthorizedUser() + " from userstore.", e);
+                       authenticatedUser + " from userstore.", e);
             }
         }
         return new HashMap<>();
@@ -555,8 +566,11 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             String spTenantDomain = getServiceProviderTenantDomain(authzReqMessageContext);
             String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
             AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-
-            return getLocalUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser);
+            List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
+            if (allowedClaims.isEmpty()) {
+                return new HashMap<>();
+            }
+            return getLocalUserClaimsInOIDCDialect(spTenantDomain, clientId, authenticatedUser, allowedClaims);
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
@@ -678,7 +692,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      * @throws OrganizationManagementException        Organization Management Exception
      */
     private Map<String, Object> getLocalUserClaimsInOIDCDialect(String spTenantDomain, String clientId,
-                                                                AuthenticatedUser authenticatedUser)
+                                                                AuthenticatedUser authenticatedUser,
+                                                                List<String> allowedClaims)
             throws IdentityApplicationManagementException, IdentityException, UserStoreException,
             OrganizationManagementException {
 
@@ -690,10 +705,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return userClaimsMappedToOIDCDialect;
         }
 
-        List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
-        if (allowedClaims.isEmpty()) {
-            return new HashMap<>();
-        }
         Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(spTenantDomain);
         if (oidcToLocalClaimMappings.isEmpty()) {
             return new HashMap<>();

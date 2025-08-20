@@ -4491,7 +4491,7 @@ public class OAuthServerConfiguration {
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
                 "RemoveUsernameFromIntrospectionResponseForAppTokens";
 
-        private static final String  RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN =
+        private static final String RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN =
                 "ReturnOnlyAppAssociatedRolesInJWTToken";
 
 
