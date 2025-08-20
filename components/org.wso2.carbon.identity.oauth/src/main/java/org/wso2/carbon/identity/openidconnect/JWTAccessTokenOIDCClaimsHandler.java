@@ -148,12 +148,14 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             setAttributesForB2B(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
-        } else if (isLocalUser || isOrganizationSSO) {
+        } else if (returnOnlyAppAssociatedClaims && (isLocalUser || isOrganizationSSO)) {
+            // This is to handle the case where the user is a local user or an organization SSO user.
             setAttributesForB2B(requestMsgCtx);
             // Get claim in oidc dialect from user store.
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
         } else {
+            // This is to handle the case where the user is a federated user.
             // Get claim map from the cached attributes
             userClaimsInOIDCDialect = getOIDCClaimsFromUserAttributes(userAttributes, requestMsgCtx);
             // Since this is a federated flow, we need to get the federated user attributes as well.
