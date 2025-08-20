@@ -6296,6 +6296,6 @@ public class OAuth2Util {
         int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
                 realmService.getTenantUserRealm(tenantId).getUserStoreManager();
-        return userStoreManager.isExistingUser(userName.split("@")[0]);
+        return userStoreManager.isExistingUser(MultitenantUtils.getTenantAwareUsername(userName));
     }
 }
