@@ -136,7 +136,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
 
         boolean hasRequestedClaimsInJWTToken = allowedClaims.isEmpty();
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
-        boolean returnOnlyAppAssociatedClaims = OAuthServerConfiguration.getInstance()
+        boolean returnOnlyAppAssociatedRoles = OAuthServerConfiguration.getInstance()
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
         boolean isOrganizationSSO = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
@@ -146,13 +146,13 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return new HashMap<>();
         }
 
-        if (!returnOnlyAppAssociatedClaims &&
+        if (!returnOnlyAppAssociatedRoles &&
                 (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser || isOrganizationSSO)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
             setAttributesForB2B(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
-        } else if (returnOnlyAppAssociatedClaims && (isLocalUser || isOrganizationSSO)) {
+        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSO)) {
             // This is to handle the case where the user is a local user, or an organization SSO user where this b2b
             // user could be a federated user, but still exist in our userstore.
             setAttributesForB2B(requestMsgCtx);
