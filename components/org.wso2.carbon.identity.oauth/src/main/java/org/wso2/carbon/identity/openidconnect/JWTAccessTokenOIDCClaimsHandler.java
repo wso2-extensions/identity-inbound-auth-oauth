@@ -132,8 +132,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
 
         // Get claims in cache, and find the additional claims requested for JWT access token.
-        getAdditionalClaimsForJWT(userAttributes, allowedClaims);
-
         boolean hasRequestedClaimsInJWTToken = allowedClaims.isEmpty();
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
         boolean returnOnlyAppAssociatedRoles = OAuthServerConfiguration.getInstance()
@@ -176,18 +174,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return userClaimsInOIDCDialect;
         } else {
             return filterClaims(userClaimsInOIDCDialect, requestMsgCtx);
-        }
-    }
-
-    private void getAdditionalClaimsForJWT(Map<ClaimMapping, String> userAttributes, List<String> allowedClaims) {
-
-        // Add additional claims to the allowed claims list if they are not already present in the authorisation
-        // grant cache from OIDC requested attributes.
-        for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-            String localClaim = entry.getKey().getLocalClaim().getClaimUri();
-            if (allowedClaims.contains(localClaim)) {
-                allowedClaims.remove(localClaim);
-            }
         }
     }
 
@@ -725,9 +711,11 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
 
         Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(spTenantDomain);
+
         if (oidcToLocalClaimMappings.isEmpty()) {
             return new HashMap<>();
         }
+
         List<String> localClaimURIs = allowedClaims.stream().map(oidcToLocalClaimMappings::get).filter(Objects::nonNull)
                 .collect(Collectors.toList());
         return OIDCClaimUtil.getUserClaimsInOIDCDialect(serviceProvider, authenticatedUser, localClaimURIs);
