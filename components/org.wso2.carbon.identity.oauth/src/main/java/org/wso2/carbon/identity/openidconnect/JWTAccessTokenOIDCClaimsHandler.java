@@ -131,14 +131,17 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
         List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
 
-        boolean isTokenRequestedClaimsEmpty = allowedClaims.isEmpty();
+        // Get claims in cache, and find the additional claims requested for JWT access token.
+        getAdditionalClaimsForJWT(userAttributes, allowedClaims);
+
+        boolean hasRequestedClaimsInJWTToken = allowedClaims.isEmpty();
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
         boolean returnOnlyAppAssociatedClaims = OAuthServerConfiguration.getInstance()
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
         boolean isOrganizationSSO = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
-        if (isTokenRequestedClaimsEmpty) {
+        if (hasRequestedClaimsInJWTToken) {
             // If there are no claims requested in JWT access token, no need to execute the rest of the flow.
             return new HashMap<>();
         }
@@ -173,6 +176,18 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return userClaimsInOIDCDialect;
         } else {
             return filterClaims(userClaimsInOIDCDialect, requestMsgCtx);
+        }
+    }
+
+    private void getAdditionalClaimsForJWT(Map<ClaimMapping, String> userAttributes, List<String> allowedClaims) {
+
+        // Add additional claims to the allowed claims list if they are not already present in the authorisation
+        // grant cache from OIDC requested attributes.
+        for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+            String localClaim = entry.getKey().getLocalClaim().getClaimUri();
+            if (allowedClaims.contains(localClaim)) {
+                allowedClaims.remove(localClaim);
+            }
         }
     }
 
