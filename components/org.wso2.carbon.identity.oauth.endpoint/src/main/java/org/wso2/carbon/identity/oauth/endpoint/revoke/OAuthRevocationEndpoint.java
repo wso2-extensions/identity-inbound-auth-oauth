@@ -95,9 +95,8 @@ public class OAuthRevocationEndpoint {
     public Response revokeAccessToken(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        boolean enteredFlow = false;
         try {
-            enteredFlow = enterFlow(Flow.Name.TOKEN_REVOKE);
+            enterFlow(Flow.Name.TOKEN_REVOKE);
             Map<String, Object> params = new HashMap<>();
             if (log.isDebugEnabled()) {
                 log.debug("Successfully received token revocation request in the tenant:" +
@@ -152,9 +151,7 @@ public class OAuthRevocationEndpoint {
                 return handleRevokeResponse(callback, oauthRevokeResp);
             }
         } finally {
-            if (enteredFlow) {
-                IdentityContext.getThreadLocalIdentityContext().exitFlow();
-            }
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -403,14 +400,13 @@ public class OAuthRevocationEndpoint {
         }
     }
 
-    private boolean enterFlow(Flow.Name flowName) {
+    private void enterFlow(Flow.Name flowName) {
 
         Flow flow = new Flow.Builder()
                 .name(flowName)
                 .initiatingPersona(getFlowInitiatingPersona())
                 .build();
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
-        return true;
     }
 
     private Flow.InitiatingPersona getFlowInitiatingPersona() {
