@@ -30,6 +30,8 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -93,57 +95,66 @@ public class OAuthRevocationEndpoint {
     public Response revokeAccessToken(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        Map<String, Object> params = new HashMap<>();
-        if (log.isDebugEnabled()) {
-            log.debug("Successfully received token revocation request in the tenant:" +
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-        }
-        if (MapUtils.isNotEmpty(paramMap)) {
-            paramMap.forEach((key, value) -> {
-                if (TOKEN_PARAM.equals(key) && CollectionUtils.isNotEmpty(value)) {
-                    params.put("is token available", "true");
-                } else if (!OAuth.OAUTH_CLIENT_SECRET.equals(key)) {
-                    params.put(key, value);
-                }
-            });
-        }
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_REVOKE_REQUEST)
-                    .inputParams(params)
-                    .resultMessage("Successfully received token revocation request.")
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
-        }
-
-        validateRepeatedParams(request, paramMap);
-
-        HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-        String token = getToken(paramMap, httpRequest);
-        String callback = getCallback(paramMap, httpRequest);
-        if (isEmpty(token)) {
+        boolean enteredFlow = false;
+        try {
+            enteredFlow = enterFlow(Flow.Name.TOKEN_REVOKE);
+            Map<String, Object> params = new HashMap<>();
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully received token revocation request in the tenant:" +
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            }
+            if (MapUtils.isNotEmpty(paramMap)) {
+                paramMap.forEach((key, value) -> {
+                    if (TOKEN_PARAM.equals(key) && CollectionUtils.isNotEmpty(value)) {
+                        params.put("is token available", "true");
+                    } else if (!OAuth.OAUTH_CLIENT_SECRET.equals(key)) {
+                        params.put(key, value);
+                    }
+                });
+            }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        OAuthConstants.LogConstants.ActionIDs.RECEIVE_REVOKE_REQUEST)
                         .inputParams(params)
-                        .resultMessage("'token' parameter is missing in the revoke request.")
+                        .resultMessage("Successfully received token revocation request.")
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
-
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
             }
-            return handleClientFailure(callback);
-        }
-        String tokenType = getTokenType(paramMap, httpRequest);
 
-        OAuthRevocationRequestDTO revokeRequest = buildOAuthRevocationRequest(httpRequest, paramMap, token, tokenType);
-        OAuthRevocationResponseDTO oauthRevokeResp = revokeTokens(revokeRequest);
+            validateRepeatedParams(request, paramMap);
 
-        if (oauthRevokeResp.getErrorMsg() != null) {
-            return handleErrorResponse(callback, oauthRevokeResp);
-        } else {
-            return handleRevokeResponse(callback, oauthRevokeResp);
+            HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
+            String token = getToken(paramMap, httpRequest);
+            String callback = getCallback(paramMap, httpRequest);
+            if (isEmpty(token)) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                            .inputParams(params)
+                            .resultMessage("'token' parameter is missing in the revoke request.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+
+                }
+                return handleClientFailure(callback);
+            }
+            String tokenType = getTokenType(paramMap, httpRequest);
+
+            OAuthRevocationRequestDTO revokeRequest =
+                    buildOAuthRevocationRequest(httpRequest, paramMap, token, tokenType);
+            OAuthRevocationResponseDTO oauthRevokeResp = revokeTokens(revokeRequest);
+
+            if (oauthRevokeResp.getErrorMsg() != null) {
+                return handleErrorResponse(callback, oauthRevokeResp);
+            } else {
+                return handleRevokeResponse(callback, oauthRevokeResp);
+            }
+        } finally {
+            if (enteredFlow) {
+                IdentityContext.getThreadLocalIdentityContext().exitFlow();
+            }
         }
     }
 
@@ -389,6 +400,28 @@ public class OAuthRevocationEndpoint {
 
         if (!validateParams(request, paramMap)) {
             throw new RevokeEndpointBadRequestException("Invalid request with repeated parameters.");
+        }
+    }
+
+    private boolean enterFlow(Flow.Name flowName) {
+
+        Flow flow = new Flow.Builder()
+                .name(flowName)
+                .initiatingPersona(getFlowInitiatingPersona())
+                .build();
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
+        return true;
+    }
+
+    private Flow.InitiatingPersona getFlowInitiatingPersona() {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow != null) {
+            return existingFlow.getInitiatingPersona();
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+            return Flow.InitiatingPersona.APPLICATION;
+        } else {
+            return Flow.InitiatingPersona.USER;
         }
     }
 }
