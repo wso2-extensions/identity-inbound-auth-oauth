@@ -131,29 +131,27 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
         List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
 
-        // Get claims in cache, and find the additional claims requested for JWT access token.
-        boolean hasRequestedClaimsInJWTToken = allowedClaims.isEmpty();
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
         boolean returnOnlyAppAssociatedRoles = OAuthServerConfiguration.getInstance()
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
-        boolean isOrganizationSSO = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationSSOUserOrgSwitch = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
-        if (hasRequestedClaimsInJWTToken) {
+        if (allowedClaims.isEmpty()) {
             // If there are no claims requested in JWT access token, no need to execute the rest of the flow.
             return new HashMap<>();
         }
 
         if (!returnOnlyAppAssociatedRoles &&
-                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser || isOrganizationSSO)) {
+                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser || isOrganizationSSOUserOrgSwitch)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
-            setAttributesForB2B(requestMsgCtx);
+            setOrganizationSwitchAttributes(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
-        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSO)) {
+        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSOUserOrgSwitch)) {
             // This is to handle the case where the user is a local user, or an organization SSO user where this b2b
             // user could be a federated user, but still exist in our userstore.
-            setAttributesForB2B(requestMsgCtx);
+            setOrganizationSwitchAttributes(requestMsgCtx);
             // Get claim in oidc dialect from user store.
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
@@ -177,7 +175,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
     }
 
-    private void setAttributesForB2B(OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
+    private void setOrganizationSwitchAttributes(OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
 
         if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
                 requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
