@@ -145,35 +145,6 @@ public class CibaAuthRequestValidator {
     }
 
     /**
-     * Checks whether the transaction_context values exists and is valid.
-     *
-     * @param claimsSet JWT claimsets of the authentication request.
-     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
-     */
-    private void valiateTransactionContext(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
-
-        try {
-            // Validation for transaction_context.
-            if ((claimsSet.getClaim(CibaConstants.TRANSACTION_CONTEXT)) == null) {
-                // Request has no transaction_context claim.
-                return;
-            }
-            if (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT) == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            claimsSet.getIssuer() + ".The request is with invalid  " +
-                            "value for (transaction_context).");
-                }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid value for (transaction_context).");
-            }
-        } catch (ParseException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
-                    e);
-        }
-    }
-
-    /**
      * Checks whether the binding_message values exists and is valid.
      *
      * @param claimsSet JWT claimsets of the authentication request.
