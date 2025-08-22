@@ -421,7 +421,7 @@ public class OAuthRevocationEndpoint {
         } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             return Flow.InitiatingPersona.APPLICATION;
         } else {
-            return Flow.InitiatingPersona.USER;
+            return Flow.InitiatingPersona.ADMIN;
         }
     }
 }
