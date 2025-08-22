@@ -103,9 +103,8 @@ public class OAuth2TokenEndpoint {
                                      String payload) throws
             OAuthSystemException, InvalidRequestParentException {
 
-        boolean enteredFlow = false;
         try {
-            enteredFlow = enterFlow(Flow.Name.TOKEN_ISSUE);
+            enterFlow(Flow.Name.TOKEN_ISSUE);
             Map<String, List<String>> paramMap;
             try {
                 // Start super tenant flow only if tenant qualified URLs are disabled.
@@ -133,9 +132,7 @@ public class OAuth2TokenEndpoint {
             }
             return issueAccessToken(request, response, paramMap);
         } finally {
-            if (enteredFlow) {
-                IdentityContext.getThreadLocalIdentityContext().exitFlow();
-            }
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -147,9 +144,8 @@ public class OAuth2TokenEndpoint {
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        boolean enteredFlow = false;
         try {
-            enteredFlow = enterFlow(Flow.Name.TOKEN_ISSUE);
+            enterFlow(Flow.Name.TOKEN_ISSUE);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -165,9 +161,7 @@ public class OAuth2TokenEndpoint {
             }
             return issueAccessToken(request, response, (Map<String, List<String>>) paramMap);
         } finally {
-            if (enteredFlow) {
-                IdentityContext.getThreadLocalIdentityContext().exitFlow();
-            }
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -465,14 +459,13 @@ public class OAuth2TokenEndpoint {
         return tokenReqDTO;
     }
 
-    private boolean enterFlow(Flow.Name flowName) {
+    private void enterFlow(Flow.Name flowName) {
 
         Flow flow = new Flow.Builder()
                 .name(flowName)
                 .initiatingPersona(getFlowInitiatingPersona())
                 .build();
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
-        return true;
     }
 
     private Flow.InitiatingPersona getFlowInitiatingPersona() {
