@@ -134,7 +134,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         boolean isLocalUser = isLocalUser(requestMsgCtx.getAuthorizedUser());
         boolean returnOnlyAppAssociatedRoles = OAuthServerConfiguration.getInstance()
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
-        boolean isOrganizationSSOUserOrgSwitch = isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationSSOUserOrgSwitch = isOrganizationSsoUserSwitchingOrganization(
+                requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
         if (allowedClaims.isEmpty()) {
@@ -143,7 +144,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
 
         if (!returnOnlyAppAssociatedRoles &&
-                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser || isOrganizationSSOUserOrgSwitch)) {
+                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser ||
+                isOrganizationSSOUserOrgSwitch)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
             setOrganizationSwitchAttributes(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
@@ -175,7 +177,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
     }
 
-    private void setOrganizationSwitchAttributes(OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
+    private void setOrganizationSwitchAttributes(OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
 
         if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
                 requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
