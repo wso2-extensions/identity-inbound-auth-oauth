@@ -47,6 +47,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
@@ -140,35 +141,6 @@ public class CibaAuthRequestValidator {
             }
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Invalid value for (requested_expiry).");
-        }
-    }
-
-    /**
-     * Checks whether the transaction_context values exists and is valid.
-     *
-     * @param claimsSet JWT claimsets of the authentication request.
-     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
-     */
-    private void valiateTransactionContext(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
-
-        try {
-            // Validation for transaction_context.
-            if ((claimsSet.getClaim(CibaConstants.TRANSACTION_CONTEXT)) == null) {
-                // Request has no transaction_context claim.
-                return;
-            }
-            if (StringUtils.isBlank(claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString())) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            claimsSet.getIssuer() + ".The request is with invalid  " +
-                            "value for (transaction_context).");
-                }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid value for (transaction_context).");
-            }
-        } catch (ParseException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
-                    e);
         }
     }
 
@@ -791,9 +763,9 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-            JSONObject transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
+            Map<String, Object> transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
             if (transactionContext != null) {
-                cibaAuthCodeRequest.setTransactionContext(transactionContext.toJSONString());
+                cibaAuthCodeRequest.setTransactionContext(new JSONObject(transactionContext).toJSONString());
             }
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
