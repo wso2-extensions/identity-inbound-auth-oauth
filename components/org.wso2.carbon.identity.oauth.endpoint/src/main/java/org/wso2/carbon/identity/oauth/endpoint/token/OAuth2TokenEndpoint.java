@@ -18,12 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.token;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
+import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -103,8 +105,8 @@ public class OAuth2TokenEndpoint {
                                      String payload) throws
             OAuthSystemException, InvalidRequestParentException {
 
+        boolean isEnteredTokenIssueFlow = false;
         try {
-            enterFlow(Flow.Name.TOKEN_ISSUE);
             Map<String, List<String>> paramMap;
             try {
                 // Start super tenant flow only if tenant qualified URLs are disabled.
@@ -112,6 +114,8 @@ public class OAuth2TokenEndpoint {
                     startSuperTenantFlow();
                 }
                 paramMap = parseJsonTokenRequest(payload);
+                isEnteredTokenIssueFlow = enterFlow(Flow.Name.TOKEN_ISSUE, isClientCredentialsGrant(paramMap));
+
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
@@ -132,7 +136,9 @@ public class OAuth2TokenEndpoint {
             }
             return issueAccessToken(request, response, paramMap);
         } finally {
-            IdentityContext.getThreadLocalIdentityContext().exitFlow();
+            if (isEnteredTokenIssueFlow) {
+                IdentityContext.getThreadLocalIdentityContext().exitFlow();
+            }
         }
     }
 
@@ -145,7 +151,7 @@ public class OAuth2TokenEndpoint {
             throws OAuthSystemException, InvalidRequestParentException {
 
         try {
-            enterFlow(Flow.Name.TOKEN_ISSUE);
+            enterFlow(Flow.Name.TOKEN_ISSUE, isClientCredentialsGrant(paramMap));
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -459,24 +465,42 @@ public class OAuth2TokenEndpoint {
         return tokenReqDTO;
     }
 
-    private void enterFlow(Flow.Name flowName) {
+    private boolean enterFlow(Flow.Name flowName, boolean isClientCredentialGrant) {
 
         Flow flow = new Flow.Builder()
                 .name(flowName)
-                .initiatingPersona(getFlowInitiatingPersona())
+                .initiatingPersona(getFlowInitiatingPersona(isClientCredentialGrant))
                 .build();
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
+        return true;
     }
 
-    private Flow.InitiatingPersona getFlowInitiatingPersona() {
+    private Flow.InitiatingPersona getFlowInitiatingPersona(boolean isClientCredentialGrant) {
 
         Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
         if (existingFlow != null) {
             return existingFlow.getInitiatingPersona();
-        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor() || isClientCredentialGrant) {
             return Flow.InitiatingPersona.APPLICATION;
-        } else {
-            return Flow.InitiatingPersona.USER;
         }
+        return Flow.InitiatingPersona.USER;
+    }
+
+    private boolean isClientCredentialsGrant(MultivaluedMap<String, String> paramMap) {
+
+        if (MapUtils.isEmpty(paramMap)) {
+            return false;
+        }
+        return OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(paramMap.getFirst(OAuth.OAUTH_GRANT_TYPE));
+    }
+
+    private boolean isClientCredentialsGrant(Map<String, List<String>> paramMap) {
+
+        if (MapUtils.isEmpty(paramMap)) {
+            return false;
+        }
+        List<String> grantTypes = paramMap.get(OAuth.OAUTH_GRANT_TYPE);
+        return !CollectionUtils.isEmpty(grantTypes) &&
+                OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantTypes.get(0));
     }
 }
