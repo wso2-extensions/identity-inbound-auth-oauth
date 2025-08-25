@@ -512,6 +512,21 @@ public class OAuthServerConfigurationTest {
                 .isValidateAuthenticatedUserForRefreshGrantEnabled());
     }
 
+    @Test
+    public void testParseReturnOnlyApplicationAssociatedRoleClaimInJWT() {
+
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isReturnOnlyAppAssociatedRolesInJWTToken());
+    }
+
+    @Test
+    public void testParseReturnOnlyApplicationAssociatedRoleClaimInUserInfo() {
+
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isReturnOnlyAppAssociatedRolesInUserInfo());
+    }
+
+
     private String fillURLPlaceholdersForTest(String url) {
 
         return url.replace("${carbon.protocol}", "https")

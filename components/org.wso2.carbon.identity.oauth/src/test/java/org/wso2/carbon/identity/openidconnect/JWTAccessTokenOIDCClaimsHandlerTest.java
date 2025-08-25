@@ -32,7 +32,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
-import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
@@ -48,7 +47,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -103,14 +101,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 
 @Listeners(MockitoTestNGListener.class)
 public class JWTAccessTokenOIDCClaimsHandlerTest {
+
+    public static final Log LOG = LogFactory.getLog(JWTAccessTokenOIDCClaimsHandlerTest.class);
+
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "dbScripts/identity.sql";
@@ -132,8 +135,18 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
     private static final String ROLES = "roles";
     private static final String ADDRESS = "address";
-    private static final String[] jwtAccessTokenClaims = new String[]{"given_name", "family_name", "email", "address",
-            "roles", "groups"};
+    private static final String[] jwtAccessTokenClaims =
+            new String[]{
+                    "email",
+                    "username",
+                    "family_name",
+                    "given_name",
+                    "groups",
+                    "address",
+                    "roles"
+            };
+
+    private static final String[] roleClaim = new String[]{"roles"};
     private static final Map<String, String> USER_CLAIMS_MAP = new HashMap<String, String>() {{
         put(LOCAL_EMAIL_CLAIM_URI, "peter@example.com");
         put(LOCAL_USERNAME_CLAIM_URI, USER_NAME);
@@ -149,6 +162,9 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private ApplicationManagementService applicationManagementService;
     @Mock
     private RoleManagementService roleManagementService;
+
+    @Mock
+    OAuthServerConfiguration mockOAuthServerConfiguration;
     @Mock
     ClaimMetadataHandler mockClaimMetadataHandler;
     private MockedStatic<FrameworkUtils> frameworkUtils;
@@ -174,8 +190,8 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     public void setUpBeforeMethod() throws Exception {
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext privilegedCarbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-        privilegedCarbonContext.setTenantId(MultitenantConstants.SUPER_TENANT_ID);
-        privilegedCarbonContext.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        privilegedCarbonContext.setTenantId(12);
+        privilegedCarbonContext.setTenantDomain("foo.com");
 
         frameworkUtils = mockStatic(FrameworkUtils.class);
         frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
@@ -306,6 +322,71 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         oAuthServerConfiguration);
                 assertNotNull(jwtClaimsSet);
                 assertTrue(jwtClaimsSet.getClaims().isEmpty());
+            }
+        }
+    }
+
+
+
+    @Test
+    public void testHandleJWTTOkenClaimsWithOIDCClaims() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            lenient().when(mockOAuthServerConfiguration.isReturnOnlyAppAssociatedRolesInJWTToken()).thenReturn(true);
+
+            // Grant cache entry
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey("dummyAccessToken");
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry();
+            Map<ClaimMapping, String> userAttributes = new HashMap<>();
+            ClaimMapping emailClaimMapping = ClaimMapping.build(LOCAL_EMAIL_CLAIM_URI, LOCAL_EMAIL_CLAIM_URI,
+                    null, false);
+            userAttributes.put(emailClaimMapping, "peter@example.com");
+            authorizationGrantCacheEntry.setUserAttributes(userAttributes);
+
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
+
+                identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(jwtAccessTokenClaims));
+                Map<String, String> mappings = getOIDCtoLocalClaimsMapping();
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
+                OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+                mockApplicationManagementService();
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).
+                        thenReturn(12);
+                AuthorizationGrantCache.getInstance().addToCacheByToken(cacheKey, authorizationGrantCacheEntry);
+
+                UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+                mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet);
+                assertFalse(jwtClaimsSet.getClaims().isEmpty());
+
+                for (Map.Entry<String, Object> claim : jwtClaimsSet.getClaims().entrySet()) {
+                   LOG.info ("Claim Key: " + claim.getKey() + ", Claim Value: " + claim.getValue());
+                }
+                assertEquals(jwtClaimsSet.getClaims().get("email"), "peter@example.com",
+                        "OIDC claim email is not added with the JWT token");
+                assertEquals(jwtClaimsSet.getClaims().get("username"), "peter",
+                        "OIDC username is not added with the JWT token");
             }
         }
     }
@@ -449,6 +530,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         TestConstants.CLAIM_VALUE1);
                 federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("email"),
                         TestConstants.CLAIM_VALUE2);
+
                 AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new
                         AuthorizationGrantCacheEntry();
                 authorizationGrantCacheEntry.setMappedRemoteClaims(federatedUserAttributes);
@@ -461,9 +543,9 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         oAuthServerConfiguration);
                 assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
                 assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
-                Assert.assertEquals(jwtClaimsSet.getClaims().size(), 2,
+                assertEquals(jwtClaimsSet.getClaims().size(), 2,
                         "Expected custom claims are not set.");
-                Assert.assertEquals(jwtClaimsSet.getClaim("email"), TestConstants.CLAIM_VALUE2,
+                assertEquals(jwtClaimsSet.getClaim("email"), TestConstants.CLAIM_VALUE2,
                         "OIDC claim email is not added with the JWT token");
             }
         }
@@ -487,6 +569,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         Map<String, String> mappings = new HashMap<>();
         mappings.put("given_name", "http://wso2.org/claims/givenname");
         mappings.put("family_name", "http://wso2.org/claims/lastname");
+        mappings.put("username", "http://wso2.org/claims/username");
         mappings.put("email", "http://wso2.org/claims/emailaddress");
         mappings.put("address", "http://wso2.org/claims/addresses");
         mappings.put("roles", "http://wso2.org/claims/roles");
@@ -509,7 +592,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private UserRealm getUserRealmWithUserClaims(Map<String, String> userClaims) throws UserStoreException {
 
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
-        lenient().when(userStoreManager.getUserClaimValues(eq(TENANT_AWARE_USERNAME), any(), eq(null)))
+        lenient().when(userStoreManager.getUserClaimValues(any(), any(), eq(null)))
                 .thenReturn(userClaims);
 
         UserRealm userRealm = mock(UserRealm.class);
@@ -581,6 +664,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
 
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.setAuthorizedUser(getDefaultAuthenticatedLocalUser());
+        requestMsgCtx.addProperty(ACCESS_TOKEN, "dummyAccessToken");
         return requestMsgCtx;
     }
 
@@ -645,7 +729,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     }
 
     private void mockUserRealm(String username, UserRealm userRealm,
-                               MockedStatic<IdentityTenantUtil> identityTenantUtil) throws IdentityException {
+                               MockedStatic<IdentityTenantUtil> identityTenantUtil) {
 
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
