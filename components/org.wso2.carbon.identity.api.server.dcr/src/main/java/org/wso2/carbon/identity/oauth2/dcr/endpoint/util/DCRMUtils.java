@@ -55,7 +55,8 @@ public class DCRMUtils {
     public static DCRMService getOAuth2DCRMService() {
 
         if (oAuth2DCRMService == null) {
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null);
+            oAuth2DCRMService = (DCRMService) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(DCRMService.class, null);
         }
         return oAuth2DCRMService;
     }
