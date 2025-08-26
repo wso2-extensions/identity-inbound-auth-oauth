@@ -260,7 +260,7 @@ public class OAuth2ScopeService {
         } else {
             try {
                 isScopeExists = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO().isScopeExists(name,
-                        tenantID);
+                        tenantID, true);
             } catch (IdentityOAuth2ScopeServerException e) {
                 throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
                         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME, name, e);

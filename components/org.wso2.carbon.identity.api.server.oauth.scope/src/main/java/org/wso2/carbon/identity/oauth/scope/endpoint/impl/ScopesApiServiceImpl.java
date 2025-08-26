@@ -177,12 +177,12 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * @return Response with the indication whether the scope exists or not.
      */
     @Override
-    public Response isScopeExists(String name) {
+    public Response isScopeExists(String name, Boolean includeOIDCScopes) {
 
         boolean isScopeExists = false;
 
         try {
-            isScopeExists = ScopeUtils.getOAuth2ScopeService().isScopeExists(name);
+            isScopeExists = ScopeUtils.getOAuth2ScopeService().isScopeExists(name, includeOIDCScopes);
         } catch (IdentityOAuth2ScopeClientException e) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client Error while getting scope existence of scope name " + name, e);
