@@ -37,7 +37,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
@@ -501,6 +503,17 @@ public final class OAuthUtil {
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
         return dto;
+    }
+
+    public static OAuthConsumerSecretDTO buildConsumerSecretDTO(OAuthConsumerSecretDO consumerSecretDO) {
+
+        OAuthConsumerSecretDTO consumerSecretDTO = new OAuthConsumerSecretDTO();
+        consumerSecretDTO.setClientId(consumerSecretDO.getClientId());
+        consumerSecretDTO.setDescription(consumerSecretDO.getDescription());
+        consumerSecretDTO.setExpiryTime(consumerSecretDO.getExpiryTime());
+        consumerSecretDTO.setSecretId(consumerSecretDO.getSecretId());
+        consumerSecretDTO.setSecretValue(consumerSecretDO.getSecretValue());
+        return consumerSecretDTO;
     }
 
     /**

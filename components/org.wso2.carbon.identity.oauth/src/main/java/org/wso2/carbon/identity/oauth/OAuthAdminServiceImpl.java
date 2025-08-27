@@ -39,8 +39,11 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
@@ -74,6 +77,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -373,6 +377,20 @@ public class OAuthAdminServiceImpl {
                     "Error resolving user. Failed to register OAuth App", e);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
+    }
+
+    public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
+            throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
+        OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
+        consumerSecret.setSecretId(UUID.randomUUID().toString());
+        consumerSecret.setDescription(consumerSecretDTO.getDescription());
+        consumerSecret.setClientId(consumerSecretDTO.getClientId());
+        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+        consumerSecret.setExpiryTime(consumerSecretDTO.getExpiryTime());
+        consumerSecretDAO.addOAuthConsumerSecret(consumerSecret);
+        return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {

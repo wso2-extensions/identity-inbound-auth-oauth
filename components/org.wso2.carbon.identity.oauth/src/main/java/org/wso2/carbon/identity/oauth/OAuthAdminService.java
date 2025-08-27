@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
@@ -377,6 +378,16 @@ public class OAuthAdminService extends AbstractAdmin {
 
         try {
             return oAuthAdminServiceImpl.updateApproveAlwaysForAppConsentByResourceOwner(appName, state);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    public OAuthConsumerSecretDTO createClientSecret(OAuthConsumerSecretDTO consumerSecret)
+            throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.createOAuthConsumerSecret(consumerSecret);
         } catch (IdentityOAuthAdminException ex) {
             throw handleError(ex);
         }
