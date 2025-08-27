@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -44,5 +44,12 @@ public interface ImpersonationConfigMgtService {
      */
     public void setImpersonationConfig(ImpersonationConfig impersonationConfig, String tenantDomain)
             throws ImpersonationConfigMgtException;
+
+    /**
+     * Deletes the impersonation configuration for a given tenant domain.
+     * @param tenantDomain The domain of the tenant whose impersonation configuration is to be deleted.
+     * @throws ImpersonationConfigMgtException If there is an error in deleting the configuration.
+     */
+    default void deleteImpersonationConfig(String tenantDomain) throws ImpersonationConfigMgtException {}
 }
 
