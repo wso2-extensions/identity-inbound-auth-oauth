@@ -383,11 +383,34 @@ public class OAuthAdminService extends AbstractAdmin {
         }
     }
 
+    // ----------------- OAuth Consumer Secret Management -----------------
+    /**
+     * Create a new OAuth consumer secret.
+     *
+     * @param consumerSecret OAuthConsumerSecretDTO containing the details of the consumer secret to be created.
+     * @return Created OAuthConsumerSecretDTO object with the details of the created consumer secret.
+     * @throws IdentityOAuthAdminException Error when persisting the consumer secret in the persistence store.
+     */
     public OAuthConsumerSecretDTO createClientSecret(OAuthConsumerSecretDTO consumerSecret)
             throws IdentityOAuthAdminException {
 
         try {
             return oAuthAdminServiceImpl.createOAuthConsumerSecret(consumerSecret);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    /**
+     * Remove an existing OAuth consumer secret.
+     *
+     * @param secretId ID of the consumer secret to be removed.
+     * @throws IdentityOAuthAdminException Error when removing the consumer secret from the persistence store.
+     */
+    public void removeClientSecret(String secretId) throws IdentityOAuthAdminException {
+
+        try {
+            oAuthAdminServiceImpl.removeOAuthConsumerSecret(secretId);
         } catch (IdentityOAuthAdminException ex) {
             throw handleError(ex);
         }

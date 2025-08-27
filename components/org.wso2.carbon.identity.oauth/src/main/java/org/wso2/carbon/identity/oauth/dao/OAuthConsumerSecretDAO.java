@@ -46,6 +46,12 @@ public class OAuthConsumerSecretDAO {
         }
     }
 
+    /**
+     * Add a new OAuth consumer secret.
+     *
+     * @param consumerSecretDO OAuthConsumerSecretDO containing the details of the consumer secret to be added
+     * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
+     */
     public void addOAuthConsumerSecret(OAuthConsumerSecretDO consumerSecretDO) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
@@ -71,6 +77,27 @@ public class OAuthConsumerSecretDAO {
                     e);
         } catch (SQLException e) {
             throw handleError("Error occurred while obtaining a connection from the identity database", e);
+        }
+    }
+
+    /**
+     * Remove an OAuth consumer secret.
+     *
+     * @param secretId ID of the secret to be removed.
+     * @throws IdentityOAuthAdminException if an error occurs while removing the consumer secret.
+     */
+    public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OAUTH_CONSUMER_SECRET)) {
+                prepStmt.setString(1, secretId);
+                prepStmt.execute();
+                IdentityDatabaseUtil.commitTransaction(connection);
+            }
+        } catch (SQLException e) {
+            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
+                    .REMOVE_OAUTH_CONSUMER_SECRET, e);
         }
     }
 }
