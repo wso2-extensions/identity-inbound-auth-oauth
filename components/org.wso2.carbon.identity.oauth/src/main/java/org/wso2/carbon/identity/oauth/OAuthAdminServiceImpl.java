@@ -379,6 +379,13 @@ public class OAuthAdminServiceImpl {
         return OAuthUtil.buildConsumerAppDTO(app);
     }
 
+    /**
+     * Create a new OAuth consumer secret for the given client Id.
+     *
+     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, description and expiry time
+     * @return {@link OAuthConsumerSecretDTO} containing the created consumer secret information
+     * @throws IdentityOAuthAdminException Error when persisting the consumer secret information to the persistence store.
+     */
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
@@ -391,6 +398,18 @@ public class OAuthAdminServiceImpl {
         consumerSecret.setExpiryTime(consumerSecretDTO.getExpiryTime());
         consumerSecretDAO.addOAuthConsumerSecret(consumerSecret);
         return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
+    }
+
+    /**
+     * Remove an existing OAuth consumer secret by the given secret Id.
+     *
+     * @param secretId Id of the consumer secret to be removed
+     * @throws IdentityOAuthAdminException Error when removing the consumer secret information from the persistence store.
+     */
+    public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
+        consumerSecretDAO.removeOAuthConsumerSecret(secretId);
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
