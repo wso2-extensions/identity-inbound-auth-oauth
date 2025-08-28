@@ -202,7 +202,7 @@ public class ImpersonationConfigMgtTest {
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
 
-            // Mock resource does not exist scenario
+            // Mock resource does not exist scenario.
             when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, false))
                     .thenReturn(null);
 
