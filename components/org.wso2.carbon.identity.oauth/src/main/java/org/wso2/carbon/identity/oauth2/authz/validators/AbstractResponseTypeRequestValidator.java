@@ -36,6 +36,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -350,6 +352,15 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             registeredCallbackUrl =
                     registeredCallbackUrl.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+
+        if (regexp == null) {
+            return registeredCallbackUrl.equals(callbackURI);
+        }
+        /*
+        Escape dots only when followed by a letter/digit (so .com, .org, etc. get escaped),
+        but don't touch .* or .+ or .{n} .
+         */
+        regexp = regexp.replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.");
+        return callbackURI.matches(regexp);
     }
 }
