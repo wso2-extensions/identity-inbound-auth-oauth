@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ *  Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -42,6 +42,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.FileAssert.fail;
@@ -58,13 +60,13 @@ import static org.wso2.carbon.identity.oauth2.impersonation.utils.ErrorMessage.E
  */
 @Listeners(MockitoTestNGListener.class)
 public class ImpersonationConfigMgtTest {
+
     @Mock
     private ConfigurationManager configurationManager;
 
     private ImpersonationConfigMgtServiceImpl impersonationConfigMgtService
-                = new ImpersonationConfigMgtServiceImpl();
+            = new ImpersonationConfigMgtServiceImpl();
     private static final String tenantDomain = "carbon.super";
-
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -75,23 +77,23 @@ public class ImpersonationConfigMgtTest {
     @DataProvider(name = "GetImpersonationConfigData")
     public Object[][] getImpersonationConfigData() {
 
-            Attribute attributeEnabled = new Attribute(ENABLE_EMAIL_NOTIFICATION, "true");
-            Resource resourceEnabled = new Resource(IMPERSONATION_RESOURCE_NAME, IMPERSONATION_RESOURCE_TYPE_NAME);
-            resourceEnabled.setHasAttribute(true);
-            resourceEnabled.setAttributes(Collections.singletonList(attributeEnabled));
+        Attribute attributeEnabled = new Attribute(ENABLE_EMAIL_NOTIFICATION, "true");
+        Resource resourceEnabled = new Resource(IMPERSONATION_RESOURCE_NAME, IMPERSONATION_RESOURCE_TYPE_NAME);
+        resourceEnabled.setHasAttribute(true);
+        resourceEnabled.setAttributes(Collections.singletonList(attributeEnabled));
 
-            Attribute attributeDisabled = new Attribute(ENABLE_EMAIL_NOTIFICATION, "false");
-            Resource resourceDisabled = new Resource(IMPERSONATION_RESOURCE_NAME, IMPERSONATION_RESOURCE_TYPE_NAME);
-            resourceDisabled.setHasAttribute(true);
-            resourceDisabled.setAttributes(Collections.singletonList(attributeDisabled));
+        Attribute attributeDisabled = new Attribute(ENABLE_EMAIL_NOTIFICATION, "false");
+        Resource resourceDisabled = new Resource(IMPERSONATION_RESOURCE_NAME, IMPERSONATION_RESOURCE_TYPE_NAME);
+        resourceDisabled.setHasAttribute(true);
+        resourceDisabled.setAttributes(Collections.singletonList(attributeDisabled));
 
-            return new Object[][]{
-                 // Resource to be return
-                 // isEmailNotificationEnabled
+        return new Object[][]{
+                // Resource to be return
+                // isEmailNotificationEnabled
                 {resourceEnabled, true},
                 {resourceDisabled, false},
                 {null, true}
-            };
+        };
     }
 
     @Test(dataProvider = "GetImpersonationConfigData")
@@ -99,15 +101,15 @@ public class ImpersonationConfigMgtTest {
             throws Exception {
 
         Resource tenantResource = (Resource) resource;
-         if (resource != null) {
-              when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME))
-                      .thenReturn(tenantResource);
-         }  else {
-             ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
-                     (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
-              when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME))
-                      .thenThrow(configurationManagementException);
-         }
+        if (resource != null) {
+            when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME,
+                    true)).thenReturn(tenantResource);
+        } else {
+            ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
+                    (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
+            when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME,
+                    true)).thenThrow(configurationManagementException);
+        }
 
         try {
             ImpersonationConfig impersonationConfig = impersonationConfigMgtService
@@ -122,11 +124,10 @@ public class ImpersonationConfigMgtTest {
     @Test
     public void testGetImpersonationConfigException() throws ConfigurationManagementException {
 
-
         ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
                 (ERROR_CODE_RETRIEVE_RESOURCE_TYPE.getMessage(), ERROR_CODE_RETRIEVE_RESOURCE_TYPE.getCode());
-        when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME))
-                    .thenThrow(configurationManagementException);
+        when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, true))
+                .thenThrow(configurationManagementException);
 
         try {
             impersonationConfigMgtService.getImpersonationConfig(tenantDomain);
@@ -142,7 +143,7 @@ public class ImpersonationConfigMgtTest {
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
             lenient().when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME),
-                            any(Resource.class))).thenReturn(new Resource());
+                    any(Resource.class))).thenReturn(new Resource());
             ImpersonationConfig impersonationConfig = new ImpersonationConfig();
             impersonationConfig.setEnableEmailNotification(true);
             try {
@@ -161,7 +162,7 @@ public class ImpersonationConfigMgtTest {
             ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
                     (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
             lenient().when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME),
-                            any(Resource.class))).thenThrow(configurationManagementException);
+                    any(Resource.class))).thenThrow(configurationManagementException);
             ImpersonationConfig impersonationConfig = new ImpersonationConfig();
             impersonationConfig.setEnableEmailNotification(true);
             try {
@@ -170,6 +171,47 @@ public class ImpersonationConfigMgtTest {
                 assertEquals(e.getErrorCode(), ERROR_CODE_IMP_CONFIG_UPDATE.getCode());
                 assertEquals(e.getMessage(),
                         String.format(ERROR_CODE_IMP_CONFIG_UPDATE.getDescription(), tenantDomain));
+            }
+        }
+    }
+
+    @Test
+    public void testDeleteImpersonationConfig() throws ConfigurationManagementException {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
+
+            // Mock resource exists scenario
+            Resource existingResource = new Resource(IMPERSONATION_RESOURCE_NAME, IMPERSONATION_RESOURCE_TYPE_NAME);
+            when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, false))
+                    .thenReturn(existingResource);
+
+            try {
+                impersonationConfigMgtService.deleteImpersonationConfig(tenantDomain);
+                verify(configurationManager).deleteResource(IMPERSONATION_RESOURCE_TYPE_NAME,
+                        IMPERSONATION_RESOURCE_NAME);
+            } catch (ImpersonationConfigMgtException e) {
+                fail("Unexpected Exception");
+            }
+        }
+    }
+
+    @Test
+    public void testDeleteImpersonationConfigWhenResourceDoesNotExist() throws ConfigurationManagementException {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
+
+            // Mock resource does not exist scenario.
+            when(configurationManager.getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, false))
+                    .thenReturn(null);
+
+            try {
+                impersonationConfigMgtService.deleteImpersonationConfig(tenantDomain);
+                verify(configurationManager, never()).deleteResource(IMPERSONATION_RESOURCE_TYPE_NAME,
+                        IMPERSONATION_RESOURCE_NAME);
+            } catch (ImpersonationConfigMgtException e) {
+                fail("Unexpected Exception");
             }
         }
     }
