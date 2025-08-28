@@ -47,6 +47,7 @@ public interface ImpersonationConfigMgtService {
 
     /**
      * Deletes the impersonation configuration for a given tenant domain.
+     *
      * @param tenantDomain The domain of the tenant whose impersonation configuration is to be deleted.
      * @throws ImpersonationConfigMgtException If there is an error in deleting the configuration.
      */
