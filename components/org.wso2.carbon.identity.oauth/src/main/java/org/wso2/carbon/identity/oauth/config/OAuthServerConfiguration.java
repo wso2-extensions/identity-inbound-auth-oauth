@@ -235,6 +235,8 @@ public class OAuthServerConfiguration {
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
+    private boolean isReturnOnlyAppAssociatedRolesInUserInfo = false;
+    private boolean isReturnOnlyAppAssociatedRolesInJWTToken = false;
 
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -579,6 +581,10 @@ public class OAuthServerConfiguration {
 
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
+
+        // Read config for returning only app associated roles in JWT token.
+        parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(oauthElem);
+
     }
 
     /**
@@ -1651,6 +1657,26 @@ public class OAuthServerConfiguration {
     public boolean isUserInfoResponseRemoveInternalPrefixFromRoles() {
 
         return userInfoRemoveInternalPrefixFromRoles;
+    }
+
+    /**
+     * Return application audience roles only in the userinfo response.
+     *
+     * @return Return application audience roles only in the userinfo response.
+     */
+    public boolean isReturnOnlyAppAssociatedRolesInUserInfo() {
+
+        return isReturnOnlyAppAssociatedRolesInUserInfo;
+    }
+
+    /**
+     * Return application audience roles only in the jwt accesstoken.
+     *
+     * @return Return application audience roles only in the jwt access token.
+     */
+    public boolean isReturnOnlyAppAssociatedRolesInJWTToken() {
+
+        return isReturnOnlyAppAssociatedRolesInJWTToken;
     }
 
     public String getConsumerDialectURI() {
@@ -3594,6 +3620,13 @@ public class OAuthServerConfiguration {
                         Boolean.parseBoolean(userInfoResponseRemoveInternalPrefixFromRoles.getText().trim());
             }
 
+            OMElement returnOnlyAppAssociatedRolesInUserInfoElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO));
+            if (returnOnlyAppAssociatedRolesInUserInfoElem != null) {
+                isReturnOnlyAppAssociatedRolesInUserInfo =
+                        Boolean.parseBoolean(returnOnlyAppAssociatedRolesInUserInfoElem.getText().trim());
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
@@ -3964,6 +3997,16 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(OMElement oauthConfigElem) {
+
+        OMElement returnOnlyAppAssociatedRolesInJWTTokenElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN));
+        if (returnOnlyAppAssociatedRolesInJWTTokenElem != null) {
+            isReturnOnlyAppAssociatedRolesInJWTToken =
+                    Boolean.parseBoolean(returnOnlyAppAssociatedRolesInJWTTokenElem.getText());
+        }
+    }
+
     /**
      * This method returns the value of the property UseClientIdAsSubClaimForAppTokens for the OAuth configuration
      * in identity.xml.
@@ -4250,6 +4293,9 @@ public class OAuthServerConfiguration {
                 "UserInfoMultiValueSupportEnabled";
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
+        private static final String OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO =
+                "ReturnOnlyAppAssociatedRolesInUserInfo";
+
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
@@ -4447,6 +4493,10 @@ public class OAuthServerConfiguration {
         private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
                 "RemoveUsernameFromIntrospectionResponseForAppTokens";
+
+        private static final String RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN =
+                "ReturnOnlyAppAssociatedRolesInJWTToken";
+
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
