@@ -949,6 +949,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             tokenRespDTO.setExpiresIn(Long.MAX_VALUE / SECONDS_TO_MILISECONDS_FACTOR);
             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
         }
+        long refreshTokenExpiresInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
+        if (refreshTokenExpiresInMillis > 0) {
+            tokenRespDTO.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+        } else if (expireTimeMillis > 0) {
+            tokenRespDTO.setRefreshTokenExpiresInMillis(expireTimeMillis);
+        } else {
+            tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
+        }
         tokenRespDTO.setAuthorizedScopes(scope);
         tokenRespDTO.setIsConsentedToken(existingAccessTokenDO.isConsentedToken());
         return tokenRespDTO;
