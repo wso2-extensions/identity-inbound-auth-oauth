@@ -1283,8 +1283,7 @@ public class EndpointUtil {
                         "A valid OAuth application could not be found for the given client_id.",
                         "validate-oauth-client", null);
             }
-            throw new InvalidApplicationClientException("A valid OAuth client could not be found for client_id: " +
-                    Encode.forHtml(consumerKey));
+            throw new InvalidApplicationClientException("Client credentials are invalid.");
         }
 
         if (isNotActiveState(appState)) {
