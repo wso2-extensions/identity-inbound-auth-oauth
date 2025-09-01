@@ -445,11 +445,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokenResp.setAccessToken(accessTokenBean.getAccessToken());
         tokenResp.setTokenId(accessTokenBean.getTokenId());
         tokenResp.setRefreshToken(accessTokenBean.getRefreshToken());
-        if (accessTokenBean.getValidityPeriodInMillis() > 0) {
+        long expireTimeMillis = accessTokenBean.getValidityPeriodInMillis();
+        if (expireTimeMillis > 0) {
             tokenResp.setExpiresIn(accessTokenBean.getValidityPeriod());
-            tokenResp.setExpiresInMillis(accessTokenBean.getValidityPeriodInMillis());
+            tokenResp.setExpiresInMillis(expireTimeMillis);
         } else {
             tokenResp.setExpiresIn(Long.MAX_VALUE);
+            tokenResp.setExpiresInMillis(Long.MAX_VALUE);
+        }
+        long refreshTokenExpiresInMillis = accessTokenBean.getRefreshTokenValidityPeriodInMillis();
+        if (refreshTokenExpiresInMillis > 0) {
+            tokenResp.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+        } else if (expireTimeMillis > 0) {
+            tokenResp.setRefreshTokenExpiresInMillis(expireTimeMillis);
+        } else {
             tokenResp.setExpiresInMillis(Long.MAX_VALUE);
         }
         tokenResp.setAuthorizedScopes(scope);
@@ -847,8 +856,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 grantCacheEntry.setTokenId(null);
             }
 
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
             grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
 
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
