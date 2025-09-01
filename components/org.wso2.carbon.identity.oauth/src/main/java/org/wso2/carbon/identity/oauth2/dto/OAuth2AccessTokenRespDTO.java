@@ -38,6 +38,7 @@ public class OAuth2AccessTokenRespDTO {
     String errorMsg;
     long expiresIn;
     long expiresInMillis;
+    private long refreshTokenExpiresInMillis;
     ResponseHeader[] responseHeaders;
     String authorizedScopes;
     private String idToken;
@@ -128,6 +129,16 @@ public class OAuth2AccessTokenRespDTO {
 
     public void setExpiresInMillis(long expiresInMillis) {
         this.expiresInMillis = expiresInMillis;
+    }
+
+    public void setRefreshTokenExpiresInMillis(long refreshTokenExpiresInMillis) {
+
+        this.refreshTokenExpiresInMillis = refreshTokenExpiresInMillis;
+    }
+
+    public long getRefreshTokenExpiresInMillis() {
+
+        return refreshTokenExpiresInMillis;
     }
 
     /**
