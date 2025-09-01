@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -33,7 +33,10 @@ public enum ErrorMessage {
 
     ERROR_CODE_IMP_CONFIG_UPDATE("65019",
             "Unable to update Impersonation configuration.",
-            "Server encountered an error while updating the Impersonation configuration of %s.");
+            "Server encountered an error while updating the Impersonation configuration of %s."),
+    ERROR_CODE_IMP_CONFIG_DELETE("65020",
+            "Unable to delete Impersonation configuration.",
+            "Server encountered an error while deleting the Impersonation configuration of %s.");
 
     /**
      * The error code.
