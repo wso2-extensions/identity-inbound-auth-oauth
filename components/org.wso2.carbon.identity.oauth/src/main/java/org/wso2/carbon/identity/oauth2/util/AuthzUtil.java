@@ -258,6 +258,59 @@ public class AuthzUtil {
     }
 
     /**
+     * Check whether user has the request permissions.
+     *
+     * @param userId                              User ID.
+     * @param userResidentOrganizationId          User resident organization ID.
+     *                                            This can be null if the user is not a shared user.
+     * @param tenantDomainOfAccessingOrganization Tenant domain of the accessing organization.
+     * @param requestedPermissions                Requested permissions.
+     * @return True if user has the requested permissions.
+     * @throws IdentityOAuth2Exception if an error occurs while checking user authorization.
+     */
+    public static boolean isUserAuthorized(String userId, String userResidentOrganizationId,
+                                           String tenantDomainOfAccessingOrganization,
+                                           List<String> requestedPermissions) throws IdentityOAuth2Exception {
+
+        String userResidentTenant = StringUtils.EMPTY;
+        if (userResidentOrganizationId != null) {
+            try {
+                userResidentTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(userResidentOrganizationId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception(
+                        "Error while resolving tenant domain for user resident organization : "
+                                + userResidentOrganizationId, e);
+            }
+        }
+        if (StringUtils.isNotBlank(userResidentTenant) &&
+                !tenantDomainOfAccessingOrganization.equals(userResidentTenant)) {
+            String accessingOrgId;
+            try {
+                accessingOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomainOfAccessingOrganization);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving org id of tenant : "
+                        + tenantDomainOfAccessingOrganization, e);
+            }
+            // Resolve shared user id in accessing organization.
+            try {
+                Optional<String> optionalOrganizationUserId =
+                        OrganizationSharedUserUtil.getUserIdOfAssociatedUserByOrgId(userId, accessingOrgId);
+                userId = optionalOrganizationUserId.orElseThrow(
+                        () -> new IdentityOAuth2ClientException("User is not allowed to access the organization"));
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving shared user ID", e);
+            }
+        }
+
+        List<String> roleIds = getRoles(userId, tenantDomainOfAccessingOrganization);
+        List<String> associatedScopesForRoles =
+                getAssociatedScopesForRoles(roleIds, tenantDomainOfAccessingOrganization);
+        return new HashSet<>(associatedScopesForRoles).containsAll(requestedPermissions);
+    }
+
+    /**
      * Get authorized permissions of the authenticated user.
      *
      * @param authenticatedUser Authenticated user.
