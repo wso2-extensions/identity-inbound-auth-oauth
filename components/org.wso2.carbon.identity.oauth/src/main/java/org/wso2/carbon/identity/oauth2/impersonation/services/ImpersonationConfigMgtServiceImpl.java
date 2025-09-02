@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ *  Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -54,7 +54,7 @@ public class ImpersonationConfigMgtServiceImpl implements ImpersonationConfigMgt
 
         try {
             // Attempt to retrieve the resource containing impersonation configuration.
-            Resource resource = getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME);
+            Resource resource = getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, true);
             ImpersonationConfig impersonationConfig;
             // If the resource is null, use the default configuration, otherwise parse the resource.
             if (resource == null) {
@@ -93,6 +93,27 @@ public class ImpersonationConfigMgtServiceImpl implements ImpersonationConfigMgt
     }
 
     /**
+     * Deletes the impersonation configuration for a given tenant domain.
+     *
+     * @param tenantDomain The domain of the tenant whose impersonation configuration is to be deleted.
+     * @throws ImpersonationConfigMgtException If there is an error in deleting the configuration.
+     */
+    @Override
+    public void deleteImpersonationConfig(String tenantDomain) throws ImpersonationConfigMgtException {
+
+        validateTenantDomain(tenantDomain);
+        try {
+            // Check for the existence of the resource in the organization before attempting deletion.
+            Resource resource = getResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME, false);
+            if (resource != null) {
+                getConfigurationManager().deleteResource(IMPERSONATION_RESOURCE_TYPE_NAME, IMPERSONATION_RESOURCE_NAME);
+            }
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(ErrorMessage.ERROR_CODE_IMP_CONFIG_DELETE, e, tenantDomain);
+        }
+    }
+
+    /**
      * Validates the given tenant domain.
      *
      * @param tenantDomain The tenant domain to validate.
@@ -122,14 +143,16 @@ public class ImpersonationConfigMgtServiceImpl implements ImpersonationConfigMgt
      *
      * @param resourceTypeName The type name of the resource.
      * @param resourceName     The name of the resource.
+     * @param inherited        Whether to include resources inherited from the organization hierarchy.
      * @return The resource if found, or null if the resource does not exist.
      * @throws ConfigurationManagementException If there is an error in the configuration management process.
      */
-    private Resource getResource(String resourceTypeName, String resourceName) throws ConfigurationManagementException {
+    private Resource getResource(String resourceTypeName, String resourceName, boolean inherited)
+            throws ConfigurationManagementException {
 
         try {
             if (getConfigurationManager() != null) {
-                return getConfigurationManager().getResource(resourceTypeName, resourceName);
+                return getConfigurationManager().getResource(resourceTypeName, resourceName, inherited);
             }
             return null;
         } catch (ConfigurationManagementException e) {
