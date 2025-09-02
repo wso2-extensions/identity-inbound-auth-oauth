@@ -91,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -129,6 +130,7 @@ import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.EXISTING_TOKEN_USED;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -142,6 +144,7 @@ public class AccessTokenIssuer {
     public static final String OAUTH_APP_DO = "OAuthAppDO";
     private static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
     private final AuthorizationDetailsValidator authorizationDetailsValidator;
+    private static final String ENABLE_POST_TOKEN_ISSUE_EVENT = "PostTokenIssueEvent.Enable";
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -425,7 +428,7 @@ public class AccessTokenIssuer {
     }
 
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
@@ -1352,6 +1355,11 @@ public class AccessTokenIssuer {
 
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
+        try {
+            triggerPostIssueTokenEvent(tokenReqDTO, tokenRespDTO, tokReqMsgCtx);
+        } catch (IdentityOAuth2Exception | OrganizationManagementException e) {
+            log.error("Error while triggering post issue token event.", e);
+        }
 
         if (isRefresh) {
             if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
@@ -1380,6 +1388,65 @@ public class AccessTokenIssuer {
                 }
             }
         }
+    }
+
+    private static void triggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO tokenReqDTO,
+                                                   OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception, OrganizationManagementException {
+
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_POST_TOKEN_ISSUE_EVENT))) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token event publishing is disabled. Hence skipping the post issue token event.");
+            }
+            return;
+        }
+        if (tokenReqDTO == null || tokenRespDTO == null || tokReqMsgCtx == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token request DTO, token response DTO or token request message context is null. " +
+                        "Skipping the post issue token event.");
+            }
+            return;
+        }
+        if (tokenRespDTO.isError()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token response DTO is in error state. Hence skipping the post issue token event.");
+            }
+            return;
+        }
+
+        String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(tenantDomain);
+        String accessingOrganizationId = StringUtils.EMPTY;
+        if (tokReqMsgCtx.getAuthorizedUser() != null
+                && tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
+            accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
+        }
+
+        Map<String, Object> eventProperties = new HashMap<>();
+        eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenRespDTO.getTokenId());
+        eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, tenantDomain);
+        eventProperties.put(OIDCConstants.Event.USER_TYPE, tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
+        eventProperties.put(OIDCConstants.Event.CLIENT_ID, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+        eventProperties.put(OIDCConstants.Event.GRANT_TYPE, tokenReqDTO.getGrantType());
+        eventProperties.put(OIDCConstants.Event.ISSUED_TIME, String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime()));
+        eventProperties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, organizationId);
+        eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+        eventProperties.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, IdentityTenantUtil.getLoginTenantId());
+        eventProperties.put(OIDCConstants.Event.EXISTING_TOKEN_USED, String.valueOf(existingTokenUsed(tokReqMsgCtx)));
+        eventProperties.put(OIDCConstants.Event.SERVICE_PROVIDER, OAuth2Util.getServiceProvider(
+                tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), tenantDomain).getApplicationName());
+        OAuth2TokenUtil.postIssueToken(eventProperties);
+    }
+
+    private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        Boolean existingTokenUsed = (Boolean) tokReqMsgCtx.getProperty(EXISTING_TOKEN_USED);
+        if (existingTokenUsed == null) {
+            existingTokenUsed = false;
+        }
+        return existingTokenUsed;
     }
 
     /**
@@ -1463,8 +1530,8 @@ public class AccessTokenIssuer {
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
 
             log.debug("Customized audience list and access token attributes from pre issue access token actions " +
-                            "are persisted in the AuthorizationGrantCache against the token id: " +
-                            tokenRespDTO.getTokenId());
+                    "are persisted in the AuthorizationGrantCache against the token id: " +
+                    tokenRespDTO.getTokenId());
         }
     }
 
