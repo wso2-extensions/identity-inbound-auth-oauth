@@ -281,6 +281,7 @@ public class OAuthServerConfiguration {
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
+    private boolean isMultipleClientSecretsEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -452,6 +453,9 @@ public class OAuthServerConfiguration {
         parseHashAlgorithm(oauthElem);
         // read hash mode config
         parseEnableHashMode(oauthElem);
+
+        // read multiple client secrets config
+        parseEnableMultipleClientSecrets(oauthElem);
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
@@ -1033,6 +1037,10 @@ public class OAuthServerConfiguration {
 
     public boolean isClientSecretHashEnabled() {
         return isClientSecretHashEnabled;
+    }
+
+    public boolean isMultipleClientSecretsEnabled() {
+        return isMultipleClientSecretsEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -3163,6 +3171,18 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
+
+        OMElement multipleClientSecretsElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
+        if (multipleClientSecretsElement != null) {
+            isMultipleClientSecretsEnabled = Boolean.parseBoolean(multipleClientSecretsElement.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Is multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
+        }
+    }
+
     private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem) {
 
         OMElement redirectToOAuthErrorPageElem =
@@ -3547,6 +3567,9 @@ public class OAuthServerConfiguration {
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
+
+        // Multiple Client Secret configs
+        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "EnableMultipleClientSecrets";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";

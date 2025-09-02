@@ -595,6 +595,11 @@ public class OAuth2Util {
 
     }
 
+    public static boolean isMultipleClientSecretsEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
+    }
+
     /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
