@@ -28,7 +28,10 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 
@@ -99,5 +102,31 @@ public class OAuthConsumerSecretDAO {
             throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
                     .REMOVE_OAUTH_CONSUMER_SECRET, e);
         }
+    }
+
+    public List<OAuthConsumerSecretDO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
+
+        List<OAuthConsumerSecretDO> consumerSecrets = new ArrayList<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT)) {
+                prepStmt.setString(1, consumerKey);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
+                        secret.setSecretId(resultSet.getString(1));
+                        secret.setDescription(resultSet.getString(2));
+                        secret.setClientId(resultSet.getString(3));
+                        secret.setSecretValue(resultSet.getString(4));
+                        secret.setExpiryTime(resultSet.getLong(5));
+                        consumerSecrets.add(secret);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw handleError("Error when executing the SQL : " + SQLQueries.OAuthAppDAOSQLQueries
+                    .GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT, e);
+        }
+        return consumerSecrets;
     }
 }
