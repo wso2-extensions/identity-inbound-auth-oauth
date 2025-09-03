@@ -761,7 +761,20 @@ public class AccessTokenIssuer {
         impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
         AuthenticatedUser impersonatedUser = tokReqMsgCtx.getAuthorizedUser();
         impersonationNotificationRequestDTO.setSubject(impersonatedUser);
-        impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
+        String tenantDomain = impersonatedUser.getTenantDomain();
+        if (impersonatedUser.isFederatedUser() && impersonatedUser.getAccessingOrganization() != null) {
+            try {
+                String orgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().resolveTenantDomain(
+                        impersonatedUser.getAccessingOrganization());
+                if (orgHandle != null) {
+                    tenantDomain = orgHandle;
+                }
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from organization " +
+                        "handle: " + impersonatedUser.getAccessingOrganization(), e);
+            }
+        }
+        impersonationNotificationRequestDTO.setTenantDomain(tenantDomain);
         ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
         notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
     }

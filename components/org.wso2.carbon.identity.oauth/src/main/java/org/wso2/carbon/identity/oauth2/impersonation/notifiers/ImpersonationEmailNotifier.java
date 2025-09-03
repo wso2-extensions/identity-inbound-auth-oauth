@@ -82,8 +82,9 @@ public class ImpersonationEmailNotifier {
                 String userResidentTenantDomain;
                 if (StringUtils.isNotBlank(subject.getAccessingOrganization()) &&
                         StringUtils.isNotBlank(subject.getUserStoreDomain())) {
-                    impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId, tenantDomain,
-                            subject.getAccessingOrganization(), subject.getUserResidentOrganization(), clientId);
+                    impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId,
+                            subject.getTenantDomain(), subject.getAccessingOrganization(),
+                            subject.getUserResidentOrganization(), clientId);
                     userResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                             .resolveTenantDomain(subject.getUserResidentOrganization());
                 } else {
