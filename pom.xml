@@ -937,7 +937,7 @@
         <json-smart.version>2.6.0</json-smart.version>
         <version.org.wso2.orbit.javax.xml.bind>2.3.1.wso2v1</version.org.wso2.orbit.javax.xml.bind>
         <version.org.wso2.orbit.javax.activation>1.1.1.wso2v1</version.org.wso2.orbit.javax.activation>
-        <net.minidev.accessors-smart.version>2.5.2</net.minidev.accessors-smart.version>
+        <net.minidev.accessors-smart.version>2.6.0</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
 
