@@ -201,7 +201,7 @@ public class TokenValidationHandler {
             return buildClientAppErrorResponse("Access token expired");
         }
         // Set the token expiration time
-        responseDTO.setExpiryTime(getAccessTokenExpirationTime(accessTokenDO));
+        responseDTO.setExpiryTime(OAuth2Util.getAccessTokenExpirationTime(accessTokenDO));
 
         // Adding the AccessTokenDO as a context property for further use
         messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
@@ -880,26 +880,6 @@ public class TokenValidationHandler {
         }
 
         return tokenValidator;
-    }
-
-    /**
-     * @param accessTokenDO
-     * @return
-     */
-    private long getAccessTokenExpirationTime(AccessTokenDO accessTokenDO) {
-        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
-
-        if (OAuthConstants.UserType.APPLICATION_USER.equals(accessTokenDO.getTokenType())
-                && OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds() < 0) {
-            return Long.MAX_VALUE;
-        } else if (OAuthConstants.UserType.APPLICATION.equals(accessTokenDO.getTokenType())
-                && OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() < 0) {
-            return Long.MAX_VALUE;
-        } else if (expiryTime < 0) {
-            return Long.MAX_VALUE;
-        }
-
-        return expiryTime / 1000;
     }
 
     /**

@@ -1340,6 +1340,29 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Get access token expiration time in milliseconds.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return Expiration time in milliseconds.
+     */
+    public static long getAccessTokenExpirationTime(AccessTokenDO accessTokenDO) {
+
+        long expiryTime = OAuth2Util.getAccessTokenExpireMillis(accessTokenDO, false);
+
+        if (OAuthConstants.UserType.APPLICATION_USER.equals(accessTokenDO.getTokenType())
+                && OAuthServerConfiguration.getInstance().getUserAccessTokenValidityPeriodInSeconds() < 0) {
+            return Long.MAX_VALUE;
+        } else if (OAuthConstants.UserType.APPLICATION.equals(accessTokenDO.getTokenType())
+                && OAuthServerConfiguration.getInstance().getApplicationAccessTokenValidityPeriodInSeconds() < 0) {
+            return Long.MAX_VALUE;
+        } else if (expiryTime < 0) {
+            return Long.MAX_VALUE;
+        }
+
+        return expiryTime / 1000;
+    }
+
     @Deprecated
     public static long calculateValidityInMillis(long issuedTimeInMillis, long validityPeriodMillis) {
 
