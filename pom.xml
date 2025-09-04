@@ -904,7 +904,7 @@
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
         <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v6</waffle-jna.wso2.version>
+        <waffle-jna.wso2.version>1.6.wso2v7</waffle-jna.wso2.version>
         <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
         <nimbusds.version>9.37.3.wso2v1</nimbusds.version>
