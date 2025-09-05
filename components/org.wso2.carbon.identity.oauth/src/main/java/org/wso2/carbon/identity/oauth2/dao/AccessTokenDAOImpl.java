@@ -2126,7 +2126,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         + Arrays.toString(accessTokenDO.getScope()));
             }
         }
-        boolean tokenUpdateSuccessful;
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         try {
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled() && !accessTokenDO.isConsentedToken()) {
@@ -2149,7 +2148,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
             }
             IdentityDatabaseUtil.commitTransaction(connection);
-            tokenUpdateSuccessful = true;
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             String errorMsg = "Error while regenerating access token";
@@ -2157,7 +2155,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
         }
-        if (tokenUpdateSuccessful) {
+        if (isTokenCleanupFeatureEnabled) {
             // Post refresh access token event
             if (StringUtils.equals(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) ||
                     StringUtils.equals(grantType, OAuthConstants.GrantTypes.PASSWORD)) {
