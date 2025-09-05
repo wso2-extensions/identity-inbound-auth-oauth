@@ -3391,11 +3391,11 @@ public class OAuth2UtilTest {
 
     @Test(dataProvider = "getOrgAuthenticatedUserDataProvider")
     public void testGetOrgAuthenticatedUser(String userId, String tenantDomain, String userAccessingOrg,
-                                                        String userResidentOrg, String clientId, 
-                                                        Class<? extends Exception> expectedException, 
-                                                        boolean mockUserExists, boolean mockResolveOrgSuccessful) 
+                                                        String userResidentOrg, String clientId,
+                                                        Class<? extends Exception> expectedException,
+                                                        boolean mockUserExists, boolean mockResolveOrgSuccessful)
             throws Exception {
-        
+
         User mockUser = mock(User.class);
         lenient().when(mockUser.getUserName()).thenReturn("testusername");
         lenient().when(mockUser.getUserStoreDomain()).thenReturn("PRIMARY");
@@ -3456,5 +3456,57 @@ public class OAuth2UtilTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testApplicationUserTokenWithNegativeValidity() {
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        accessTokenDO.setIssuedTime(timestamp);
+        accessTokenDO.setTokenType(OAuthConstants.UserType.APPLICATION_USER);
+
+        when(oauthServerConfigurationMock.getUserAccessTokenValidityPeriodInSeconds()).thenReturn(-1L);
+
+        assertEquals(Long.MAX_VALUE, OAuth2Util.getAccessTokenExpirationTime(accessTokenDO),
+                "Application user token with negative validity should return Long.MAX_VALUE");
+    }
+
+    @Test
+    public void testApplicationTokenWithNegativeValidity() {
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        accessTokenDO.setIssuedTime(timestamp);
+        accessTokenDO.setTokenType(OAuthConstants.UserType.APPLICATION);
+
+        when(oauthServerConfigurationMock.getApplicationAccessTokenValidityPeriodInSeconds()).thenReturn(-1L);
+
+        assertEquals(Long.MAX_VALUE, OAuth2Util.getAccessTokenExpirationTime(accessTokenDO),
+                "Application token with negative validity should return Long.MAX_VALUE");
+    }
+
+    @Test
+    public void testTokenWithNegativeExpiryTime() {
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        accessTokenDO.setIssuedTime(timestamp);
+        accessTokenDO.setValidityPeriodInMillis(-1);
+
+        assertEquals(Long.MAX_VALUE, OAuth2Util.getAccessTokenExpirationTime(accessTokenDO),
+                "Token with negative expiry time should return Long.MAX_VALUE");
+    }
+
+    @Test
+    public void testTokenWithPositiveExpiryTime() {
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        accessTokenDO.setIssuedTime(timestamp);
+        accessTokenDO.setValidityPeriodInMillis(3600000); // 1 hour
+
+        assertTrue(OAuth2Util.getAccessTokenExpirationTime(accessTokenDO) > 0,
+                "Token with positive expiry time should return positive value");
     }
 }
