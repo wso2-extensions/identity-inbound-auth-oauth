@@ -182,6 +182,7 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean allowCrossTenantIntrospectionForSubOrgTokens = false;
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
@@ -234,6 +235,8 @@ public class OAuthServerConfiguration {
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
+    private boolean isReturnOnlyAppAssociatedRolesInUserInfo = false;
+    private boolean isReturnOnlyAppAssociatedRolesInJWTToken = false;
 
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -314,6 +317,7 @@ public class OAuthServerConfiguration {
     // By default, this is true because OIDC claims are not required for client credential grant type
     // and CC grant doesn't involve a user.
     private boolean skipOIDCClaimsForClientCredentialGrant = true;
+    private boolean showAuthFailureReasonForPasswordGrant = false;
 
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
@@ -326,6 +330,11 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+
+    // Property to determine whether the SP ID should be returned to the application. Marking it as true to
+    // preserve backward compatibility.
+    private boolean returnSpIdToApplication = true;
+
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
@@ -347,7 +356,6 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
-    private boolean isUserSessionImpersonationEnabled = true;
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
             "code id_token", "code id_token token");
     private List<String> configuredHybridResponseTypes = new ArrayList<>();
@@ -489,6 +497,8 @@ public class OAuthServerConfiguration {
 
         parseSkipOIDCClaimsForClientCredentialGrantConfig(oauthElem);
 
+        parseShowAuthFailureReasonForPasswordGrant(oauthElem);
+
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
 
@@ -550,6 +560,9 @@ public class OAuthServerConfiguration {
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
 
+        // Read config for cross sub org allow.
+        parseAllowCrossTenantIntrospectionForSubOrgTokens(oauthElem);
+
         // Read config for using client id as sub claim for application tokens.
         parseUseClientIdAsSubClaimForAppTokens(oauthElem);
 
@@ -574,8 +587,11 @@ public class OAuthServerConfiguration {
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
 
-        // Read config for user session impersonation feature.
-        parseUserSessionImpersonation(oauthElem);
+        // Read config for returning spId to application.
+        parseReturnSpIdToApplicationConfig(oauthElem);
+
+        // Read config for returning only app associated roles in JWT token.
+        parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(oauthElem);
     }
 
     /**
@@ -649,6 +665,26 @@ public class OAuthServerConfiguration {
         if (skipOIDCClaimsForClientCredentialGrantElement != null) {
             skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
                     skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
+        }
+    }
+
+    private void parseShowAuthFailureReasonForPasswordGrant(OMElement oauthElem) {
+
+        OMElement showAuthFailureReasonForPasswordGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .SHOW_AUTH_FAILURE_REASON_FOR_PASSWORD_GRANT));
+        if (showAuthFailureReasonForPasswordGrantElement != null) {
+            showAuthFailureReasonForPasswordGrant = Boolean.parseBoolean(
+                    showAuthFailureReasonForPasswordGrantElement.getText().trim());
+        }
+    }
+
+    private void parseReturnSpIdToApplicationConfig(OMElement oauthElem) {
+
+        OMElement returnSpIdToApplicationElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETURN_SP_ID_TO_APPLICATION));
+        if (returnSpIdToApplicationElement != null) {
+            returnSpIdToApplication = Boolean.parseBoolean(returnSpIdToApplicationElement.getText().trim());
         }
     }
 
@@ -901,6 +937,24 @@ public class OAuthServerConfiguration {
 
         return skipOIDCClaimsForClientCredentialGrant;
     }
+
+    /**
+     * Returns the value of returnSpIdToApplication configuration. By configuring this, apps can receive spId in
+     * the query param.
+     *
+     * @return boolean value of returnSpIdToApplication configuration.
+     */
+    public boolean returnSpIdToApps() {
+
+        return returnSpIdToApplication;
+    }
+
+
+    public boolean isShowAuthFailureReasonForPasswordGrant() {
+
+        return showAuthFailureReasonForPasswordGrant;
+    }
+
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -1631,6 +1685,26 @@ public class OAuthServerConfiguration {
     public boolean isUserInfoResponseRemoveInternalPrefixFromRoles() {
 
         return userInfoRemoveInternalPrefixFromRoles;
+    }
+
+    /**
+     * Return application audience roles only in the userinfo response.
+     *
+     * @return Return application audience roles only in the userinfo response.
+     */
+    public boolean isReturnOnlyAppAssociatedRolesInUserInfo() {
+
+        return isReturnOnlyAppAssociatedRolesInUserInfo;
+    }
+
+    /**
+     * Return application audience roles only in the jwt accesstoken.
+     *
+     * @return Return application audience roles only in the jwt access token.
+     */
+    public boolean isReturnOnlyAppAssociatedRolesInJWTToken() {
+
+        return isReturnOnlyAppAssociatedRolesInJWTToken;
     }
 
     public String getConsumerDialectURI() {
@@ -3574,6 +3648,13 @@ public class OAuthServerConfiguration {
                         Boolean.parseBoolean(userInfoResponseRemoveInternalPrefixFromRoles.getText().trim());
             }
 
+            OMElement returnOnlyAppAssociatedRolesInUserInfoElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO));
+            if (returnOnlyAppAssociatedRolesInUserInfoElem != null) {
+                isReturnOnlyAppAssociatedRolesInUserInfo =
+                        Boolean.parseBoolean(returnOnlyAppAssociatedRolesInUserInfoElem.getText().trim());
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
@@ -3895,12 +3976,37 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * token introspection from other tenants.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowCrossTenantIntrospectionForSubOrgTokens(OMElement oauthConfigElem) {
+
+        OMElement allowCrossTenantIntrospectionForSubOrgTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS));
+        if (allowCrossTenantIntrospectionForSubOrgTokensElem != null) {
+            allowCrossTenantIntrospectionForSubOrgTokens = Boolean.parseBoolean(
+                    allowCrossTenantIntrospectionForSubOrgTokensElem.getText());
+        }
+    }
+
+    /**
      * This method returns the value of the property AllowCrossTenantTokenIntrospection for the OAuth configuration
      * in identity.xml.
      */
     public boolean isCrossTenantTokenIntrospectionAllowed() {
 
         return allowCrossTenantIntrospection;
+    }
+
+    /**
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * for the OAuth configuration in identity.xml.
+     */
+    public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
+
+        return allowCrossTenantIntrospectionForSubOrgTokens;
     }
 
     /**
@@ -3916,6 +4022,16 @@ public class OAuthServerConfiguration {
         if (useClientIdAsSubClaimForAppTokensElem != null) {
             useClientIdAsSubClaimForAppTokens =
                     Boolean.parseBoolean(useClientIdAsSubClaimForAppTokensElem.getText());
+        }
+    }
+
+    private void parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(OMElement oauthConfigElem) {
+
+        OMElement returnOnlyAppAssociatedRolesInJWTTokenElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN));
+        if (returnOnlyAppAssociatedRolesInJWTTokenElem != null) {
+            isReturnOnlyAppAssociatedRolesInJWTToken =
+                    Boolean.parseBoolean(returnOnlyAppAssociatedRolesInJWTTokenElem.getText());
         }
     }
 
@@ -4103,15 +4219,6 @@ public class OAuthServerConfiguration {
         }
     }
 
-    private void parseUserSessionImpersonation(OMElement oauthConfigElem) {
-
-        OMElement userSessionImpersonationElem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.USER_SESSION_IMPERSONATION));
-        if (userSessionImpersonationElem != null) {
-            isUserSessionImpersonationEnabled = Boolean.parseBoolean(userSessionImpersonationElem.getText());
-        }
-    }
-
     /**
      * Get scope metadata service extension impl class.
      *
@@ -4120,16 +4227,6 @@ public class OAuthServerConfiguration {
     public String getScopeMetadataExtensionImpl() {
 
         return scopeMetadataExtensionImpl;
-    }
-
-    /**
-     * Get user session impersonation feature enabled or not.
-     *
-     * @return true if user session impersonation is enabled.
-     */
-    public boolean isUserSessionImpersonationEnabled() {
-
-        return isUserSessionImpersonationEnabled;
     }
 
     /**
@@ -4224,6 +4321,9 @@ public class OAuthServerConfiguration {
                 "UserInfoMultiValueSupportEnabled";
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
+        private static final String OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO =
+                "ReturnOnlyAppAssociatedRolesInUserInfo";
+
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
@@ -4415,16 +4515,24 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS
+                = "AllowCrossTenantIntrospectionForSubOrgTokens";
 
         private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
                 "RemoveUsernameFromIntrospectionResponseForAppTokens";
+
+        private static final String RETURN_ONLY_APP_ASSOCIATED_ROLES_IN_JWT_TOKEN =
+                "ReturnOnlyAppAssociatedRolesInJWTToken";
+
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
+        private static final String SHOW_AUTH_FAILURE_REASON_FOR_PASSWORD_GRANT =
+                "ShowAuthFailureReasonForPasswordGrant";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
         private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
@@ -4434,6 +4542,7 @@ public class OAuthServerConfiguration {
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
     }
 
 }

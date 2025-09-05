@@ -27,7 +27,9 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -78,6 +80,8 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGran
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.idp.mgt.util.IdPSecretsProcessor;
@@ -131,11 +135,26 @@ public class DefaultIDTokenBuilderTest {
     private OAuth2AccessTokenRespDTO tokenRespDTO;
     private AuthenticatedUser user;
 
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
+
+    private MockedStatic<Utils> utilsStaticMock;
 
     public DefaultIDTokenBuilderTest() {
 
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+    }
+
+    @BeforeMethod
+    public void init() {
+
+        organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
+    }
+
+    @AfterMethod
+    public void tear() {
+
+        organizationManagementUtil.close();
     }
 
     @BeforeClass
@@ -271,6 +290,9 @@ public class DefaultIDTokenBuilderTest {
         setPrivateField(OpenIDConnectServiceComponentHolder.getInstance(), "claimProviders", claimProviders);
         invokePrivateMethod(JDBCPersistenceManager.getInstance(), "initDataSource");
         mockKeystores();
+
+        utilsStaticMock = mockStatic(Utils.class);
+        utilsStaticMock.when(() -> Utils.isClaimAndOIDCScopeInheritanceEnabled(anyString())).thenReturn(false);
     }
 
     @AfterClass
@@ -281,6 +303,8 @@ public class DefaultIDTokenBuilderTest {
 
     @Test
     public void testBuildIDToken() throws Exception {
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
 
         String clientId = "dabfba9390aa423f8b04332794d83614";
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();

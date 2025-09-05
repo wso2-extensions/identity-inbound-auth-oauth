@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -76,6 +77,7 @@ import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -147,6 +149,9 @@ public class OAuth2ServiceTest {
     @Mock
     private HttpServletRequest mockHttpServletRequest;
 
+    @Mock
+    private IdentityEventService mockIdentityEventService;
+
     private OAuth2Service oAuth2Service;
     private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
     private MockedStatic<LoggerUtils> loggerUtils;
@@ -158,6 +163,7 @@ public class OAuth2ServiceTest {
         setPrivateField(OAuthServerConfiguration.getInstance(), "timeStampSkewInSeconds", 3600L);
         loggerUtils = mockStatic(LoggerUtils.class);
         loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+        OpenIDConnectServiceComponentHolder.setIdentityEventService(mockIdentityEventService);
     }
 
     @AfterMethod
@@ -564,9 +570,21 @@ public class OAuth2ServiceTest {
     @Test
     public void testIssueAccessToken() throws IdentityException {
 
-        try (MockedStatic<AccessTokenIssuer> accessTokenIssuer = mockStatic(AccessTokenIssuer.class)) {
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setOauthConsumerKey(clientId);
+
+        try (MockedStatic<AccessTokenIssuer> accessTokenIssuer = mockStatic(AccessTokenIssuer.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ComponentServiceHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             AccessTokenIssuer mockAccessTokenIssuer = mock(AccessTokenIssuer.class);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId))
+                    .thenReturn(appDO);
+            oAuth2ComponentServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(mockIdentityEventService);
             accessTokenIssuer.when(AccessTokenIssuer::getInstance).thenReturn(mockAccessTokenIssuer);
             when(mockAccessTokenIssuer.issue(any(OAuth2AccessTokenReqDTO.class))).thenReturn(tokenRespDTO);
             assertNotNull(oAuth2Service.issueAccessToken(new OAuth2AccessTokenReqDTO()));

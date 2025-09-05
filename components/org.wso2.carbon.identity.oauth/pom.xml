@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.318-SNAPSHOT</version>
+        <version>7.0.351-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -253,6 +253,10 @@
             <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
             <scope>provided</scope>
@@ -373,7 +377,7 @@
                             ${project.artifactId}
                         </Bundle-SymbolicName>
                         <Private-Package>
-                            org.wso2.carbon.identity.oauth.internal,
+                            org.wso2.carbon.identity.oauth.internal.*,
                         </Private-Package>
                         <Import-Package>
                             javax.cache,
@@ -448,6 +452,14 @@
                             org.wso2.carbon.identity.organization.management.role.management.service.models; version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.models;version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service;
+                            version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception;
+                            version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy;
+                            version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.application.resource.hierarchy.traverse.service;
+                            version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.handler.event.account.lock.service.*;version="${account.lock.service.imp.pkg.version.range}",
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
@@ -469,7 +481,7 @@
                             org.wso2.carbon.identity.oauth.rar.core; version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
-                            !org.wso2.carbon.identity.oauth.internal,
+                            !org.wso2.carbon.identity.oauth.internal.*,
                             !org.wso2.carbon.identity.oauth.common.*,
                             !org.wso2.carbon.identity.oauth.rar.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",

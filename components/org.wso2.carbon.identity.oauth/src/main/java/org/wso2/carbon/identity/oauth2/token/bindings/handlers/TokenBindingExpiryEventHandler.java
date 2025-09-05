@@ -37,7 +37,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -357,11 +357,6 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
     private boolean validateImpersonatingActorInitiatedRevocation(
             AccessTokenDO accessTokenDO, String authenticatedSubjectIdentifier) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return false;
-        }
         boolean isImpersonationRequest = accessTokenDO.getAccessTokenExtendedAttributes() != null &&
                 accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null &&
                 accessTokenDO.getAccessTokenExtendedAttributes().getParameters().containsKey(IMPERSONATING_ACTOR);
@@ -462,6 +457,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
         OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+        if (StringUtils.isNotBlank(consumerKey) && user != null) {
+            AccessTokenEventUtil.publishTokenRevokeEvent(consumerKey, user);
+        }
     }
 
     /**

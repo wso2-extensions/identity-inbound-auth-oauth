@@ -1173,11 +1173,6 @@ public class AuthzUtil {
                                             OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
             throws OAuthProblemException {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
             try {
@@ -1407,8 +1402,16 @@ public class AuthzUtil {
         try {
             redirectURL = doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState,
                     authorizationResponseDTO);
-            String serviceProviderId = oAuthMessage.getRequest().getParameter(SERVICE_PROVIDER_ID);
-            redirectURL = addServiceProviderIdToRedirectURI(redirectURL, serviceProviderId);
+            String callbackURL = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
+            boolean returnSpIdToApps = OAuthServerConfiguration.getInstance().returnSpIdToApps();
+            // If callback is present and redirectURL starts with it, skip.
+            if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
+                    !returnSpIdToApps) {
+                log.debug("Redirecting to app's callback URL. Hence not adding service provider id.");
+            } else {
+                String serviceProviderId = oAuthMessage.getRequest().getParameter(SERVICE_PROVIDER_ID);
+                redirectURL = addServiceProviderIdToRedirectURI(redirectURL, serviceProviderId);
+            }
         } catch (OAuthProblemException ex) {
             if (isFormPostOrFormPostJWTResponseMode(oauth2Params.getResponseMode())) {
                 return handleFailedState(oAuthMessage, oauth2Params, ex, authorizationResponseDTO);
@@ -1590,11 +1593,15 @@ public class AuthzUtil {
         try {
             // Add the service provider id to the redirect URL. This is needed to support application wise branding.
             String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
-            if (StringUtils.isNotBlank(clientId)) {
-                ServiceProvider serviceProvider = getServiceProvider(clientId);
-                if (serviceProvider != null) {
-                    redirectURL = addServiceProviderIdToRedirectURI(redirectURL,
-                            serviceProvider.getApplicationResourceId());
+            String callbackURL = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
+            // If callback is present and redirectURL starts with it, skip.
+            if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
+                    !OAuthServerConfiguration.getInstance().returnSpIdToApps()) {
+                log.debug("Redirecting to app's callback URL. Hence not adding service provider id.");
+            } else if (StringUtils.isNotBlank(clientId)) {
+                ServiceProvider sp = getServiceProvider(clientId);
+                if (sp != null) {
+                    redirectURL = addServiceProviderIdToRedirectURI(redirectURL, sp.getApplicationResourceId());
                 }
             }
         } catch (OAuthSystemException e) {
@@ -1790,11 +1797,6 @@ public class AuthzUtil {
     private static void setImpersonationDetailsToAuthzRequestContext(OAuthMessage oAuthMessage,
                                                               OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
             oAuthAuthzReqMessageContext.setImpersonationRequest(true);
@@ -2151,11 +2153,6 @@ public class AuthzUtil {
 
     private static void setImpersonationDetailsToAuthGrantCache(OAuthMessage oAuthMessage) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = oAuthMessage.getAuthorizationGrantCacheEntry();
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
@@ -4757,10 +4754,8 @@ public class AuthzUtil {
             cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
                     .getMappedRemoteClaims());
         }
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
         // Add impersonation to the session data cache entry.
-        if (isUserSessionImpersonationEnabled && oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             cacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
 

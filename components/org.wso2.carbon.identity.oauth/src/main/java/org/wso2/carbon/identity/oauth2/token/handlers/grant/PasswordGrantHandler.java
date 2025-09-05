@@ -93,7 +93,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ALLOW_SESSION_CREATION;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BASIC_AUTHENTICATOR_CLASS;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -355,8 +354,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
         boolean isPublishPasswordGrantLoginEnabled = Boolean.parseBoolean(
                 IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
-        boolean isShowAuthFailureReason = Boolean.parseBoolean(
-                getBasicAuthenticatorConfigs().getParameterMap().get(SHOW_AUTHFAILURE_RESON_CONFIG));
+        boolean isShowAuthFailureReason =
+                OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant();
         String genericErrorUserName = tokenReq.getResourceOwnerUsername();
         try {
             // Get the user store preference order supplier.

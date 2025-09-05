@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -65,7 +66,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
+import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -73,6 +74,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -3303,5 +3305,156 @@ public class OAuth2UtilTest {
 
         String actualIdTokenIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain, clientID, isMtlsRequest);
         assertEquals(actualIdTokenIssuer, expectedResult);
+    }
+
+    @DataProvider(name = "getAuthenticatedUserDataProvider")
+    public Object[][] getAuthenticatedUserDataProvider() {
+        return new Object[][]{
+                // userId, tenantDomain, clientId, expectedException, mockUserExists
+                {"testuser123", "carbon.super", "testclientid", null, true},
+                {"invaliduser", "carbon.super", "testclientid", IdentityOAuth2Exception.class, false},
+                {null, "carbon.super", "testclientid", IdentityOAuth2Exception.class, false},
+                {"testuser123", "carbon.super", "testclientid", IdentityOAuth2Exception.class, false}
+        };
+    }
+
+    @Test(dataProvider = "getAuthenticatedUserDataProvider")
+    public void testGetAuthenticatedUser(String userId, String tenantDomain, String clientId, 
+                                       Class<? extends Exception> expectedException, boolean mockUserExists) 
+            throws Exception {
+        
+        // Mock dependencies
+        User mockUser = mock(User.class);
+        lenient().when(mockUser.getUserName()).thenReturn("testusername");
+        lenient().when(mockUser.getUserStoreDomain()).thenReturn("PRIMARY");
+        
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(1);
+        
+        // Mock OAuthUtil.getUserFromTenant
+        try (MockedStatic<OAuthUtil> oAuthUtilMockedStatic = mockStatic(OAuthUtil.class)) {
+            if (mockUserExists) {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(mockUser);
+            } else {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(null);
+            }
+            
+            // Mock the overloaded getAuthenticatedUser method
+            try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+                AuthenticatedUser expectedAuthUser = new AuthenticatedUser();
+                expectedAuthUser.setUserId(userId);
+                expectedAuthUser.setUserName("testusername");
+                expectedAuthUser.setUserStoreDomain("PRIMARY");
+                expectedAuthUser.setTenantDomain(tenantDomain);
+                
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(anyString(), anyString(), 
+                        anyString(), anyString(), anyString(), any()))
+                        .thenReturn(expectedAuthUser);
+                
+                // Call the real method
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId))
+                        .thenCallRealMethod();
+                
+                if (expectedException != null) {
+                    assertThrows(expectedException, 
+                            () -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId));
+                } else {
+                    AuthenticatedUser result = OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId);
+                    assertNotNull(result);
+                    if (mockUserExists) {
+                        assertEquals(result.getUserId(), userId);
+                        assertEquals(result.getUserName(), "testusername");
+                        assertEquals(result.getUserStoreDomain(), "PRIMARY");
+                        assertEquals(result.getTenantDomain(), tenantDomain);
+                    }
+                }
+            }
+        }
+    }
+
+    @DataProvider(name = "getOrgAuthenticatedUserDataProvider")
+    public Object[][] getOrgAuthenticatedUserDataProvider() {
+        return new Object[][]{
+                // userId, tenantDomain, userAccessingOrg, userResidentOrg, clientId, expectedException,
+                // mockUserExists, mockResolveOrgSuccessful
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid", null, true, true},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, false, true},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, true, false},
+                {null, "carbon.super", "org1", "org2", "testclientid", IdentityOAuth2Exception.class, true, true}
+        };
+    }
+
+    @Test(dataProvider = "getOrgAuthenticatedUserDataProvider")
+    public void testGetOrgAuthenticatedUser(String userId, String tenantDomain, String userAccessingOrg,
+                                                        String userResidentOrg, String clientId, 
+                                                        Class<? extends Exception> expectedException, 
+                                                        boolean mockUserExists, boolean mockResolveOrgSuccessful) 
+            throws Exception {
+        
+        User mockUser = mock(User.class);
+        lenient().when(mockUser.getUserName()).thenReturn("testusername");
+        lenient().when(mockUser.getUserStoreDomain()).thenReturn("PRIMARY");
+        
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+
+        lenient().when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        lenient().when(tenantManagerMock.getTenantId(anyString())).thenReturn(1);
+        
+        if (mockResolveOrgSuccessful && userResidentOrg != null) {
+            when(organizationManagerMock.resolveTenantDomain(userResidentOrg)).thenReturn("resolved.domain");
+        } else if (userResidentOrg != null) {
+            when(organizationManagerMock.resolveTenantDomain(userResidentOrg))
+                    .thenThrow(new OrganizationManagementException("Failed to resolve organization"));
+        }
+        
+        try (MockedStatic<OAuthUtil> oAuthUtilMockedStatic = mockStatic(OAuthUtil.class)) {
+            if (mockUserExists && userId != null) {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(mockUser);
+            } else {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(null);
+            }
+
+            try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+                AuthenticatedUser expectedAuthUser = new AuthenticatedUser();
+                expectedAuthUser.setUserId(userId);
+                expectedAuthUser.setUserName("testusername");
+                expectedAuthUser.setUserStoreDomain("PRIMARY");
+                expectedAuthUser.setTenantDomain(tenantDomain);
+                
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(anyString(), anyString(), 
+                        anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+                        .thenReturn(expectedAuthUser);
+                
+                // Call the real method under test
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, 
+                        userAccessingOrg, userResidentOrg, clientId))
+                        .thenCallRealMethod();
+                
+                if (expectedException != null) {
+                    assertThrows(expectedException, 
+                            () -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, userAccessingOrg, 
+                                    userResidentOrg, clientId));
+                } else {
+                    AuthenticatedUser result = OAuth2Util.getAuthenticatedUser(userId, tenantDomain, 
+                            userAccessingOrg, userResidentOrg, clientId);
+                    
+                    assertNotNull(result);
+                    if (mockUserExists && userId != null) {
+                        assertEquals(result.getUserId(), userId);
+                        assertEquals(result.getUserName(), "testusername");
+                        assertEquals(result.getUserStoreDomain(), "PRIMARY");
+                        assertEquals(result.getTenantDomain(), tenantDomain);
+                    }
+                }
+            }
+        }
     }
 }

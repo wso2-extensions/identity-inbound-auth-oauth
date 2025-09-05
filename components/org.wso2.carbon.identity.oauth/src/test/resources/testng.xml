@@ -121,6 +121,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.JWTTokenIssuerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.util.OAuthEventPublishingUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtilsTest"/>
             <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
@@ -207,6 +208,7 @@
             <class name="org.wso2.carbon.identity.oauth2.impersonation.ImpersonationConfigMgtTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.util.OAuthEventPublishingUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtilsTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>

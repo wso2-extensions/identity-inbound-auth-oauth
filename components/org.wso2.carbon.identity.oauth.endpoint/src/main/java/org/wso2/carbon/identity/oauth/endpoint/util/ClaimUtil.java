@@ -245,7 +245,10 @@ public class ClaimUtil {
                     // For claim resolving during sub organization impersonation.
                     if (isImpersonatedUser && authenticatedUser.isFederatedUser()
                             && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())) {
-                        realm = getUserRealm(null, authenticatedUser.getUserResidentOrganization());
+                        String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance()
+                                .getOrganizationManager()
+                                .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+                        realm = getUserRealm(null, userResidentOrgHandle);
                     } else {
                         realm = getUserRealm(null, userTenantDomain);
                     }
@@ -404,8 +407,11 @@ public class ClaimUtil {
             if (isSubOrgImpersonatedUser) {
                 resolveRoleClaimForImpersonatedSubOrgUser(authenticatedUser, serviceProvider, userClaims);
             }
+
+            boolean returnOnlyAppAssociatedRoles = OAuthServerConfiguration.getInstance()
+                    .isReturnOnlyAppAssociatedRolesInUserInfo();
             // Resolving roles claim for sub org apps and shared apps since backward compatibility is not needed.
-            if (isRoleClaimRequested && isSubOrgApp) {
+            if (isRoleClaimRequested && (isSubOrgApp || returnOnlyAppAssociatedRoles)) {
                 String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(authenticatedUser,
                         serviceProvider.getApplicationResourceId());
                 if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
@@ -444,7 +450,9 @@ public class ClaimUtil {
         AuthenticatedUser subOrgAuthenticatedUser = new AuthenticatedUser();
         subOrgAuthenticatedUser.setUserId(authenticatedUser.getUserId());
         subOrgAuthenticatedUser.setUserName(authenticatedUser.getUserName());
-        subOrgAuthenticatedUser.setTenantDomain(authenticatedUser.getUserResidentOrganization());
+        String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        subOrgAuthenticatedUser.setTenantDomain(userResidentOrgHandle);
 
         // Get app associated roles.
         String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(subOrgAuthenticatedUser, sharedAppId);

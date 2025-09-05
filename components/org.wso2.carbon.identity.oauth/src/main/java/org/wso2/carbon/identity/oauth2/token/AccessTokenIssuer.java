@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
@@ -398,13 +399,20 @@ public class AccessTokenIssuer {
 
         String syncLockString = authzGrantHandler.buildSyncLockString(tokReqMsgCtx);
         if (StringUtils.isBlank(syncLockString)) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            tokenRespDTO = validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+        } else {
+            synchronized (syncLockString.intern()) {
+                tokenRespDTO = validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+                        tenantDomainOfApp, oAuthAppDO);
+            }
         }
-        synchronized (syncLockString.intern()) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
-                    tenantDomainOfApp, oAuthAppDO);
+
+        if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
         }
+
+        return tokenRespDTO;
     }
 
     private AuthorizationGrantCacheEntry getAuthzGrantCacheEntryFromDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
@@ -422,11 +430,6 @@ public class AccessTokenIssuer {
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                                        OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
             tokReqMsgCtx.setImpersonationRequest(true);
@@ -724,12 +727,6 @@ public class AccessTokenIssuer {
                                                           OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            notifyImpersonation(tokReqMsgCtx);
-            return;
-        }
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
         Map<String, String> requestParams = Arrays.stream(params).collect(Collectors.toMap(RequestParameter::getKey,
                 requestParam -> requestParam.getValue()[0]));
@@ -765,12 +762,8 @@ public class AccessTokenIssuer {
         impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
         String impersonatorUserId = (String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
         impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
-        try {
-            String impersonatedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
-            impersonationNotificationRequestDTO.setSubject(impersonatedUserId);
-        } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception("User ID not found in the token request context.", e);
-        }
+        AuthenticatedUser impersonatedUser = tokReqMsgCtx.getAuthorizedUser();
+        impersonationNotificationRequestDTO.setSubject(impersonatedUser);
         impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
         ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
         notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
@@ -800,11 +793,6 @@ public class AccessTokenIssuer {
                                                                 AuthorizationGrantCacheEntry
                                                                         authorizationGrantCacheEntry) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         if (cacheEntry.getImpersonator() != null) {
             authorizationGrantCacheEntry.setImpersonator(cacheEntry.getImpersonator());
         }
@@ -1482,8 +1470,9 @@ public class AccessTokenIssuer {
                     log.debug("Adding AuthorizationGrantCache entry for the access token");
                 }
             }
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
             authorizationGrantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
         } else {
             if (log.isDebugEnabled()) {

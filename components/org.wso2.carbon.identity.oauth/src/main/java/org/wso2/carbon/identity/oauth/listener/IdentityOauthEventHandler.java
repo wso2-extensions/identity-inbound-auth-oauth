@@ -121,17 +121,23 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
             IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
 
-            Object userIdList = event.getEventProperties()
+            Object deletedUserIdListObj = event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
+            Object addedUserIdListObj = event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.NEW_USER_ID_LIST);
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
-            List<String> deletedUserIDList;
 
-            if (userIdList instanceof List<?>) {
-                deletedUserIDList = (List<String>) userIdList;
+            if (deletedUserIdListObj instanceof List<?>) {
+                List<String> deletedUserIDList = (List<String>) deletedUserIdListObj;
                 terminateSession(deletedUserIDList, roleId, tenantDomain);
+                removeAuthzGrantCacheForUserList(deletedUserIDList, tenantDomain);
+            }
+            if (addedUserIdListObj instanceof List<?>) {
+                List<String> addedUserIDList = (List<String>) addedUserIdListObj;
+                removeAuthzGrantCacheForUserList(addedUserIDList, tenantDomain);
             }
 
         } else if (IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
@@ -522,6 +528,35 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         }
     }
 
+    private void removeAuthzGrantCacheForUserList(List<String> userIDList, String tenantDomain) {
+
+        try {
+            if (CollectionUtils.isNotEmpty(userIDList)) {
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                UserStoreManager userStoreManager = getUserStoreManager(tenantId);
+
+                for (String userId : userIDList) {
+                    try {
+                        User user = ((AbstractUserStoreManager) userStoreManager).getUser(userId, null);
+                        if (user == null) {
+                            log.warn("User not found for user id: " + userId + ". Hence skipping " +
+                                    "authorization grant cache clearance.");
+                            continue;
+                        }
+                        String userName = user.getUsername();
+                        String domain = user.getUserStoreDomain();
+                        UserStoreManager userStoreManagerOfUser = getUserStoreManager(userStoreManager, domain);
+                        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManagerOfUser);
+                    } catch (UserStoreException e) {
+                        log.error("Error occurred while clearing authorization grant cache for user: " + userId, e);
+                    }
+                }
+            }
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            log.error("Error occurred while retrieving user manager.", e);
+        }
+    }
+
     /**
      * Get the user store manager of the user.
      *
@@ -534,6 +569,15 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         String userStoreDomainOfUser = IdentityUtil.extractDomainFromName(userName);
         UserStoreManager secondaryUserStoreManager = userStoreManager.getSecondaryUserStoreManager(
                 userStoreDomainOfUser);
+        if (secondaryUserStoreManager == null) {
+            return userStoreManager;
+        }
+        return secondaryUserStoreManager;
+    }
+
+    private UserStoreManager getUserStoreManager(UserStoreManager userStoreManager, String domainName) {
+
+        UserStoreManager secondaryUserStoreManager = userStoreManager.getSecondaryUserStoreManager(domainName);
         if (secondaryUserStoreManager == null) {
             return userStoreManager;
         }

@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
@@ -32,7 +31,6 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -43,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtSe
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -76,20 +73,19 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
         return new Object[][]{
                 // response type, existingImpersonatedUserId, impersonatedUserIdInReq,
                 // rejectImpersonation, ssoImpersonation, validImpersonation
-                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", null, null, false, false, true, true},
-                {SUBJECT_TOKEN, null, "impersonatedUserId", null, null, false, false, true, true},
-                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", null, null, true, false, false, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", null, null, false, false, true},
+                {SUBJECT_TOKEN, null, "impersonatedUserId", null, null, false, false, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", null, null, true, false, false},
                 // Invalid impersonation request
-                {SUBJECT_TOKEN, "impersonatedUserId", null, null, null, false, false, false, true},
-                {SUBJECT_TOKEN, null, null, null, null, false, false, false, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", null, null, null, false, false, false},
+                {SUBJECT_TOKEN, null, null, null, null, false, false, false},
                 // SSO cases.
-                {CODE, "impersonatedUserId", "impersonatedUserId", null, null, false, true, true, true},
-                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", null, null, false, true, false, true},
+                {CODE, "impersonatedUserId", "impersonatedUserId", null, null, false, true, true},
+                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", null, null, false, true, false},
                 // Disabled.
-                {CODE, "impersonatedUserId", "impersonatedUserId", null, null, false, true, false, false},
                 {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", "dummyOrg1", "dummyOrg1", false, false,
-                        true, true},
-                {CODE, "impersonatedUserId", "impersonatedUserId", "dummyOrg1", "dummyOrg1", false, true, true, true},
+                        true},
+                {CODE, "impersonatedUserId", "impersonatedUserId", "dummyOrg1", "dummyOrg1", false, true, true},
         };
     }
 
@@ -98,24 +94,13 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
                                                String impersonatedUserIdInReq,
                                                String residentOrg, String accessingOrg,
                                                boolean rejectImpersonation,
-                                     boolean ssoImpersonation, boolean validImpersonation,
-                                               boolean isUserSessionImpersonationEnabled) throws Exception {
+                                     boolean ssoImpersonation, boolean validImpersonation) throws Exception {
 
         String dummyClientId = "dummyClientId";
 
         try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-            MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class);
-            MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                    OAuthServerConfiguration.class);
-            MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
-
-            OAuthServerConfiguration mockedOAuthServerConfiguration =  mock(OAuthServerConfiguration.class);
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockedOAuthServerConfiguration);
-            when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(
-                    isUserSessionImpersonationEnabled);
+            MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class);) {
 
             Cookie authCookie = mock(Cookie.class);
             SessionContext sessionContext = mock(SessionContext.class);
@@ -213,48 +198,26 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(impersonationMgtService.validateImpersonationRequest(any(ImpersonationRequestDTO.class)))
                     .thenReturn(resultContext);
 
-            try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
-                // Invoke impersonation validation.
-                when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
+            // Invoke impersonation validation.
+            when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
 
-                if (residentOrg != null && accessingOrg != null) {
-                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
-                            impersonatedUserIdInReq, impersonator.getTenantDomain(), accessingOrg, residentOrg,
-                            dummyClientId)).thenReturn(impersonatedUser);
-                } else {
-                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
-                            impersonatedUserIdInReq, impersonator.getTenantDomain(),
-                            dummyClientId)).thenReturn(impersonatedUser);
-                }
+            // Invoke handleSessionImpersonation method.
+            Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(
+                    "handleSessionImpersonation", OAuthMessage.class, String.class, OAuth2Parameters.class,
+                    AuthenticationResult.class);
+            handleSessionImpersonation.setAccessible(true);
 
-
-
-                // Invoke handleSessionImpersonation method.
-                Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(
-                        "handleSessionImpersonation", OAuthMessage.class, String.class, OAuth2Parameters.class,
-                        AuthenticationResult.class);
-                handleSessionImpersonation.setAccessible(true);
-
-                if (!isUserSessionImpersonationEnabled) {
+            if (rejectImpersonation) {
+                assertThrows(Exception.class, () -> {
                     handleSessionImpersonation.invoke(null,
-                            oAuthMessage, "", oAuth2Parameters, authenticationResult);
-                    assertEquals("Impersonation should not be allowed when impersonation is disabled.",
-                            authenticationResult.getSubject().getUserId(), impersonator.getUserId());
-                    return;
-                }
-
-                if (rejectImpersonation) {
-                    assertThrows(Exception.class, () -> {
-                        handleSessionImpersonation.invoke(null,
-                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
-                    });
-                } else {
-                    if (ssoImpersonation) {
-                        handleSessionImpersonation.invoke(null,
-                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
-                        assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
-                                impersonatedUser.getUserId()), validImpersonation);
-                    }
+                            oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
+                });
+            } else {
+                if (ssoImpersonation) {
+                    handleSessionImpersonation.invoke(null,
+                            oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
+                    assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
+                            impersonatedUser.getUserId()), validImpersonation);
                 }
             }
         }

@@ -18,12 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.token;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
+import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -32,6 +34,8 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -101,32 +105,41 @@ public class OAuth2TokenEndpoint {
                                      String payload) throws
             OAuthSystemException, InvalidRequestParentException {
 
-        Map<String, List<String>> paramMap;
+        boolean isEnteredTokenIssueFlow = false;
         try {
-            // Start super tenant flow only if tenant qualified URLs are disabled.
-            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                startSuperTenantFlow();
+            Map<String, List<String>> paramMap;
+            try {
+                // Start super tenant flow only if tenant qualified URLs are disabled.
+                if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                    startSuperTenantFlow();
+                }
+                paramMap = parseJsonTokenRequest(payload);
+                isEnteredTokenIssueFlow = enterFlow(Flow.Name.TOKEN_ISSUE, isClientCredentialsGrant(paramMap));
+
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+                if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.get(PROP_CLIENT_ID));
+                }
+                diagnosticLogBuilder.resultMessage("Successfully received the token request.")
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            } catch (TokenEndpointBadRequestException e) {
+                triggerOnTokenExceptionListeners(e, request, null);
+                throw e;
+            } finally {
+                if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                    PrivilegedCarbonContext.endTenantFlow();
+                }
             }
-            paramMap = parseJsonTokenRequest(payload);
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
-            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
-                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.get(PROP_CLIENT_ID));
-            }
-            diagnosticLogBuilder.resultMessage("Successfully received the token request.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-        } catch (TokenEndpointBadRequestException e) {
-            triggerOnTokenExceptionListeners(e, request, null);
-            throw e;
+            return issueAccessToken(request, response, paramMap);
         } finally {
-            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                PrivilegedCarbonContext.endTenantFlow();
+            if (isEnteredTokenIssueFlow) {
+                IdentityContext.getThreadLocalIdentityContext().exitFlow();
             }
         }
-        return issueAccessToken(request, response, paramMap);
     }
 
     @POST
@@ -137,19 +150,25 @@ public class OAuth2TokenEndpoint {
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
-            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
-                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.getFirst(PROP_CLIENT_ID));
+        try {
+            enterFlow(Flow.Name.TOKEN_ISSUE, isClientCredentialsGrant(paramMap));
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+                if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                            paramMap.getFirst(PROP_CLIENT_ID));
+                }
+                diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("Successfully received the token request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
-            diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .resultMessage("Successfully received the token request.")
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            return issueAccessToken(request, response, (Map<String, List<String>>) paramMap);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
-        return issueAccessToken(request, response, (Map<String, List<String>>) paramMap);
     }
 
     protected Response issueAccessToken(HttpServletRequest request, HttpServletResponse response,
@@ -444,5 +463,44 @@ public class OAuth2TokenEndpoint {
         tokenReqDTO.setActorToken(oauthRequest.getParam(OAuthConstants.ACTOR_TOKEN));
 
         return tokenReqDTO;
+    }
+
+    private boolean enterFlow(Flow.Name flowName, boolean isClientCredentialGrant) {
+
+        Flow flow = new Flow.Builder()
+                .name(flowName)
+                .initiatingPersona(getFlowInitiatingPersona(isClientCredentialGrant))
+                .build();
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
+        return true;
+    }
+
+    private Flow.InitiatingPersona getFlowInitiatingPersona(boolean isClientCredentialGrant) {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow != null) {
+            return existingFlow.getInitiatingPersona();
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor() || isClientCredentialGrant) {
+            return Flow.InitiatingPersona.APPLICATION;
+        }
+        return Flow.InitiatingPersona.USER;
+    }
+
+    private boolean isClientCredentialsGrant(MultivaluedMap<String, String> paramMap) {
+
+        if (MapUtils.isEmpty(paramMap)) {
+            return false;
+        }
+        return OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(paramMap.getFirst(OAuth.OAUTH_GRANT_TYPE));
+    }
+
+    private boolean isClientCredentialsGrant(Map<String, List<String>> paramMap) {
+
+        if (MapUtils.isEmpty(paramMap)) {
+            return false;
+        }
+        List<String> grantTypes = paramMap.get(OAuth.OAUTH_GRANT_TYPE);
+        return !CollectionUtils.isEmpty(grantTypes) &&
+                OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantTypes.get(0));
     }
 }

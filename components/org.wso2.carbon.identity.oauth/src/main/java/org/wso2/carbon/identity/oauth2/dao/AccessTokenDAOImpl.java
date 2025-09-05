@@ -357,7 +357,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                         getTokenPersistRetryCount());
                 String errorMsg = "Access Token for consumer key : " + consumerKey + ", user : " +
-                        accessTokenDO.getAuthzUser() + " and scope : " +
+                        accessTokenDO.getAuthzUser().getLoggableMaskedUserId() + " and scope : " +
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()) + "already exists";
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
@@ -376,7 +376,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                             getTokenPersistRetryCount());
                     String errorMsg = "Access Token for consumer key : " + consumerKey + ", user : " +
-                            accessTokenDO.getAuthzUser() + " and scope : " +
+                            accessTokenDO.getAuthzUser().getLoggableMaskedUserId() + " and scope : " +
                             OAuth2Util.buildScopeString(accessTokenDO.getScope()) + "already exists";
                     throw new IdentityOAuth2Exception(errorMsg, e);
                 }
@@ -399,7 +399,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     log.error("'CON_APP_KEY' constrain violation retry count exceeds above the maximum count - " +
                             getTokenPersistRetryCount());
                     String errorMsg = "Access Token for consumer key : " + consumerKey + ", user : " +
-                            accessTokenDO.getAuthzUser() + " and scope : " +
+                            accessTokenDO.getAuthzUser().getLoggableMaskedUserId() + " and scope : " +
                             OAuth2Util.buildScopeString(accessTokenDO.getScope()) + "already exists";
                     throw new IdentityOAuth2Exception(errorMsg, e);
                 }

@@ -24,6 +24,7 @@ import com.nimbusds.jwt.JWTParser;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -48,6 +49,7 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -81,6 +83,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     private UserInfoJWTResponse userInfoJWTResponse;
     Connection con = null;
     MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+    private MockedStatic<Utils> utilsStaticMock;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -99,6 +102,14 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters()
                 .add(new OpenIDConnectClaimFilterImpl());
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
+        utilsStaticMock = mockStatic(Utils.class);
+        utilsStaticMock.when(() -> Utils.isClaimAndOIDCScopeInheritanceEnabled(anyString())).thenReturn(false);
+    }
+
+    @AfterClass
+    public void tearDownClass() {
+
+        utilsStaticMock.close();
     }
 
     @BeforeMethod
