@@ -406,7 +406,11 @@ public class AccessTokenIssuer {
         }
 
         if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
-            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            try {
+                AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            } catch (OrganizationManagementException | IdentityOAuth2Exception | UserIdNotFoundException  e) {
+                log.error("Error while publishing POST_ISSUE_ACCESS_TOKEN_V2 event. Event not published.", e);
+            }
         }
 
         return tokenRespDTO;

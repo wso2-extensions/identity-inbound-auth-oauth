@@ -28,6 +28,7 @@ public class OIDCConstants {
     public static final String IDN_OIDC_REQ_OBJECT_CLAIMS = "STORE_IDN_OIDC_REQ_OBJECT_CLAIMS";
     public static final String HAS_NON_OIDC_CLAIMS = "hasNonOIDCClaims";
     public static final String ID_TOKEN_USER_CLAIMS_PROP_KEY = "IDTokenUserClaims";
+    public static final String TOKEN_ID = "TOKEN_ID";
 
     /**
      * This class is used to define constants related to OIDC event specific features.
@@ -51,6 +52,14 @@ public class OIDCConstants {
         public static final String OLD_ACCESS_TOKEN = "OLD_ACCESS_TOKEN";
         public static final String POST_REFRESH_TOKEN = "POST_REFRESH_TOKEN";
         public static final String IS_REQUEST_OBJECT_FLOW = "IS_REQUEST_OBJECT_FLOW";
+        public static final String CLIENT_ID = "CLIENT_ID";
+        public static final String USER_TYPE = "USER_TYPE";
+        public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
+        public static final String ISSUED_TIME = "ISSUED_TIME";
+        public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
+        public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
+        public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
+        public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
     }
 }
 

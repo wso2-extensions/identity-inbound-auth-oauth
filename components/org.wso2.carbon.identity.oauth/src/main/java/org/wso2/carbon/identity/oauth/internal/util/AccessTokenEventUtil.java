@@ -18,17 +18,21 @@
 
 package org.wso2.carbon.identity.oauth.internal.util;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -36,12 +40,16 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.EXISTING_TOKEN_USED;
 
 /**
  * Utility class for publishing OAuth related events.
@@ -241,7 +249,7 @@ public class AccessTokenEventUtil {
      */
     public static void publishTokenIssueEvent(OAuthTokenReqMessageContext tokReqMsgCtx,
                                               OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO)
-            throws UserIdNotFoundException {
+            throws UserIdNotFoundException, OrganizationManagementException, IdentityOAuth2Exception {
 
         HashMap<String, Object> properties = new HashMap<>();
 
@@ -259,6 +267,16 @@ public class AccessTokenEventUtil {
         }
 
         if (tokReqMsgCtx != null) {
+
+            String issuerTenant = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+            String issuerOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(issuerTenant);
+            String accessingOrganizationId = StringUtils.EMPTY;
+            if (tokReqMsgCtx.getAuthorizedUser() != null
+                    && tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
+                accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
+            }
+
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
                 properties.put(IdentityEventConstants.EventProperty.USER_ID,
                         tokReqMsgCtx.getAuthorizedUser().getUserId());
@@ -272,9 +290,24 @@ public class AccessTokenEventUtil {
                         tokReqMsgCtx.getAuthorizedUser().getUserResidentOrganization());
             }
 
+            properties.put(OIDCConstants.Event.USER_TYPE,
+                    tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
+            properties.put(OIDCConstants.Event.CLIENT_ID,
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            properties.put(OIDCConstants.Event.ISSUED_TIME,
+                    String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime()));
+            properties.put(EXISTING_TOKEN_USED,
+                    String.valueOf(existingTokenUsed(tokReqMsgCtx)));
+            properties.put(OIDCConstants.Event.SERVICE_PROVIDER, OAuth2Util.getServiceProvider(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), issuerTenant).getApplicationName());
+            properties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, issuerOrganizationId);
+            properties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+            properties.put(OIDCConstants.Event.TOKEN_ID, tokReqMsgCtx.getProperty(OIDCConstants.TOKEN_ID));
+
             properties.put(IdentityEventConstants.EventProperty.IAT, tokReqMsgCtx.getAccessTokenIssuedTime());
             properties.put(IdentityEventConstants.EventProperty.JTI, tokReqMsgCtx.getJWTID());
             properties.put(IdentityEventConstants.EventProperty.GRANT_TYPE, oAuth2AccessTokenReqDTO.getGrantType());
+            properties.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, IdentityTenantUtil.getLoginTenantId());
 
             if (tokReqMsgCtx.getProperty(APP_DAO) != null &&
                     tokReqMsgCtx.getProperty(APP_DAO) instanceof OAuthAppDO) {
@@ -297,5 +330,14 @@ public class AccessTokenEventUtil {
         } catch (IdentityEventException e) {
             LOG.error("Error occurred publishing event " + IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, e);
         }
+    }
+
+    private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        Boolean existingTokenUsed = (Boolean) tokReqMsgCtx.getProperty(EXISTING_TOKEN_USED);
+        if (existingTokenUsed == null) {
+            existingTokenUsed = false;
+        }
+        return existingTokenUsed;
     }
 }
