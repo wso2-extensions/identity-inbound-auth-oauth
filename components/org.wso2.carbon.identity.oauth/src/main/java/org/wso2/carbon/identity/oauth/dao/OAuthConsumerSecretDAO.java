@@ -60,14 +60,13 @@ public class OAuthConsumerSecretDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String processedClientSecret =
                     persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
-            long expiryTime = System.currentTimeMillis() + consumerSecretDO.getExpiryTime() * 1000;
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER_SECRET)) {
                 prepStmt.setString(1, consumerSecretDO.getSecretId());
                 prepStmt.setString(2, consumerSecretDO.getDescription());
                 prepStmt.setString(3, consumerSecretDO.getClientId());
                 prepStmt.setString(4, processedClientSecret);
-                prepStmt.setLong(5, expiryTime);
+                prepStmt.setLong(5, consumerSecretDO.getExpiresAt());
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
@@ -118,7 +117,7 @@ public class OAuthConsumerSecretDAO {
                         secret.setDescription(resultSet.getString(2));
                         secret.setClientId(resultSet.getString(3));
                         secret.setSecretValue(resultSet.getString(4));
-                        secret.setExpiryTime(resultSet.getLong(5));
+                        secret.setExpiresAt(resultSet.getLong(5));
                         consumerSecrets.add(secret);
                     }
                 }

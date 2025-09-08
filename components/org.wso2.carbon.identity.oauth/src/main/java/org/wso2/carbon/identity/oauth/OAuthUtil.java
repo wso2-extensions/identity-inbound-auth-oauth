@@ -510,9 +510,9 @@ public final class OAuthUtil {
         OAuthConsumerSecretDTO consumerSecretDTO = new OAuthConsumerSecretDTO();
         consumerSecretDTO.setClientId(consumerSecretDO.getClientId());
         consumerSecretDTO.setDescription(consumerSecretDO.getDescription());
-        consumerSecretDTO.setExpiryTime(consumerSecretDO.getExpiryTime());
+        consumerSecretDTO.setExpiresAt(consumerSecretDO.getExpiresAt());
         consumerSecretDTO.setSecretId(consumerSecretDO.getSecretId());
-        consumerSecretDTO.setSecretValue(consumerSecretDO.getSecretValue());
+        consumerSecretDTO.setClientSecret(consumerSecretDO.getSecretValue());
         return consumerSecretDTO;
     }
 

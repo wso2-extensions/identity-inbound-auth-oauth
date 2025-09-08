@@ -22,7 +22,7 @@ public class OAuthConsumerSecretDO {
     private String description;
     private String clientId;
     private String secretValue;
-    private long expiryTime;
+    private long expiresAt;
 
     public String getSecretId() {
         return secretId;
@@ -56,11 +56,11 @@ public class OAuthConsumerSecretDO {
         this.secretValue = secretValue;
     }
 
-    public long getExpiryTime() {
-        return expiryTime;
+    public long getExpiresAt() {
+        return expiresAt;
     }
 
-    public void setExpiryTime(long expiryTime) {
-        this.expiryTime = expiryTime;
+    public void setExpiresAt(long expiryTime) {
+        this.expiresAt = expiryTime;
     }
 }
