@@ -878,7 +878,7 @@
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
 
         <!--SAML Common Util Version-->
-        <saml.common.util.version>1.3.0</saml.common.util.version>
+        <saml.common.util.version>1.3.1</saml.common.util.version>
         <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Account lock service versions -->
@@ -904,7 +904,7 @@
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
         <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v6</waffle-jna.wso2.version>
+        <waffle-jna.wso2.version>1.6.wso2v7</waffle-jna.wso2.version>
         <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
         <nimbusds.version>9.37.3.wso2v1</nimbusds.version>
@@ -937,7 +937,7 @@
         <json-smart.version>2.6.0</json-smart.version>
         <version.org.wso2.orbit.javax.xml.bind>2.3.1.wso2v1</version.org.wso2.orbit.javax.xml.bind>
         <version.org.wso2.orbit.javax.activation>1.1.1.wso2v1</version.org.wso2.orbit.javax.activation>
-        <net.minidev.accessors-smart.version>2.5.2</net.minidev.accessors-smart.version>
+        <net.minidev.accessors-smart.version>2.6.0</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
 
