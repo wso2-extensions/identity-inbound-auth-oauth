@@ -395,7 +395,7 @@ public class OAuthAdminServiceImpl {
         consumerSecret.setDescription(consumerSecretDTO.getDescription());
         consumerSecret.setClientId(consumerSecretDTO.getClientId());
         consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
-        consumerSecret.setExpiryTime(consumerSecretDTO.getExpiryTime());
+        consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
         consumerSecretDAO.addOAuthConsumerSecret(consumerSecret);
         return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
@@ -525,7 +525,20 @@ public class OAuthAdminServiceImpl {
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+
+            // Always check single secret from appDO.
+            boolean isSecretValid = StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(),
+                    oauthappdo.getOauthConsumerSecret());
+
+            // If not valid, and multi-secret feature is enabled, check against all the secrets of the client
+            if (!isSecretValid && OAuth2Util.isMultipleClientSecretsEnabled()) {
+                List<String> activeSecrets = OAuth2Util.getClientSecrets(oauthConsumerKey); // fetch from new table
+                isSecretValid = activeSecrets.stream()
+                        .anyMatch(secret -> StringUtils.equals(secret, consumerAppDTO.getOauthConsumerSecret()));
+            }
+
+            // If still invalid, throw an error
+            if (!isSecretValid) {
                 errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
                         "consumerKey: " + oauthConsumerKey;
                 if (LOG.isDebugEnabled()) {
