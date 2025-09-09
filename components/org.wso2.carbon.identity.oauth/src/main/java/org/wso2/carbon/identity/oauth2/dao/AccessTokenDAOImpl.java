@@ -1787,10 +1787,29 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
      * @param authenticatedUser Authenticated user object.
      * @return Access tokens as a set of AccessTokenDO
      * @throws IdentityOAuth2Exception If any errors occurred.
+     * 
+     * @deprecated Use {@link #getAccessTokensByUserForOpenidScope(AuthenticatedUser, boolean)} instead.
      */
+    @Deprecated
     @Override
     public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
+
+        return getAccessTokensByUserForOpenidScope(authenticatedUser, false);
+    }
+
+    /**
+     * Returns the set of access tokens issued for the user which are having openid scope.
+     *
+     * @param authenticatedUser Authenticated user object.
+     * @param includeExpiredAccessTokensWithActiveRefreshToken Whether to include expired access tokens
+     *                                                         if their refresh token is still active.
+     * @return Access tokens as a set of AccessTokenDO
+     * @throws IdentityOAuth2Exception If any errors occurred.
+     */
+    @Override
+    public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser,
+            boolean includeExpiredAccessTokensWithActiveRefreshToken) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving access tokens of user: " + authenticatedUser.toString());
@@ -1821,7 +1840,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             ps.setString(5, OAuthConstants.Scope.OPENID);
             rs = ps.executeQuery();
 
-            Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs);
+            Map<String, AccessTokenDO> tokenMap = getAccessTokenDOMapFromResultSet(authenticatedUser, rs,
+                    includeExpiredAccessTokensWithActiveRefreshToken);
 
             connection.commit();
             accessTokens = new HashSet<>(tokenMap.values());
@@ -1837,14 +1857,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     private Map<String, AccessTokenDO> getAccessTokenDOMapFromResultSet(AuthenticatedUser authenticatedUser,
-                                                                        ResultSet rs) throws SQLException,
-            IdentityOAuth2Exception {
+                ResultSet rs, boolean includeExpiredAccessTokensWithActiveRefreshToken)
+            throws SQLException, IdentityOAuth2Exception {
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
         while (rs.next()) {
             Timestamp timeCreated = rs.getTimestamp(4, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
             long issuedTimeInMillis = timeCreated.getTime();
             long validityPeriodInMillis = rs.getLong(5);
+            Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+            long refreshTokenValidityPeriodInMillis = rs.getLong(7);
 
             /*
              * Tokens returned by this method will be used to clear claims cached against the tokens.
@@ -1852,16 +1874,19 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
              * performance.
              * Tokens issued for openid scope can contain cached claims against them.
              * Tokens that are in ACTIVE state and not expired should be removed from the cache.
+             * Also, if the includeExpiredAccessTokensWithActiveRefreshToken is true, tokens that are time-expired
+             * but have a still-valid refresh token associate with it, will be included.
              */
-            if (isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+            boolean isAccessTokenExpired = isTokenExpired(issuedTimeInMillis, validityPeriodInMillis);
+            boolean isRefreshTokenExpired = isTokenExpired(refreshTokenTimeCreated.getTime(),
+                    refreshTokenValidityPeriodInMillis);
+            if (isAccessTokenExpired && (!includeExpiredAccessTokensWithActiveRefreshToken || isRefreshTokenExpired)) {
                 continue;
             }
 
             String accessToken = getPersistenceProcessor().getPreprocessedAccessTokenIdentifier(rs.getString(1));
             String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(rs.getString(2));
             String tokenId = rs.getString(3);
-            Timestamp refreshTokenTimeCreated = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
-            long refreshTokenValidityPeriodInMillis = rs.getLong(7);
             String consumerKey = rs.getString(8);
             String grantType = rs.getString(9);
 
@@ -3049,7 +3074,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 long issuedTimeInMillis = timeCreated.getTime();
                 long validityPeriodInMillis = rs.getLong(4);
 
-                if (!isAccessTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
+                if (!isTokenExpired(issuedTimeInMillis, validityPeriodInMillis)) {
                     AccessTokenDO accessTokenDO = new AccessTokenDO();
                     accessTokenDO.setAccessToken(accessToken);
                     accessTokenDO.setTokenId(tokenId);
@@ -3163,7 +3188,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
      * @param validityPeriodMillis
      * @return true if access token is expired. False if not.
      */
-    private boolean isAccessTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
+    private boolean isTokenExpired(long issuedTimeInMillis, long validityPeriodMillis) {
 
         return OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodMillis) < 0;
     }
