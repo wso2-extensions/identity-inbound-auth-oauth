@@ -335,7 +335,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
              claims are usually cached against tokens or auth codes, otherwise.
              */
             accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser, true);
             authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
             removeAccessTokensFromCache(accessTokenDOSet);
