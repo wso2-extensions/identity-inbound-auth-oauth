@@ -49,12 +49,7 @@ public class OldTokensCleanDAO {
         try {
             connection.setAutoCommit(false);
             if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
-                String sql;
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT_WITH_IDP_NAME;
-                } else {
-                    sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT;
-                }
+                String sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT_WITH_IDP_NAME;
                 PreparedStatement prepStmt = connection.prepareStatement(sql);
                 prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
                 prepStmt.setString(2, tokenId);
@@ -71,12 +66,7 @@ public class OldTokensCleanDAO {
     public void cleanupTokenByTokenValue(String token, Connection connection) throws SQLException {
         OldAccessTokenDO oldAccessTokenObject = new OldAccessTokenDO();
 
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH_WITH_IDP_NAME;
-        } else {
-            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH;
-        }
+        String sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH_WITH_IDP_NAME;
 
         PreparedStatement prepStmt = connection.prepareStatement(sql);
         prepStmt.setString(1, token);
@@ -115,10 +105,7 @@ public class OldTokensCleanDAO {
             }
 
             oldAccessTokenObject.setAuthorizedOrganizationId(resultSet.getString(22));
-
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                oldAccessTokenObject.setIdpId(resultSet.getInt(23));
-            }
+            oldAccessTokenObject.setIdpId(resultSet.getInt(23));
         }
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
             saveTokenInAuditTable(oldAccessTokenObject, connection);
@@ -128,12 +115,7 @@ public class OldTokensCleanDAO {
 
     private void saveTokenInAuditTable(OldAccessTokenDO oldAccessTokenDAO, Connection connection) throws SQLException {
 
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            sql = SQLQueries.STORE_OLD_TOKEN_IN_AUDIT_WITH_IDP_NAME;
-        } else {
-            sql = SQLQueries.STORE_OLD_TOKEN_IN_AUDIT;
-        }
+        String sql = SQLQueries.STORE_OLD_TOKEN_IN_AUDIT_WITH_IDP_NAME;
 
         PreparedStatement insertintoaudittable = connection.prepareStatement(sql);
         insertintoaudittable.setString(1, oldAccessTokenDAO.getTokenId());
@@ -164,9 +146,7 @@ public class OldTokensCleanDAO {
         }
         insertintoaudittable.setString(22, Boolean.toString(oldAccessTokenDAO.isConsentedToken()));
         insertintoaudittable.setString(23, oldAccessTokenDAO.getAuthorizedOrganizationId());
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            insertintoaudittable.setInt(24, oldAccessTokenDAO.getIdpId());
-        }
+        insertintoaudittable.setInt(24, oldAccessTokenDAO.getIdpId());
         insertintoaudittable.execute();
         if (log.isDebugEnabled()) {
             log.debug(

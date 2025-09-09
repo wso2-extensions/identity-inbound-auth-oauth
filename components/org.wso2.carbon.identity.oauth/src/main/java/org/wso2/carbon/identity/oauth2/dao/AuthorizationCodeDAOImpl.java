@@ -96,12 +96,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         String userDomain = OAuth2Util.getUserStoreDomain(authzCodeDO.getAuthorizedUser());
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
         try {
-            String sql;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME;
-            } else {
-                sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE;
-            }
+            String sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME;
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, authzCodeDO.getAuthzCodeId());
@@ -122,14 +117,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
             int appTenantId = IdentityTenantUtil.getTenantId(appTenantDomain);
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(15, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                prepStmt.setInt(16, appTenantId);
-                prepStmt.setInt(17, appTenantId);
-            } else {
-                prepStmt.setInt(15, appTenantId);
-            }
+            prepStmt.setString(15, authenticatedIDP);
+            // Set tenant ID of the IDP by considering it is same as appTenantID.
+            prepStmt.setInt(16, appTenantId);
+            prepStmt.setInt(17, appTenantId);
 
             prepStmt.execute();
 
@@ -235,12 +226,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             long validityPeriod = 0;
             int tenantId;
 
-            String sql;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE_IDP_NAME;
-            } else {
-                sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE;
-            }
+            String sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE_IDP_NAME;
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
@@ -266,10 +252,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 subjectIdentifier = resultSet.getString(12);
                 pkceCodeChallenge = resultSet.getString(13);
                 pkceCodeChallengeMethod = resultSet.getString(14);
-                String authenticatedIDP = null;
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    authenticatedIDP = resultSet.getString(15);
-                }
+                String authenticatedIDP = resultSet.getString(15);
                 user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain,
                         authenticatedIDP);
                 ServiceProvider serviceProvider;
@@ -690,12 +673,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         List<AuthzCodeDO> latestAuthzCodes = new ArrayList<>();
         try {
-            String sqlQuery;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_TENANT_IDP_NAME;
-            } else {
-                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_TENANT;
-            }
+            String sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_TENANT_IDP_NAME;
             ps = connection.prepareStatement(sqlQuery);
             ps.setInt(1, tenantId);
             rs = ps.executeQuery();
@@ -713,10 +691,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                             ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
                 }
                 String userStoreDomain = rs.getString(9);
-                String authenticatedIDP = null;
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    authenticatedIDP = rs.getString(10);
-                }
+                String authenticatedIDP = rs.getString(10);
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
                         .getTenantDomain(tenantId), authenticatedIDP);
@@ -759,12 +734,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         List<AuthzCodeDO> latestAuthzCodes = new ArrayList<>();
         try {
-            String sqlQuery;
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_USER_DOMAIN_IDP_NAME;
-            } else {
-                sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_USER_DOMAIN;
-            }
+            String sqlQuery = SQLQueries.LIST_LATEST_AUTHZ_CODES_IN_USER_DOMAIN_IDP_NAME;
             ps = connection.prepareStatement(sqlQuery);
             ps.setInt(1, tenantId);
             ps.setString(2, userStoreDomain);
@@ -782,10 +752,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
                             ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
                 }
-                String authenticatedIDP = null;
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    authenticatedIDP = rs.getString(9);
-                }
+                String authenticatedIDP = rs.getString(9);
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain, OAuth2Util
                         .getTenantDomain(tenantId), authenticatedIDP);

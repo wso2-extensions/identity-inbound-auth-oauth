@@ -232,6 +232,8 @@ public class OIDCClaimUtil {
     /**
      * Filter user claims based on consent with the highest priority {@link OpenIDConnectClaimFilter}. Consent based
      * user claims filtering can be configured at the global level, as well as the service provider level.
+     *
+     * @deprecated Access token DAO has flag to indicate whether the token is consented or not.
      */
     public static Map<String, Object> filterUserClaimsBasedOnConsent(Map<String, Object> userClaims,
                                                                      AuthenticatedUser authenticatedUser,
@@ -288,23 +290,18 @@ public class OIDCClaimUtil {
                                                                      ServiceProvider serviceProvider,
                                                                      boolean isConsentedToken) {
 
-        if (!OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            return filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId, spTenantDomain, grantType,
-                    serviceProvider);
+        if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
+            return OpenIDConnectServiceComponentHolder.getInstance()
+                    .getHighestPriorityOpenIDConnectClaimFilter()
+                    .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
         } else {
-            if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
-                return OpenIDConnectServiceComponentHolder.getInstance()
-                        .getHighestPriorityOpenIDConnectClaimFilter()
-                        .getClaimsFilteredByUserConsent(userClaims, authenticatedUser, clientId, spTenantDomain);
-            } else {
-                if (log.isDebugEnabled()) {
-                    String msg = "Filtering user claims based on consent skipped for grant type. Returning " +
-                            "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
-                    log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
-                            clientId, spTenantDomain));
-                }
-                return userClaims;
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on consent skipped for grant type. Returning " +
+                        "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
             }
+            return userClaims;
         }
     }
 

@@ -90,10 +90,10 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
-    private static boolean idpIdColumnEnabled = false;
+    private static boolean idpIdColumnEnabled = true;
     private static Map<String, ResponseModeProvider> responseModeProviders;
     private static ResponseModeProvider defaultResponseModeProvider;
-    private static boolean consentedTokenColumnEnabled = false;
+    private static boolean consentedTokenColumnEnabled = true;
     private static IdentityEventService identityEventService;
     private static boolean tokenExtendedTableExist = false;
     private List<TokenBinder> tokenBinders = new ArrayList<>();
@@ -191,6 +191,12 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
     }
 
+    /**
+     * Check whether the idp_id table column is enabled.
+     * @return isIDPIdColumnEnabled.
+     * @deprecated This method is deprecated since the idp_id column is always enabled.
+     */
+    @Deprecated
     public static boolean isIDPIdColumnEnabled() {
 
         return idpIdColumnEnabled;
@@ -201,6 +207,12 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
     }
 
+    /**
+     * Check whether the consented_token table column is enabled.
+     * @return isConsentedTokenColumnEnabled.
+     * @deprecated This method is deprecated since the consented token column is always enabled.
+     */
+    @Deprecated
     public static boolean isConsentedTokenColumnEnabled() {
 
         return consentedTokenColumnEnabled;
