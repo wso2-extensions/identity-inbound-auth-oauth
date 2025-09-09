@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.mockito.MockedStatic;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -27,11 +28,15 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -45,10 +50,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class AccessTokenDAOImplTest {
+
+    private static final String EXPIRED_TOKEN_ID = "expired_token_id";
+    private static final String TEST_TENANT_DOMAIN = "TestTenantDomain";
+    private static final String TEST_USER1 = "user1";
+    private static final String PRIMARY_USER_STORE = "PRIMARY";
 
     private AccessTokenDAOImpl accessTokenDAO;
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
@@ -59,6 +71,8 @@ public class AccessTokenDAOImplTest {
     Connection connection = null;
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+    private MockedStatic<OAuth2Util> oAuth2Util;
+    private MockedStatic<IdentityUtil> identityUtil;
 
     @BeforeClass
     public void initTest() throws Exception {
@@ -76,11 +90,16 @@ public class AccessTokenDAOImplTest {
         connection = DAOUtils.getConnection(DB_NAME);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        identityUtil = mockStatic(IdentityUtil.class);
 
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                 .thenReturn(mockOAuthServerConfiguration);
         when(mockOAuthServerConfiguration.isTokenCleanupEnabled()).thenReturn(true);
+        oAuth2Util = mockStatic(OAuth2Util.class, InvocationOnMock::callRealMethod);
+
+        TokenPersistenceProcessor mockTokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
+        when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(mockTokenPersistenceProcessor);
         accessTokenDAO = new AccessTokenDAOImpl();
     }
 
@@ -92,6 +111,8 @@ public class AccessTokenDAOImplTest {
         }
         identityDatabaseUtil.close();
         oAuthServerConfiguration.close();
+        identityUtil.close();
+        oAuth2Util.close();
     }
 
     @AfterClass
@@ -116,6 +137,35 @@ public class AccessTokenDAOImplTest {
         if (dataSource != null) {
             dataSource.close();
         }
+    }
+
+    @Test
+    public void testGetAccessTokensByUserForOpenidScope_includeExpiredAccessTokensWithActiveRefreshToken()
+            throws Exception {
+
+        identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantId(TEST_TENANT_DOMAIN)).thenReturn(1234);
+        oAuth2Util.when(() -> OAuth2Util.getTokenPartitionedSqlByUserStore(
+                        SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER, PRIMARY_USER_STORE))
+                .thenReturn(SQLQueries.GET_OPEN_ID_ACCESS_TOKEN_DATA_BY_AUTHZUSER);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(TEST_USER1);
+        authenticatedUser.setUserStoreDomain(PRIMARY_USER_STORE);
+        authenticatedUser.setTenantDomain(TEST_TENANT_DOMAIN);
+
+        assertTrue(accessTokenDAO
+                .getAccessTokensByUserForOpenidScope(authenticatedUser, true)
+                .stream()
+                .anyMatch(token -> EXPIRED_TOKEN_ID.equals(token.getTokenId())),
+                "Expired access token with active refresh token was not returned.");
+
+        assertFalse(accessTokenDAO
+                        .getAccessTokensByUserForOpenidScope(authenticatedUser, false)
+                        .stream()
+                        .anyMatch(token -> EXPIRED_TOKEN_ID.equals(token.getTokenId())),
+                "Expired access token with active refresh token was returned.");
     }
 
     @Test

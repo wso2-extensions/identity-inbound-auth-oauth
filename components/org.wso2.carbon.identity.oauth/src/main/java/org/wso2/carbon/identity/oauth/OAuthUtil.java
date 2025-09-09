@@ -1261,7 +1261,7 @@ public final class OAuthUtil {
 
             // Retrieve the tokens and auth codes associated with usernames without domain.
             accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser, true);
             authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
             
