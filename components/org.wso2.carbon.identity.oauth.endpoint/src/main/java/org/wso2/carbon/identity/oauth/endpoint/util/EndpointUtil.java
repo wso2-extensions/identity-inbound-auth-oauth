@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -180,6 +181,7 @@ public class EndpointUtil {
     private static final String UNKNOWN_ERROR = "unknown_error";
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String KEEP_OIDC_SCOPES_IN_CONSENT_URL = "OAuth.KeepOIDCScopesInConsentURL";
+    private static final String USE_ABSOLUTE_PUBLIC_URL_FOR_AUTH_REQUEST = "OAuth.UseAbsolutePublicURLForAuthRequest";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
@@ -592,9 +594,13 @@ public class EndpointUtil {
 
         int tenantId = OAuth2Util.getClientTenatId();
 
-        //Build the authentication request context.
-        String commonAuthCallerPath =
-                ServiceURLBuilder.create().addPath(OAUTH2_AUTHORIZE).build().getRelativeInternalURL();
+        // Build the authentication request context.
+        boolean useAbsolutePublicURLForAuthRequest = Boolean.parseBoolean(IdentityUtil.getProperty(
+                USE_ABSOLUTE_PUBLIC_URL_FOR_AUTH_REQUEST));
+        ServiceURL urlBuilder = ServiceURLBuilder.create().addPath(OAUTH2_AUTHORIZE).build();
+        String commonAuthCallerPath = useAbsolutePublicURLForAuthRequest ? urlBuilder.getAbsolutePublicURL() :
+                urlBuilder.getRelativeInternalURL();
+
         authenticationRequest.setCommonAuthCallerPath(commonAuthCallerPath);
         authenticationRequest.setForceAuth(forceAuthenticate);
         authenticationRequest.setPassiveAuth(checkAuthentication);
