@@ -3174,9 +3174,13 @@ public class OAuthServerConfiguration {
     private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
 
         OMElement multipleClientSecretsElement = oauthConfigElem
-                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
         if (multipleClientSecretsElement != null) {
-            isMultipleClientSecretsEnabled = Boolean.parseBoolean(multipleClientSecretsElement.getText());
+            OMElement isMultipleClientSecretsEnabledElement = multipleClientSecretsElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
+            if (isMultipleClientSecretsEnabledElement != null) {
+                isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
+            }
         }
         if (log.isDebugEnabled()) {
             log.debug("Is multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
@@ -3569,7 +3573,8 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
         // Multiple Client Secret configs
-        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "EnableMultipleClientSecrets";
+        private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
+        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
