@@ -66,7 +66,11 @@ public class OAuthConsumerSecretDAO {
                 prepStmt.setString(2, consumerSecretDO.getDescription());
                 prepStmt.setString(3, consumerSecretDO.getClientId());
                 prepStmt.setString(4, processedClientSecret);
-                prepStmt.setLong(5, consumerSecretDO.getExpiresAt());
+                if (consumerSecretDO.getExpiresAt() != null) {
+                    prepStmt.setLong(5, consumerSecretDO.getExpiresAt());
+                } else {
+                    prepStmt.setNull(5, java.sql.Types.BIGINT); // inserts NULL into EXPIRY_TIME
+                }
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
