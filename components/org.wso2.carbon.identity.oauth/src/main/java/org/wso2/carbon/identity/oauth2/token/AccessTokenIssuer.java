@@ -761,11 +761,29 @@ public class AccessTokenIssuer {
         impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
         AuthenticatedUser impersonatedUser = tokReqMsgCtx.getAuthorizedUser();
         impersonationNotificationRequestDTO.setSubject(impersonatedUser);
+        String tenantDomain = getTenantDomain(impersonatedUser);
+        impersonationNotificationRequestDTO.setTenantDomain(tenantDomain);
+        ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
+        notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
+    }
+
+    /**
+     * Get tenant domain of the impersonated user.
+     * In B2B scenarios, we need to resolve the tenant domain from the organization handle.
+     *
+     * @param impersonatedUser Impersonated user.
+     * @return Tenant domain of the impersonated user.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the tenant domain from the organization
+     *                                 handle.
+     */
+    private String getTenantDomain(AuthenticatedUser impersonatedUser) throws IdentityOAuth2Exception {
+
         String tenantDomain = impersonatedUser.getTenantDomain();
+        // In B2B user, we need to resolve the tenant domain from the organization handle.
         if (impersonatedUser.isFederatedUser() && impersonatedUser.getAccessingOrganization() != null) {
             try {
-                String orgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().resolveTenantDomain(
-                        impersonatedUser.getAccessingOrganization());
+                String orgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(impersonatedUser.getAccessingOrganization());
                 if (orgHandle != null) {
                     tenantDomain = orgHandle;
                 }
@@ -774,9 +792,7 @@ public class AccessTokenIssuer {
                         "handle: " + impersonatedUser.getAccessingOrganization(), e);
             }
         }
-        impersonationNotificationRequestDTO.setTenantDomain(tenantDomain);
-        ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
-        notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
+        return tenantDomain;
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
