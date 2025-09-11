@@ -350,6 +350,33 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             registeredCallbackUrl =
                     registeredCallbackUrl.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+        
+        if (regexp == null) {
+            return registeredCallbackUrl.equals(callbackURI);
+        }
+
+        boolean initialMatch = callbackURI.matches(regexp);
+        String escapedSpecialCharRegexp = regexp
+                .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+        if (LoggerUtils.isDiagnosticLogsEnabled() && initialMatch && !callbackURI.matches(escapedSpecialCharRegexp)) {
+            String[] callbackURIs = regexp.split("\\|");
+            if (regexp.startsWith("(") && regexp.endsWith(")")) {
+                callbackURIs = regexp.substring(1, regexp.length() - 1).split("\\|");
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,
+                    VALIDATE_INPUT_PARAMS)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oauthApp.getOauthConsumerKey())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
+                    .configParam(LogConstants.InputKeys.APPLICATION_NAME, oauthApp.getApplicationName())
+                    .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, callbackURIs)
+                    .resultMessage("Provided redirect URI does not match when the characters (., +, ?) " +
+                            "are treated as literals in configured callback URI(s) of the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+        }
+
+        return initialMatch;
     }
 }
