@@ -1111,8 +1111,6 @@ public class OAuthAppDAO {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
         consumerSecretDO.setClientId(consumerKey);
-        consumerSecretDO.setDescription("Default");
-        consumerSecretDO.setExpiresAt(0);
         consumerSecretDO.setSecretValue(consumerSecret);
         new OAuthConsumerSecretDAO().addOAuthConsumerSecret(consumerSecretDO);
     }
