@@ -1115,7 +1115,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return validityPeriodInMillis;
     }
 
-    private AccessTokenDO getExistingToken(OAuthTokenReqMessageContext tokenMsgCtx, OAuthCacheKey cacheKey)
+    protected AccessTokenDO getExistingToken(OAuthTokenReqMessageContext tokenMsgCtx, OAuthCacheKey cacheKey)
             throws IdentityOAuth2Exception {
         AccessTokenDO existingToken = null;
         OAuth2AccessTokenReqDTO tokenReq = tokenMsgCtx.getOauth2AccessTokenReqDTO();
