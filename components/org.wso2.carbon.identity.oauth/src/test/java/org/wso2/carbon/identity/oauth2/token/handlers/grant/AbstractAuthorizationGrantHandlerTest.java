@@ -502,6 +502,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         existingAccessTokenDO.setAccessToken("existingAccessToken");
         existingAccessTokenDO.setTokenState(TOKEN_STATE_ACTIVE);
         existingAccessTokenDO.setConsumerKey(clientId);
+        existingAccessTokenDO.setTokenId("12345");
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         authenticatedUser.setAccessingOrganization("orgabc");

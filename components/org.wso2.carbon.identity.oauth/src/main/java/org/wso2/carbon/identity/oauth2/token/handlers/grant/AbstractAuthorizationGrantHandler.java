@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -251,6 +252,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         tokReqMsgCtx.setRefreshTokenvalidityPeriod(existingToken.getRefreshTokenValidityPeriodInMillis());
+        tokReqMsgCtx.addProperty(OIDCConstants.TOKEN_ID, existingToken.getTokenId());
     }
 
     @Override
@@ -501,6 +503,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // Update cache with newly added token.
         updateCacheIfEnabled(newTokenBean, OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()), oauthTokenIssuer);
+        tokReqMsgCtx.addProperty(OIDCConstants.TOKEN_ID, newTokenBean.getTokenId());
         return createResponseWithTokenBean(newTokenBean, newTokenBean.getValidityPeriodInMillis(), scope);
     }
 
