@@ -152,8 +152,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
             return getFailureOrErrorResponseDTO(executionStatus);
         }
-        AccessTokenDO accessTokenBean = getRefreshTokenGrantProcessor()
-                .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType(tokReqMsgCtx));
+
+        AccessTokenDO accessTokenBean;
+        try {
+            accessTokenBean = getRefreshTokenGrantProcessor()
+                    .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType(tokReqMsgCtx));
+        } catch (IllegalArgumentException e) {
+            if (StringUtils.equals(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE, e.getMessage())) {
+                return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
+            }
+            throw e;
+        }
 
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
