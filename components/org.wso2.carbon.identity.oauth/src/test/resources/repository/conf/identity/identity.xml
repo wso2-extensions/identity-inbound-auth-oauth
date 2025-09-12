@@ -226,6 +226,11 @@
                 <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.token.handlers.grant.idTokenNotAllowedGrantHandler</GrantTypeHandlerImplClass>
                 <IdTokenAllowed>false</IdTokenAllowed>
             </SupportedGrantType>
+            <SupportedGrantType>
+                <GrantTypeName>organization_switch</GrantTypeName>
+                <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.grant.organizationswitch.OrganizationSwitchGrant</GrantTypeHandlerImplClass>
+                <IsRefreshTokenAllowed>true</IsRefreshTokenAllowed>
+            </SupportedGrantType>
         </SupportedGrantTypes>
         <OAuthCallbackHandlers>
             <OAuthCallbackHandler Class="org.wso2.carbon.identity.oauth2.test.utils.TestDefaultCallbackHandler"/>
