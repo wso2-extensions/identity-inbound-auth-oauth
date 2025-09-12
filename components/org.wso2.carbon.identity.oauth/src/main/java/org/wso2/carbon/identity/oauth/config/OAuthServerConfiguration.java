@@ -1934,6 +1934,20 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Return the value of whether the refresh token is allowed for this grant type. Default value will be returned
+     * if there is no tag or empty tag.
+     *
+     * @param grantType Name of the Grant type.
+     * @param defaultValue Default value to be returned if there is no tag or empty tag.
+     * @return True or False if there is a value. Null otherwise.
+     */
+    public String getValueForIsRefreshTokenAllowed(String grantType, String defaultValue) {
+
+        Boolean isRefreshTokenAllowed = refreshTokenAllowedGrantTypes.get(grantType);
+        return isRefreshTokenAllowed == null ? defaultValue : isRefreshTokenAllowed.toString();
+    }
+
+    /**
      * Returns whether user consent is required for the particular grant type.
      *
      * @param grantType
