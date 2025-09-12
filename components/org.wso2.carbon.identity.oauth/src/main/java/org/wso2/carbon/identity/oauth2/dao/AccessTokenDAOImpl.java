@@ -558,21 +558,22 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (includeTokenBindingRef) {
                 prepStmt.setString(7, tokenBindingReference);
+                prepStmt.setString(8, authorizedOrganization);
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    prepStmt.setString(9, authenticatedIDP);
+                    // Set tenant ID of the IDP by considering it is same as appTenantID.
+                    prepStmt.setInt(10, appTenantId);
+                }
+
+            } else {
+                prepStmt.setString(7, authorizedOrganization);
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                     prepStmt.setString(8, authenticatedIDP);
+                    // Set tenant ID of the IDP by considering it is same as appTenantID.
+                    prepStmt.setInt(9, appTenantId);
                 }
-            } else {
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    prepStmt.setString(7, authenticatedIDP);
-                }
-            }
 
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(9, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                prepStmt.setInt(10, appTenantId);
             }
-
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
