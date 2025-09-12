@@ -808,7 +808,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return grantHandler.isOfTypeApplicationUser();
     }
 
-    private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+    protected JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                             OAuthTokenReqMessageContext tokReqMsgCtx) {
         /**
          * If OAuth.JWT.RenewTokenWithoutRevokingExisting is enabled from configurations, and current token
