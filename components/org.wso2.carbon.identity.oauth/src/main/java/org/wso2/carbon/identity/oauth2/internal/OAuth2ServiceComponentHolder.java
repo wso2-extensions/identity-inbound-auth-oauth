@@ -113,6 +113,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static List<String> opaqueRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
     private static boolean restrictUnassignedScopes;
     private static ConfigurationContextService configurationContextService;
@@ -199,6 +200,26 @@ public class OAuth2ServiceComponentHolder {
     public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
 
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
+    }
+
+    /**
+     * Get the list of grant types which are allowed to renew Opaque tokens without revoke.
+     *
+     * @return allowed grant types
+     */
+    public static List<String> getOpaqueRenewWithoutRevokeAllowedGrantTypes() {
+        return opaqueRenewWithoutRevokeAllowedGrantTypes;
+    }
+
+    /**
+     * Set the list of grant types which are allowed to renew Opaque tokens without revoke.
+     *
+     * @param opaqueRenewWithoutRevokeAllowedGrantTypes List of allowed grant types
+     */
+    public static void setOpaqueRenewWithoutRevokeAllowedGrantTypes(
+            List<String> opaqueRenewWithoutRevokeAllowedGrantTypes) {
+        OAuth2ServiceComponentHolder.opaqueRenewWithoutRevokeAllowedGrantTypes =
+                opaqueRenewWithoutRevokeAllowedGrantTypes;
     }
 
     public static boolean isConsentedTokenColumnEnabled() {

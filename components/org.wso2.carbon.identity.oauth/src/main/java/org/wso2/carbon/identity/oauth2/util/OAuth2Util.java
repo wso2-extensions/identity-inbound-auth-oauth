@@ -232,6 +232,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG_FOR_OPAQUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.Scope.OAUTH2;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
@@ -5732,9 +5733,35 @@ public class OAuth2Util {
             allowedGrantTypes = new ArrayList<>(Collections.singletonList((String) value));
         }
         if (log.isDebugEnabled()) {
-            log.debug("Allowed grant types for renewing token without revoking existing token: " + allowedGrantTypes);
+            log.debug("Allowed grant types for renewing JWT token without revoking existing token: "
+                    + allowedGrantTypes);
         }
 
+        return allowedGrantTypes;
+    }
+
+    /**
+     * Get allowed grant type list for renewing token without revoking existing token.
+     *
+     * @return Allowed grant type list.
+     */
+    public static ArrayList<String> getOpaqueRenewWithoutRevokeAllowedGrantTypes() {
+
+        ArrayList<String> allowedGrantTypes;
+        Object value = IdentityConfigParser.getInstance().getConfiguration()
+                .get(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG_FOR_OPAQUE);
+        if (value == null) {
+            allowedGrantTypes = new ArrayList<>(Arrays.asList(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS));
+        } else if (value instanceof ArrayList) {
+            allowedGrantTypes = (ArrayList) value;
+        } else {
+            allowedGrantTypes = new ArrayList<>(Collections.singletonList((String) value));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(
+                    "Allowed grant types for renewing Opaque token without revoking existing token: "
+                            + allowedGrantTypes);
+        }
         return allowedGrantTypes;
     }
 
