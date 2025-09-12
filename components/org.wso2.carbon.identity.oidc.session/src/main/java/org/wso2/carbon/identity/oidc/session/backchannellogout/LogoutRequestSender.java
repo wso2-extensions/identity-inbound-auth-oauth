@@ -32,6 +32,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.ThreadLocalAwareThreadPoolExecutor;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -48,7 +49,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.Cookie;
@@ -118,7 +118,7 @@ public class LogoutRequestSender {
             workQueue = new ArrayBlockingQueue<Runnable>(workQueueSizeInt);
         }
 
-        threadPool = new ThreadPoolExecutor(poolSizeInt, poolSizeInt, keepAliveTimeLong,
+        threadPool = new ThreadLocalAwareThreadPoolExecutor(poolSizeInt, poolSizeInt, keepAliveTimeLong,
                 TimeUnit.MILLISECONDS, workQueue);
 
         httpConnectTimeout = Integer.parseInt(httpConnectTimeoutProperty);
