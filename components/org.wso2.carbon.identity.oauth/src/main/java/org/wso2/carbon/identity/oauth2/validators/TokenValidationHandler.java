@@ -379,6 +379,34 @@ public class TokenValidationHandler {
         return introResp;
     }
 
+    public OAuth2ClientApplicationDTO buildClientAppDTO(String accessTokenIdentifier,
+                                                        OAuth2IntrospectionResponseDTO introspectionResponseDTO)
+            throws IdentityOAuth2Exception {
+
+        OAuth2ClientApplicationDTO oauthValidationResponse = new OAuth2ClientApplicationDTO();
+        oauthValidationResponse.setConsumerKey(introspectionResponseDTO.getClientId());
+
+        OAuth2TokenValidationResponseDTO responseDTO = new OAuth2TokenValidationResponseDTO();
+        responseDTO.setValid(introspectionResponseDTO.isActive());
+
+        AccessTokenDO accessTokenDO = OAuth2Util.findAccessToken(accessTokenIdentifier, false);
+        if (accessTokenDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Access Token not found: " + accessTokenIdentifier);
+            }
+            responseDTO.setValid(false);
+            oauthValidationResponse.setAccessTokenValidationResponse(responseDTO);
+            return oauthValidationResponse;
+        }
+        responseDTO.setExpiryTime(getAccessTokenExpirationTime(accessTokenDO));
+        responseDTO.setAuthorizedUser(getAuthzUser(accessTokenDO));
+        responseDTO.setScope(accessTokenDO.getScope());
+        responseDTO.setTokenBinding(accessTokenDO.getTokenBinding());
+        oauthValidationResponse.setAccessTokenValidationResponse(responseDTO);
+
+        return oauthValidationResponse;
+    }
+
     private static void handleTokenValidationException(DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder,
                                                        Exception exception) throws IdentityOAuth2Exception {
 
