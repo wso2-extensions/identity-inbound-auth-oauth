@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -1221,6 +1222,7 @@ public class DCRMService {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
+            JWTUtils.validateJWTDepth(softwareStatement);
             return signedJWT.getJWTClaimsSet().getClaims();
         } catch (ParseException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,

@@ -144,6 +144,7 @@ import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -3931,6 +3932,7 @@ public class AuthzUtil {
 
     private static String getSubjectFromIdToken(String idTokenHint) throws ParseException {
 
+        JWTUtils.validateJWTDepth(idTokenHint);
         return SignedJWT.parse(idTokenHint).getJWTClaimsSet().getSubject();
     }
 

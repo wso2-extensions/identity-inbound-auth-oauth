@@ -301,6 +301,7 @@ public class OAuth2TokenUtil {
         }
         JWTClaimsSet claimsSet = null;
         try {
+            JWTUtils.validateJWTDepth(signedJWT.serialize());
             claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
                 throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
