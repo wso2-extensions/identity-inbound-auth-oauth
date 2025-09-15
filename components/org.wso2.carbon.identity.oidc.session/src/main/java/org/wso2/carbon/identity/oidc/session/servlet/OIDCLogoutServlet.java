@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManagementException;
@@ -593,6 +594,7 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
+        JWTUtils.validateJWTDepth(idToken);
         String clientId = (String) SignedJWT.parse(idToken).getJWTClaimsSet()
                 .getClaims().get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
 
@@ -617,6 +619,7 @@ public class OIDCLogoutServlet extends HttpServlet {
         String tenantDomain = null;
         Map realm = null;
 
+        JWTUtils.validateJWTDepth(idToken);
         JWTClaimsSet claimsSet = SignedJWT.parse(idToken).getJWTClaimsSet();
         if (claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM) instanceof Map) {
             realm = (Map) claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM);
@@ -1114,6 +1117,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 appTenantDomain = IdentityTenantUtil.resolveTenantDomain();
             }
             JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idToken);
+            JWTUtils.validateJWTDepth(idToken);
             return (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                     .get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         } else {
@@ -1121,6 +1125,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 throw new IdentityOAuth2Exception(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
                         "ID token signature validation failed.");
             }
+            JWTUtils.validateJWTDepth(idToken);
             return (String) SignedJWT.parse(idToken).getJWTClaimsSet()
                     .getClaims().get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         }

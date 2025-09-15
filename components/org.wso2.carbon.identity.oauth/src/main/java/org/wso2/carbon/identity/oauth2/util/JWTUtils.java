@@ -116,6 +116,7 @@ public class JWTUtils {
             throws IdentityOAuth2Exception {
 
         try {
+            validateJWTDepth(signedJWT.serialize());
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             return Optional.ofNullable(claimsSet);
         } catch (ParseException e) {
@@ -542,6 +543,19 @@ public class JWTUtils {
         }
         if (claimsSet.getAudience() == null) {
             throw new IdentityOAuth2Exception("Mandatory field - Audience is empty in the given JWT");
+        }
+    }
+
+    /**
+     * Validates the depth of the JWT to ensure it does not exceed the allowed limit.
+     *
+     * @param jwt The JWT string to validate.
+     * @throws ParseException If the JWT depth exceeds the allowed limit.
+     */
+    public static void validateJWTDepth(String jwt) throws ParseException {
+
+        if (StringUtils.isNotBlank(jwt) && IdentityUtil.exceedsAllowedJWTDepth(jwt)) {
+            throw new ParseException("The JWT depth exceeds the allowed limit.", 0);
         }
     }
 }

@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.model.ResourceScopeCacheEntry;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -686,6 +687,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
 
         JWTClaimsSet claimsSet = null;
         try {
+            JWTUtils.validateJWTDepth(signedJWT.serialize());
             claimsSet = signedJWT.getJWTClaimsSet();
         } catch (ParseException e) {
             log.error("Error when trying to retrieve claimsSet from the JWT:", e);

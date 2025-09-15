@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -131,6 +132,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                     .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
                 return jweObject.getPayload().toString();
             } else {
+                JWTUtils.validateJWTDepth(encryptedJWT.serialize());
                 return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
             }
 

@@ -190,6 +190,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
         X509Certificate x509Certificate;
         JWSHeader header = signedJWT.getHeader();
+        JWTUtils.validateJWTDepth(signedJWT.serialize());
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
         // Get certificate from tenant if available in claims.
         Optional<X509Certificate> certificate = JWTUtils.getCertificateFromClaims(jwtClaimsSet);
