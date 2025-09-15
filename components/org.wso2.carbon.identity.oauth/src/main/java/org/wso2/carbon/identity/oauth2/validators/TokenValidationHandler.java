@@ -543,7 +543,7 @@ public class TokenValidationHandler {
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
                         StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
-                } else if ((!isCrossTenantTokenIntrospectionAllowed || !allowCrossTenantIntrospectionForSubOrgTokens) &&
+                } else if (!isCrossTenantTokenIntrospectionAllowed && !allowCrossTenantIntrospectionForSubOrgTokens &&
                         accessTokenDO != null && StringUtils.isNotEmpty(
                         accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     // Previously, cases where accessTokenDO.getAuthzUser().getAccessingOrganization() was not empty
