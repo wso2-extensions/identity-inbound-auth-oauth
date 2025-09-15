@@ -4524,8 +4524,6 @@ public class OAuthServerConfiguration {
         // Enable Default Requested Scopes For Back Channel Grant Config.
         private static final String ENABLE_DEFAULT_REQUESTED_SCOPES_FOR_BACK_CHANNEL_GRANT =
                 "EnableDefaultRequestedScopesForBackChannelGrant";
-
-
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";
