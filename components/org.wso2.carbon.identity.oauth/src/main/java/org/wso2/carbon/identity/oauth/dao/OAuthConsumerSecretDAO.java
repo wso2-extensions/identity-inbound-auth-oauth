@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -39,8 +40,10 @@ public class OAuthConsumerSecretDAO {
 
     private static final Log LOG = LogFactory.getLog(OAuthConsumerSecretDAO.class);
     private TokenPersistenceProcessor persistenceProcessor;
+    private final TokenPersistenceProcessor hashingPersistenceProcessor;
 
     public OAuthConsumerSecretDAO() {
+        hashingPersistenceProcessor = new HashingPersistenceProcessor();
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
@@ -66,10 +69,12 @@ public class OAuthConsumerSecretDAO {
                 prepStmt.setString(2, consumerSecretDO.getDescription());
                 prepStmt.setString(3, consumerSecretDO.getClientId());
                 prepStmt.setString(4, processedClientSecret);
+                prepStmt.setString(5, hashingPersistenceProcessor
+                        .getProcessedAccessTokenIdentifier(consumerSecretDO.getSecretValue()));
                 if (consumerSecretDO.getExpiresAt() != null) {
-                    prepStmt.setLong(5, consumerSecretDO.getExpiresAt());
+                    prepStmt.setLong(6, consumerSecretDO.getExpiresAt());
                 } else {
-                    prepStmt.setNull(5, java.sql.Types.BIGINT); // inserts NULL into EXPIRY_TIME
+                    prepStmt.setNull(6, java.sql.Types.BIGINT); // inserts NULL into EXPIRY_TIME
                 }
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);

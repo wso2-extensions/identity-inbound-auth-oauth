@@ -53,7 +53,7 @@ public class SQLQueries {
                 "ID_TOKEN_EXPIRE_TIME) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
         public static final String ADD_OAUTH_CONSUMER_SECRET = "INSERT INTO IDN_OAUTH_CONSUMER_SECRETS " +
-                "(SECRET_ID, DESCRIPTION, CONSUMER_KEY, SECRET_VALUE, EXPIRY_TIME) VALUES (?,?,?,?,?)";
+                "(SECRET_ID, DESCRIPTION, CONSUMER_KEY, SECRET_VALUE, SECRET_HASH, EXPIRY_TIME) VALUES (?,?,?,?,?,?)";
 
         public static final String REMOVE_OAUTH_CONSUMER_SECRET = "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS " +
                 "WHERE SECRET_ID=?";
