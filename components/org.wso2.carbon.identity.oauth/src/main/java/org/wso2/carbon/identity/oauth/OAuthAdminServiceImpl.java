@@ -1803,8 +1803,10 @@ public class OAuthAdminServiceImpl {
                                                     tokenBindingReference,
                                                     true);
                                 } else {
-                                    // Retrieve latest access token for particular client, user and scope combination if
-                                    // its ACTIVE or EXPIRED.
+                                    /*
+                                     Retrieve latest access token for particular client, user and scope combination if
+                                     its ACTIVE or EXPIRED.
+                                    */
                                     scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,

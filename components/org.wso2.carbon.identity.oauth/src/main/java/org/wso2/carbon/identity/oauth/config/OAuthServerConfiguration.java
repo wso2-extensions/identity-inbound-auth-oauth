@@ -339,7 +339,7 @@ public class OAuthServerConfiguration {
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
     private List<String> defaultRequestedScopes = new ArrayList<>();
-    // Property to define the default scope for back-channel grant.
+    // Property to define whether the default scope for back-channel grant is enabled or not.
     private boolean isDefaultScopeForBackChannelGrantEnabled = false;
 
     // Property to define the filtered claims.
@@ -553,7 +553,7 @@ public class OAuthServerConfiguration {
         // Read config for default requested scopes.
         parseDefaultRequestedScopesConfiguration(oauthElem);
 
-        // Read config for default requested scopes for back-channel grant.
+        // Read default requested scopes for back-channel grant from config.
         parseDefaultScopeForBackChannelConfig(oauthElem);
 
         // Read config for filtered claims for introspection response.
