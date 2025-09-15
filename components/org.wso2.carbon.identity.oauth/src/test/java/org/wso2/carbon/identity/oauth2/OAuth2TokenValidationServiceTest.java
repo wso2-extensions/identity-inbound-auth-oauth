@@ -36,11 +36,13 @@ import org.wso2.carbon.identity.oauth2.validators.TokenValidationHandler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 
 @Listeners(MockitoTestNGListener.class)
@@ -239,5 +241,35 @@ public class OAuth2TokenValidationServiceTest {
 
         assertNotNull(tokenValidationService.buildIntrospectionResponse(mockedOAuth2TokenValidationRequestDTO),
                 "Expected to be not null");
+    }
+
+    @Test
+    public void testBuildClientAppDTOWithValidInputs() throws Exception {
+
+        String accessToken = "validAccessToken";
+        when(mockedValidationHandler.buildClientAppDTO(anyString(), any(OAuth2IntrospectionResponseDTO.class)))
+                .thenReturn(mockedClientApplicationDTO);
+
+        OAuth2ClientApplicationDTO result =
+                tokenValidationService.buildClientAppDTO(accessToken, mockedIntrospectionResponseDTO);
+
+        assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
+        assertEquals(result, mockedClientApplicationDTO, "Expected the returned DTO to match the mocked DTO");
+    }
+
+    @Test
+    public void testBuildClientAppDTOWithException() throws Exception {
+
+        String accessToken = "invalidAccessToken";
+        when(mockedValidationHandler.buildClientAppDTO(anyString(), any(OAuth2IntrospectionResponseDTO.class)))
+                .thenThrow(new IdentityOAuth2Exception("dummyException"));
+
+        OAuth2ClientApplicationDTO result =
+                tokenValidationService.buildClientAppDTO(accessToken, mockedIntrospectionResponseDTO);
+
+        assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
+        assertFalse(result.getAccessTokenValidationResponse().isValid(), "Expected the token to be invalid");
+        assertEquals(result.getAccessTokenValidationResponse().getErrorMsg(), "dummyException",
+                "Expected error message did not match");
     }
 }

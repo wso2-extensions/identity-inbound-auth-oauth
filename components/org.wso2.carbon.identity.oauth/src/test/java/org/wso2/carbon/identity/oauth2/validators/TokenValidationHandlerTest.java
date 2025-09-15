@@ -88,6 +88,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -96,6 +97,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
@@ -221,7 +223,7 @@ public class TokenValidationHandlerTest {
                     .thenReturn(oAuth2ServiceComponentHolderInstance);
             TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
             when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
-            when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(
+            when(tokenProvider.getVerifiedAccessToken(anyString(), anyBoolean())).thenReturn(
                     accessTokenDO);
             OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
             OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken =
@@ -275,7 +277,7 @@ public class TokenValidationHandlerTest {
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
                 when(realmService.getTenantManager()).thenReturn(tenantManager);
-                doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
+                doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(anyString());
                 lenient().doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager)
                         .getDomain(Mockito.anyInt());
                 OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
@@ -311,7 +313,7 @@ public class TokenValidationHandlerTest {
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
                 TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
                 when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
-                when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(
+                when(tokenProvider.getVerifiedAccessToken(anyString(), anyBoolean())).thenReturn(
                         accessTokenDO);
 
                 OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory =
@@ -321,7 +323,7 @@ public class TokenValidationHandlerTest {
                 oAuthTokenPersistenceFactory.when(
                         OAuthTokenPersistenceFactory::getInstance).thenReturn(mockOAuthTokenPersistenceFactory);
                 lenient().when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
-                lenient().when(tokenManagementDAO.getRefreshToken(Mockito.anyString())).thenReturn(accessTokenDO);
+                lenient().when(tokenManagementDAO.getRefreshToken(anyString())).thenReturn(accessTokenDO);
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setTokenType("Default");
@@ -332,7 +334,7 @@ public class TokenValidationHandlerTest {
 
                 oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(new PlainTextPersistenceProcessor());
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
-                oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
+                oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean()))
                         .thenReturn(1000L);
 
                 ServiceProvider serviceProvider = new ServiceProvider();
@@ -440,13 +442,13 @@ public class TokenValidationHandlerTest {
                     jwtToken, "bearer", "dummyKey", "dummyValue");
 
             identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(mockIdentityProviderManager);
-            when(mockIdentityProviderManager.getResidentIdP(Mockito.anyString())).thenReturn(identityProvider);
-            jwtUtils.when(() -> JWTUtils.isJWT(Mockito.anyString())).thenCallRealMethod();
-            jwtUtils.when(() -> JWTUtils.parseJWT(Mockito.anyString())).thenCallRealMethod();
+            when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
+            jwtUtils.when(() -> JWTUtils.isJWT(anyString())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.parseJWT(anyString())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.getJWTClaimSet(any())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.validateRequiredFields(any())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.getResidentIDPForIssuer(any(), any())).thenCallRealMethod();
-            jwtUtils.when(() -> JWTUtils.getIDPForIssuer(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+            jwtUtils.when(() -> JWTUtils.getIDPForIssuer(anyString(), anyString(), anyString()))
                     .thenCallRealMethod();
             jwtUtils.when(JWTUtils::getSubOrgStartLevel).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.resolveSubject(any())).thenCallRealMethod();
@@ -559,5 +561,52 @@ public class TokenValidationHandlerTest {
                 oAuth2TokenValidationRequestDTO, oAuth2TokenValidationResponseDTO);
 
         return validationReqDTO;
+    }
+
+    @Test
+    public void testBuildClientAppDTOWithValidInputs() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            AccessTokenDO accessTokenDO = new AccessTokenDO();
+            accessTokenDO.setConsumerKey("testConsumerKey");
+            accessTokenDO.setScope(new String[]{"scope1", "scope2"});
+            accessTokenDO.setAuthzUser(new AuthenticatedUser());
+            accessTokenDO.setValidityPeriodInMillis(3600000L);
+            accessTokenDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(3600000L);
+
+            TokenValidationHandler tokenValidationHandler = TokenValidationHandler.getInstance();
+            OAuth2IntrospectionResponseDTO introspectionResponseDTO = new OAuth2IntrospectionResponseDTO();
+            introspectionResponseDTO.setActive(true);
+            introspectionResponseDTO.setClientId("testConsumerKey");
+
+            OAuth2ClientApplicationDTO result = tokenValidationHandler.buildClientAppDTO(
+                    "testAccessToken", introspectionResponseDTO);
+
+            assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
+            assertEquals(result.getConsumerKey(), "testConsumerKey", "Consumer key mismatch");
+            assertNotNull(result.getAccessTokenValidationResponse(), "Expected a non-null AccessTokenValidationResponse");
+            assertTrue(result.getAccessTokenValidationResponse().isValid(), "Expected the token to be valid");
+        }
+    }
+
+    @Test
+    public void testBuildClientAppDTOWithInvalidAccessToken() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(null);
+
+            TokenValidationHandler tokenValidationHandler = TokenValidationHandler.getInstance();
+            OAuth2IntrospectionResponseDTO introspectionResponseDTO = new OAuth2IntrospectionResponseDTO();
+            introspectionResponseDTO.setActive(false);
+
+            OAuth2ClientApplicationDTO result = tokenValidationHandler.buildClientAppDTO(
+                    "invalidAccessToken", introspectionResponseDTO);
+
+            assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
+            assertFalse(result.getAccessTokenValidationResponse().isValid(), "Expected the token to be invalid");
+        }
     }
 }

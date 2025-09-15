@@ -94,6 +94,24 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
         }
     }
 
+    public OAuth2ClientApplicationDTO buildClientAppDTO(String accessTokenIdentifier,
+            OAuth2IntrospectionResponseDTO introspectionResponseDTO) {
+
+        TokenValidationHandler validationHandler = TokenValidationHandler.getInstance();
+
+        try {
+            return validationHandler.buildClientAppDTO(accessTokenIdentifier, introspectionResponseDTO);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error occurred while validating the OAuth2 access token", e);
+            OAuth2ClientApplicationDTO appDTO = new OAuth2ClientApplicationDTO();
+            OAuth2TokenValidationResponseDTO errRespDTO = new OAuth2TokenValidationResponseDTO();
+            errRespDTO.setValid(false);
+            errRespDTO.setErrorMsg(e.getMessage());
+            appDTO.setAccessTokenValidationResponse(errRespDTO);
+            return appDTO;
+        }
+    }
+
     /**
      * returns back the introspection response, which is compatible with RFC 7662.
      *
