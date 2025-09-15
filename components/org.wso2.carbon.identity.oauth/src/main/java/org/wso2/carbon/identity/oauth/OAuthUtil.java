@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -1257,10 +1258,21 @@ public final class OAuthUtil {
              Only the tokens and auth codes issued for openid scope should be removed from the cache, since no
              claims are usually cached against tokens or auth codes, otherwise.
              */
+
+            // Retrieve the tokens and auth codes associated with usernames without domain.
             accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser, true);
             authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
+            
+            // Retrieve the tokens and auth codes associated with domain-qualified usernames.
+            if (!userName.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+                authenticatedUser.setUserName(IdentityUtil.addDomainToName(userName, userStoreDomain));
+                accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                        .getAccessTokensByUserForOpenidScope(authenticatedUser, true));
+                authorizationCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                        .getAuthorizationCodesByUserForOpenidScope(authenticatedUser));
+            }
             clearAuthzCodeGrantCachesForTokens(accessTokenDOSet);
             clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet);
         } catch (IdentityOAuth2Exception e) {
