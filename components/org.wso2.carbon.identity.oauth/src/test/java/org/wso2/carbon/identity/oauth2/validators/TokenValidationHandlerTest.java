@@ -587,7 +587,8 @@ public class TokenValidationHandlerTest {
 
             assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
             assertEquals(result.getConsumerKey(), "testConsumerKey", "Consumer key mismatch");
-            assertNotNull(result.getAccessTokenValidationResponse(), "Expected a non-null AccessTokenValidationResponse");
+            assertNotNull(result.getAccessTokenValidationResponse(),
+                    "Expected a non-null AccessTokenValidationResponse");
             assertTrue(result.getAccessTokenValidationResponse().isValid(), "Expected the token to be valid");
         }
     }
