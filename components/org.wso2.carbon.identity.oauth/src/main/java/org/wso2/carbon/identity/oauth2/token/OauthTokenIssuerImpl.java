@@ -43,8 +43,14 @@ public class OauthTokenIssuerImpl implements OauthTokenIssuer {
     private boolean persistAccessTokenAlias = true;
 
     public String accessToken(OAuthTokenReqMessageContext tokReqMsgCtx) throws OAuthSystemException {
-        boolean renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(
-                IdentityUtil.getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG_FOR_OPAQUE));
+        String renewWithoutRevokeConfig =
+                IdentityUtil.getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG_FOR_OPAQUE);
+
+        boolean renewWithoutRevokingExistingEnabled = false;
+        if (renewWithoutRevokeConfig != null) {
+            renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(
+                    renewWithoutRevokeConfig);
+        }
 
         if (renewWithoutRevokingExistingEnabled && tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() == null
                 && (OAuth2ServiceComponentHolder.getOpaqueRenewWithoutRevokeAllowedGrantTypes()
