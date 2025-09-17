@@ -5751,11 +5751,12 @@ public class OAuth2Util {
         Object value = IdentityConfigParser.getInstance().getConfiguration()
                 .get(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG_FOR_OPAQUE);
         if (value == null) {
-            allowedGrantTypes = new ArrayList<>(Arrays.asList(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS));
-        } else if (value instanceof ArrayList) {
-            allowedGrantTypes = (ArrayList) value;
+            allowedGrantTypes = new ArrayList<>
+                    (Collections.singletonList(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS));
+        } else if (value instanceof List) {
+            allowedGrantTypes = new ArrayList<>((List) value);
         } else {
-            allowedGrantTypes = new ArrayList<>(Collections.singletonList((String) value));
+            allowedGrantTypes = new ArrayList<>(Collections.singletonList(String.valueOf(value)));
         }
         if (log.isDebugEnabled()) {
             log.debug(
