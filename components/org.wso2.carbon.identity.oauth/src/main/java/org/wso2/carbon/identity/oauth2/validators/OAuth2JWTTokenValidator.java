@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -190,7 +191,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
         X509Certificate x509Certificate;
         JWSHeader header = signedJWT.getHeader();
-        JWTUtils.validateJWTDepth(signedJWT.serialize());
+        IdentityUtil.validateJWTDepth(signedJWT.serialize());
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
         // Get certificate from tenant if available in claims.
         Optional<X509Certificate> certificate = JWTUtils.getCertificateFromClaims(jwtClaimsSet);

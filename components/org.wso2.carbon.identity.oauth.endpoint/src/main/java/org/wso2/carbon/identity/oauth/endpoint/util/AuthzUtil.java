@@ -3932,7 +3932,7 @@ public class AuthzUtil {
 
     private static String getSubjectFromIdToken(String idTokenHint) throws ParseException {
 
-        JWTUtils.validateJWTDepth(idTokenHint);
+        IdentityUtil.validateJWTDepth(idTokenHint);
         return SignedJWT.parse(idTokenHint).getJWTClaimsSet().getSubject();
     }
 

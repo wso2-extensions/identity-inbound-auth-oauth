@@ -2885,7 +2885,7 @@ public class OAuth2Util {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String tenantDomain;
         try {
-            JWTUtils.validateJWTDepth(idToken);
+            IdentityUtil.validateJWTDepth(idToken);
             String clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
             if (isJWTSignedWithSPKey) {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
