@@ -80,6 +80,7 @@ public class OAuth2ServiceComponentHolder {
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
+    private static List<String> opaqueRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static AccountLockService accountLockService;
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
@@ -155,6 +156,26 @@ public class OAuth2ServiceComponentHolder {
     public static List<String> getJwtRenewWithoutRevokeAllowedGrantTypes() {
 
         return jwtRenewWithoutRevokeAllowedGrantTypes;
+    }
+
+    /**
+     * Get the list of grant types which are allowed to renew Opaque tokens without revoke.
+     *
+     * @return allowed grant types
+     */
+    public static List<String> getOpaqueRenewWithoutRevokeAllowedGrantTypes() {
+        return opaqueRenewWithoutRevokeAllowedGrantTypes;
+    }
+
+    /**
+     * Set the list of grant types which are allowed to renew Opaque tokens without revoke.
+     *
+     * @param opaqueRenewWithoutRevokeAllowedGrantTypes List of allowed grant types
+     */
+    public static void setOpaqueRenewWithoutRevokeAllowedGrantTypes(
+            List<String> opaqueRenewWithoutRevokeAllowedGrantTypes) {
+        OAuth2ServiceComponentHolder.opaqueRenewWithoutRevokeAllowedGrantTypes =
+                opaqueRenewWithoutRevokeAllowedGrantTypes;
     }
 
     /**
