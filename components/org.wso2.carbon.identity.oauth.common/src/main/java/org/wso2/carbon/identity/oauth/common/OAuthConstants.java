@@ -37,10 +37,7 @@ public final class OAuthConstants {
     public static final String HTTP_REQ_HEADER_AUTH_METHOD_BASIC = "Basic";
     public static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("application/x-www-form-urlencoded",
                                                                            "application/json");
-    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG_FOR_OPAQUE =
-            "OAuth.Opaque.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
-    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG_FOR_OPAQUE =
-            "OAuth.Opaque.RenewTokenWithoutRevokingExisting.Enable";
+
     // OAuth2 response headers
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";
     public static final String HTTP_RESP_HEADER_PRAGMA = "Pragma";
