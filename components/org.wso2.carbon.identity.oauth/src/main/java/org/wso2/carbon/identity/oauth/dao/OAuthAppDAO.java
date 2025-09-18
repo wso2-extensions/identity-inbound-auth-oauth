@@ -130,7 +130,6 @@ public class OAuthAppDAO {
                         prepStmt.setString(1, processedClientId);
                         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
                             prepStmt.setString(2, null);
-                            consumerAppDO.setOauthConsumerSecret(null);
                         } else {
                             prepStmt.setString(2, processedClientSecret);
                         }
@@ -167,10 +166,10 @@ public class OAuthAppDAO {
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
-                    IdentityDatabaseUtil.commitTransaction(connection);
                     if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                        addConsumerSecret(consumerAppDO.getOauthConsumerKey(), processedClientSecret);
+                        addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(), processedClientSecret);
                     }
+                    IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
                     IdentityDatabaseUtil.rollbackTransaction(connection);
                     if (isDuplicateClient(e1)) {
@@ -1107,12 +1106,13 @@ public class OAuthAppDAO {
         }
     }
 
-    private void addConsumerSecret(String consumerKey, String consumerSecret) throws IdentityOAuthAdminException {
+    private void addConsumerSecret(Connection connection, String consumerKey, String consumerSecret)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
         consumerSecretDO.setClientId(consumerKey);
         consumerSecretDO.setSecretValue(consumerSecret);
-        new OAuthConsumerSecretDAO().addOAuthConsumerSecret(consumerSecretDO);
+        new OAuthConsumerSecretDAO().addOAuthConsumerSecret(connection, consumerSecretDO);
     }
 
     /**
