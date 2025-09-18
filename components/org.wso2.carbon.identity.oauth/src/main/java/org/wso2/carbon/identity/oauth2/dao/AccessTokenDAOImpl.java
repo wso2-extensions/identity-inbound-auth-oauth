@@ -466,15 +466,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
-    private String getActiveAccessTokenWithoutBindingRefQuerySQL(Connection connection) throws SQLException {
-
-        String sql = getLatestAccessTokenQuerySQL(connection);
-        if (sql.contains("AND TOKEN_BINDING_REF = ?")) {
-            sql = sql.replace("AND TOKEN_BINDING_REF = ?", "");
-        }
-        return sql;
-    }
-
     @Override
     public AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                               String scope, boolean includeExpiredTokens)
@@ -487,15 +478,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     public AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                               String scope, String tokenBindingReference, boolean includeExpiredTokens)
             throws IdentityOAuth2Exception {
-
-        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, tokenBindingReference,
-                includeExpiredTokens, true);
-    }
-
-    @Override
-    public AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
-            String scope, String tokenBindingReference, boolean includeExpiredTokens,
-            boolean includeTokenBindingRef) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving latest access token for client: " + consumerKey + " user: "
@@ -518,12 +500,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         ResultSet resultSet = null;
         try {
 
-            String sql;
-            if (includeTokenBindingRef) {
-                sql = getLatestAccessTokenQuerySQL(connection);
-            } else {
-                sql = getActiveAccessTokenWithoutBindingRefQuerySQL(connection);
-            }
+            String sql = getLatestAccessTokenQuerySQL(connection);
 
             if (!includeExpiredTokens) {
                 sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH=? AND TOKEN_STATE='ACTIVE'");
@@ -556,24 +533,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 prepStmt.setString(6, hashedScope);
             }
 
-            if (includeTokenBindingRef) {
-                prepStmt.setString(7, tokenBindingReference);
-                prepStmt.setString(8, authorizedOrganization);
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    prepStmt.setString(9, authenticatedIDP);
-                    // Set tenant ID of the IDP by considering it is same as appTenantID.
-                    prepStmt.setInt(10, appTenantId);
-                }
+            prepStmt.setString(7, tokenBindingReference);
+            prepStmt.setString(8, authorizedOrganization);
 
-            } else {
-                prepStmt.setString(7, authorizedOrganization);
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    prepStmt.setString(8, authenticatedIDP);
-                    // Set tenant ID of the IDP by considering it is same as appTenantID.
-                    prepStmt.setInt(9, appTenantId);
-                }
-
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                prepStmt.setString(9, authenticatedIDP);
+                // Set tenant ID of the IDP by considering it is same as appTenantID.
+                prepStmt.setInt(10, appTenantId);
             }
+
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -630,8 +598,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
                     }
-                    if (includeTokenBindingRef && StringUtils.isNotBlank(tokenBindingReference) &&
-                            !NONE.equals(tokenBindingReference)) {
+                    if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(accessTokenDO, connection, tokenId);
                     }
                     if (log.isDebugEnabled() && IdentityUtil

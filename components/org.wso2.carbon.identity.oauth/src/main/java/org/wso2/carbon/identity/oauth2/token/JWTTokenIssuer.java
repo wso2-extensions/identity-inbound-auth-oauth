@@ -1023,7 +1023,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return grantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
     }
 
-    protected JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+    private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                             OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         /**
