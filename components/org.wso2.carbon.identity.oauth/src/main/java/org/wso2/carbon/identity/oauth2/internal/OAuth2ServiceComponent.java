@@ -105,6 +105,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabl
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getOpaqueRenewWithoutRevokeAllowedGrantTypes;
 
 /**
  * OAuth 2 OSGi service component.
@@ -167,6 +168,9 @@ public class OAuth2ServiceComponent {
             // Read and store the allowed grant types for JWT renew without revoke in OAuth2ServiceComponentHolder.
             OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
                     getJWTRenewWithoutRevokeAllowedGrantTypes());
+            // Read and store the allowed grant types for Opaque renew without revoke in OAuth2ServiceComponentHolder.
+            OAuth2ServiceComponentHolder.setOpaqueRenewWithoutRevokeAllowedGrantTypes(
+                    getOpaqueRenewWithoutRevokeAllowedGrantTypes());
             //Registering TenantCreationEventListener
             ServiceRegistration scopeTenantMgtListenerSR = bundleContext.registerService(
                     TenantMgtListener.class.getName(), scopeTenantMgtListener, null);

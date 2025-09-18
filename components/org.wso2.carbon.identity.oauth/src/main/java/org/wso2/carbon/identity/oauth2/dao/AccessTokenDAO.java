@@ -62,6 +62,26 @@ public interface AccessTokenDAO {
     }
 
     /**
+     * Get latest access token.
+     *
+     * @param consumerKey consumer key.
+     * @param authzUser authorized user.
+     * @param userStoreDomain user store domain.
+     * @param scope scope.
+     * @param tokenBindingReference token binding reference.
+     * @param includeExpiredTokens include expired tokens.
+     * @param includeTokenBindingRef include token binding reference.
+     * @return latest access token.
+     * @throws IdentityOAuth2Exception in case of failure.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+            String scope, String tokenBindingReference, boolean includeExpiredTokens,
+            boolean includeTokenBindingRef) throws IdentityOAuth2Exception {
+
+        return null;
+    }
+
+    /**
      * Get tokenId by binding reference.
      * @param bindingRef BindingRef.
      * @return TokenId.
