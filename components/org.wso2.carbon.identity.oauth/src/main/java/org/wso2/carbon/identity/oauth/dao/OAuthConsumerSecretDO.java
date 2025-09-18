@@ -22,6 +22,7 @@ public class OAuthConsumerSecretDO {
     private String description;
     private String clientId;
     private String secretValue;
+    private String secretHash;
     private Long expiresAt;
 
     public String getSecretId() {
@@ -62,5 +63,13 @@ public class OAuthConsumerSecretDO {
 
     public void setExpiresAt(Long expiryTime) {
         this.expiresAt = expiryTime;
+    }
+
+    public String getSecretHash() {
+        return secretHash;
+    }
+
+    public void setSecretHash(String secretHash) {
+        this.secretHash = secretHash;
     }
 }
