@@ -22,6 +22,7 @@ import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -593,8 +594,9 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
         IdentityUtil.validateJWTDepth(idToken);
-        String clientId = (String) SignedJWT.parse(idToken).getJWTClaimsSet()
+        String clientId = (String) signedJWT.getJWTClaimsSet()
                 .getClaims().get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
 
         if (StringUtils.isBlank(clientId)) {
@@ -618,8 +620,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         String tenantDomain = null;
         Map realm = null;
 
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
         IdentityUtil.validateJWTDepth(idToken);
-        JWTClaimsSet claimsSet = SignedJWT.parse(idToken).getJWTClaimsSet();
+        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
         if (claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM) instanceof Map) {
             realm = (Map) claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM);
         }
@@ -1116,7 +1119,8 @@ public class OIDCLogoutServlet extends HttpServlet {
                 appTenantDomain = IdentityTenantUtil.resolveTenantDomain();
             }
             JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idToken);
-            IdentityUtil.validateJWTDepth(idToken);
+            String payloadJson = ((EncryptedJWT) decryptedIDToken).getPayload().toString();
+            IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
             return (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                     .get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         } else {
@@ -1124,8 +1128,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 throw new IdentityOAuth2Exception(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
                         "ID token signature validation failed.");
             }
+            SignedJWT signedJWT = SignedJWT.parse(idToken);
             IdentityUtil.validateJWTDepth(idToken);
-            return (String) SignedJWT.parse(idToken).getJWTClaimsSet()
+            return (String) signedJWT.getJWTClaimsSet()
                     .getClaims().get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         }
     }

@@ -132,7 +132,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                     .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
                 return jweObject.getPayload().toString();
             } else {
-                IdentityUtil.validateJWTDepth(encryptedJWT.serialize());
+                String payloadJson = encryptedJWT.getPayload().toString();
+                IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
                 return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
             }
 
