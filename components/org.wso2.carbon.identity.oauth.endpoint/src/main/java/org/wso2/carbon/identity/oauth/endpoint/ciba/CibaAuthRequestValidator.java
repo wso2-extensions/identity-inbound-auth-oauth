@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
