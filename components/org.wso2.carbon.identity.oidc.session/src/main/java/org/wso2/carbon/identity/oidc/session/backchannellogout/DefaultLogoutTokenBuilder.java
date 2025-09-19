@@ -443,8 +443,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
         IdentityUtil.validateJWTDepth(idToken);
-        return SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+        return signedJWT.getJWTClaimsSet().getAudience().get(0);
     }
 
     /**

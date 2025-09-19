@@ -21,13 +21,16 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math3.analysis.function.Identity;
 import org.slf4j.MDC;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -75,6 +78,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -593,8 +597,9 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
         IdentityUtil.validateJWTDepth(idToken);
-        String clientId = (String) SignedJWT.parse(idToken).getJWTClaimsSet()
+        String clientId = (String) signedJWT.getJWTClaimsSet()
                 .getClaims().get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
 
         if (StringUtils.isBlank(clientId)) {
@@ -618,8 +623,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         String tenantDomain = null;
         Map realm = null;
 
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
         IdentityUtil.validateJWTDepth(idToken);
-        JWTClaimsSet claimsSet = SignedJWT.parse(idToken).getJWTClaimsSet();
+        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
         if (claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM) instanceof Map) {
             realm = (Map) claimsSet.getClaims().get(OAuthConstants.OIDCClaims.REALM);
         }
@@ -1116,7 +1122,8 @@ public class OIDCLogoutServlet extends HttpServlet {
                 appTenantDomain = IdentityTenantUtil.resolveTenantDomain();
             }
             JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idToken);
-            IdentityUtil.validateJWTDepth(idToken);
+            String payloadJson = ((EncryptedJWT) decryptedIDToken).getPayload().toString();
+            IdentityUtil.validateJWTDepthWithJWTPayload(payloadJson);
             return (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                     .get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         } else {
@@ -1124,8 +1131,9 @@ public class OIDCLogoutServlet extends HttpServlet {
                 throw new IdentityOAuth2Exception(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
                         "ID token signature validation failed.");
             }
+            SignedJWT signedJWT = SignedJWT.parse(idToken);
             IdentityUtil.validateJWTDepth(idToken);
-            return (String) SignedJWT.parse(idToken).getJWTClaimsSet()
+            return (String) signedJWT.getJWTClaimsSet()
                     .getClaims().get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         }
     }
