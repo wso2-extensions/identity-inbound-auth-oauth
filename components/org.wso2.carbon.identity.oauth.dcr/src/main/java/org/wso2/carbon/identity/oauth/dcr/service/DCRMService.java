@@ -1221,6 +1221,7 @@ public class DCRMService {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
+            IdentityUtil.validateJWTDepth(softwareStatement);
             return signedJWT.getJWTClaimsSet().getClaims();
         } catch (ParseException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,

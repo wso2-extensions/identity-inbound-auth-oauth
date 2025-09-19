@@ -116,6 +116,7 @@ public class JWTUtils {
             throws IdentityOAuth2Exception {
 
         try {
+            IdentityUtil.validateJWTDepth(signedJWT.serialize());
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             return Optional.ofNullable(claimsSet);
         } catch (ParseException e) {

@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -442,7 +443,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      */
     private String extractClientFromIdToken(String idToken) throws ParseException {
 
-        return SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+        SignedJWT signedJWT = SignedJWT.parse(idToken);
+        IdentityUtil.validateJWTDepth(idToken);
+        return signedJWT.getJWTClaimsSet().getAudience().get(0);
     }
 
     /**
