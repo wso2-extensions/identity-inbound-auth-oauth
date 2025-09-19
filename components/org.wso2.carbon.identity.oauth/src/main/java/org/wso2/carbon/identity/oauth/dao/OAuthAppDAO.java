@@ -353,20 +353,18 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(4));
 
                             oauthApp.setCallbackUrl(rSet.getString(5));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                    StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
                                                 oauthApp.getApplicationName()));
                                 if (isRootOrganization(tenantId)) {
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                    StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             oauthApp.setGrantTypes(rSet.getString(6));
@@ -472,7 +470,12 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(4));
 
                             oauthApp.setCallbackUrl(rSet.getString(5));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+
+                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
                                                 oauthApp.getApplicationName()));
@@ -480,12 +483,6 @@ public class OAuthAppDAO {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(6)));
@@ -572,7 +569,12 @@ public class OAuthAppDAO {
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
 
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
-                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                        } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil.
                                             resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
@@ -581,13 +583,6 @@ public class OAuthAppDAO {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
-                        }
-
-                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                         }
 
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
@@ -659,7 +654,12 @@ public class OAuthAppDAO {
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
 
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
-                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                        } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil
                                             .resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
@@ -668,13 +668,6 @@ public class OAuthAppDAO {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
-                        }
-
-                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                         }
 
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
@@ -774,7 +767,11 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(5));
 
                             oauthApp.setCallbackUrl(rSet.getString(6));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            if (!(isRootOrganization(tenantID)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil
                                                 .resolveOriginUrlFromPlaceholders(rSet.getString(6),
@@ -783,12 +780,6 @@ public class OAuthAppDAO {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(tenantID)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             oauthApp.setGrantTypes(rSet.getString(7));
