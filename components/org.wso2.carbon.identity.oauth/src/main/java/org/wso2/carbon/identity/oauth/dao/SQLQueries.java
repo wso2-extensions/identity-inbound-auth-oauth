@@ -61,6 +61,9 @@ public class SQLQueries {
         public static final String GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT = "SELECT * FROM IDN_OAUTH_CONSUMER_SECRETS " +
                 "WHERE CONSUMER_KEY=?";
 
+        public static final String GET_OAUTH_CONSUMER_SECRET_OF_CLIENT = "SELECT * FROM IDN_OAUTH_CONSUMER_SECRETS " +
+                "WHERE CONSUMER_KEY=? AND SECRET_HASH=?";
+
         public static final String UPDATE_OAUTH_CONSUMER = "UPDATE IDN_OAUTH_CONSUMER_APPS " +
                 "SET CONSUMER_SECRET=? WHERE CONSUMER_KEY=? AND USERNAME=? AND TENANT_ID=? AND USER_DOMAIN=?";
 
