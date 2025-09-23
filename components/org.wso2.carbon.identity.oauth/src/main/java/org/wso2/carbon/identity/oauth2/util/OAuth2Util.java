@@ -2245,10 +2245,10 @@ public class OAuth2Util {
         return oAuthAppDO.getOauthConsumerSecret();
     }
 
-    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash) throws IdentityOAuthAdminException {
+    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash)
+            throws IdentityOAuthAdminException {
 
-        return new OAuthConsumerSecretDAO()
-                .getOAuthConsumerSecret(consumerKey, secretHash);
+        return new OAuthConsumerSecretDAO().getOAuthConsumerSecret(consumerKey, secretHash);
     }
 
     /**

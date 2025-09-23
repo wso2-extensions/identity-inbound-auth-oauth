@@ -416,6 +416,23 @@ public class OAuthAdminService extends AbstractAdmin {
         }
     }
 
+    /**
+     * Get all OAuth consumer secrets associated with a given OAuth consumer key.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return List of OAuthConsumerSecretDTO objects containing the details of the consumer secrets
+     * associated with the given consumer key.
+     * @throws IdentityOAuthAdminException Error when reading the consumer secrets from the persistence store.
+     */
+    public List<OAuthConsumerSecretDTO> getClientSecrets(String consumerKey) throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.getOAuthConsumerSecrets(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
     public String[] getAllowedGrantTypes() {
 
         return oAuthAdminServiceImpl.getAllowedGrantTypes();
