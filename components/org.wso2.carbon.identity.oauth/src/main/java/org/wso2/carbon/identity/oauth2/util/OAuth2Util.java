@@ -169,6 +169,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -545,7 +546,7 @@ public class OAuth2Util {
             if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret) &&
                     !isMultipleClientSecretsEnabled()) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
+                    log.debug("Provided Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
                 }
                 return false;
@@ -564,18 +565,28 @@ public class OAuth2Util {
     }
 
     public static boolean isValidClientSecret(String clientId, String providedSecret)
-            throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
 
-        // If multi-secret is enabled, validate against all secrets.
         String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(providedSecret);
-        boolean matchFound = getClientSecretHashes(clientId).stream()
-                .anyMatch(secretHash -> StringUtils.equals(secretHash, hashedProvidedSecret));
-        if (!matchFound) {
+        OAuthConsumerSecretDO secret = getClientSecret(clientId, hashedProvidedSecret);
+        if (secret == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Provided the Client ID : " + clientId +
+                log.debug("Provided Client ID : " + clientId +
                         " and Client Secret do not match with the issued credentials.");
             }
             return false;
+        }
+        // If secret is found, check whether it is expired.
+        if (secret.getExpiresAt() != null) {
+            Instant nowUtc = Instant.now();
+            Instant expiryInstant = Instant.ofEpochMilli(secret.getExpiresAt());
+            boolean isExpired = expiryInstant.isBefore(nowUtc);
+            if (isExpired) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided Client Secret has expired");
+                }
+                return false;
+            }
         }
         return true;
     }
@@ -2234,24 +2245,10 @@ public class OAuth2Util {
         return oAuthAppDO.getOauthConsumerSecret();
     }
 
-    public static List<String> getClientSecrets(String consumerKey) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException, IdentityOAuthAdminException {
+    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash) throws IdentityOAuthAdminException {
 
         return new OAuthConsumerSecretDAO()
-                .getOAuthConsumerSecrets(consumerKey)
-                .stream()
-                .map(OAuthConsumerSecretDO::getSecretValue)
-                .collect(Collectors.toList());
-    }
-
-    public static List<String> getClientSecretHashes(String consumerKey) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException, IdentityOAuthAdminException {
-
-        return new OAuthConsumerSecretDAO()
-                .getOAuthConsumerSecrets(consumerKey)
-                .stream()
-                .map(OAuthConsumerSecretDO::getSecretHash)
-                .collect(Collectors.toList());
+                .getOAuthConsumerSecret(consumerKey, secretHash);
     }
 
     /**
