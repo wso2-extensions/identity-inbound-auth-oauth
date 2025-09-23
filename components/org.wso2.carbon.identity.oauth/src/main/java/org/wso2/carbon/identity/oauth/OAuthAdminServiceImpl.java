@@ -412,6 +412,24 @@ public class OAuthAdminServiceImpl {
         consumerSecretDAO.removeOAuthConsumerSecret(secretId);
     }
 
+    /**
+     * Retrieve all OAuth consumer secrets associated with a given consumer key (client ID).
+     *
+     * @param consumerKey Client Id
+     * @return A list of {@link OAuthConsumerSecretDTO} containing the consumer secret information
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the persistence store.
+     */
+    public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
+        List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
+        List<OAuthConsumerSecretDO> secrets = consumerSecretDAO.getOAuthConsumerSecrets(consumerKey);
+        for (OAuthConsumerSecretDO secret : secrets) {
+            consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
+        }
+        return consumerSecretsList;
+    }
+
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
         if (application.getAudiences() != null) {
