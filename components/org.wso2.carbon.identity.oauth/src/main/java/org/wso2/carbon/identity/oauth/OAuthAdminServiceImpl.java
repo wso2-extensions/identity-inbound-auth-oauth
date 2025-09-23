@@ -504,8 +504,13 @@ public class OAuthAdminServiceImpl {
         String errorMessage = "Error while updating the app information.";
         String oauthConsumerKey = consumerAppDTO.getOauthConsumerKey();
 
-        if (StringUtils.isEmpty(oauthConsumerKey) || StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
-            errorMessage = "ConsumerKey or ConsumerSecret is not provided for updating the OAuth application.";
+        if (StringUtils.isEmpty(oauthConsumerKey)) {
+            if (!OAuth2Util.isMultipleClientSecretsEnabled() &&
+                    StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
+                errorMessage = "ConsumerKey or ConsumerSecret is not provided for updating the OAuth application.";
+            } else {
+                errorMessage = "ConsumerKey is not provided for updating the OAuth application.";
+            }
             if (LOG.isDebugEnabled()) {
                 LOG.debug(errorMessage);
             }
@@ -525,13 +530,15 @@ public class OAuthAdminServiceImpl {
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
-                errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
-                        "consumerKey: " + oauthConsumerKey;
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(errorMessage);
+            if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+                if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+                    errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
+                            "consumerKey: " + oauthConsumerKey;
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(errorMessage);
+                    }
+                    throw handleClientError(INVALID_REQUEST, errorMessage);
                 }
-                throw handleClientError(INVALID_REQUEST, errorMessage);
             }
         } catch (InvalidOAuthClientException e) {
             String msg = "Cannot find a valid OAuth client for consumerKey: " + oauthConsumerKey;
