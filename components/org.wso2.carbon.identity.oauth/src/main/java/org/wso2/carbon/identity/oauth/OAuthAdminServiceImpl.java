@@ -89,8 +89,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.*;
 
 /**
  * OAuth OSGi service implementation.
@@ -525,19 +524,14 @@ public class OAuthAdminServiceImpl {
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-
-            // Always check single secret from appDO.
             boolean isSecretValid = StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(),
                     oauthappdo.getOauthConsumerSecret());
-
-            // If not valid, and multi-secret feature is enabled, check against all the secrets of the client
-            if (!isSecretValid && OAuth2Util.isMultipleClientSecretsEnabled()) {
-                List<String> activeSecrets = OAuth2Util.getClientSecrets(oauthConsumerKey); // fetch from new table
-                isSecretValid = activeSecrets.stream()
-                        .anyMatch(secret -> StringUtils.equals(secret, consumerAppDTO.getOauthConsumerSecret()));
+            if (!isSecretValid) {
+                if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                    isSecretValid = OAuth2Util.validateClientSecret(oauthConsumerKey,
+                            consumerAppDTO.getOauthConsumerSecret());
+                }
             }
-
-            // If still invalid, throw an error
             if (!isSecretValid) {
                 errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
                         "consumerKey: " + oauthConsumerKey;

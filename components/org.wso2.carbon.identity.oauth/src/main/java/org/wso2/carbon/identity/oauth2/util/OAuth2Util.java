@@ -102,6 +102,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -366,6 +367,8 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
 
+    private static final TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
+
     private OAuth2Util() {
 
     }
@@ -525,52 +528,67 @@ public class OAuth2Util {
 
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
-        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
-
-        // Always check single secret first.
         String appClientSecret = appDO.getOauthConsumerSecret();
-        if (secretsMatch(appClientSecret, clientSecretProvided, isHashDisabled, persistenceProcessor)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Successfully authenticated clientId : " + clientId + " using legacy single secret.");
-            }
-            return true;
-        }
-
-        // If multi-secret is enabled, check additional secrets.
-        if (isMultipleClientSecretsEnabled()) {
-            List<String> clientSecrets = getClientSecrets(clientId);
-            for (String secretFromDB : clientSecrets) {
-                if (secretsMatch(secretFromDB, clientSecretProvided, isHashDisabled, persistenceProcessor)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully authenticated clientId : " + clientId + " using multi-secret flow.");
-                    }
-                    return true;
+        if (isHashDisabled) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided) && !isMultipleClientSecretsEnabled()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
                 }
+                return false;
+            }
+        } else {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret) &&
+                    !isMultipleClientSecretsEnabled()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
             }
         }
 
-        // No match found.
-        if (log.isDebugEnabled()) {
-            log.debug("Provided Client ID : " + clientId + " and Client Secret did not match any stored credentials.");
-        }
-        return false;
-    }
-
-    /**
-     * Helper method to check whether a stored secret matches the provided secret.
-     */
-    private static boolean secretsMatch(String storedSecret, String providedSecret,
-                                        boolean isHashDisabled, TokenPersistenceProcessor processor)
-            throws IdentityOAuth2Exception {
-        if (storedSecret == null) {
+        if (isMultipleClientSecretsEnabled() && !isValidClientSecret(clientId, clientSecretProvided)) {
             return false;
         }
-        if (isHashDisabled) {
-            return StringUtils.equals(storedSecret, providedSecret);
-        } else {
-            String processedSecret = processor.getProcessedClientSecret(providedSecret);
-            return StringUtils.equals(storedSecret, processedSecret);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully authenticated the client with client id : " + clientId);
         }
+
+        return true;
+    }
+
+    public static boolean isValidClientSecret(String clientId, String providedSecret)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
+
+        // If multi-secret is enabled, validate against all secrets.
+        String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(providedSecret);
+        boolean matchFound = getClientSecretHashes(clientId).stream()
+                .anyMatch(secretHash -> StringUtils.equals(secretHash, hashedProvidedSecret));
+        if (!matchFound) {
+            if (log.isDebugEnabled()) {
+                log.debug("Provided the Client ID : " + clientId +
+                        " and Client Secret do not match with the issued credentials.");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean validateClientSecret(String clientId, String providedSecret) 
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
+        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+        boolean isHashDisabled = isHashDisabled();
+        String preProcessedClientSecret = "";
+        if (isHashDisabled) {
+            preProcessedClientSecret = persistenceProcessor.getPreprocessedClientSecret(providedSecret);
+        }
+        return isValidClientSecret(clientId, preProcessedClientSecret);
     }
 
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
@@ -2234,6 +2252,16 @@ public class OAuth2Util {
                 .getOAuthConsumerSecrets(consumerKey)
                 .stream()
                 .map(OAuthConsumerSecretDO::getSecretValue)
+                .collect(Collectors.toList());
+    }
+
+    public static List<String> getClientSecretHashes(String consumerKey) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException, IdentityOAuthAdminException {
+
+        return new OAuthConsumerSecretDAO()
+                .getOAuthConsumerSecrets(consumerKey)
+                .stream()
+                .map(OAuthConsumerSecretDO::getSecretHash)
                 .collect(Collectors.toList());
     }
 
