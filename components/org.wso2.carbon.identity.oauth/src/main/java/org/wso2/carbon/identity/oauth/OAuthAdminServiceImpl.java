@@ -89,7 +89,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.*;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
 
 /**
  * OAuth OSGi service implementation.
@@ -524,15 +525,7 @@ public class OAuthAdminServiceImpl {
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-            boolean isSecretValid = StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(),
-                    oauthappdo.getOauthConsumerSecret());
-            if (!isSecretValid) {
-                if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                    isSecretValid = OAuth2Util.validateClientSecret(oauthConsumerKey,
-                            consumerAppDTO.getOauthConsumerSecret());
-                }
-            }
-            if (!isSecretValid) {
+            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
                 errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
                         "consumerKey: " + oauthConsumerKey;
                 if (LOG.isDebugEnabled()) {
