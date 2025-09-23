@@ -580,17 +580,6 @@ public class OAuth2Util {
         return true;
     }
 
-    public static boolean validateClientSecret(String clientId, String providedSecret) 
-            throws IdentityOAuth2Exception, IdentityOAuthAdminException, InvalidOAuthClientException {
-        TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
-        boolean isHashDisabled = isHashDisabled();
-        String preProcessedClientSecret = "";
-        if (isHashDisabled) {
-            preProcessedClientSecret = persistenceProcessor.getPreprocessedClientSecret(providedSecret);
-        }
-        return isValidClientSecret(clientId, preProcessedClientSecret);
-    }
-
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
         try {
             TenantManager tenantManager = OAuthComponentServiceHolder.getInstance()
