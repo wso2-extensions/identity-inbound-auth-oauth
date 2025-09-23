@@ -258,7 +258,17 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             if (isExistingClient) {
                                 // For existing client, we fetch the existing client secret and set.
                                 OAuthAppDO app = OAuth2Util.getAppInformationByClientId(oauthConsumerKey);
-                                oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                                String clientSecret = app.getOauthConsumerSecret();
+                                if (clientSecret == null && OAuth2Util.isMultipleClientSecretsEnabled()) {
+                                    List<String> consumerSecrets = OAuth2Util
+                                            .getClientSecrets(oauthConsumerKey);
+                                    if (isNotEmpty(consumerSecrets)) {
+                                        // Set the latest client secret as the client secret of the app.
+                                        oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecrets.get(0));
+                                    }
+                                } else {
+                                    oAuthConsumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                                }
                             } else {
                                 oAuthConsumerAppDTO.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                             }
