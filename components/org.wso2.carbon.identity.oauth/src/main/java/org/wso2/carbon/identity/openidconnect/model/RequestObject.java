@@ -21,6 +21,7 @@ import com.nimbusds.jwt.SignedJWT;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 
@@ -79,6 +80,7 @@ public class RequestObject implements Serializable {
     public void setPlainJWT(PlainJWT plainJWT) throws RequestObjectException {
         this.plainJWT = plainJWT;
         try {
+            IdentityUtil.validateJWTDepth(plainJWT.serialize());
             this.setClaimSet(plainJWT.getJWTClaimsSet());
         } catch (ParseException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to parse Claim Set in " +
@@ -112,6 +114,7 @@ public class RequestObject implements Serializable {
     public void setSignedJWT(SignedJWT signedJWT) throws RequestObjectException {
         this.signedJWT = signedJWT;
         try {
+            IdentityUtil.validateJWTDepth(signedJWT.serialize());
             setClaimSet(signedJWT.getJWTClaimsSet());
         } catch (ParseException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST, "Unable to parse Claim Set in " +

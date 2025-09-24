@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -131,6 +132,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                     .split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWS) {
                 return jweObject.getPayload().toString();
             } else {
+                String payloadJson = encryptedJWT.getPayload().toString();
+                IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
                 return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
             }
 
