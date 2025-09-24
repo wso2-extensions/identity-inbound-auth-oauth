@@ -457,7 +457,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
                     .getTenantDomain()), e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return authorizationCodes;
     }
@@ -479,7 +479,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-        ResultSet rs;
+        ResultSet rs = null;
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
@@ -540,7 +540,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
                     .getTenantDomain()), e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return authorizationCodes;
     }
@@ -555,7 +555,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement ps = null;
-        ResultSet rs;
+        ResultSet rs = null;
         List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
         String authzUser = authenticatedUser.getUserName();
         String tenantDomain = authenticatedUser.getTenantDomain();
@@ -581,7 +581,6 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 long validityPeriodInMillis = rs.getLong(3);
                 Timestamp timeCreated = rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long issuedTimeInMillis = timeCreated.getTime();
-                String authorizationCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
                 String authzCodeId = rs.getString(4);
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
@@ -595,6 +594,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
                 if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
                     if (isHashDisabled) {
+                        String authorizationCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
                         authorizationCodes
                                 .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
                                         callbackUrl, consumerKey, authorizationCode, authzCodeId));
@@ -608,7 +608,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
                     .getTenantDomain()), e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return authorizationCodes;
     }
@@ -639,7 +639,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization " +
                     "code table for the application with consumer key : " + consumerKey, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return authorizationCodes;
     }
@@ -672,7 +672,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             throw new IdentityOAuth2Exception("Error occurred while getting authorization codes from authorization " +
                     "code table for the application with consumer key : " + consumerKey, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
         }
         return authorizationCodes;
     }
