@@ -1106,6 +1106,15 @@ public class OAuthAppDAO {
         }
     }
 
+    /**
+     * Add consumer secret for consumerApp using connection.
+     *
+     * @param connection     Same db connection used in OAuth creation.
+     * @param consumerKey    Consumer key of the created app.
+     * @param consumerSecret Consumer secret of the created app.
+     * @throws IdentityOAuth2Exception if an error occurs during the process.
+     * @throws IdentityOAuthAdminException if an error occurs during the process.
+     */
     private void addConsumerSecret(Connection connection, String consumerKey, String consumerSecret)
             throws IdentityOAuth2Exception, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();

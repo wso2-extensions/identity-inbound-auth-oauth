@@ -505,6 +505,17 @@ public final class OAuthUtil {
         return dto;
     }
 
+    /**
+     * Builds an {@link OAuthConsumerSecretDTO} object from the given
+     * {@link OAuthConsumerSecretDO}. This method copies the relevant fields such as
+     * client ID, description, expiry time, secret ID, and client secret value from
+     * the data object (DO) to the data transfer object (DTO).
+     *
+     * @param consumerSecretDO The {@link OAuthConsumerSecretDO} containing the
+     *                         persisted consumer secret data.
+     * @return An {@link OAuthConsumerSecretDTO} populated with values from the
+     *         provided {@link OAuthConsumerSecretDO}.
+     */
     public static OAuthConsumerSecretDTO buildConsumerSecretDTO(OAuthConsumerSecretDO consumerSecretDO) {
 
         OAuthConsumerSecretDTO consumerSecretDTO = new OAuthConsumerSecretDTO();

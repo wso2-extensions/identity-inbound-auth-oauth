@@ -3171,6 +3171,12 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Parses the OAuth configuration XML element to determine whether
+     * the support for multiple client secrets is enabled.
+     *
+     * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
+     */
     private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
 
         OMElement multipleClientSecretsElement = oauthConfigElem

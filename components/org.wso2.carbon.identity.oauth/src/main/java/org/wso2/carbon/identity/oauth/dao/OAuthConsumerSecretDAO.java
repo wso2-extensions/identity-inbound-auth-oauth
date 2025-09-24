@@ -156,6 +156,14 @@ public class OAuthConsumerSecretDAO {
         return consumerSecrets;
     }
 
+    /**
+     * Retrieve a specific OAuth consumer secret associated with a given consumer key (client ID) and secret hash.
+     *
+     * @param consumerKey The consumer key (client ID).
+     * @param secretHash  The hash of the secret to be retrieved.
+     * @return An OAuthConsumerSecretDO object representing the consumer secret, or null if not found.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secret.
+     */
     public OAuthConsumerSecretDO getOAuthConsumerSecret(String consumerKey, String secretHash) throws IdentityOAuthAdminException {
 
         OAuthConsumerSecretDO secret = null;
