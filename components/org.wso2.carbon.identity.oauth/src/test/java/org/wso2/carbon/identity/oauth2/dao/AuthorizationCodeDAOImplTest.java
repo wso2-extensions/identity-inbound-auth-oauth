@@ -65,7 +65,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -332,7 +331,7 @@ public class AuthorizationCodeDAOImplTest {
         when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
                 thenReturn(mockedServiceProvider);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomain(1234)).thenReturn("super.wso2");
-        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), isNull())).
+        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString())).
                 thenReturn(mockedAuthenticatedUser);
 
         Assert.assertNotNull(authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),

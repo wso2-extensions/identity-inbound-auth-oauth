@@ -106,37 +106,21 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             String driverName = connection.getMetaData().getDriverName();
             boolean isMysqlOrMarinaDBOrH2 =
                     driverName.contains("MySQL") || driverName.contains("MariaDB") || driverName.contains("H2");
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (isAccessTokenExtendedTableExist()) {
-                    if (isMysqlOrMarinaDBOrH2) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MYSQL;
-                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_DB2SQL;
-                    } else if (driverName.contains("MS SQL")
-                            || driverName.contains("Microsoft")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MSSQL;
-                    } else if (driverName.contains("PostgreSQL")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_POSTGRESQL;
-                    } else if (driverName.contains("INFORMIX")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_INFORMIX;
-                    } else {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_ORACLE;
-                    }
+
+            if (isAccessTokenExtendedTableExist()) {
+                if (isMysqlOrMarinaDBOrH2) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MYSQL;
+                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_DB2SQL;
+                } else if (driverName.contains("MS SQL")
+                        || driverName.contains("Microsoft")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MSSQL;
+                } else if (driverName.contains("PostgreSQL")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_POSTGRESQL;
+                } else if (driverName.contains("INFORMIX")) {
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_INFORMIX;
                 } else {
-                    if (isMysqlOrMarinaDBOrH2) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
-                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
-                    } else if (driverName.contains("MS SQL")
-                            || driverName.contains("Microsoft")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
-                    } else if (driverName.contains("PostgreSQL")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
-                    } else if (driverName.contains("INFORMIX")) {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
-                    } else {
-                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
-                    }
+                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_ORACLE;
                 }
             } else {
                 if (isMysqlOrMarinaDBOrH2) {
@@ -219,10 +203,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                             resultSet.getTimestamp(13, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
                     validationDataDO.setAccessTokenValidityInMillis(resultSet.getLong(14));
                     String authorizedOrganization = resultSet.getString(15);
-                    String authenticatedIDP = null;
-                    if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(16);
-                    }
+                    String authenticatedIDP = resultSet.getString(16);
+
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
@@ -289,12 +271,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
 
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            sql = SQLQueries.RETRIEVE_REFRESH_TOKEN_WITH_IDP_NAME;
-        } else {
-            sql = SQLQueries.RETRIEVE_REFRESH_TOKEN;
-        }
+        String sql = SQLQueries.RETRIEVE_REFRESH_TOKEN_WITH_IDP_NAME;
+
 
         try {
             sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, refreshToken);
@@ -323,10 +301,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     String tokenId = resultSet.getString(12);
                     String grantType = resultSet.getString(13);
                     String subjectIdentifier = resultSet.getString(14);
-                    String authenticatedIDP = null;
-                    if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(15);
-                    }
+                    String authenticatedIDP = resultSet.getString(15);
+
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser, userDomain,
                             tenantDomain, authenticatedIDP);
