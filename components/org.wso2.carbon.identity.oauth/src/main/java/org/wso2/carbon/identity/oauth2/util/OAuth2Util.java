@@ -568,6 +568,18 @@ public class OAuth2Util {
         return true;
     }
 
+    /**
+     * Validates whether the provided client secret is correct and not expired for the given client ID.
+     *
+     * @param clientId        The client ID of the consumer application.
+     * @param providedSecret  The raw client secret value provided for validation.
+     * @return {@code true} if the provided secret matches a stored secret and is not expired,
+     *         {@code false} otherwise.
+     * @throws IdentityOAuth2Exception     If an error occurs while processing the secret or
+     *                                     performing OAuth-related operations.
+     * @throws IdentityOAuthAdminException If an error occurs while retrieving or accessing
+     *                                     the stored client secret from the persistence layer.
+     */
     public static boolean isValidClientSecret(String clientId, String providedSecret)
             throws IdentityOAuth2Exception, IdentityOAuthAdminException {
 
@@ -586,9 +598,7 @@ public class OAuth2Util {
             Instant expiryInstant = Instant.ofEpochMilli(secret.getExpiresAt());
             boolean isExpired = expiryInstant.isBefore(nowUtc);
             if (isExpired) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided Client Secret has expired");
-                }
+                log.debug("Provided Client Secret has expired");
                 return false;
             }
         }
@@ -637,6 +647,11 @@ public class OAuth2Util {
 
     }
 
+    /**
+     * Check whether multiple client secrets feature is enabled or not.
+     *
+     * @return Whether multiple client secrets feature is enabled or not.
+     */
     public static boolean isMultipleClientSecretsEnabled() {
 
         return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
@@ -2249,6 +2264,14 @@ public class OAuth2Util {
         return oAuthAppDO.getOauthConsumerSecret();
     }
 
+    /**
+     * Get the client secret of the application.
+     *
+     * @param consumerKey Consumer Key of the application.
+     * @param secretHash  Hash of the consumer secret.
+     * @return Consumer Secret retrieved from the DB which matches with the provided secret hash.
+     * @throws IdentityOAuthAdminException Error when loading the application.
+     */
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash)
             throws IdentityOAuthAdminException {
 
