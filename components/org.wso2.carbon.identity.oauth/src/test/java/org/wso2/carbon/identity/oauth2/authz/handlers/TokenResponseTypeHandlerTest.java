@@ -85,7 +85,6 @@ public class TokenResponseTypeHandlerTest {
     @Test(dataProvider = "CommonDataProvider")
     public void testIssue(boolean isIDPIdColumnEnabled, String clientId) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         AccessTokenResponseTypeHandler tokenResponseTypeHandler = new AccessTokenResponseTypeHandler();
         tokenResponseTypeHandler.init();
 

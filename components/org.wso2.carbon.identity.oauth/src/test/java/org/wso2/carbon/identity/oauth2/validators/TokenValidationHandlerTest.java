@@ -203,7 +203,6 @@ public class TokenValidationHandlerTest {
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
                      mockStatic(OAuth2ServiceComponentHolder.class);) {
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
 
             AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
@@ -264,7 +263,6 @@ public class TokenValidationHandlerTest {
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString())).
                     thenReturn(false);
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
             OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                     Mockito.mock(OAuth2ServiceComponentHolder.class);

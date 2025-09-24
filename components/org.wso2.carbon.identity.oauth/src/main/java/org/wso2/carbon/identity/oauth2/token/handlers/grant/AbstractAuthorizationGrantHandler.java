@@ -644,7 +644,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+
             if (existingTokenBean != null) {
                 tokReqMsgCtx.setConsentedToken(existingTokenBean.isConsentedToken());
             } else {
@@ -653,7 +653,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     tokReqMsgCtx.setConsentedToken(true);
                 }
             }
-        }
+
         OAuthAppDO oAuthAppBean = getoAuthApp(consumerKey);
         long validityPeriodInMillis = getConfiguredExpiryTimeForApplication(tokReqMsgCtx, consumerKey, oAuthAppBean);
         tokReqMsgCtx.setValidityPeriod(validityPeriodInMillis);

@@ -98,7 +98,6 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
             String previousGrantType = validationBean.getGrantType();
             // Check if the previous grant type is consent refresh token type or not.
             if (!OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(previousGrantType)) {
@@ -117,7 +116,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             if (accessTokenDO.isConsentedToken()) {
                 tokReqMsgCtx.setConsentedToken(true);
             }
-        }
+
         return accessTokenDO;
     }
 

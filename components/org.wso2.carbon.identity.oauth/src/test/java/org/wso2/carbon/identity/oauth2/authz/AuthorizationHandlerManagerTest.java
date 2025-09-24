@@ -113,7 +113,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationIDTokenTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -133,7 +132,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationIDTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_ID_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -153,7 +151,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationTokenResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -173,7 +170,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationCodeResponse(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_CODE);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);
@@ -222,7 +218,6 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testHandleAuthorizationTokenResponseNoScopes(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         authzReqDTO.setResponseType(TestConstants.AUTHORIZATION_HANDLER_RESPONSE_TYPE_TOKEN);
         authzReqDTO.setConsumerKey(TestConstants.CLIENT_ID);

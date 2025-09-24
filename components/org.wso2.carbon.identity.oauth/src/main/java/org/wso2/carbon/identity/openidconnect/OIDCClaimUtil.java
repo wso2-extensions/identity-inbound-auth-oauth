@@ -288,10 +288,7 @@ public class OIDCClaimUtil {
                                                                      ServiceProvider serviceProvider,
                                                                      boolean isConsentedToken) {
 
-        if (!OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            return filterUserClaimsBasedOnConsent(userClaims, authenticatedUser, clientId, spTenantDomain, grantType,
-                    serviceProvider);
-        } else {
+
             if (isConsentedToken && !FrameworkUtils.isConsentPageSkippedForSP(serviceProvider)) {
                 return OpenIDConnectServiceComponentHolder.getInstance()
                         .getHighestPriorityOpenIDConnectClaimFilter()
@@ -305,7 +302,6 @@ public class OIDCClaimUtil {
                 }
                 return userClaims;
             }
-        }
     }
 
     public static boolean isConsentBasedClaimFilteringApplicable(String grantType) {

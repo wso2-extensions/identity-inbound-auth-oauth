@@ -180,7 +180,6 @@ public class AbstractAuthorizationGrantHandlerTest {
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
@@ -281,8 +280,6 @@ public class AbstractAuthorizationGrantHandlerTest {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
@@ -489,8 +486,6 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @Test(dataProvider = "IssueExistingAccessTokensWithoutConsent")
     public void testIssueExistingAccessTokensWithoutConsent(boolean idpIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(idpIdColumnEnabled);
 
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         oAuth2AccessTokenReqDTO.setClientId(clientId);

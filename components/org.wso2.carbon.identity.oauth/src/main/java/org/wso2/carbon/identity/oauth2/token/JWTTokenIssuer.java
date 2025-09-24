@@ -1135,16 +1135,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 throw new IdentityOAuth2Exception("User id not found for user: "
                         + authenticatedUser.getLoggableMaskedUserId(), e);
             }
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                boolean isConsented;
-                if (tokenReqMessageContext != null) {
-                    isConsented = tokenReqMessageContext.isConsentedToken();
-                } else {
-                    isConsented = authAuthzReqMessageContext.isConsentedToken();
-                }
-                // when no persistence of tokens, there is no existing token to check the consented value for.
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
+
+            boolean isConsented;
+            if (tokenReqMessageContext != null) {
+                isConsented = tokenReqMessageContext.isConsentedToken();
+            } else {
+                isConsented = authAuthzReqMessageContext.isConsentedToken();
             }
+            // when no persistence of tokens, there is no existing token to check the consented value for.
+            jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
+
             jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
         }
     }

@@ -159,8 +159,6 @@ import javax.xml.stream.XMLStreamReader;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
@@ -449,19 +447,6 @@ public class OAuth2ServiceComponent {
             }
             OAuth2ServiceComponentHolder.setAudienceEnabled(false);
         }
-        if (checkIDPIdColumnAvailable()) {
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is available in all relevant tables. " +
-                        "Setting isIDPIdColumnEnabled to true.");
-            }
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available in all relevant tables. " +
-                        "Setting isIDPIdColumnEnabled to false.");
-            }
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
-        }
 
         if (isAccessTokenExtendedTableExist()) {
             log.debug("IDN_OAUTH2_ACCESS_TOKEN_EXTENDED table is available Setting " +
@@ -469,17 +454,6 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.setTokenExtendedTableExist(true);
         }
 
-        boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
-        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(isConsentedTokenColumnAvailable);
-        if (log.isDebugEnabled()) {
-            if (isConsentedTokenColumnAvailable) {
-                log.debug("CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table. Hence setting " +
-                        "consentedColumnAvailable to true.");
-            } else {
-                log.debug("CONSENTED_TOKEN column is not available in IDN_OAUTH2_ACCESS_TOKEN table. Hence " +
-                        "setting consentedColumnAvailable to false.");
-            }
-        }
         if (OAuthServerConfiguration.getInstance().isGlobalRbacScopeIssuerEnabled()) {
             bundleContext.registerService(ScopeValidator.class, new RoleBasedScopeIssuer(), null);
         }

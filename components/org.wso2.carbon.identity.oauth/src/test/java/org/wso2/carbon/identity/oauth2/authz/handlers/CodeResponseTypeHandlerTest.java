@@ -121,7 +121,6 @@ public class CodeResponseTypeHandlerTest {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testIssue(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);
