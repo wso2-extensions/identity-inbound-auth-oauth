@@ -177,8 +177,8 @@ public class OAuthConsumerSecretDAO {
                 }
             }
         } catch (SQLException e) {
-            throw handleError("Error occurred while retrieving OAuth consumer secrets for client id : "
-                    + consumerKey, e);
+            throw handleError("Error occurred while retrieving the provided OAuth consumer secret  "
+                    + "for client id : " + consumerKey, e);
         }
         return secret;
     }

@@ -529,9 +529,11 @@ public class OAuth2Util {
 
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
+        boolean isSecretValid;
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
-            if (!StringUtils.equals(appClientSecret, clientSecretProvided) && !isMultipleClientSecretsEnabled()) {
+            isSecretValid = StringUtils.equals(appClientSecret, clientSecretProvided);
+            if (!isSecretValid && !isMultipleClientSecretsEnabled()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
@@ -542,9 +544,8 @@ public class OAuth2Util {
             TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-
-            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret) &&
-                    !isMultipleClientSecretsEnabled()) {
+            isSecretValid = StringUtils.equals(appClientSecret, processedProvidedClientSecret);
+            if (!isSecretValid && !isMultipleClientSecretsEnabled()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
@@ -553,7 +554,10 @@ public class OAuth2Util {
             }
         }
 
-        if (isMultipleClientSecretsEnabled() && !isValidClientSecret(clientId, clientSecretProvided)) {
+        // If the single client secret is not valid and the execution reaches here, it means multiple client secrets
+        // feature is enabled. Hence, we will check the provided client secret against the list of secrets associated
+        // with the client
+        if (!isSecretValid && !isValidClientSecret(clientId, clientSecretProvided)) {
             return false;
         }
 
