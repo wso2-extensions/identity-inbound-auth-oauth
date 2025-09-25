@@ -69,6 +69,7 @@ each purpose  and factory class to get instance of each DAO classes were introdu
  on org.wso2.carbon.identity.oauth2.dao.TokenMgtDAO were distributed among new set of classes, each of these method
  need to be reviewed  and refactored  during next step.
  */
+
 /**
  * Data Access Layer functionality for Token management in OAuth 2.0 implementation. This includes
  * storing and retrieving access tokens, authorization codes and refresh tokens.
@@ -689,8 +690,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     /**
      * Revoke active access tokens issued against application.
      *
-     * @param consumerKey    OAuth application consumer key.
-     * @param accessTokens   Active access tokens.
+     * @param consumerKey  OAuth application consumer key.
+     * @param accessTokens Active access tokens.
      * @throws IdentityOAuth2Exception
      * @throws IdentityApplicationManagementException
      */
@@ -744,8 +745,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
     /**
      * Revoke authorize codes issued against application.
      *
-     * @param consumerKey          OAuth application consumer key.
-     * @param authorizationCodes   Active authorization codes.
+     * @param consumerKey        OAuth application consumer key.
+     * @param authorizationCodes Active authorization codes.
      * @throws IdentityApplicationManagementException
      */
     @Override

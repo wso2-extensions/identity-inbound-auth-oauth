@@ -256,9 +256,9 @@ public class AuthorizationCodeDAOImplTest {
         availableAuthzCodes.add(authzCode);
 
         Assert.assertEquals(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(authzCodeDO.getConsumerKey()),
-                    availableAuthzCodes);
+                availableAuthzCodes);
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(UUID.randomUUID().
-                    toString()).isEmpty());
+                toString()).isEmpty());
     }
 
     @Test
@@ -325,7 +325,7 @@ public class AuthorizationCodeDAOImplTest {
         String authzCodeID = UUID.randomUUID().toString();
         String authzCode = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
-            OAuthConstants.AuthorizationCodeState.ACTIVE);
+                OAuthConstants.AuthorizationCodeState.ACTIVE);
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
         when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
@@ -353,7 +353,7 @@ public class AuthorizationCodeDAOImplTest {
                 OAuthConstants.AuthorizationCodeState.ACTIVE, tempScope);
 
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(authzCodeDO.
-                    getConsumerKey()).isEmpty());
+                getConsumerKey()).isEmpty());
     }
 
     @Test
