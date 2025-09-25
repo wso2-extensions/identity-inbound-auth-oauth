@@ -98,6 +98,14 @@ public class ClaimProviderImpl implements ClaimProvider {
             OIDCSessionState previousSession = getSessionState(oAuthTokenReqMessageContext);
             if (previousSession != null) {
                 claimValue = previousSession.getSidClaim();
+            } else {
+                AuthorizationGrantCacheKey authorizationGrantCacheKey =
+                        new AuthorizationGrantCacheKey(oAuth2AccessTokenRespDTO.getAccessToken());
+                AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                        AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+                if (authorizationGrantCacheEntry != null) {
+                    claimValue = authorizationGrantCacheEntry.getOidcSessionId();
+                }
             }
         } else {
             LOG.debug("AccessCode is null. Possibly a back end grant");
