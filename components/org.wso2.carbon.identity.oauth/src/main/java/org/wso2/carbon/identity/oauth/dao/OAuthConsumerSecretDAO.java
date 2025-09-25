@@ -144,7 +144,10 @@ public class OAuthConsumerSecretDAO {
                         secret.setClientId(resultSet.getString(3));
                         secret.setSecretValue(resultSet.getString(4));
                         secret.setSecretHash(resultSet.getString(5));
-                        secret.setExpiresAt(resultSet.getLong(6));
+                        long expiresAt = resultSet.getLong(6);
+                        if (!resultSet.wasNull()) {
+                            secret.setExpiresAt(expiresAt);
+                        }
                         consumerSecrets.add(secret);
                     }
                 }
@@ -180,7 +183,10 @@ public class OAuthConsumerSecretDAO {
                         secret.setClientId(resultSet.getString(3));
                         secret.setSecretValue(resultSet.getString(4));
                         secret.setSecretHash(resultSet.getString(5));
-                        secret.setExpiresAt(resultSet.getLong(6));
+                        long expiresAt = resultSet.getLong(6);
+                        if (!resultSet.wasNull()) {
+                            secret.setExpiresAt(expiresAt);
+                        }
                     }
                 }
             }
