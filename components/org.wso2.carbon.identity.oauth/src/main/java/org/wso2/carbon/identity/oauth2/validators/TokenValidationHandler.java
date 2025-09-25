@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -57,6 +58,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
@@ -675,6 +677,14 @@ public class TokenValidationHandler {
                         StringUtils.isNotBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
                     introResp.setCnfBindingValue(accessTokenDO.getTokenBinding().getBindingValue());
                 }
+
+                if (!isValidTokenBinding(accessTokenDO)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Token binding validation failed for the given token.");
+                    }
+                    introResp.setActive(false);
+                    return introResp;
+                }
             }
             // add authorized user type
             if (tokenType != null) {
@@ -1036,5 +1046,37 @@ public class TokenValidationHandler {
                 throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
             }
         }
+    }
+
+    /**
+     * Checks if the token binding is valid.
+     *
+     * This validation is performed only for token binders that support validation based on the access token data
+     * alone (e.g., SSO session-based token binding), without requiring request context (such as cookies, etc.).
+     * Token binders that support this type of validation must override the
+     * {@link TokenBinder#isValidTokenBinding(AccessTokenDO)} method to provide their specific implementation.
+     *
+     * @param accessTokenDO The access token data object.
+     * @return true if the token binding is valid, false otherwise.
+     */
+    private boolean isValidTokenBinding(AccessTokenDO accessTokenDO) {
+
+        String bindingType = accessTokenDO.getTokenBinding().getBindingType();
+        Optional<TokenBinder> tokenBinderOptional =
+                OAuth2ServiceComponentHolder.getInstance().getTokenBinder(bindingType);
+
+        if (tokenBinderOptional.isPresent()) {
+            try {
+                return tokenBinderOptional.get().isValidTokenBinding(accessTokenDO);
+            } catch (UnsupportedOperationException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Token binder with type: " + bindingType + " does not support direct access token " +
+                            "based token binding validation. Therefore, the token binding is ignored.");
+                }
+            }
+        }
+        /* Return true to maintain backward compatibility for binders that don't support direct access token
+        based token binding validation.*/
+        return true;
     }
 }

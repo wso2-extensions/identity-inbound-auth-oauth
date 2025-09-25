@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.token.bindings;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
 import java.util.Optional;
 
@@ -106,4 +107,26 @@ public interface TokenBinder extends TokenBinderInfo {
      * @return true if token binding is valid.
      */
     boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference);
+
+    /**
+     * Check the validity of the access token based on the configured token binding.
+     *
+     * Token binding validation methods ({@link #isValidTokenBinding(Object, String)},
+     * {@link #isValidTokenBinding(Object, TokenBinding)}, and
+     * {@link #isValidTokenBinding(OAuth2AccessTokenReqDTO, String)}) are expected to be invoked only when the
+     * "validateTokenBinding" config is enabled.
+     * This method can be used regardless of whether the "validateTokenBinding" configuration is enabled.
+     *
+     * Token binders that support this type of validation must override this method to provide
+     * their specific implementation.
+     * The default implementation throws an exception to ensure only supporting binders handle this validation.
+     *
+     * @param accessTokenDO the access token data object to validate.
+     * @return {@code true} if the token binding is valid, {@code false} otherwise.
+     * @throws UnsupportedOperationException if the token binder does not support this validation.
+     */
+    default boolean isValidTokenBinding(AccessTokenDO accessTokenDO) throws UnsupportedOperationException {
+
+        throw new UnsupportedOperationException("Token binding validation is not supported by this binder");
+    }
 }
