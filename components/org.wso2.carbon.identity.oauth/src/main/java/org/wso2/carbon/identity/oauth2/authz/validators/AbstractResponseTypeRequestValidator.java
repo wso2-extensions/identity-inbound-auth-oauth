@@ -381,7 +381,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                     .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
                     .configParam(LogConstants.InputKeys.APPLICATION_NAME, oauthApp.getApplicationName())
                     .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, callbackURIs)
-                    .resultMessage("Provided callback URI does not match when the characters (., +, ?) " +
+                    .resultMessage("Provided redirect URI does not match when the characters (., +, ?) " +
                             "are treated as literals in configured callback URI(s) of the application.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED));
