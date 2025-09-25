@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -135,7 +134,14 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
                 }
                 return false;
             }
-            if (!isValidSession(sessionIdentifier, FrameworkUtils.getLoginTenantDomainFromContext())) {
+            /* Retrieve session context information using sessionIdentifier in order to check the validity of
+            commonAuthId cookie.*/
+            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
+            if (sessionContext == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Session context is not found corresponding to the session identifier: " +
+                            sessionIdentifier);
+                }
                 return false;
             }
         } catch (OAuthSystemException e) {
@@ -149,57 +155,5 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     public boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference) {
 
         return isValidTokenBinding(oAuth2AccessTokenReqDTO, bindingReference, COMMONAUTH_COOKIE);
-    }
-
-    @Override
-    public boolean isValidTokenBinding(AccessTokenDO accessTokenDO) {
-
-        if (accessTokenDO == null || accessTokenDO.getTokenBinding() == null ||
-                StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
-            if (log.isDebugEnabled()) {
-                log.debug("No token binding value is found for SSO session bound token.");
-            }
-            return false;
-        }
-        String sessionIdentifier = accessTokenDO.getTokenBinding().getBindingValue();
-        return isValidSession(sessionIdentifier, resolveTenantDomain(accessTokenDO));
-    }
-
-    /**
-     * Checks if the session is valid by retrieving the session context information using the session identifier.
-     *
-     * @param sessionIdentifier The session identifier from the token binding.
-     * @param tenantDomain      The tenant domain extracted from the access token owner.
-     * @return true if the session is valid, false otherwise.
-     */
-    private boolean isValidSession(String sessionIdentifier, String tenantDomain) {
-
-        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier, tenantDomain);
-        if (sessionContext == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Session context is not found corresponding to the session identifier: " +
-                        sessionIdentifier);
-            }
-            return false;
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
-        }
-        return true;
-    }
-
-    /**
-     * Resolve the tenant domain.
-     *
-     * @param accessTokenDO The access token data object.
-     * @return The tenant domain.
-     */
-    private String resolveTenantDomain(AccessTokenDO accessTokenDO) {
-
-        if (accessTokenDO.getAuthzUser() != null) {
-            return accessTokenDO.getAuthzUser().getTenantDomain();
-        }
-        return FrameworkUtils.getLoginTenantDomainFromContext();
     }
 }

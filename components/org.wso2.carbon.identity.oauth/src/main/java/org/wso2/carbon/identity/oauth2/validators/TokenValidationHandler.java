@@ -24,7 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
@@ -49,7 +51,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -58,7 +59,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
@@ -678,12 +678,15 @@ public class TokenValidationHandler {
                     introResp.setCnfBindingValue(accessTokenDO.getTokenBinding().getBindingValue());
                 }
 
-                if (!isValidTokenBinding(accessTokenDO)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Token binding validation failed for the given token.");
+                // Validate SSO session bound token.
+                if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
+                    if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Token is not bound to an active SSO session.");
+                        }
+                        introResp.setActive(false);
+                        return introResp;
                     }
-                    introResp.setActive(false);
-                    return introResp;
                 }
             }
             // add authorized user type
@@ -1049,34 +1052,34 @@ public class TokenValidationHandler {
     }
 
     /**
-     * Checks if the token binding is valid.
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
      *
-     * This validation is performed only for token binders that support validation based on the access token data
-     * alone (e.g., SSO session-based token binding), without requiring request context (such as cookies, etc.).
-     * Token binders that support this type of validation must override the
-     * {@link TokenBinder#isValidTokenBinding(AccessTokenDO)} method to provide their specific implementation.
-     *
-     * @param accessTokenDO The access token data object.
-     * @return true if the token binding is valid, false otherwise.
+     * @param accessTokenDO the access token data object to validate.
+     * @return {@code true} if the token is bound to an active SSO session, {@code false} otherwise.
      */
-    private boolean isValidTokenBinding(AccessTokenDO accessTokenDO) {
+    private boolean isTokenBoundToActiveSSOSession(AccessTokenDO accessTokenDO) {
 
-        String bindingType = accessTokenDO.getTokenBinding().getBindingType();
-        Optional<TokenBinder> tokenBinderOptional =
-                OAuth2ServiceComponentHolder.getInstance().getTokenBinder(bindingType);
-
-        if (tokenBinderOptional.isPresent()) {
-            try {
-                return tokenBinderOptional.get().isValidTokenBinding(accessTokenDO);
-            } catch (UnsupportedOperationException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Token binder with type: " + bindingType + " does not support direct access token " +
-                            "based token binding validation. Therefore, the token binding is ignored.");
-                }
+        if (StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
+            if (log.isDebugEnabled()) {
+                log.debug("No token binding value is found for SSO session bound token.");
             }
+            return false;
         }
-        /* Return true to maintain backward compatibility for binders that don't support direct access token
-        based token binding validation.*/
+
+        String sessionIdentifier = accessTokenDO.getTokenBinding().getBindingValue();
+        String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier, tenantDomain);
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
         return true;
     }
 }

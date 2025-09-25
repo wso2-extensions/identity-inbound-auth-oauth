@@ -34,7 +34,9 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
@@ -66,7 +68,6 @@ import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
-import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.util.TestUtils;
@@ -156,6 +157,7 @@ public class TokenValidationHandlerTest {
 
         authzUser = new AuthenticatedUser();
         authzUser.setAccessingOrganization("test_org");
+        authzUser.setTenantDomain("carbon.super");
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
         validityPeriodInMillis = 3600000L;
@@ -437,7 +439,8 @@ public class TokenValidationHandlerTest {
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
                      mockStatic(OAuth2ServiceComponentHolder.class);
              MockedStatic<OrganizationManagementConfigUtil> organizationManagementConfigUtil =
-                     mockStatic(OrganizationManagementConfigUtil.class);) {
+                     mockStatic(OrganizationManagementConfigUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setOrganizationId(resourceResidentOrganizationId);
@@ -636,7 +639,8 @@ public class TokenValidationHandlerTest {
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
-                     mockStatic(OrganizationManagementUtil.class)) {
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
                     .thenReturn(false);
@@ -695,11 +699,9 @@ public class TokenValidationHandlerTest {
             // As the token is dummy, no point in getting actual tenant details.
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
 
-            SSOSessionBasedTokenBinder mockSSOSessionBasedTokenBinder = Mockito.mock(SSOSessionBasedTokenBinder.class);
-            when(oAuth2ServiceComponentHolderInstance.getTokenBinder(
-                    OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER))
-                    .thenReturn(Optional.of(mockSSOSessionBasedTokenBinder));
-            when(mockSSOSessionBasedTokenBinder.isValidTokenBinding(accessTokenDO)).thenReturn(isSessionValid);
+            SessionContext sessionContext = isSessionValid ? new SessionContext() : null;
+            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
+                    .thenReturn(sessionContext);
 
             OAuth2IntrospectionResponseDTO introspectionResponse = tokenValidationHandler
                     .buildIntrospectionResponse(validationRequest);
