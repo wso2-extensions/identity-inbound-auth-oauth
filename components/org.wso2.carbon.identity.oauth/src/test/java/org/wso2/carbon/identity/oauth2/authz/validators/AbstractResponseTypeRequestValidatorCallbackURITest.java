@@ -64,6 +64,44 @@ public class AbstractResponseTypeRequestValidatorCallbackURITest {
                 {CALLBACK_URL_REGEXP_PREFIX + "(https://a.example.com/cb|https://b.example.com/cb)",
                         "https://c.example.com/cb", "true", false},
                 {"https://example.com/callback", null, "true", false},
+
+                // Regular redirect URL registered.
+                {"https://sampleapp.com/callback", "https://sampleapp.com/callback", "false", true},
+                {"https://sampleapp.com/callback", "https://127.0.0.1:8080/callback", "false", false},
+
+                // Loopback redirect URL registered.
+                {"https://127.0.0.1:8080/callback", "https://127.0.0.1:8081/callback", "false", true},
+                {"https://127.0.0.1:8080/anothercallback", "https://127.0.0.1:8080/callback", "false", false},
+                {"https://127.0.0.1:8080/callback", "https://localhost:8080/callback", "false", false},
+                {"https://127.0.0.1:8080/callback", "https://sampleapp.com/callback", "false", false},
+
+                // Simple regex based registered callback URI with loopback URL.
+                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
+                        "https://sampleapp.com/callback", "false", true},
+                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
+                        "https://127.0.0.1:8001/callback", "false", true},
+                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
+                        "https://127.0.0.1:8001/callback", "false", true},
+
+                // Regex with dynamic query values.
+                {"regexp=https://127.0.0.1:8090\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", "false", true},
+                {"regexp=https://127.0.0.1:8090\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", "true", true},
+                {"regexp=https://127.0.0.1:8090/callbak\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", "false", false},
+                {"regexp=https://127.0.0.1:8090/callbak\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", "true", false},
+
+                // Regex with a range of port numbers.
+                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))",
+                        "https://127.0.0.1:8089/callback", "false", false},
+                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))",
+                        "https://127.0.0.1:8007/callback", "false", false},
+                {"regexp=(((https://127.0.0.1)|((https://sampleapp.com:)([8][0]{2}[0-7])))(/callback))",
+                        "https://127.0.0.1:10000/callback", "false", true},
+                {"regexp=(((https://127.0.0.1)|((https://127.0.0.2:)([8][0]{2}[0-7])))(/callback))",
+                        "https://127.0.0.2:8007/callback", "false", true},
+                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))",
+                        "https://127.0.0.2:8089/callback", "false", false},
+                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))",
+                        "https://127.0.0.2:8007/callback", "false", true},
         };
     }
 
