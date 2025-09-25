@@ -378,7 +378,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,
                     VALIDATE_INPUT_PARAMS)
                     .inputParam(LogConstants.InputKeys.CLIENT_ID, oauthApp.getOauthConsumerKey())
-                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.CALLBACK_URI, callbackURI)
                     .configParam(LogConstants.InputKeys.APPLICATION_NAME, oauthApp.getApplicationName())
                     .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, callbackURIs)
                     .resultMessage("Provided callback URI does not match when the characters (., +, ?) " +
