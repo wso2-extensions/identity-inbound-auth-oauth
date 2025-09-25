@@ -342,7 +342,12 @@ paths:
           description: Name of the scope that is to be checked
           required: true
           type: string
-
+        - name: includeOIDCScopes
+          in: query
+          description: Used to check existence of OIDC scopes as well via OAuth2 scopes endpoint.
+          schema:
+            type: boolean
+            default: false
       responses:
         200:
           description: Scope Exists
