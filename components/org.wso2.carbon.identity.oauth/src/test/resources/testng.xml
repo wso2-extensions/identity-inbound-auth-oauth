@@ -43,6 +43,7 @@
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.NoneResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authcontext.JWTTokenGeneratorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.impersonation.ImpersonatorPermissionValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.impersonation.SubjectScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.impersonation.UserAccountStatusValidatorTest"/>

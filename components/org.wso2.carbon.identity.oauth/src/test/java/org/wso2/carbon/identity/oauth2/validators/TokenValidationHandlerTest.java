@@ -66,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.util.TestUtils;
@@ -82,6 +83,7 @@ import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +126,7 @@ public class TokenValidationHandlerTest {
     private Connection conn = null;
     private TokenValidationHandler tokenValidationHandler;
     private OAuth2JWTTokenValidator oAuth2JWTTokenValidator;
+    private static final String SSO_SESSION_BINDING_REFERENCE = "sso_session_binding_ref";
 
     @Mock
     private OAuth2TokenValidator tokenValidator;
@@ -608,6 +611,112 @@ public class TokenValidationHandlerTest {
 
             assertNotNull(result, "Expected a non-null OAuth2ClientApplicationDTO");
             assertFalse(result.getAccessTokenValidationResponse().isValid(), "Expected the token to be invalid");
+        }
+    }
+
+    @DataProvider(name = "ssoSessionBoundTokenStatusDataProvider")
+    public Object[][] ssoSessionBoundTokenStatusDataProvider() {
+
+        return new Object[][]{
+                {true, true},
+                {false, false}
+        };
+    }
+
+    @Test(dataProvider = "ssoSessionBoundTokenStatusDataProvider")
+    public void testBuildIntrospectionResponseForSSOSessionBoundAccessToken(boolean isSessionValid,
+                                                                            boolean expectedActiveStatus)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
+
+            oAuthServerConfiguration.when(
+                            () -> OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed())
+                    .thenReturn(true);
+            oAuthServerConfiguration.when(
+                            () -> OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens())
+                    .thenReturn(true);
+            oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getAllowedScopes())
+                    .thenReturn(Collections.emptyList());
+
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolderInstance);
+
+            OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+            IdentityTenantUtil.setRealmService(realmService);
+            lenient().when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+            identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+
+            OAuth2TokenValidationRequestDTO validationRequest = new OAuth2TokenValidationRequestDTO();
+            OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = validationRequest.new OAuth2AccessToken();
+            accessToken.setIdentifier("sso-session-access-token");
+            accessToken.setTokenType("bearer");
+            validationRequest.setAccessToken(accessToken);
+
+            AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                    refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                    authorizationCode);
+            accessTokenDO.setTokenId("sso-session-token-id");
+
+            TokenBinding tokenBinding = new TokenBinding();
+            tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+            tokenBinding.setBindingReference(SSO_SESSION_BINDING_REFERENCE);
+            tokenBinding.setBindingValue("sso_session_binding_value");
+            accessTokenDO.setTokenBinding(tokenBinding);
+
+            TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
+            when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(new OAuthAppDO());
+
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setApplicationVersion("v1.0.0");
+            oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), any()))
+                    .thenReturn(serviceProvider);
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(1000L);
+            // As the token is dummy, no point in getting actual tenant details.
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
+
+            SSOSessionBasedTokenBinder mockSSOSessionBasedTokenBinder = Mockito.mock(SSOSessionBasedTokenBinder.class);
+            when(oAuth2ServiceComponentHolderInstance.getTokenBinder(
+                    OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER))
+                    .thenReturn(Optional.of(mockSSOSessionBasedTokenBinder));
+            when(mockSSOSessionBasedTokenBinder.isValidTokenBinding(accessTokenDO)).thenReturn(isSessionValid);
+
+            OAuth2IntrospectionResponseDTO introspectionResponse = tokenValidationHandler
+                    .buildIntrospectionResponse(validationRequest);
+
+            assertNotNull(introspectionResponse, "Introspection response should not be null");
+            if (expectedActiveStatus) {
+                assertTrue(introspectionResponse.isActive(),
+                        "Token should be active when SSO session is valid");
+                assertEquals(introspectionResponse.getBindingType(),
+                        OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER,
+                        "Binding type should match SSO session binder");
+                assertEquals(introspectionResponse.getBindingReference(), SSO_SESSION_BINDING_REFERENCE,
+                        "Binding reference should be preserved");
+            } else {
+                assertFalse(introspectionResponse.isActive(),
+                        "Token should be inactive when SSO session has timed out");
+            }
         }
     }
 }
