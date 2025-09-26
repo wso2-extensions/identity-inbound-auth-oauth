@@ -1686,8 +1686,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
      * @throws IdentityOAuth2Exception If any errors occurred.
      */
     @Override
-    public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser,
-                                                                  boolean includeExpiredAccessTokensWithActiveRefreshToken) throws IdentityOAuth2Exception {
+    public Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(
+            AuthenticatedUser authenticatedUser, boolean includeExpiredAccessTokensWithActiveRefreshToken)
+            throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving access tokens of user: " + authenticatedUser.toString());
@@ -1734,8 +1735,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return accessTokens;
     }
 
-    private Map<String, AccessTokenDO> getAccessTokenDOMapFromResultSet(AuthenticatedUser authenticatedUser,
-                                                                        ResultSet rs, boolean includeExpiredAccessTokensWithActiveRefreshToken)
+    private Map<String, AccessTokenDO> getAccessTokenDOMapFromResultSet
+            (AuthenticatedUser authenticatedUser, ResultSet rs,
+             boolean includeExpiredAccessTokensWithActiveRefreshToken)
             throws SQLException, IdentityOAuth2Exception {
 
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
