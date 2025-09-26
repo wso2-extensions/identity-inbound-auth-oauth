@@ -65,7 +65,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -257,9 +256,9 @@ public class AuthorizationCodeDAOImplTest {
         availableAuthzCodes.add(authzCode);
 
         Assert.assertEquals(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(authzCodeDO.getConsumerKey()),
-                    availableAuthzCodes);
+                availableAuthzCodes);
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByConsumerKey(UUID.randomUUID().
-                    toString()).isEmpty());
+                toString()).isEmpty());
     }
 
     @Test
@@ -326,13 +325,13 @@ public class AuthorizationCodeDAOImplTest {
         String authzCodeID = UUID.randomUUID().toString();
         String authzCode = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
-            OAuthConstants.AuthorizationCodeState.ACTIVE);
+                OAuthConstants.AuthorizationCodeState.ACTIVE);
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
         when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
                 thenReturn(mockedServiceProvider);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomain(1234)).thenReturn("super.wso2");
-        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), isNull())).
+        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString())).
                 thenReturn(mockedAuthenticatedUser);
 
         Assert.assertNotNull(authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),
@@ -354,7 +353,7 @@ public class AuthorizationCodeDAOImplTest {
                 OAuthConstants.AuthorizationCodeState.ACTIVE, tempScope);
 
         Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(authzCodeDO.
-                    getConsumerKey()).isEmpty());
+                getConsumerKey()).isEmpty());
     }
 
     @Test
