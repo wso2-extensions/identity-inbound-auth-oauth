@@ -856,7 +856,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.729</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.732</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -880,11 +880,11 @@
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
         <!-- Axis2 Version -->
-        <axis2.wso2.version>1.6.1-wso2v105</axis2.wso2.version>
-        <axis2.osgi.version.range>[1.6.1.wso2v105, 2.0.0)</axis2.osgi.version.range>
+        <axis2.wso2.version>1.6.1-wso2v108</axis2.wso2.version>
+        <axis2.osgi.version.range>[1.6.1, 2.0.0)</axis2.osgi.version.range>
 
         <!-- Axiom Version -->
-        <axiom.wso2.version>1.2.11-wso2v29</axiom.wso2.version>
+        <axiom.wso2.version>1.2.11-wso2v30</axiom.wso2.version>
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
 
         <!--SAML Common Util Version-->
