@@ -98,7 +98,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
-import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -2275,7 +2274,7 @@ public class OAuth2Util {
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash)
             throws IdentityOAuthAdminException {
 
-        return new OAuthConsumerSecretDAO().getOAuthConsumerSecret(consumerKey, secretHash);
+        return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, secretHash);
     }
 
     /**

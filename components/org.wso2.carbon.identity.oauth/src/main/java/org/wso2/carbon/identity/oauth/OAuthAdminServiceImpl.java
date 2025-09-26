@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -381,14 +380,14 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
-        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
         consumerSecret.setSecretId(UUID.randomUUID().toString());
         consumerSecret.setDescription(consumerSecretDTO.getDescription());
         consumerSecret.setClientId(consumerSecretDTO.getClientId());
         consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
         consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
-        consumerSecretDAO.addOAuthConsumerSecret(consumerSecret);
+        oAuthAppDAO.addOAuthConsumerSecret(consumerSecret);
         return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
 
@@ -400,8 +399,8 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
-        consumerSecretDAO.removeOAuthConsumerSecret(secretId);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        oAuthAppDAO.removeOAuthConsumerSecret(secretId);
     }
 
     /**
@@ -413,9 +412,9 @@ public class OAuthAdminServiceImpl {
      */
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthConsumerSecretDAO consumerSecretDAO = new OAuthConsumerSecretDAO();
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
-        List<OAuthConsumerSecretDO> secrets = consumerSecretDAO.getOAuthConsumerSecrets(consumerKey);
+        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
         for (OAuthConsumerSecretDO secret : secrets) {
             consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
         }
