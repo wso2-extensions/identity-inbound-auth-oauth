@@ -69,6 +69,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -191,8 +193,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
                     .thenReturn(mockOAuthComponentServiceHolder);
             when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
             when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
-            when(mockOrganizationManager.getMinimalOrganization(ORG_ID, TENANT_DOMAIN_TEST)).thenReturn(
-                    minimalOrganization);
+            when(mockOrganizationManager.getMinimalOrganization(eq(ORG_ID), anyString()))
+                    .thenReturn(minimalOrganization);
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
                     buildActionExecutionRequest(
