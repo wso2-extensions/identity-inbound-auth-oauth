@@ -61,6 +61,7 @@
     <test name="oauth.tests.with.debug.disabled" preserve-order="true" parallel="false">
         <parameter name="log-level" value="info"/>
         <classes>
+            <class name="org.wso2.carbon.identity.oauth2.authz.validators.AbstractResponseTypeRequestValidatorCallbackURITest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AppInfoCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKeyTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheKeyTest"/>
