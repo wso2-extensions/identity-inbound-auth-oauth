@@ -45,6 +45,12 @@ public class CibaAuthRequestWrapper extends CommonAuthRequestWrapper {
         extraParameters = new HashMap();
     }
 
+    public CibaAuthRequestWrapper(HttpServletRequest request, Map<String, String> params) {
+
+        super(request);
+        this.extraParameters = params;
+    }
+
     @Override
     public String getParameter(String name) {
 
