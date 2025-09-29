@@ -410,7 +410,8 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.isScopeExists(someScopeName, false)).thenReturn(Boolean.TRUE);
-            assertEquals(scopesApiService.isScopeExists(someScopeName, false).getStatus(), Response.Status.OK.getStatusCode(),
+            assertEquals(scopesApiService.isScopeExists(someScopeName,
+                            false).getStatus(), Response.Status.OK.getStatusCode(),
                     "Error occurred while checking is scope exist");
         } else if (Response.Status.NOT_FOUND.equals(expectation)) {
             when(oAuth2ScopeService.isScopeExists(someScopeName, false)).thenReturn(Boolean.FALSE);
