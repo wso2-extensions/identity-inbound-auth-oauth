@@ -470,7 +470,6 @@ public class OAuth2ServiceComponent {
         }
 
         boolean isConsentedTokenColumnAvailable = checkConsentedTokenColumnAvailable();
-        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(isConsentedTokenColumnAvailable);
         if (log.isDebugEnabled()) {
             if (isConsentedTokenColumnAvailable) {
                 log.debug("CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table. Hence setting " +
