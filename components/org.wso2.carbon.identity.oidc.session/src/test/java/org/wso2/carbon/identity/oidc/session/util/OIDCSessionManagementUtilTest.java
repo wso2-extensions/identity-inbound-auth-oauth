@@ -18,8 +18,12 @@
 
 package org.wso2.carbon.identity.oidc.session.util;
 
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import nu.xom.ParsingException;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -38,12 +42,15 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.util.HashMap;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -468,5 +475,46 @@ public class OIDCSessionManagementUtilTest {
                     IdentityKeyStoreResolverException.class);
             assertThrows(() -> OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken));
         }
+    }
+
+    @DataProvider
+    public Object[][] provideDataForTestExtractClientIDFromDecryptedIDToken() throws ParsingException, IdentityKeyStoreResolverException, java.text.ParseException, IdentityOAuth2Exception {
+
+        String samplePayload = "{\n" +
+                "  \"at_hash\": \"DGK44TIWp3shsXF7t7n9UA\",\n" +
+                "  \"aud\": \"NiGF_FECD1sjTkxFhqiP3FP7zMoa\",\n" +
+                "  \"c_hash\": \"jf-L1d0jBAydYkrM6Aldmw\",\n" +
+                "  \"sub\": \"admin\",\n" +
+                "  \"nbf\": 1595580573,\n" +
+                "  \"azp\": \"NiGF_FECD1sjTkxFhqiP3FP7zMoa\",\n" +
+                "  \"amr\": [\n" +
+                "    \"BasicAuthenticator\"\n" +
+                "  ],\n" +
+                "  \"iss\": \"https://localhost:9443/oauth2/token\",\n" +
+                "  \"exp\": 1595584173,\n" +
+                "  \"iat\": 1595580573,\n" +
+                "  \"sid\": \"657e1511-2e93-4600-b774-4fcca0f2368d\"\n" +
+                "}";
+        EncryptedJWT jwt = mock(EncryptedJWT.class);
+        Payload mockedPayload = mock(Payload.class);
+        when(mockedPayload.toString()).thenReturn(samplePayload);
+        when(jwt.getPayload()).thenReturn(mockedPayload);
+        JWTClaimsSet mockClaimsSet = mock(JWTClaimsSet.class);
+        HashMap<String, Object> claimsMap = new HashMap<>();
+        when(mockClaimsSet.getClaims()).thenReturn(claimsMap);
+        claimsMap.put(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM, CLIENT_ID);
+        when(jwt.getJWTClaimsSet()).thenReturn(mockClaimsSet);
+        when(mockClaimsSet.getClaim(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM)).thenReturn(CLIENT_ID);
+
+        return new Object[][]{
+                {jwt}
+        };
+    }
+
+    @Test(dataProvider = "provideDataForTestExtractClientIDFromDecryptedIDToken")
+    public void testExtractClientIDFromDecryptedIDToken(JWT idtoken) throws ParseException {
+
+        String clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(idtoken);
+        Assert.assertEquals(clientId, CLIENT_ID, "Client ID is not as expected");
     }
 }
