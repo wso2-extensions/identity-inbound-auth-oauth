@@ -23,7 +23,6 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
-import nu.xom.ParsingException;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -42,7 +41,6 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
@@ -186,8 +184,8 @@ public class OIDCSessionManagementUtilTest {
     @Test(dataProvider = "provideDataForTestAddSessionStateToURL1")
     public void testAddSessionStateToURL1(String url, Object obpscookie) {
 
-        String state = OIDCSessionManagementUtil.addSessionStateToURL(url, CLIENT_ID, CALLBACK_URL, (Cookie) obpscookie,
-                responseType[1]);
+        String state = OIDCSessionManagementUtil.addSessionStateToURL(url, CLIENT_ID, CALLBACK_URL,
+                (Cookie) obpscookie, responseType[1]);
         assertNotNull(state, "This is empty");
     }
 
@@ -478,7 +476,7 @@ public class OIDCSessionManagementUtilTest {
     }
 
     @DataProvider
-    public Object[][] provideDataForTestExtractClientIDFromDecryptedIDToken() throws ParsingException, IdentityKeyStoreResolverException, java.text.ParseException, IdentityOAuth2Exception {
+    public Object[][] provideDataForTestExtractClientIDFromDecryptedIDToken() throws ParseException {
 
         String samplePayload = "{\n" +
                 "  \"at_hash\": \"DGK44TIWp3shsXF7t7n9UA\",\n" +
