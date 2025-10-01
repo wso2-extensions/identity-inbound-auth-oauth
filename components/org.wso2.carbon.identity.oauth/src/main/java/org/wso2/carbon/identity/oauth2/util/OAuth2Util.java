@@ -64,6 +64,7 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -141,6 +142,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -174,6 +176,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -209,8 +212,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
@@ -6269,5 +6274,211 @@ public class OAuth2Util {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
                 realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.isExistingUser(MultitenantUtils.getTenantAwareUsername(userName));
+    }
+
+    /**
+     * Get token binding value from the request headers.
+     *
+     * @param oAuth2AccessTokenReqDTO OAuth2AccessTokenReqDTO
+     * @param cookieName              Cookie name
+     * @return Token binding value
+     */
+    public static Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO,
+                                                        String cookieName) {
+
+        HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
+        if (ArrayUtils.isEmpty(httpRequestHeaders)) {
+            return Optional.empty();
+        }
+
+        for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+            if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
+                if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
+                    return Optional.empty();
+                }
+
+                String[] cookies = httpRequestHeader.getValue()[0].split(";");
+                String cookiePrefix = cookieName + "=";
+                for (String cookie : cookies) {
+                    if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix) &&
+                            !HttpCookie.parse(cookie).isEmpty()) {
+                        String cookieValue = HttpCookie.parse(cookie).get(0).getValue();
+                        if (StringUtils.isNotBlank(cookieValue)) {
+                            if (COMMONAUTH_COOKIE.equals(cookieName)) {
+                                // For sso-session binding, token binding value will be the session context id.
+                                return Optional.of(DigestUtils.sha256Hex(cookieValue));
+                            } else {
+                                return Optional.of(cookieValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return True if the token is bound to an active SSO session, false otherwise.
+     */
+    public static boolean isTokenBoundToActiveSSOSession(AccessTokenDO accessTokenDO) {
+
+        if (accessTokenDO == null || accessTokenDO.getAuthzUser() == null || accessTokenDO.getTokenBinding() == null) {
+            return false;
+        }
+
+        if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER
+                .equals(accessTokenDO.getTokenBinding().getBindingType()) ||
+                StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
+            log.debug("No token binding value is found for SSO session bound token.");
+            return false;
+        }
+
+        String sessionIdentifier = accessTokenDO.getTokenBinding().getBindingValue();
+        String userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        String consumerKey = accessTokenDO.getConsumerKey();
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier, userTenantDomain);
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            // Revoke the SSO session bound access token.
+            try {
+                if (getAppInformationByClientId(consumerKey, getAppResidentTenantDomain(accessTokenDO))
+                        .isTokenRevocationWithIDPSessionTerminationEnabled()) {
+                    revokeAccessToken(accessTokenDO);
+                }
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                log.error("Error while revoking SSO session bound access token.", e);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
+        return true;
+    }
+
+    /**
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
+     *
+     * @param tokenBinding          Token binding object.
+     * @param accessTokenIdentifier Access token identifier.
+     * @param appDO                 OAuth application data object.
+     * @param authenticatedUser     Authenticated user.
+     * @return True if the token is bound to an active SSO session, false otherwise.
+     */
+    public static boolean isTokenBoundToActiveSSOSession(TokenBinding tokenBinding, String accessTokenIdentifier,
+                                                         OAuthAppDO appDO, AuthenticatedUser authenticatedUser) {
+
+        if (tokenBinding == null || accessTokenIdentifier == null || appDO == null || authenticatedUser == null) {
+            return false;
+        }
+
+        if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER
+                .equals(tokenBinding.getBindingType()) ||
+                StringUtils.isBlank(tokenBinding.getBindingValue())) {
+            if (log.isDebugEnabled()) {
+                log.debug("No token binding value is found for SSO session bound token.");
+            }
+            return false;
+        }
+
+        String sessionIdentifier = tokenBinding.getBindingValue();
+        SessionContext sessionContext =
+                FrameworkUtils.getSessionContextFromCache(sessionIdentifier, authenticatedUser.getTenantDomain());
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            // Revoke the SSO session bound access token.
+            try {
+                if (appDO.isTokenRevocationWithIDPSessionTerminationEnabled()) {
+                    AccessTokenDO accessTokenDO = getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, true);
+                    revokeAccessToken(accessTokenDO);
+                }
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Error while revoking SSO session bound access token.", e);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
+        return true;
+    }
+
+    /**
+     * Revokes the given access token.
+     *
+     * @param accessTokenDO Access token data object.
+     * @throws IdentityOAuth2Exception If an error occurs while revoking the token.
+     */
+    private static void revokeAccessToken(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking token: " + accessTokenDO.getTokenId() + "for consumer key: " +
+                    accessTokenDO.getConsumerKey());
+        }
+
+        try {
+            String tokenBindingReference = NONE;
+            if (accessTokenDO.getTokenBinding() != null && StringUtils
+                    .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
+                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+            }
+            String consumerKey = accessTokenDO.getConsumerKey();
+            String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
+            String userId = accessTokenDO.getAuthzUser().getUserId();
+
+            // Clear OAuth cache entries.
+            OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), scope, tokenBindingReference);
+            OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser(), scope);
+            OAuthUtil.clearOAuthCache(consumerKey, accessTokenDO.getAuthzUser());
+            OAuthUtil.clearOAuthCache(accessTokenDO);
+
+            // Perform the token revocation in DB.
+            OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+            revokeRequestDTO.setConsumerKey(consumerKey);
+            revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+
+            synchronized ((consumerKey + ":" + userId + ":" + scope + ":" + tokenBindingReference).intern()) {
+                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                        .revokeAccessToken(revokeRequestDTO, accessTokenDO);
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully revoked token: " + accessTokenDO.getTokenId() +
+                        " and cleared associated cache entries.");
+            }
+        } catch (UserIdNotFoundException e) {
+            // Masking getLoggableUserId as it will return the username because the user id is not available.
+            log.error("User id cannot be found for user: " + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());
+            throw new IdentityOAuth2Exception("Failed to revoke token: " + accessTokenDO.getTokenId());
+        }
+    }
+
+    /**
+     * Get the resident tenant domain of the application associated with the access token.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return Resident tenant domain of the application.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving the tenant domain.
+     */
+    private static String getAppResidentTenantDomain(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        String appResidentTenantDomain = getTenantDomain(accessTokenDO.getAppResidentTenantId());
+        if (StringUtils.isBlank(appResidentTenantDomain)) {
+            // Get user domain as app domain.
+            appResidentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        return appResidentTenantDomain;
     }
 }

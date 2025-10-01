@@ -34,7 +34,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -639,9 +638,10 @@ public class TokenValidationHandlerTest {
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
-                     mockStatic(OrganizationManagementUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+                     mockStatic(OrganizationManagementUtil.class)) {
 
+            oAuth2Util.when(() -> OAuth2Util.isTokenBoundToActiveSSOSession(any(AccessTokenDO.class)))
+                    .thenReturn(isSessionValid);
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
                     .thenReturn(false);
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
@@ -698,10 +698,6 @@ public class TokenValidationHandlerTest {
             oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(1000L);
             // As the token is dummy, no point in getting actual tenant details.
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
-
-            SessionContext sessionContext = isSessionValid ? new SessionContext() : null;
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(sessionContext);
 
             OAuth2IntrospectionResponseDTO introspectionResponse = tokenValidationHandler
                     .buildIntrospectionResponse(validationRequest);
