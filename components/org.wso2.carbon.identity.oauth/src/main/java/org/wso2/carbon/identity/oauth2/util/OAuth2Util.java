@@ -657,6 +657,16 @@ public class OAuth2Util {
     }
 
     /**
+     * Get the allowed client secret limit.
+     *
+     * @return client secret limit.
+     */
+    public static int getClientSecretLimit() {
+
+        return OAuthServerConfiguration.getInstance().getClientSecretLimit();
+    }
+
+    /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
      *
