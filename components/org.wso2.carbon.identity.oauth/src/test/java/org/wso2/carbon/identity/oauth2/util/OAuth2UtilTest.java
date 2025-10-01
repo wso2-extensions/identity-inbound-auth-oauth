@@ -497,6 +497,20 @@ public class OAuth2UtilTest {
         };
     }
 
+    @DataProvider(name = "ApplicationStatusProvider")
+    public Object[][] applicationStatusProvider() {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationEnabled(true);
+
+        ServiceProvider disabledServiceProvider = new ServiceProvider();
+        disabledServiceProvider.setApplicationEnabled(false);
+        return new Object[][]{
+                {serviceProvider, true},
+                {disabledServiceProvider, false}
+        };
+    }
+
     @Test(dataProvider = "AuthenticateClient")
     public void testAuthenticateClient(Object cacheResult, String clientSecretInDB, boolean expectedResult)
             throws Exception {
@@ -560,8 +574,9 @@ public class OAuth2UtilTest {
         }
     }
 
-    @Test
-    public void testAuthenticateClientWithAppTenant() throws Exception {
+    @Test(dataProvider = "ApplicationStatusProvider")
+    public void testAuthenticateClientWithAppTenant(ServiceProvider serviceProvider, boolean isAppEnabled)
+            throws Exception {
 
         try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
             OAuthAppDO appDO = new OAuthAppDO();
@@ -581,16 +596,26 @@ public class OAuth2UtilTest {
                     (mock, context) -> {
                         when(mock.getAppInformation(eq(clientId), anyInt())).thenReturn(appDO);
                     })) {
+                ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+                OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+                when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                        .thenReturn(serviceProvider);
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(clientTenantDomain))
                         .thenReturn(clientTenantId);
 
                 // Mock realm and tenant manager.
-                when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
-                when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
-                when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
-                when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+                lenient().when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+                lenient().when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+                lenient().when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
+                lenient().when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
 
-                assertTrue(OAuth2Util.authenticateClient(clientId, clientSecret, clientTenantDomain));
+                if (isAppEnabled) {
+                    assertTrue(OAuth2Util.authenticateClient(clientId, clientSecret, clientTenantDomain));
+                } else {
+                    assertThrows(InvalidOAuthClientException.class, () -> {
+                        OAuth2Util.authenticateClient(clientId, clientSecret, clientTenantDomain);
+                    });
+                }
             }
         }
     }
