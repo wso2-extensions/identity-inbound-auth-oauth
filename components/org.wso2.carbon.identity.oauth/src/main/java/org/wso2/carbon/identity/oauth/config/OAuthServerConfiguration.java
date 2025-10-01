@@ -281,8 +281,11 @@ public class OAuthServerConfiguration {
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
-    private boolean isMultipleClientSecretsEnabled = false;
 
+    // Property to define whether multiple client secrets are allowed for a service provider.
+    private boolean isMultipleClientSecretsEnabled = false;
+    // Property to define the limit of client secrets per service provider.
+    private int clientSecretLimit;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -1041,6 +1044,10 @@ public class OAuthServerConfiguration {
 
     public boolean isMultipleClientSecretsEnabled() {
         return isMultipleClientSecretsEnabled;
+    }
+
+    public int getClientSecretLimit() {
+        return clientSecretLimit;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -3186,10 +3193,18 @@ public class OAuthServerConfiguration {
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
             if (isMultipleClientSecretsEnabledElement != null) {
                 isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
+                if (isMultipleClientSecretsEnabled) {
+                    OMElement isClientSecretLimitElement = multipleClientSecretsElement
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_LIMIT));
+                    clientSecretLimit = Integer.parseInt(isClientSecretLimitElement.getText());
+                }
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Is multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
+            log.debug("Multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
+            if (isMultipleClientSecretsEnabled) {
+                log.debug("Client secret limit: " + clientSecretLimit);
+            }
         }
     }
 
@@ -3581,6 +3596,7 @@ public class OAuthServerConfiguration {
         // Multiple Client Secret configs
         private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
         private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
+        private static final String CLIENT_SECRET_LIMIT = "Limit";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
