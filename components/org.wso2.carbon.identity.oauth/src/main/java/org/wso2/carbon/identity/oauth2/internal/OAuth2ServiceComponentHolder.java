@@ -206,11 +206,6 @@ public class OAuth2ServiceComponentHolder {
         return consentedTokenColumnEnabled;
     }
 
-    public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
-
-        OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
-    }
-
     public static RegistryService getRegistryService() {
 
         return registryService;
