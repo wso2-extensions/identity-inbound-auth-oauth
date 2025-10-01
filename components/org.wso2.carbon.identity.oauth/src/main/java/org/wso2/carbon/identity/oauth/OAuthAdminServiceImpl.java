@@ -81,6 +81,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
@@ -389,14 +390,22 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
-        consumerSecret.setSecretId(UUID.randomUUID().toString());
-        consumerSecret.setDescription(consumerSecretDTO.getDescription());
-        consumerSecret.setClientId(consumerSecretDTO.getClientId());
-        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
-        consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
-        oAuthAppDAO.addOAuthConsumerSecret(consumerSecret);
-        return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
+        String consumerKey = consumerSecretDTO.getClientId();
+        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
+        if (OAuth2Util.getClientSecretLimit() > secrets.size()) {
+            OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
+            consumerSecret.setSecretId(UUID.randomUUID().toString());
+            consumerSecret.setDescription(consumerSecretDTO.getDescription());
+            consumerSecret.setClientId(consumerKey);
+            consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+            consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
+            oAuthAppDAO.addOAuthConsumerSecret(consumerSecret);
+            return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
+        } else {
+            throw handleClientError(CLIENT_SECRET_LIMIT_REACHED,
+                    "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
+                            "Clients cannot have more than " + OAuth2Util.getClientSecretLimit() + " secrets.");
+        }
     }
 
     /**
