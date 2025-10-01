@@ -21,11 +21,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -73,6 +75,20 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         if (optionalAccessTokenDO.isPresent()) {
             AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
             clientId = accessTokenDO.getConsumerKey();
+            if (log.isDebugEnabled()) {
+                String userIdentifier;
+                AuthenticatedUser authenticatedUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
+                try {
+                    userIdentifier = authenticatedUser.getUserId();
+                } catch (UserIdNotFoundException e) {
+                    userIdentifier = LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(authenticatedUser.toFullQualifiedUsername()) :
+                            authenticatedUser.toFullQualifiedUsername();
+                }
+
+                log.debug("Retrieving user info response for user: " + userIdentifier + " for client_id: " +
+                        clientId + " of tenantDomain: " + authenticatedUser.getTenantDomain());
+            }
         } else {
             throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
         }
@@ -147,9 +163,11 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         if (MapUtils.isEmpty(userClaims)) {
             if (log.isDebugEnabled()) {
                 AuthenticatedUser authenticatedUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
-                log.debug("No user claims available to be filtered for user: " +
-                        authenticatedUser.toFullQualifiedUsername() + " for client_id: " + clientId +
-                        " of tenantDomain: " + spTenantDomain);
+                String userIdentifier = LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authenticatedUser.toFullQualifiedUsername()) :
+                        authenticatedUser.toFullQualifiedUsername();
+                log.debug("No user claims available to be filtered for user: " + userIdentifier + " for client_id: " +
+                        clientId + " of tenantDomain: " + spTenantDomain);
             }
             return new HashMap<>();
         }
@@ -173,8 +191,9 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             if (log.isDebugEnabled()) {
                 String msg = "Filtering user claims based on user consent skipped due api based auth flow. Returning " +
                         "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
-                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
-                        clientId, spTenantDomain));
+                log.debug(String.format(msg, LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authenticatedUser.toFullQualifiedUsername()) :
+                        authenticatedUser.toFullQualifiedUsername(), clientId, spTenantDomain));
             }
             return userClaimsFilteredByScope;
         }
