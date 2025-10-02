@@ -390,6 +390,11 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is disabled by server configuration.");
+        }
+
         String consumerKey = consumerSecretDTO.getClientId();
         valiateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -418,6 +423,11 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is disabled by server configuration.");
+        }
+
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         if (getOAuthConsumerSecret(secretId) != null) {
             oAuthAppDAO.removeOAuthConsumerSecret(secretId);
@@ -436,6 +446,10 @@ public class OAuthAdminServiceImpl {
      */
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is disabled by server configuration.");
+        }
         valiateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
@@ -940,6 +954,11 @@ public class OAuthAdminServiceImpl {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
+                    "to generate a new client secret.");
+        }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
