@@ -423,13 +423,8 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
-                    "client secret support is disabled by server configuration.");
-        }
-
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         if (getOAuthConsumerSecret(secretId) != null) {
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
             oAuthAppDAO.removeOAuthConsumerSecret(secretId);
         } else {
             throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
@@ -469,6 +464,11 @@ public class OAuthAdminServiceImpl {
      * persistence store.
      */
     public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is disabled by server configuration.");
+        }
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId);
@@ -954,11 +954,6 @@ public class OAuthAdminServiceImpl {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
-                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
-                    "to generate a new client secret.");
-        }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
@@ -970,6 +965,12 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
+
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
+                    "to generate a new client secret.");
+        }
 
         Properties properties = new Properties();
         String newSecret = OAuthUtil.getRandomNumberSecure();
