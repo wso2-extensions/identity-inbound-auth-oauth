@@ -148,6 +148,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -347,6 +348,15 @@ public class OAuth2UtilTest {
         identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
         identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
                 .thenReturn(identityKeyStoreResolver);
+
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        ServiceProvider enabledSp = new ServiceProvider();
+        enabledSp.setApplicationName("dummyApp");
+        enabledSp.setApplicationEnabled(true);
+        // Handle both null and non-null tenant domain values.
+        lenient().when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                nullable(String.class))).thenReturn(enabledSp);
     }
 
     @AfterMethod
