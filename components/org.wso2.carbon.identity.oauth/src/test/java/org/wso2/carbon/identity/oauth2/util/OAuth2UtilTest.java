@@ -570,6 +570,76 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "AuthenticateClientForDisabledApps")
+    public Object[][] authenticateClientForDisabledApps() {
+
+        OAuthAppDO cachedOAuthappDO = new OAuthAppDO();
+        cachedOAuthappDO.setOauthConsumerKey(clientId);
+        cachedOAuthappDO.setOauthConsumerSecret(clientSecret);
+
+        ServiceProvider enabledSp = new ServiceProvider();
+        enabledSp.setApplicationName("dummyApp");
+        enabledSp.setApplicationEnabled(true);
+
+        ServiceProvider disabledSp = new ServiceProvider();
+        disabledSp.setApplicationName("dummyApp");
+        disabledSp.setApplicationEnabled(false);
+
+        // cacheResult
+        // dummyClientSecret
+        // appTenant
+        // ServiceProvider
+        // expectedResult
+        return new Object[][]{
+                {cachedOAuthappDO, clientSecret, "tenant1", enabledSp, true},
+                {cachedOAuthappDO, clientSecret, "tenant1", disabledSp, false},
+                {cachedOAuthappDO, clientSecret, "tenant1", null, false},
+        };
+    }
+
+    @Test(dataProvider = "AuthenticateClientForDisabledApps")
+    public void testAuthenticateClientForDisabledApps(Object cacheResult, String clientSecretInDB, String appTenant,
+                                                      ServiceProvider serviceProvider, boolean expectedResult)
+            throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecretInDB);
+
+            // Mock the cache result
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId, appTenant)).thenReturn((OAuthAppDO) cacheResult);
+
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+            OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+
+            // Handle both null and non-null tenant domain values.
+            lenient().when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                    nullable(String.class))).thenReturn(serviceProvider);
+
+            // Mock realm and tenant manager.
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+            when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+            when(tenantManagerMock.getTenantId(appTenant)).thenReturn(clientTenantId);
+            when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+            // Mock the DB result
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO);
+                    })) {
+
+                lenient().when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(
+                        new PlainTextPersistenceProcessor());
+                assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret, appTenant), expectedResult);
+            }
+        }
+    }
+
     @Test
     public void testAuthenticateClientWithAppTenant() throws Exception {
 
