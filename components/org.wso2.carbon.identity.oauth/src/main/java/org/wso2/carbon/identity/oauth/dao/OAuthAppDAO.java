@@ -1536,6 +1536,35 @@ public class OAuthAppDAO {
         return consumerSecrets;
     }
 
+    public OAuthConsumerSecretDO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDO secret = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_ID)) {
+                prepStmt.setString(1, secretId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        secret = new OAuthConsumerSecretDO();
+                        secret.setSecretId(resultSet.getString(1));
+                        secret.setDescription(resultSet.getString(2));
+                        secret.setClientId(resultSet.getString(3));
+                        secret.setSecretValue(resultSet.getString(4));
+                        secret.setSecretHash(resultSet.getString(5));
+                        long expiresAt = resultSet.getLong(6);
+                        if (!resultSet.wasNull()) {
+                            secret.setExpiresAt(expiresAt);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw handleError("Error occurred while retrieving the provided OAuth consumer secret  "
+                    + "for secret id : " + secretId, e);
+        }
+        return secret;
+    }
+
     /**
      * Retrieve a specific OAuth consumer secret associated with a given consumer key (client ID) and secret hash.
      *
@@ -1574,5 +1603,4 @@ public class OAuthAppDAO {
         }
         return secret;
     }
-
 }
