@@ -254,13 +254,13 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             throws IdentityOAuth2Exception {
 
         if (OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getTokenIdBySessionIdentifier(sessionContextId).contains(tokenId)) {
+                .isDefaultTokenSessionMappingExists(sessionContextId, tokenId)) {
             /**
              *  If there is already a session to token mapping exists, we don't need to persist that mapping again.
              *  This can happen if a user try to login from the same browser again with same (app+scope+binding).
              */
             if (log.isDebugEnabled()) {
-                log.debug("This token to session mapping is already persisted in the DB");
+                log.debug("Token session mapping already exists for sessionContextId: " + sessionContextId);
             }
             return;
         }

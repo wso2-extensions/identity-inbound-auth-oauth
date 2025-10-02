@@ -78,6 +78,7 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.getProperty;
 import static org.wso2.carbon.identity.core.util.LambdaExceptionUtils.rethrowRowMapper;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.CHECK_DEFAULT_TOKEN_SESSION_MAPPING_EXISTS;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_ACCESS_TOKENS_BY_BINDING_REFERENCE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
@@ -659,6 +660,30 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         return sql;
+    }
+
+    @Override
+    public boolean isDefaultTokenSessionMappingExists(String sessionId, String tokenId) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Checking token to session mapping existence for sessionId: " + sessionId);
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(CHECK_DEFAULT_TOKEN_SESSION_MAPPING_EXISTS)) {
+                prepStmt.setString(1, sessionId);
+                prepStmt.setString(2, tokenId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getInt("TOTAL") > 0;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while checking token to session mapping existence for " +
+                    "session: " + sessionId + " and token: " + tokenId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+        return false;
     }
 
     private AccessTokenDO getLatestAccessTokenByState(Connection connection, String consumerKey,
