@@ -594,8 +594,9 @@ public class OAuth2Util {
         // If secret is found, check whether it is expired.
         if (secret.getExpiresAt() != null) {
             Instant nowUtc = Instant.now();
-            Instant expiryInstant = Instant.ofEpochMilli(secret.getExpiresAt());
-            boolean isExpired = expiryInstant.isBefore(nowUtc);
+            long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
+            Instant expiryInstantWithSkew = Instant.ofEpochMilli(secret.getExpiresAt()).plusSeconds(timeStampSkewInSeconds);
+            boolean isExpired = expiryInstantWithSkew.isBefore(nowUtc);
             if (isExpired) {
                 log.debug("Provided Client Secret has expired");
                 return false;
