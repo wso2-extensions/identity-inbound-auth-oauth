@@ -84,6 +84,7 @@ import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_SECRET_ID;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -389,8 +390,9 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         String consumerKey = consumerSecretDTO.getClientId();
+        valiateOAuthAppExistence(consumerKey);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
         if (OAuth2Util.getClientSecretLimit() > secrets.size()) {
             OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
@@ -417,7 +419,11 @@ public class OAuthAdminServiceImpl {
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        oAuthAppDAO.removeOAuthConsumerSecret(secretId);
+        if (getOAuthConsumerSecret(secretId) != null) {
+            oAuthAppDAO.removeOAuthConsumerSecret(secretId);
+        } else {
+            throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
+        }
     }
 
     /**
@@ -425,10 +431,12 @@ public class OAuthAdminServiceImpl {
      *
      * @param consumerKey Client Id
      * @return A list of {@link OAuthConsumerSecretDTO} containing the consumer secret information
-     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the persistence store.
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the
+     * persistence store.
      */
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
+        valiateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
@@ -436,6 +444,24 @@ public class OAuthAdminServiceImpl {
             consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
         }
         return consumerSecretsList;
+    }
+
+    /**
+     * Retrieve an OAuth consumer secret by the given secret Id.
+     *
+     * @param secretId Id of the consumer secret
+     * @return {@link OAuthConsumerSecretDTO} containing the consumer secret information
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the
+     * persistence store.
+     */
+    public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId);
+        if (secret == null) {
+            return null;
+        }
+        return OAuthUtil.buildConsumerSecretDTO(secret);
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -1822,6 +1848,26 @@ public class OAuthAdminServiceImpl {
     OAuth2Service getOAuth2Service() {
 
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
+    }
+
+    private void valiateOAuthAppExistence(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthAppDO oauthappdo;
+        try {
+            oauthappdo = getOAuthApp(consumerKey);
+            if (oauthappdo == null) {
+                String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(msg);
+                }
+                throw handleClientError(INVALID_OAUTH_CLIENT, msg);
+            }
+        } catch (InvalidOAuthClientException e) {
+            String msg = "Cannot find a valid OAuth client for consumerKey: " + consumerKey;
+            throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while creating consumer secret for consumerKey: " + consumerKey, e);
+        }
     }
 
     OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
