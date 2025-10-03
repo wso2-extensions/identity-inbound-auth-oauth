@@ -651,7 +651,11 @@ public class OAuth2Util {
             throw new IdentityOAuthAdminException("Error while retrieving the application details.", e);
         }
 
-        if (serviceProvider == null || !serviceProvider.isApplicationEnabled()) {
+        // Check if disabled application authentication check is enabled
+        String configValue = IdentityUtil.getProperty(OAuthConstants.ENABLE_DISABLED_APP_AUTHENTICATION_CHECK);
+        boolean isDisabledAppCheckEnabled = configValue != null ? Boolean.parseBoolean(configValue) : true;
+        
+        if (isDisabledAppCheckEnabled && (serviceProvider == null || !serviceProvider.isApplicationEnabled())) {
             if (log.isDebugEnabled()) {
                 log.debug("Application with the provided client_id: " + clientId + " is not enabled.");
             }
