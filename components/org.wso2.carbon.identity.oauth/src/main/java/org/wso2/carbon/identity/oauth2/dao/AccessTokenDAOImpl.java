@@ -673,9 +673,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 prepStmt.setString(1, sessionId);
                 prepStmt.setString(2, tokenId);
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
-                    if (resultSet.next()) {
-                        return resultSet.getInt("TOTAL") > 0;
-                    }
+                    resultSet.next();
+                    return resultSet.getInt("TOTAL") > 0;
                 }
             }
         } catch (SQLException e) {
@@ -683,7 +682,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     "session: " + sessionId + " and token: " + tokenId;
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
-        return false;
     }
 
     private AccessTokenDO getLatestAccessTokenByState(Connection connection, String consumerKey,

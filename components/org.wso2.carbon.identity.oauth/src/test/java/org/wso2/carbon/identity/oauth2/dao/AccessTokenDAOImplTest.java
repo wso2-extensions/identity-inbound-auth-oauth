@@ -26,6 +26,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -42,6 +43,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,6 +63,10 @@ public class AccessTokenDAOImplTest {
     private static final String TEST_TENANT_DOMAIN = "TestTenantDomain";
     private static final String TEST_USER1 = "user1";
     private static final String PRIMARY_USER_STORE = "PRIMARY";
+    private static final String SESSION_ID = "4503eb1561bfd6bf237b7e05c15afaff21f511d81135423015a747ee7e3f0bc0";
+    private static final String TOKEN_ID = "2sa9a678f890877856y66e75f605d456";
+    private static final String NON_EXISTENT_SESSION_ID = "non_existent_session_id";
+    private static final String NON_EXISTENT_TOKEN_ID = "non_existent_token_id";
 
     private AccessTokenDAOImpl accessTokenDAO;
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
@@ -127,8 +133,7 @@ public class AccessTokenDAOImplTest {
         connection = DAOUtils.getConnection(DB_NAME);
         identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
                 .thenReturn(connection);
-        assertEquals(accessTokenDAO.getSessionIdentifierByTokenId("2sa9a678f890877856y66e75f605d456"),
-                    "4503eb1561bfd6bf237b7e05c15afaff21f511d81135423015a747ee7e3f0bc0");
+        assertEquals(accessTokenDAO.getSessionIdentifierByTokenId(TOKEN_ID), SESSION_ID);
     }
 
     private static void closeH2Base(String databaseName) throws Exception {
@@ -205,5 +210,38 @@ public class AccessTokenDAOImplTest {
         when(mockOAuthServerConfiguration.getHashAlgorithm()).thenReturn("SHA-256");
 
         accessTokenDAO.revokeAccessTokensInBatch(tokens, isHashedToken);
+    }
+
+    @DataProvider(name = "tokenSessionMappingTestData")
+    public Object[][] tokenSessionMappingTestData() {
+
+        return new Object[][]{
+            {SESSION_ID, TOKEN_ID, true},
+            {NON_EXISTENT_SESSION_ID, TOKEN_ID, false},
+            {SESSION_ID, NON_EXISTENT_TOKEN_ID, false},
+            {NON_EXISTENT_SESSION_ID, NON_EXISTENT_TOKEN_ID, false}
+        };
+    }
+
+    @Test(dataProvider = "tokenSessionMappingTestData")
+    public void testIsDefaultTokenSessionMappingExists(String sessionId, String tokenId, boolean expectedResult)
+            throws Exception {
+
+        connection = DAOUtils.getConnection(DB_NAME);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+        
+        boolean actualResult = accessTokenDAO.isDefaultTokenSessionMappingExists(sessionId, tokenId);
+        assertEquals(actualResult, expectedResult);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class, 
+          expectedExceptionsMessageRegExp = "Error occurred while checking token to session mapping existence.*")
+    public void testIsDefaultTokenSessionMappingExistsWithException() throws Exception {
+
+        Connection mockConnection = mock(Connection.class);
+        when(mockConnection.prepareStatement(anyString())).thenThrow(new SQLException("Database connection error"));
+        
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(mockConnection);
+        accessTokenDAO.isDefaultTokenSessionMappingExists(SESSION_ID, TOKEN_ID);
     }
 }
