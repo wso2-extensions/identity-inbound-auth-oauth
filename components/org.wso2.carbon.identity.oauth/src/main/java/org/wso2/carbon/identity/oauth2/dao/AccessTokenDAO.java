@@ -71,6 +71,20 @@ public interface AccessTokenDAO {
     }
 
     /**
+     * Check if a token to session mapping exists for the DEFAULT binding type.
+     *
+     * @param sessionId Session identifier.
+     * @param tokenId Token identifier.
+     * @return true if mapping exists, false otherwise.
+     * @throws IdentityOAuth2Exception
+     */
+    default boolean isDefaultTokenSessionMappingExists(String sessionId, String tokenId)
+            throws IdentityOAuth2Exception {
+
+        return false;
+    }
+
+    /**
      * Store tokenId to sessioncontext identifier mapping.
      * @param sessionIdentifier SessionIdentifier.
      * @param tokenId TokenId.
