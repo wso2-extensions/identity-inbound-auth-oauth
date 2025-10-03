@@ -652,7 +652,8 @@ public class OAuth2Util {
         }
 
         // Check if disabled application credentials are allowed for authentication
-        String configValue = IdentityUtil.getProperty(OAuthConstants.ALLOW_DISABLED_APPLICATION_CREDENTIALS_FOR_AUTHENTICATION);
+        String configValue
+                = IdentityUtil.getProperty(OAuthConstants.ALLOW_DISABLED_APPLICATION_CREDENTIALS_FOR_AUTHENTICATION);
         boolean allowDisabledAppCredentials = configValue != null ? Boolean.parseBoolean(configValue) : false;
         
         if (!allowDisabledAppCredentials && (serviceProvider == null || !serviceProvider.isApplicationEnabled())) {
