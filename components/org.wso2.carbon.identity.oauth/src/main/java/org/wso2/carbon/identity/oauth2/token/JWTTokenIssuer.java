@@ -695,6 +695,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes()
                             .getParameters();
             if (customClaims != null && !customClaims.isEmpty()) {
+                customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
                 for (Map.Entry<String, String> entry : customClaims.entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }

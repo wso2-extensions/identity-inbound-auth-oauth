@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -118,6 +120,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 tokReqMsgCtx.setConsentedToken(true);
             }
         }
+        accessTokenDO.setAccessTokenExtendedAttributes(
+                new AccessTokenExtendedAttributes(
+                        new HashMap<>(tokenReq.getAccessTokenExtendedAttributes().getParameters())));
         return accessTokenDO;
     }
 
