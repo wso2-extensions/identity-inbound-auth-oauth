@@ -90,7 +90,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_W
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT;
 
@@ -937,7 +936,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
                 if (!tokenReqMessageContext.isImpersonationRequest()
-                        || Boolean.parseBoolean(IdentityUtil.getProperty(IMPERSONATED_REFRESH_TOKEN_ENABLE))) {
+                        || OAuth2Util.isImpersonatedRefreshTokenEnabled()) {
                     tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
                 }
             } else {
