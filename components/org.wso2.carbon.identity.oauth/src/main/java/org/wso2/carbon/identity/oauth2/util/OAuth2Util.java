@@ -5888,6 +5888,23 @@ public class OAuth2Util {
     }
 
     /**
+     * Check if impersonated refresh token is enabled.
+     *
+     * @return True if impersonated refresh token is enabled.
+     */
+    public static boolean isImpersonatedRefreshTokenEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Impersonated refresh token configuration not found, " +
+                    "using default: " + OAuth2Constants.DEFAULT_IMPERSONATED_REFRESH_TOKEN_ENABLED);
+        }
+        return OAuth2Constants.DEFAULT_IMPERSONATED_REFRESH_TOKEN_ENABLED;
+    }
+
+    /**
      * Check if token persistence is enabled.
      *
      * @return True if token persistence is enabled.

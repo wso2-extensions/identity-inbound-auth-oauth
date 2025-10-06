@@ -276,6 +276,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(validationBean.getScope());
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
+        propagateImpersonationInfo(tokReqMsgCtx);
         if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
@@ -303,6 +304,24 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         if (sessionId != null) {
             tokReqMsgCtx.addProperty(SESSION_IDENTIFIER, sessionId);
+        }
+    }
+
+    private void propagateImpersonationInfo(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        log.debug("Checking for impersonation information in token request");
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            String impersonator = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getAccessTokenExtendedAttributes().getParameters()
+                    .get(OAuthConstants.IMPERSONATING_ACTOR);
+            if (StringUtils.isNotBlank(impersonator)) {
+                tokenReqMessageContext.setImpersonationRequest(true);
+                tokenReqMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonator);
+                if (log.isDebugEnabled()) {
+                    log.debug("Impersonation request identified for the user: " + impersonator);
+                }
+            }
         }
     }
 

@@ -3177,6 +3177,26 @@ public class OAuth2UtilTest {
         assertEquals(OAuth2Util.getAppResidentTenantDomain(), expected);
     }
 
+    @DataProvider(name = "impersonatedRefreshTokenEnabledProvider")
+    public Object[][] impersonatedRefreshTokenEnabledProvider() {
+        return new Object[][]{
+                {"true", true},
+                {"false", false},
+                {null, true}
+        };
+    }
+
+    @Test(dataProvider = "impersonatedRefreshTokenEnabledProvider")
+    public void testIsImpersonatedRefreshTokenEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE))
+                    .thenReturn(configValue);
+            assertEquals(OAuth2Util.isImpersonatedRefreshTokenEnabled(), expected);
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class,
             expectedExceptionsMessageRegExp = "Error occurred while resolving the tenant domain for the " +
                     "organization id.")
