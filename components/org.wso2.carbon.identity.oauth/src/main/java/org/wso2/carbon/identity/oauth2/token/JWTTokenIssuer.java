@@ -696,6 +696,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                             .getParameters();
             if (customClaims != null && !customClaims.isEmpty()) {
                 customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
+                if (log.isDebugEnabled()) {
+                    log.debug("Processing custom claims for JWT token. Total claims count: " + customClaims.size());
+                }
                 for (Map.Entry<String, String> entry : customClaims.entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }

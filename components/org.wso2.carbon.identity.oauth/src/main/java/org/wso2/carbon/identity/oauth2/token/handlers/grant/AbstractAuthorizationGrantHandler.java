@@ -938,6 +938,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 if (!tokenReqMessageContext.isImpersonationRequest()
                         || OAuth2Util.isImpersonatedRefreshTokenEnabled()) {
                     tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Impersonation request is not allowed to have a refresh token for client_id : " +
+                                consumerKey + ", therefore not issuing a refresh token.");
+                    }
                 }
             } else {
                 if (log.isDebugEnabled()) {

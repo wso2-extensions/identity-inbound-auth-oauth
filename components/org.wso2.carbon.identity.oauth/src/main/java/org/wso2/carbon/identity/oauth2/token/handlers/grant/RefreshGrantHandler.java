@@ -309,6 +309,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private void propagateImpersonationInfo(OAuthTokenReqMessageContext tokenReqMessageContext) {
 
+        log.debug("Checking for impersonation information in token request");
         if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
                 tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
             String impersonator = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
