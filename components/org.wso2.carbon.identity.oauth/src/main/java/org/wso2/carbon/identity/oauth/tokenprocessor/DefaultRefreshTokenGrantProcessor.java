@@ -124,9 +124,12 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             log.debug("Setting access token extended attributes for token request in refresh token flow for client: "
                     + tokenReq.getClientId() + " with token id: " + tokenId);
         }
-        accessTokenDO.setAccessTokenExtendedAttributes(
-                new AccessTokenExtendedAttributes(
-                        new HashMap<>(tokenReq.getAccessTokenExtendedAttributes().getParameters())));
+        if (tokenReq.getAccessTokenExtendedAttributes() != null &&
+                tokenReq.getAccessTokenExtendedAttributes().getParameters() != null) {
+            accessTokenDO.setAccessTokenExtendedAttributes(
+                    new AccessTokenExtendedAttributes(
+                            new HashMap<>(tokenReq.getAccessTokenExtendedAttributes().getParameters())));
+        }
         return accessTokenDO;
     }
 
