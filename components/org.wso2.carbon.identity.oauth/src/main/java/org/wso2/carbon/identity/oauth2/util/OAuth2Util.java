@@ -242,6 +242,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.INVALID_TENANT_ID;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -6348,8 +6349,8 @@ public class OAuth2Util {
             }
             // Revoke the SSO session bound access token.
             try {
-                if (getAppInformationByClientId(consumerKey, getAppResidentTenantDomain(accessTokenDO))
-                        .isTokenRevocationWithIDPSessionTerminationEnabled()) {
+                OAuthAppDO appDO = getAppInformationByClientId(consumerKey, getAppResidentTenantDomain(accessTokenDO));
+                if (appDO != null && appDO.isTokenRevocationWithIDPSessionTerminationEnabled()) {
                     revokeAccessToken(accessTokenDO);
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -6474,9 +6475,11 @@ public class OAuth2Util {
      */
     private static String getAppResidentTenantDomain(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
-        String appResidentTenantDomain = getTenantDomain(accessTokenDO.getAppResidentTenantId());
+        String appResidentTenantDomain = null;
+        if (accessTokenDO.getAppResidentTenantId() != INVALID_TENANT_ID) {
+            appResidentTenantDomain = getTenantDomain(accessTokenDO.getAppResidentTenantId());
+        }
         if (StringUtils.isBlank(appResidentTenantDomain)) {
-            // Get user domain as app domain.
             appResidentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }
         return appResidentTenantDomain;
