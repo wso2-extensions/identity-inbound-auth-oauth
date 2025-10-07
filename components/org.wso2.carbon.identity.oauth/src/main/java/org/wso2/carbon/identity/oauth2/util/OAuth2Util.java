@@ -571,21 +571,6 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
-        ServiceProvider serviceProvider;
-        try {
-            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getServiceProviderByClientId(clientId, OAuthConstants.Scope.OAUTH2, tenantDomain);
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuthAdminException("Error while retrieving the application details.", e);
-        }
-
-        if (serviceProvider == null || !serviceProvider.isApplicationEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application with the provided client_id: " + clientId + " is not enabled.");
-            }
-            return false;
-        }
-
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
@@ -641,26 +626,6 @@ public class OAuth2Util {
         if (StringUtils.isNotEmpty(appTenant) && !isTenantActive(appTenant)) {
             throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
                     + appTenant);
-        }
-
-        ServiceProvider serviceProvider;
-        try {
-            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getServiceProviderByClientId(clientId, OAuthConstants.Scope.OAUTH2, appTenant);
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuthAdminException("Error while retrieving the application details.", e);
-        }
-
-        // Check if disabled application credentials are allowed for authentication
-        String configValue
-                = IdentityUtil.getProperty(OAuthConstants.ALLOW_DISABLED_APPLICATION_CREDENTIALS_FOR_AUTHENTICATION);
-        boolean allowDisabledAppCredentials = configValue != null ? Boolean.parseBoolean(configValue) : false;
-        
-        if (!allowDisabledAppCredentials && (serviceProvider == null || !serviceProvider.isApplicationEnabled())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application with the provided client_id: " + clientId + " is not enabled.");
-            }
-            return false;
         }
 
         // Cache miss
