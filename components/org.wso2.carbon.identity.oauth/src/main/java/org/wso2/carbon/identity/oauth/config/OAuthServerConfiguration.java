@@ -284,8 +284,8 @@ public class OAuthServerConfiguration {
 
     // Property to define whether multiple client secrets are allowed for a service provider.
     private boolean isMultipleClientSecretsEnabled = false;
-    // Property to define the limit of client secrets per service provider.
-    private int clientSecretLimit;
+    // Property to define the limit of client secrets per service provider. default: unlimited
+    private int clientSecretLimit = -1;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -3196,7 +3196,10 @@ public class OAuthServerConfiguration {
                 if (isMultipleClientSecretsEnabled) {
                     OMElement isClientSecretLimitElement = multipleClientSecretsElement
                             .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_LIMIT));
-                    clientSecretLimit = Integer.parseInt(isClientSecretLimitElement.getText());
+                    if (isClientSecretLimitElement != null &&
+                            StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
+                        clientSecretLimit = Integer.parseInt(isClientSecretLimitElement.getText());
+                    }
                 }
             }
         }

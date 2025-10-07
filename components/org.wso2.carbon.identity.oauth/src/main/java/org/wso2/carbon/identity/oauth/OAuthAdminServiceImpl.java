@@ -396,16 +396,15 @@ public class OAuthAdminServiceImpl {
         }
 
         String consumerKey = consumerSecretDTO.getClientId();
-        valiateOAuthAppExistence(consumerKey);
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-        if (OAuth2Util.getClientSecretLimit() > secrets.size()) {
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+        if (!OAuth2Util.hasClientSecretLimitReached(oAuthAppDO)) {
             OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
             consumerSecret.setSecretId(UUID.randomUUID().toString());
             consumerSecret.setDescription(consumerSecretDTO.getDescription());
             consumerSecret.setClientId(consumerKey);
             consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
             consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
             oAuthAppDAO.addOAuthConsumerSecret(consumerSecret);
             return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
         } else {
@@ -445,7 +444,7 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is disabled by server configuration.");
         }
-        valiateOAuthAppExistence(consumerKey);
+        validateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
@@ -1870,12 +1869,19 @@ public class OAuthAdminServiceImpl {
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
     }
 
-    private void valiateOAuthAppExistence(String consumerKey) throws IdentityOAuthAdminException {
+    /**
+     * Validate whether the OAuth application exists for the given consumer key.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthAppDO OAuth application data object.
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    private OAuthAppDO validateOAuthAppExistence(String consumerKey) throws IdentityOAuthAdminException {
 
-        OAuthAppDO oauthappdo;
+        OAuthAppDO oAuthAppDO;
         try {
-            oauthappdo = getOAuthApp(consumerKey);
-            if (oauthappdo == null) {
+            oAuthAppDO = getOAuthApp(consumerKey);
+            if (oAuthAppDO == null) {
                 String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
                 if (LOG.isDebugEnabled()) {
                     LOG.debug(msg);
@@ -1888,6 +1894,7 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while creating consumer secret for consumerKey: " + consumerKey, e);
         }
+        return oAuthAppDO;
     }
 
     OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {

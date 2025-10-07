@@ -668,6 +668,27 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the client secret limit has been reached for the given OAuth application.
+     *
+     * @param oAuthAppDO OAuth application.
+     * @return true if the client secret limit has been reached, false otherwise.
+     * @throws IdentityOAuthAdminException If an error occurs while checking the client secret limit.
+     */
+    public static boolean hasClientSecretLimitReached(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
+
+        int currentSecretCount;
+        if (oAuthAppDO.getOauthConsumerSecret() != null) {
+            currentSecretCount = 1;
+        } else {
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
+            currentSecretCount = secrets.size();
+        }
+        int clientSecretLimit = getClientSecretLimit();
+        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+    }
+
+    /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
      *
