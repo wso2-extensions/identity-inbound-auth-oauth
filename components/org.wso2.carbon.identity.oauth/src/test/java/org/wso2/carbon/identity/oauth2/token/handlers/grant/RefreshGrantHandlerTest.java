@@ -26,25 +26,33 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenBindingMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
+
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -63,6 +71,7 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_ID;
 /**
  * Unit tests for the RefreshGrantHandler class.
  */
+@WithCarbonHome
 public class RefreshGrantHandlerTest {
 
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
@@ -72,6 +81,7 @@ public class RefreshGrantHandlerTest {
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
     private AuthorizationDetailsService authorizationDetailsService;
+    private OAuthAppDO oAuthAppDO;
 
     @BeforeMethod
     public void init() {
@@ -82,6 +92,7 @@ public class RefreshGrantHandlerTest {
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         oAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
         authorizationDetailsService = mock(AuthorizationDetailsService.class);
+        oAuthAppDO = mock(OAuthAppDO.class);
     }
 
     @DataProvider(name = "validateGrantWhenUserIsLockedInUserStoreEnd")
@@ -212,6 +223,66 @@ public class RefreshGrantHandlerTest {
             } else {
                 fail("Unexpected exception is thrown.");
             }
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            description = "Ensure the refresh grant flow fails for an SSO session-bound token if the corresponding " +
+                    "session has expired, even with a valid refresh token.")
+    public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession() throws Exception {
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(refreshTokenValidationDataDO.getTokenBindingReference()).thenReturn("sso_binding_ref");
+        when(refreshTokenValidationDataDO.getTokenId()).thenReturn("sso_token_id");
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+
+        TokenBinding tokenBinding = new TokenBinding();
+        tokenBinding.setBindingReference("sso_binding_ref");
+        tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+
+        TokenBindingMgtDAO tokenBindingMgtDAO = mock(TokenBindingMgtDAO.class);
+        when(tokenBindingMgtDAO.getTokenBindingByBindingRef(anyString(), anyString()))
+                .thenReturn(Optional.of(tokenBinding));
+
+        OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(oAuthTokenPersistenceFactory.getTokenBindingMgtDAO()).thenReturn(tokenBindingMgtDAO);
+
+        when(oAuthAppDO.getTokenBindingType())
+                .thenReturn(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactoryMockedStatic =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            oAuthTokenPersistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(oAuthTokenPersistenceFactory);
+
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
+                    .thenReturn(oAuthAppDO);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util
+                    .isTokenBoundToActiveSSOSession(any(), anyString(), any(), any())).thenReturn(false);
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
         }
     }
 }

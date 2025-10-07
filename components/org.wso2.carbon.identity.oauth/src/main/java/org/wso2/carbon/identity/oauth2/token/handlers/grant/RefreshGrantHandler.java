@@ -1008,10 +1008,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())) {
             if (!OAuth2Util.isTokenBoundToActiveSSOSession(tokenBinding, validationDataDO.getAccessToken(), oAuthAppDO,
                     validationDataDO.getAuthorizedUser())) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Token is not bound to an active SSO session.");
-                }                
-                throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an" +
+                log.debug("Token is not bound to an active SSO session.");
+                throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
                         "active SSO session.");
             }
         }

@@ -6436,9 +6436,7 @@ public class OAuth2Util {
         if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER
                 .equals(tokenBinding.getBindingType()) ||
                 StringUtils.isBlank(tokenBinding.getBindingValue())) {
-            if (log.isDebugEnabled()) {
-                log.debug("No token binding value is found for SSO session bound token.");
-            }
+            log.debug("No token binding value is found for SSO session bound token.");
             return false;
         }
 
@@ -6477,7 +6475,7 @@ public class OAuth2Util {
     private static void revokeAccessToken(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
-            log.debug("Revoking token: " + accessTokenDO.getTokenId() + "for consumer key: " +
+            log.debug("Revoking token: " + accessTokenDO.getTokenId() + " for consumer key: " +
                     accessTokenDO.getConsumerKey());
         }
 
