@@ -822,15 +822,15 @@ public class EndpointUtil {
                                                               String consentPageUrl, String sessionDataKeyConsent)
             throws OAuthSystemException {
 
-        if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
-            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
-                    endpointParams);
-        } else if (isConsentPageRedirectParamsAllowed()) {
-            // Return the consent url without filtering the query params for backward compatibility.
-            return consentPageUrl;
-        } else {
+        if (!isConsentPageRedirectParamsAllowed()) {
             return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams, sessionDataKeyConsent);
+        } else if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
+            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
+                    endpointParams);
+        } else {
+            // Return the consent url without filtering the query params for backward compatibility.
+            return consentPageUrl;
         }
     }
 

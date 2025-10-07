@@ -1119,8 +1119,10 @@ public class OIDCLogoutServlet extends HttpServlet {
                 appTenantDomain = IdentityTenantUtil.resolveTenantDomain();
             }
             JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(appTenantDomain, idToken);
-            String payloadJson = ((EncryptedJWT) decryptedIDToken).getPayload().toString();
-            IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
+            if (((EncryptedJWT) decryptedIDToken).getPayload() != null) {
+                String payloadJson = ((EncryptedJWT) decryptedIDToken).getPayload().toString();
+                IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
+            }
             return (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                     .get(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
         } else {

@@ -24,7 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
@@ -675,6 +677,17 @@ public class TokenValidationHandler {
                         StringUtils.isNotBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
                     introResp.setCnfBindingValue(accessTokenDO.getTokenBinding().getBindingValue());
                 }
+
+                // Validate SSO session bound token.
+                if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
+                    if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Token is not bound to an active SSO session.");
+                        }
+                        introResp.setActive(false);
+                        return introResp;
+                    }
+                }
             }
             // add authorized user type
             if (tokenType != null) {
@@ -1036,5 +1049,37 @@ public class TokenValidationHandler {
                 throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
             }
         }
+    }
+
+    /**
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
+     *
+     * @param accessTokenDO the access token data object to validate.
+     * @return {@code true} if the token is bound to an active SSO session, {@code false} otherwise.
+     */
+    private boolean isTokenBoundToActiveSSOSession(AccessTokenDO accessTokenDO) {
+
+        if (StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
+            if (log.isDebugEnabled()) {
+                log.debug("No token binding value is found for SSO session bound token.");
+            }
+            return false;
+        }
+
+        String sessionIdentifier = accessTokenDO.getTokenBinding().getBindingValue();
+        String tenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier, tenantDomain);
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
+        return true;
     }
 }
