@@ -155,6 +155,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -362,6 +363,15 @@ public class OAuth2UtilTest {
         identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
         identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
                 .thenReturn(identityKeyStoreResolver);
+
+        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        ServiceProvider enabledSp = new ServiceProvider();
+        enabledSp.setApplicationName("dummyApp");
+        enabledSp.setApplicationEnabled(true);
+        // Handle both null and non-null tenant domain values.
+        lenient().when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                nullable(String.class))).thenReturn(enabledSp);
     }
 
     @AfterMethod
@@ -571,6 +581,76 @@ public class OAuth2UtilTest {
 
                 when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(hashingProcessor);
                 assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
+            }
+        }
+    }
+
+    @DataProvider(name = "AuthenticateClientForDisabledApps")
+    public Object[][] authenticateClientForDisabledApps() {
+
+        OAuthAppDO cachedOAuthappDO = new OAuthAppDO();
+        cachedOAuthappDO.setOauthConsumerKey(clientId);
+        cachedOAuthappDO.setOauthConsumerSecret(clientSecret);
+
+        ServiceProvider enabledSp = new ServiceProvider();
+        enabledSp.setApplicationName("dummyApp");
+        enabledSp.setApplicationEnabled(true);
+
+        ServiceProvider disabledSp = new ServiceProvider();
+        disabledSp.setApplicationName("dummyApp");
+        disabledSp.setApplicationEnabled(false);
+
+        // cacheResult
+        // dummyClientSecret
+        // appTenant
+        // ServiceProvider
+        // expectedResult
+        return new Object[][]{
+                {cachedOAuthappDO, clientSecret, "tenant1", enabledSp, true},
+                {cachedOAuthappDO, clientSecret, "tenant1", disabledSp, false},
+                {cachedOAuthappDO, clientSecret, "tenant1", null, false},
+        };
+    }
+
+    @Test(dataProvider = "AuthenticateClientForDisabledApps")
+    public void testAuthenticateClientForDisabledApps(Object cacheResult, String clientSecretInDB, String appTenant,
+                                                      ServiceProvider serviceProvider, boolean expectedResult)
+            throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecretInDB);
+
+            // Mock the cache result
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId, appTenant)).thenReturn((OAuthAppDO) cacheResult);
+
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
+            OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+
+            // Handle both null and non-null tenant domain values.
+            lenient().when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                    nullable(String.class))).thenReturn(serviceProvider);
+
+            // Mock realm and tenant manager.
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+            when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+            when(tenantManagerMock.getTenantId(appTenant)).thenReturn(clientTenantId);
+            when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+            // Mock the DB result
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO);
+                    })) {
+
+                lenient().when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(
+                        new PlainTextPersistenceProcessor());
+                assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret, appTenant), expectedResult);
             }
         }
     }
@@ -3110,6 +3190,26 @@ public class OAuth2UtilTest {
                 .thenReturn(appResidentOrgId);
         lenient().when(organizationManagerMock.resolveTenantDomain(appResidentOrgId)).thenReturn(expected);
         assertEquals(OAuth2Util.getAppResidentTenantDomain(), expected);
+    }
+
+    @DataProvider(name = "impersonatedRefreshTokenEnabledProvider")
+    public Object[][] impersonatedRefreshTokenEnabledProvider() {
+        return new Object[][]{
+                {"true", true},
+                {"false", false},
+                {null, true}
+        };
+    }
+
+    @Test(dataProvider = "impersonatedRefreshTokenEnabledProvider")
+    public void testIsImpersonatedRefreshTokenEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE))
+                    .thenReturn(configValue);
+            assertEquals(OAuth2Util.isImpersonatedRefreshTokenEnabled(), expected);
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class,
