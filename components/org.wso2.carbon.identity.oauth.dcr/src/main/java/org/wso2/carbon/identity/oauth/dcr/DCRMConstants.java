@@ -42,6 +42,7 @@ public class DCRMConstants {
         FAILED_TO_CREATE_CLIENT_SECRET("Error occurred while creating secret of client: %s"),
         FAILED_TO_DELETE_CLIENT_SECRET("Error occurred while deleting secret"),
         FAILED_TO_GET_CLIENT_SECRETS("Error occurred while retrieving secrets of client: %s"),
+        FAILED_TO_GET_CLIENT_SECRET("Error occurred while retrieving specified secret: %s of client"),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
         BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI("Invalid back-channel logout URI: %s"),
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
