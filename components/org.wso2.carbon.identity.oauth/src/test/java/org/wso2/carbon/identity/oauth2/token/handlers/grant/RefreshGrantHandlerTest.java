@@ -29,10 +29,12 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -41,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenBindingMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -63,6 +66,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
@@ -226,10 +232,20 @@ public class RefreshGrantHandlerTest {
         }
     }
 
-    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+    @DataProvider(name = "ssoSessionInactiveDataProvider")
+    public Object[][] ssoSessionInactiveDataProvider() {
+
+        return new Object[][]{
+                {true},
+                {false}
+        };
+    }
+
+    @Test(dataProvider = "ssoSessionInactiveDataProvider",
             description = "Ensure the refresh grant flow fails for an SSO session-bound token if the corresponding " +
                     "session has expired, even with a valid refresh token.")
-    public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession() throws Exception {
+    public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession(boolean isTokenRevocationEnabled)
+            throws Exception {
 
         when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
         when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
@@ -240,12 +256,14 @@ public class RefreshGrantHandlerTest {
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
         when(refreshTokenValidationDataDO.getTokenBindingReference()).thenReturn("sso_binding_ref");
         when(refreshTokenValidationDataDO.getTokenId()).thenReturn("sso_token_id");
+        when(refreshTokenValidationDataDO.getAccessToken()).thenReturn("test_access_token");
         when(refreshTokenValidationDataDO.getRefreshTokenState())
                 .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
 
         TokenBinding tokenBinding = new TokenBinding();
         tokenBinding.setBindingReference("sso_binding_ref");
         tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+        tokenBinding.setBindingValue("sso_binding_value");
 
         TokenBindingMgtDAO tokenBindingMgtDAO = mock(TokenBindingMgtDAO.class);
         when(tokenBindingMgtDAO.getTokenBindingByBindingRef(anyString(), anyString()))
@@ -256,6 +274,9 @@ public class RefreshGrantHandlerTest {
 
         when(oAuthAppDO.getTokenBindingType())
                 .thenReturn(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+        when(oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()).thenReturn(isTokenRevocationEnabled);
+
+        DefaultOAuth2RevocationProcessor revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
 
         try (MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactoryMockedStatic =
                      mockStatic(OAuthTokenPersistenceFactory.class);
@@ -263,7 +284,9 @@ public class RefreshGrantHandlerTest {
              MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
                      mockStatic(OAuthServerConfiguration.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMockedStatic = mockStatic(FrameworkUtils.class);
+             MockedStatic<OAuthUtil> oAuthUtilMockedStatic = mockStatic(OAuthUtil.class)) {
 
             oAuthTokenPersistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
                     .thenReturn(oAuthTokenPersistenceFactory);
@@ -271,8 +294,6 @@ public class RefreshGrantHandlerTest {
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
                     .thenReturn(oAuthAppDO);
-            oAuth2UtilMockedStatic.when(() -> OAuth2Util
-                    .isTokenBoundToActiveSSOSession(any(), anyString(), any(), any())).thenReturn(false);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
@@ -280,9 +301,30 @@ public class RefreshGrantHandlerTest {
             oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
                     .thenReturn(oAuth2ServiceComponentHolder);
 
+            frameworkUtilsMockedStatic.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
+                    .thenReturn(null);
+            if (isTokenRevocationEnabled) {
+                AccessTokenDO accessTokenDO = mock(AccessTokenDO.class);
+                oAuth2UtilMockedStatic
+                        .when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), eq(true)))
+                        .thenReturn(accessTokenDO);
+                when(oAuth2ServiceComponentHolder.getRevocationProcessor()).thenReturn(revocationProcessor);
+            }
+
             RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
             refreshGrantHandler.init();
-            refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+
+            try {
+                refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                fail("Expected exception was not thrown.");
+            } catch (IdentityOAuth2Exception e) {
+                if (isTokenRevocationEnabled) {
+                    verify(revocationProcessor, times(1)).revokeAccessToken(
+                            any(), any(AccessTokenDO.class));
+                } else {
+                    verify(revocationProcessor, never()).revokeAccessToken(any(), any());
+                }
+            }
         }
     }
 }

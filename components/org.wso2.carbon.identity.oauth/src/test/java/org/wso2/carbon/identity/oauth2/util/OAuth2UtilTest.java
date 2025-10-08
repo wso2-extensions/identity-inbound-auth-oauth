@@ -48,7 +48,6 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -89,7 +88,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -101,7 +99,6 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnExc
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -109,7 +106,6 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -3614,182 +3610,5 @@ public class OAuth2UtilTest {
         reqDTO.setHttpRequestHeaders(headers);
         Optional<String> tokenBindingValue = OAuth2Util.getTokenBindingValue(reqDTO, cookieName);
         assertEquals(tokenBindingValue, expectedValue);
-    }
-
-    @DataProvider(name = "boundAccessTokenDOProvider")
-    public Object[][] boundAccessTokenDOProvider() {
-
-        SessionContext activeSession = new SessionContext();
-        return new Object[][]{
-                // accessTokenDO, sessionContext, expected result
-                {null, null, false},
-                {createAccessTokenDO(false, false, false), null, false},
-                {createAccessTokenDO(true, false, false), null, false},
-                {createAccessTokenDO(true, true, false), null, false},
-                // Session is not active.
-                {createAccessTokenDO(true, true, true), null, false},
-                // Session is active.
-                {createAccessTokenDO(true, true, true), activeSession, true},
-        };
-    }
-
-    @Test(dataProvider = "boundAccessTokenDOProvider")
-    public void testIsTokenBoundToActiveSSOSession_WithTokenDO(AccessTokenDO accessTokenDO,
-                                                               SessionContext sessionContext, boolean expectedResult) {
-
-        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(sessionContext);
-
-            if (sessionContext == null) {
-                OAuthAppDO appDO = new OAuthAppDO();
-                appDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
-                oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(SUPER_TENANT_DOMAIN_NAME);
-                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
-                        .thenReturn(appDO);
-            }
-            assertEquals(OAuth2Util.isTokenBoundToActiveSSOSession(accessTokenDO), expectedResult);
-        }
-    }
-
-    @Test
-    public void testIsTokenBoundToActiveSSOSession_WithTokenDO_TokenRevocationEnabled() throws Exception {
-
-        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
-             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
-
-            AccessTokenDO accessTokenDO = createAccessTokenDO(true, true, true);
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(null);
-
-            OAuthAppDO appDO = new OAuthAppDO();
-            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(true);
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
-            oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(SUPER_TENANT_DOMAIN_NAME);
-
-            OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
-            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                    .thenReturn(mockServiceComponentHolder);
-            DefaultOAuth2RevocationProcessor revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
-            when(mockServiceComponentHolder.getRevocationProcessor()).thenReturn(revocationProcessor);
-
-            assertFalse(OAuth2Util.isTokenBoundToActiveSSOSession(accessTokenDO));
-            verify(revocationProcessor, times(1)).revokeAccessToken(
-                    any(OAuthRevocationRequestDTO.class), eq(accessTokenDO));
-        }
-    }
-
-    @DataProvider(name = "boundAccessTokenIdentifierProvider")
-    public Object[][] boundAccessTokenIdentifierProvider() {
-
-        TokenBinding tokenBinding = new TokenBinding();
-        tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
-        tokenBinding.setBindingValue(TEST_BINDING_VALUE);
-
-        TokenBinding wrongTypeBinding = new TokenBinding();
-        wrongTypeBinding.setBindingType("WRONG_TYPE");
-        wrongTypeBinding.setBindingValue(TEST_BINDING_VALUE);
-
-        TokenBinding blankValueBinding = new TokenBinding();
-        blankValueBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
-        blankValueBinding.setBindingValue("");
-
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
-        String accessTokenIdentifier = TEST_TOKEN_IDENTIFIER;
-        SessionContext activeSession = new SessionContext();
-
-        return new Object[][]{
-                // tokenBinding, accessTokenIdentifier, appDO, user, sessionContext, expectedResult
-                {null, null, null, null, null, false},
-                {tokenBinding, accessTokenIdentifier, appDO, user, activeSession, true},
-                {tokenBinding, accessTokenIdentifier, appDO, user, null, false},
-                {wrongTypeBinding, accessTokenIdentifier, appDO, user, null, false},
-                {blankValueBinding, accessTokenIdentifier, appDO, user, null, false}
-        };
-    }
-
-    @Test(dataProvider = "boundAccessTokenIdentifierProvider")
-    public void testIsTokenBoundToActiveSSOSession_WithTokenIdentifier(TokenBinding tokenBinding,
-                                                                       String accessTokenIdentifier,
-                                                                       OAuthAppDO appDO,
-                                                                       AuthenticatedUser user,
-                                                                       SessionContext sessionContext,
-                                                                       boolean expectedResult) {
-
-        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(sessionContext);
-            assertEquals(OAuth2Util.isTokenBoundToActiveSSOSession(tokenBinding, accessTokenIdentifier, appDO, user),
-                    expectedResult);
-        }
-    }
-
-    @Test
-    public void testIsTokenBoundToActiveSSOSession_WithTokenIdentifier_TokenRevocationEnabled() throws Exception {
-
-        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
-             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
-
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(null);
-
-            TokenBinding tokenBinding = new TokenBinding();
-            tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
-            tokenBinding.setBindingValue(TEST_BINDING_VALUE);
-
-            OAuthAppDO appDO = new OAuthAppDO();
-            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(true);
-            AuthenticatedUser user = new AuthenticatedUser();
-            String accessTokenIdentifier = TEST_TOKEN_IDENTIFIER;
-            AccessTokenDO accessTokenDO = createAccessTokenDO(true, true, true);
-
-            oAuth2Util.when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, true))
-                    .thenReturn(accessTokenDO);
-
-            OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
-            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                    .thenReturn(mockServiceComponentHolder);
-            DefaultOAuth2RevocationProcessor revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
-            when(mockServiceComponentHolder.getRevocationProcessor()).thenReturn(revocationProcessor);
-
-            assertFalse(OAuth2Util.isTokenBoundToActiveSSOSession(tokenBinding, accessTokenIdentifier, appDO, user));
-            verify(revocationProcessor, times(1)).revokeAccessToken(
-                    any(OAuthRevocationRequestDTO.class), eq(accessTokenDO));
-        }
-    }
-
-    private AccessTokenDO createAccessTokenDO(boolean withUser, boolean withTokenBinding, boolean withSSOBinding) {
-
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-        accessTokenDO.setConsumerKey(clientId);
-        accessTokenDO.setAppResidentTenantId(SUPER_TENANT_ID);
-        if (withUser) {
-            AuthenticatedUser user = new AuthenticatedUser();
-            user.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
-            user.setUserId(TEST_USER_ID);
-            accessTokenDO.setAuthzUser(user);
-        }
-        if (withTokenBinding) {
-            TokenBinding tokenBinding = new TokenBinding();
-            if (withSSOBinding) {
-                tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
-            } else {
-                tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER);
-            }
-            tokenBinding.setBindingValue(TEST_BINDING_VALUE);
-            tokenBinding.setBindingReference(TEST_BINDING_REFERENCE);
-            accessTokenDO.setTokenBinding(tokenBinding);
-        }
-        return accessTokenDO;
     }
 }
