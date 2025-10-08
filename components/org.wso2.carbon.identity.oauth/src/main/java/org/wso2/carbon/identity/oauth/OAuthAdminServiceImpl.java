@@ -1406,9 +1406,9 @@ public class OAuthAdminServiceImpl {
 
     private String getLoggedInTenant() {
 
-        return Optional.ofNullable(IdentityTenantUtil.getTenantDomainFromContext())
+        return Optional.ofNullable(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .filter(StringUtils::isNotBlank)
-                .orElseGet(() -> PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+                .orElseGet(IdentityTenantUtil::getTenantDomainFromContext);
     }
 
     /**
