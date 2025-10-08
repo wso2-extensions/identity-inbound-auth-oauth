@@ -444,13 +444,21 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is disabled by server configuration.");
         }
-        validateOAuthAppExistence(consumerKey);
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
-        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-        for (OAuthConsumerSecretDO secret : secrets) {
-            consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+        if (oAuthAppDO.getOauthConsumerSecret() != null) {
+            OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
+            oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
+            oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
+            consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
+        } else {
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
+            for (OAuthConsumerSecretDO secret : secrets) {
+                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
+            }
         }
+
         return consumerSecretsList;
     }
 
