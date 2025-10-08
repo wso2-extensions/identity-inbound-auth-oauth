@@ -1540,8 +1540,8 @@ public class OAuthAppDAO {
 
         OAuthConsumerSecretDO secret = null;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_ID)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_ID)) {
                 prepStmt.setString(1, secretId);
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
                     while (resultSet.next()) {
@@ -1578,8 +1578,8 @@ public class OAuthAppDAO {
 
         OAuthConsumerSecretDO secret = null;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_HASH)) {
                 prepStmt.setString(1, consumerKey);
                 prepStmt.setString(2, secretHash);
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
