@@ -177,6 +177,10 @@ public class OAuthAdminServiceImpl {
             OAuthAppDO app;
             for (int i = 0; i < apps.length; i++) {
                 app = apps[i];
+                if (OAuth2Util.isMultipleClientSecretsEnabled() && app.getOauthConsumerSecret() == null) {
+                    String latestSecret = OAuth2Util.getLatestValidSecret(app.getOauthConsumerKey());
+                    app.setOauthConsumerSecret(latestSecret);
+                }
                 dtos[i] = OAuthUtil.buildConsumerAppDTO(app);
             }
         }
@@ -195,6 +199,10 @@ public class OAuthAdminServiceImpl {
         OAuthConsumerAppDTO dto;
         try {
             OAuthAppDO app = getOAuthApp(consumerKey);
+            if (OAuth2Util.isMultipleClientSecretsEnabled() && app.getOauthConsumerSecret() == null) {
+                String latestSecret = OAuth2Util.getLatestValidSecret(app.getOauthConsumerKey());
+                app.setOauthConsumerSecret(latestSecret);
+            }
             if (app != null) {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
@@ -227,6 +235,10 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = dao.getAppInformationByAppName(appName);
             if (app != null) {
+                if (OAuth2Util.isMultipleClientSecretsEnabled() && app.getOauthConsumerSecret() == null) {
+                    String latestSecret = OAuth2Util.getLatestValidSecret(app.getOauthConsumerKey());
+                    app.setOauthConsumerSecret(latestSecret);
+                }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
                 dto = new OAuthConsumerAppDTO();
@@ -1199,6 +1211,10 @@ public class OAuthAdminServiceImpl {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey());
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
+                            }
+                            if (OAuth2Util.isMultipleClientSecretsEnabled() && appDO.getOauthConsumerSecret() == null) {
+                                String latestSecret = OAuth2Util.getLatestValidSecret(appDO.getOauthConsumerKey());
+                                appDO.setOauthConsumerSecret(latestSecret);
                             }
                             appDTOs.add(OAuthUtil.buildConsumerAppDTO(appDO));
                             distinctClientUserScopeCombo.add(clientId + ":" + username);

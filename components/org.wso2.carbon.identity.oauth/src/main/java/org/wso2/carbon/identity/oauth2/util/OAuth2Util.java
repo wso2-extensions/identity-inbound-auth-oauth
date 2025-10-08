@@ -556,7 +556,7 @@ public class OAuth2Util {
         // If the single client secret is not valid and the execution reaches here, it means multiple client secrets
         // feature is enabled. Hence, we will check the provided client secret against the list of secrets associated
         // with the client
-        if (!isSecretValid && !isValidClientSecret(clientId, clientSecretProvided)) {
+        if (!isSecretValid && !isClientSecretValid(clientId, clientSecretProvided)) {
             return false;
         }
 
@@ -579,7 +579,7 @@ public class OAuth2Util {
      * @throws IdentityOAuthAdminException If an error occurs while retrieving or accessing
      *                                     the stored client secret from the persistence layer.
      */
-    public static boolean isValidClientSecret(String clientId, String providedSecret)
+    public static boolean isClientSecretValid(String clientId, String providedSecret)
             throws IdentityOAuth2Exception, IdentityOAuthAdminException {
 
         String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(providedSecret);
@@ -593,16 +593,27 @@ public class OAuth2Util {
         }
         // If secret is found, check whether it is expired.
         if (secret.getExpiresAt() != null) {
-            Instant nowUtc = Instant.now();
-            long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
-            Instant expiryInstantWithSkew = Instant.ofEpochMilli(secret.getExpiresAt()).plusSeconds(timeStampSkewInSeconds);
-            boolean isExpired = expiryInstantWithSkew.isBefore(nowUtc);
+            boolean isExpired = isClientSecretExpired(secret.getExpiresAt());
             if (isExpired) {
                 log.debug("Provided Client Secret has expired");
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Check whether the client secret is expired.
+     *
+     * @param expiresAt expiry timestamp of client secret since epoch
+     * @return true if the client secret is expired, false otherwise.
+     */
+    public static boolean isClientSecretExpired(Long expiresAt) {
+
+        Instant nowUtc = Instant.now();
+        long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
+        Instant expiryInstantWithSkew = Instant.ofEpochMilli(expiresAt).plusSeconds(timeStampSkewInSeconds);
+        return expiryInstantWithSkew.isBefore(nowUtc);
     }
 
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
@@ -670,7 +681,7 @@ public class OAuth2Util {
     /**
      * Check whether the client secret limit has been reached for the given OAuth application.
      *
-     * @param oAuthAppDO OAuth application.
+     * @param oAuthAppDO OAuth application data object.
      * @return true if the client secret limit has been reached, false otherwise.
      * @throws IdentityOAuthAdminException If an error occurs while checking the client secret limit.
      */
@@ -694,6 +705,35 @@ public class OAuth2Util {
         }
         int clientSecretLimit = getClientSecretLimit();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+    }
+
+    public static String getLatestValidSecret(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
+        String latestValidSecret = null;
+
+        // Secrets list will be containing secrets generated for the application in the ascending order of creation
+        // time. Hence, we will iterate the list in the reverse order to get the latest valid secret
+        for (int i = secrets.size() - 1; i >= 0; i--) {
+            OAuthConsumerSecretDO secret = secrets.get(i);
+
+            // Check if secret is not expired
+            if (!isClientSecretExpired(secret.getExpiresAt())) {
+                latestValidSecret = secret.getSecretValue();
+                break; // found the latest valid secret
+            }
+        }
+
+        if (latestValidSecret != null) {
+            return latestValidSecret;
+        } else {
+            // No valid secret found. Hence return the latest secret (even if it is expired).
+            if (!secrets.isEmpty()) {
+                return secrets.get(secrets.size() - 1).getSecretValue();
+            }
+        }
+        return null;
     }
 
     /**
