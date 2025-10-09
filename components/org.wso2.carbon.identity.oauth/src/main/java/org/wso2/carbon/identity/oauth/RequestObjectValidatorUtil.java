@@ -22,6 +22,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.collections.MapUtils;
@@ -43,10 +44,12 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.security.PublicKey;
 import java.security.cert.Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.wso2.carbon.identity.openidconnect.model.Constants.ES;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
@@ -323,6 +326,24 @@ public class RequestObjectValidatorUtil {
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Public key is not an RSA public key.");
+                }
+                return false;
+            }
+        } else if (alg.indexOf(ES) == 0) {
+            // Support for ES256, ES384, ES512 (Elliptic Curve Digital Signature Algorithm)
+            PublicKey publicKey = x509Certificate.getPublicKey();
+            if (publicKey instanceof ECPublicKey) {
+                try {
+                    verifier = new ECDSAVerifier((ECPublicKey) publicKey);
+                } catch (JOSEException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error creating ECDSAVerifier for algorithm " + alg, e);
+                    }
+                    return false;
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Public key is not an EC public key.");
                 }
                 return false;
             }
