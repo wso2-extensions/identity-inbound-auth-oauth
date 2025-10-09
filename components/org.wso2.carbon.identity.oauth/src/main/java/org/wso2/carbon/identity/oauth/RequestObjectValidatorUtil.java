@@ -336,8 +336,8 @@ public class RequestObjectValidatorUtil {
                 try {
                     verifier = new ECDSAVerifier((ECPublicKey) publicKey);
                 } catch (JOSEException e) {
+                    log.error("Error creating ECDSAVerifier for algorithm " + alg + ": " + e.getMessage());
                     if (log.isDebugEnabled()) {
-                        log.debug("Error creating ECDSAVerifier for algorithm " + alg, e);
                     }
                     return false;
                 }
