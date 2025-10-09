@@ -4770,8 +4770,19 @@ public class OAuth2Util {
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
-                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
-                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                if (isMtlsRequest) {
+                    return OAuthURL.getOAuth2MTLSTokenEPUrl();
+                }
+
+                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+                    return getResidentIdpEntityId(tenantDomain);
+                }
+
+                return ServiceURLBuilder.create()
+                        .addPath(OAUTH2_TOKEN_EP_URL)
+                        .build()
+                        .getAbsolutePublicURL();
+
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
