@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -35,6 +36,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -49,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -64,6 +67,7 @@ import java.util.TreeMap;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.INVALID_TENANT_ID;
 
 /**
  * Handles the token validation by invoking the proper validation handler by looking at the token
@@ -681,9 +685,9 @@ public class TokenValidationHandler {
                 // Validate SSO session bound token.
                 if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
                     if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Token is not bound to an active SSO session.");
-                        }
+                        log.debug("Token is not bound to an active SSO session.");
+                        // Revoke the SSO session bound access token if the session is invalid/terminated.
+                        revokeSSOSessionBoundToken(accessTokenDO);
                         introResp.setActive(false);
                         return introResp;
                     }
@@ -1054,15 +1058,13 @@ public class TokenValidationHandler {
     /**
      * Check whether the SSO-session-bound access token is still tied to an active SSO session.
      *
-     * @param accessTokenDO the access token data object to validate.
-     * @return {@code true} if the token is bound to an active SSO session, {@code false} otherwise.
+     * @param accessTokenDO Access token data object.
+     * @return True if the token is bound to an active SSO session, false otherwise.
      */
     private boolean isTokenBoundToActiveSSOSession(AccessTokenDO accessTokenDO) {
 
         if (StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
-            if (log.isDebugEnabled()) {
-                log.debug("No token binding value is found for SSO session bound token.");
-            }
+            log.debug("No token binding value is found for SSO session bound token.");
             return false;
         }
 
@@ -1081,5 +1083,50 @@ public class TokenValidationHandler {
             log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
         }
         return true;
+    }
+
+    /**
+     * Revoke the SSO session bound access token if the associated session is terminated.
+     * This is only applicable for the applications that has enabled 'revokeTokensWhenIdPSessionTerminated'.
+     *
+     * @param accessTokenDO Access token data object.
+     */
+    private void revokeSSOSessionBoundToken(AccessTokenDO accessTokenDO) {
+
+        String consumerKey = accessTokenDO.getConsumerKey();
+        try {
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey,
+                    getAppResidentTenantDomain(accessTokenDO));
+                    
+            if (appDO != null && appDO.isTokenRevocationWithIDPSessionTerminationEnabled()) {
+                OAuthUtil.clearOAuthCache(accessTokenDO);
+                OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+                revokeRequestDTO.setConsumerKey(consumerKey);
+                revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                        .revokeAccessToken(revokeRequestDTO, accessTokenDO);
+            }
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception | UserIdNotFoundException e) {
+            log.error("Error while revoking SSO session bound access token.", e);
+        } 
+    }
+
+    /**
+     * Get the resident tenant domain of the application associated with the access token.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return Resident tenant domain of the application.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving the tenant domain.
+     */
+    private static String getAppResidentTenantDomain(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        String appResidentTenantDomain = null;
+        if (accessTokenDO.getAppResidentTenantId() != INVALID_TENANT_ID) {
+            appResidentTenantDomain = OAuth2Util.getTenantDomain(accessTokenDO.getAppResidentTenantId());
+        }
+        if (StringUtils.isBlank(appResidentTenantDomain)) {
+            appResidentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        return appResidentTenantDomain;
     }
 }

@@ -48,10 +48,12 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -95,9 +97,12 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -617,18 +622,23 @@ public class TokenValidationHandlerTest {
         }
     }
 
-    @DataProvider(name = "ssoSessionBoundTokenStatusDataProvider")
-    public Object[][] ssoSessionBoundTokenStatusDataProvider() {
+    @DataProvider(name = "ssoSessionBoundTokenDataProvider")
+    public Object[][] ssoSessionBoundTokenDataProvider() {
 
+        SessionContext activeSession = new SessionContext();
         return new Object[][]{
-                {true, true},
-                {false, false}
+                //isSessionActive, isTokenRevocationEnabled, expectedActiveState
+                {true, false, true},
+                {true, true, true},
+                {false, false, false},
+                {false, true, false}
         };
     }
 
-    @Test(dataProvider = "ssoSessionBoundTokenStatusDataProvider")
-    public void testBuildIntrospectionResponseForSSOSessionBoundAccessToken(boolean isSessionValid,
-                                                                            boolean expectedActiveStatus)
+    @Test(dataProvider = "ssoSessionBoundTokenDataProvider")
+    public void testBuildIntrospectionResponseForSSOSessionBoundToken(boolean isSessionActive,
+                                                                      boolean isTokenRevocationEnabled,
+                                                                      boolean expectedActiveState)
             throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
@@ -640,7 +650,16 @@ public class TokenValidationHandlerTest {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
                      mockStatic(OrganizationManagementUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+
+            SessionContext sessionContext = isSessionActive ? new SessionContext() : null;
+            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
+                    .thenReturn(sessionContext);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
                     .thenReturn(false);
@@ -699,25 +718,21 @@ public class TokenValidationHandlerTest {
             // As the token is dummy, no point in getting actual tenant details.
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
 
-            SessionContext sessionContext = isSessionValid ? new SessionContext() : null;
-            frameworkUtils.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
-                    .thenReturn(sessionContext);
-
+            DefaultOAuth2RevocationProcessor revocationProcessor = null;
+            if (!isSessionActive && isTokenRevocationEnabled) {
+                revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
+                when(oAuth2ServiceComponentHolderInstance.getRevocationProcessor()).thenReturn(revocationProcessor);
+            }
             OAuth2IntrospectionResponseDTO introspectionResponse = tokenValidationHandler
                     .buildIntrospectionResponse(validationRequest);
 
             assertNotNull(introspectionResponse, "Introspection response should not be null");
-            if (expectedActiveStatus) {
-                assertTrue(introspectionResponse.isActive(),
-                        "Token should be active when SSO session is valid");
-                assertEquals(introspectionResponse.getBindingType(),
-                        OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER,
-                        "Binding type should match SSO session binder");
-                assertEquals(introspectionResponse.getBindingReference(), SSO_SESSION_BINDING_REFERENCE,
-                        "Binding reference should be preserved");
-            } else {
-                assertFalse(introspectionResponse.isActive(),
-                        "Token should be inactive when SSO session has timed out");
+            assertEquals(introspectionResponse.isActive(), expectedActiveState);
+
+            if (!isSessionActive && isTokenRevocationEnabled) {
+                oAuthUtil.verify(() -> OAuthUtil.clearOAuthCache(accessTokenDO));
+                verify(revocationProcessor, times(1)).revokeAccessToken(
+                        any(), eq(accessTokenDO));
             }
         }
     }
