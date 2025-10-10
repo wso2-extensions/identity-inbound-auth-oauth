@@ -996,11 +996,16 @@ public class OAuthServerConfiguration {
                         if (oauthTokenGeneratorClassName != null) {
                             Class clazz = this.getClass().getClassLoader().loadClass(oauthTokenGeneratorClassName);
                             oauthTokenGenerator = (OAuthIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthTokenGeneratorClassName
-                                    + " is created for OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthTokenGeneratorClassName
+                                        + " is created for OAuth token generation.");
+                            }
                         } else {
                             oauthTokenGenerator = new OAuthIssuerImpl(getTokenValueGenerator());
-                            log.info("The default OAuth token issuer will be used. No custom token generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default OAuth token issuer will be used. " +
+                                        "No custom token generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
