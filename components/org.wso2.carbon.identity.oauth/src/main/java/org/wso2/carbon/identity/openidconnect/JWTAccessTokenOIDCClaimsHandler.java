@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.Oauth2ErrorMessages;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -483,7 +482,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                                 !OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(prevToken.getTokenState())) {
                             throw new IdentityOAuth2ClientException(
                                     OAuth2ErrorCodes.TOKEN_REFRESH_ERROR_CODE,
-                                    Oauth2ErrorMessages.TOKEN_REFRESH_ERROR_MESSAGE);
+                                    "Associated access token is inactive or invalid");
                         }
                     }
                 }
