@@ -3967,7 +3967,7 @@ public class OAuthServerConfiguration {
             addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
         }
         if (log.isDebugEnabled()) {
-            log.debug("AddTenantDomainToAccessTokenEnabled was set to : " + addTenantDomainToAccessTokenEnabled);
+            log.debug("AddTenantDomainToAccessToken was set to : " + addTenantDomainToAccessTokenEnabled);
         }
     }
 

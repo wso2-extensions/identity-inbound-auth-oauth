@@ -667,6 +667,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // Add tenant domain and user store domain to the claims if the configuration is enabled.
         if (OAuthServerConfiguration.getInstance().isAddTenantDomainToAccessTokenEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Adding tenant domains to JWT claims - App tenant: " +
+                    spTenantDomain + ", User tenant: " + authenticatedUser.getTenantDomain());
+            }
             jwtClaimsSetBuilder.claim(APP_TENANT_DOMAIN, spTenantDomain);
             jwtClaimsSetBuilder.claim(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
         }
