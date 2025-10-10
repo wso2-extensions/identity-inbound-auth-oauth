@@ -361,6 +361,7 @@ public class OAuthServerConfiguration {
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
             "code id_token", "code id_token token");
     private List<String> configuredHybridResponseTypes = new ArrayList<>();
+    private boolean addTenantDomainToAccessTokenEnabled = false;
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
@@ -597,6 +598,9 @@ public class OAuthServerConfiguration {
 
         // Read config for returning only app associated roles in JWT token.
         parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(oauthElem);
+
+        // read domain information setting config.
+        isAddTenantDomainToAccessTokenEnabled(oauthElem);
     }
 
     /**
@@ -882,6 +886,11 @@ public class OAuthServerConfiguration {
     public String getDeviceAuthzEPUrl() {
 
         return deviceAuthzEPUrl;
+    }
+
+    public boolean isAddTenantDomainToAccessTokenEnabled() {
+
+        return addTenantDomainToAccessTokenEnabled;
     }
 
     public String getOAuth1RequestTokenUrlV2() {
@@ -3946,6 +3955,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Checks whether configuration add tenant domain to the access token is enabled.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
+
+        OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN));
+        if (enableAddDomainElem != null) {
+            addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AddTenantDomainToAccessTokenEnabled was set to : " + addTenantDomainToAccessTokenEnabled);
+        }
+    }
+
+    /**
      * Parses the map federated users to local configuration.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -4016,7 +4042,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block
      * token introspection from other tenants.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -4041,7 +4067,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens
      * for the OAuth configuration in identity.xml.
      */
     public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
@@ -4373,6 +4399,8 @@ public class OAuthServerConfiguration {
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
+        // Enable/Disable adding domain information to the token.
+        private static final String ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
