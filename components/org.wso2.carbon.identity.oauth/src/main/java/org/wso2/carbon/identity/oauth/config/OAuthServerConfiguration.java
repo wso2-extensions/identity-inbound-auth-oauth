@@ -1077,12 +1077,16 @@ public class OAuthServerConfiguration {
                             Class clazz = this.getClass().getClassLoader().loadClass
                                     (oauthIdentityTokenGeneratorClassName);
                             oauthIdentityTokenGenerator = (OauthTokenIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthIdentityTokenGeneratorClassName
-                                    + " is created for Identity OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthIdentityTokenGeneratorClassName
+                                        + " is created for Identity OAuth token generation.");
+                            }
                         } else {
                             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                            log.info("The default Identity OAuth token issuer will be used. No custom token " +
-                                            "generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default Identity OAuth token issuer will be used. No custom token " +
+                                        "generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -1495,9 +1499,11 @@ public class OAuthServerConfiguration {
     private void setDefaultRequestObjectBuilderClasses() {
         if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
             // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
-                    "configured in identity.xml. Therefore instantiating default request object builder: "
-                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            if (log.isDebugEnabled()) {
+                log.debug("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                        "configured in identity.xml. Therefore instantiating default request object builder: "
+                        + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            }
             requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
@@ -3076,8 +3082,10 @@ public class OAuthServerConfiguration {
                     oauthTokenIssuer.setPersistAccessTokenAlias(
                             supportedTokenIssuers.get(tokenType).isPersistAccessTokenAlias());
                     oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
-                    log.info("An instance of " + tokenIssuerDO.getTokenImplClass()
-                            + " is created for Identity OAuth token generation.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("An instance of " + tokenIssuerDO.getTokenImplClass()
+                                + " is created for Identity OAuth token generation.");
+                    }
                 } else {
                     oauthTokenIssuer = oauthTokenIssuerMap.get(tokenType);
                 }
