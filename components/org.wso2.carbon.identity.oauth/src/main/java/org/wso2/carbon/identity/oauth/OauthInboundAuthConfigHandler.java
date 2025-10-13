@@ -147,7 +147,7 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                 if (!StringUtils.equals(oauthApp.getOauthConsumerKey(), consumerAppDTO.getOauthConsumerKey())) {
                     throw new IdentityOAuthClientException("Invalid ClientID provided for update.");
                 }
-                if (StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
+                if (consumerAppDTO.getOauthConsumerSecret() == null) {
                     // If the consumer secret is not provided, use the existing consumer secret.
                     consumerAppDTO.setOauthConsumerSecret(oauthApp.getOauthConsumerSecret());
                 }
