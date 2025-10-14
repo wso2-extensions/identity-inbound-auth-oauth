@@ -362,6 +362,7 @@ public class OAuthServerConfiguration {
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
             "code id_token", "code id_token token");
     private List<String> configuredHybridResponseTypes = new ArrayList<>();
+    private boolean addTenantDomainToAccessTokenEnabled = false;
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
@@ -598,6 +599,9 @@ public class OAuthServerConfiguration {
 
         // Read config for returning only app associated roles in JWT token.
         parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(oauthElem);
+
+        // read domain information setting config.
+        isAddTenantDomainToAccessTokenEnabled(oauthElem);
     }
 
     /**
@@ -885,6 +889,11 @@ public class OAuthServerConfiguration {
         return deviceAuthzEPUrl;
     }
 
+    public boolean isAddTenantDomainToAccessTokenEnabled() {
+
+        return addTenantDomainToAccessTokenEnabled;
+    }
+
     public String getOAuth1RequestTokenUrlV2() {
 
         return oauth1RequestTokenUrlV2;
@@ -997,11 +1006,16 @@ public class OAuthServerConfiguration {
                         if (oauthTokenGeneratorClassName != null) {
                             Class clazz = this.getClass().getClassLoader().loadClass(oauthTokenGeneratorClassName);
                             oauthTokenGenerator = (OAuthIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthTokenGeneratorClassName
-                                    + " is created for OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthTokenGeneratorClassName
+                                        + " is created for OAuth token generation.");
+                            }
                         } else {
                             oauthTokenGenerator = new OAuthIssuerImpl(getTokenValueGenerator());
-                            log.info("The default OAuth token issuer will be used. No custom token generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default OAuth token issuer will be used. " +
+                                        "No custom token generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -1064,12 +1078,16 @@ public class OAuthServerConfiguration {
                             Class clazz = this.getClass().getClassLoader().loadClass
                                     (oauthIdentityTokenGeneratorClassName);
                             oauthIdentityTokenGenerator = (OauthTokenIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthIdentityTokenGeneratorClassName
-                                    + " is created for Identity OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthIdentityTokenGeneratorClassName
+                                        + " is created for Identity OAuth token generation.");
+                            }
                         } else {
                             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                            log.info("The default Identity OAuth token issuer will be used. No custom token " +
-                                            "generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default Identity OAuth token issuer will be used. No custom token " +
+                                        "generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -1482,9 +1500,11 @@ public class OAuthServerConfiguration {
     private void setDefaultRequestObjectBuilderClasses() {
         if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
             // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
-                    "configured in identity.xml. Therefore instantiating default request object builder: "
-                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            if (log.isDebugEnabled()) {
+                log.debug("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                        "configured in identity.xml. Therefore instantiating default request object builder: "
+                        + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            }
             requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
@@ -3067,8 +3087,10 @@ public class OAuthServerConfiguration {
                     oauthTokenIssuer.setPersistAccessTokenAlias(
                             supportedTokenIssuers.get(tokenType).isPersistAccessTokenAlias());
                     oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
-                    log.info("An instance of " + tokenIssuerDO.getTokenImplClass()
-                            + " is created for Identity OAuth token generation.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("An instance of " + tokenIssuerDO.getTokenImplClass()
+                                + " is created for Identity OAuth token generation.");
+                    }
                 } else {
                     oauthTokenIssuer = oauthTokenIssuerMap.get(tokenType);
                 }
@@ -3958,6 +3980,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Checks whether configuration add tenant domain to the access token is enabled.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
+
+        OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN));
+        if (enableAddDomainElem != null) {
+            addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AddTenantDomainToAccessToken was set to : " + addTenantDomainToAccessTokenEnabled);
+        }
+    }
+
+    /**
      * Parses the map federated users to local configuration.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -4028,7 +4067,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block
      * token introspection from other tenants.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -4053,7 +4092,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens
      * for the OAuth configuration in identity.xml.
      */
     public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
@@ -4386,6 +4425,8 @@ public class OAuthServerConfiguration {
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
+        // Enable/Disable adding domain information to the token.
+        private static final String ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
