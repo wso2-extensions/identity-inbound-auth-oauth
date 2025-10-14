@@ -3514,7 +3514,8 @@ public class OAuthServerConfiguration {
         if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
-                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText()
+                    .trim();
         }
     }
 
