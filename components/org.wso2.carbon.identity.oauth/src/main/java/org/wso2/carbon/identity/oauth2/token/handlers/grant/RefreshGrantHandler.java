@@ -879,6 +879,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
                         oldAccessToken.getTokenId());
 
+        if (grantCacheEntry == null) {
+            if (msgCtx.getAuthorizedUser() != null && msgCtx.getAuthorizedUser().isFederatedUser()) {
+                OAuthAppDO oAuthAppDO = (OAuthAppDO) msgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+                if (oAuthAppDO != null && OAuth2Util.JWT.equals(oAuthAppDO.getTokenType())) {
+                    grantCacheEntry = AuthorizationGrantCache.getInstance()
+                            .getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey, oldAccessToken.getTokenId(),
+                                    OAuth2Util.STORE_OPERATION);
+                }
+            }
+        }
+
         if (grantCacheEntry != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Getting user attributes cached against the previous access token with access token id: " +

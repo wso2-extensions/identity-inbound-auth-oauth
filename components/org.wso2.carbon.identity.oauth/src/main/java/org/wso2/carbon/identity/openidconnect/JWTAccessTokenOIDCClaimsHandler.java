@@ -43,12 +43,10 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -57,7 +55,6 @@ import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCach
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -470,21 +467,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                 if (isEmpty(userAttributes)) {
                     userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken(),
                             fetchFederatedUserAttributes);
-                    /*
-                     * If the user attributes are not found in the cache, we need to check whether the previous token
-                     * is still active. If not, it means the token has been revoked due to concurrent
-                     * refresh token requests. Hence we need to throw an error.
-                     */
-                    if (isEmpty(userAttributes)) {
-                        AccessTokenDO prevToken =
-                                OAuth2Util.findAccessToken(refreshTokenValidationDataDO.getAccessToken(), true);
-                        if (prevToken == null ||
-                                !OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(prevToken.getTokenState())) {
-                            throw new IdentityOAuth2ClientException(
-                                    OAuth2ErrorCodes.TOKEN_REFRESH_ERROR_CODE,
-                                    "Associated access token is inactive or invalid");
-                        }
-                    }
                 }
                 requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
                         isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
