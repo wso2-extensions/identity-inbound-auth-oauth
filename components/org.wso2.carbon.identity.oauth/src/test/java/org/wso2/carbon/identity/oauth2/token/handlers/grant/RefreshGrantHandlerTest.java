@@ -18,35 +18,52 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenBindingMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
@@ -54,6 +71,9 @@ import org.wso2.carbon.identity.user.profile.mgt.association.federation.Federate
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
+
+import java.sql.Timestamp;
+import java.time.Instant;
 
 import java.util.Optional;
 
@@ -64,7 +84,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -73,6 +96,7 @@ import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_ID;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.PREV_ACCESS_TOKEN;
 
 /**
  * Unit tests for the RefreshGrantHandler class.
@@ -87,6 +111,16 @@ public class RefreshGrantHandlerTest {
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
     private AuthorizationDetailsService authorizationDetailsService;
+    private RefreshTokenValidationDataDO mockValidationBean;
+    private OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+    private ActionExecutorService mockActionExecutorService;
+    private OAuthAppDO mockOAuthApp;
+    private AppInfoCache mockAppInfoCache;
+    private OauthTokenIssuer mockTokenIssuer;
+    private OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory;
+    private AccessTokenDAO mockAccessTokenDAO;
+    private OAuthCache mockOAuthCache;
+    private AuthorizationGrantCache mockAuthorizationGrantCache;
     private OAuthAppDO oAuthAppDO;
 
     @BeforeMethod
@@ -98,6 +132,17 @@ public class RefreshGrantHandlerTest {
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         oAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
         authorizationDetailsService = mock(AuthorizationDetailsService.class);
+        mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+        mockValidationBean = mock(RefreshTokenValidationDataDO.class);
+        mockActionExecutorService = mock(ActionExecutorService.class);
+        mockOAuthApp = mock(OAuthAppDO.class);
+        mockAppInfoCache = mock(AppInfoCache.class);
+        mockTokenIssuer = mock(OauthTokenIssuer.class);
+        oAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+        mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        mockOAuthCache = mock(OAuthCache.class);
+        mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+
         oAuthAppDO = mock(OAuthAppDO.class);
     }
 
@@ -325,6 +370,117 @@ public class RefreshGrantHandlerTest {
                     verify(revocationProcessor, never()).revokeAccessToken(any(), any());
                 }
             }
+        }
+    }
+
+    @Test
+    public void testIssueToken() throws InvalidOAuthClientException, IdentityOAuth2Exception, OAuthSystemException {
+
+        String userStoreDomain = "user-store-domain";
+        String tenantDomain = "tenant-domain";
+        String username = "user";
+        String clientId = "app1";
+        String userId = "user-id";
+        MockAuthenticatedUser user1 = new MockAuthenticatedUser(username);
+        user1.setUserStoreDomain(userStoreDomain);
+        user1.setTenantDomain(tenantDomain);
+        user1.setUserId(userId);
+        user1.setFederatedUser(true);
+
+        when(mockOAuthApp.getApplicationAccessTokenExpiryTime()).thenReturn(1000L);
+        when(mockOAuthApp.getUserAccessTokenExpiryTime()).thenReturn(1000L);
+        when(mockOAuthApp.getRefreshTokenExpiryTime()).thenReturn(1000L);
+        when(mockOAuthApp.getTokenType()).thenReturn("JWT");
+        when(mockOAuthApp.getOauthConsumerKey()).thenReturn(clientId);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolderMockedStatic = mockStatic(
+                     OAuthComponentServiceHolder.class);
+
+             MockedStatic<AppInfoCache> appInfoCacheMockedStatic = mockStatic(AppInfoCache.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextMockedStatic = mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactoryMockedStatic = mockStatic(
+                     OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic = mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedConstruction<OAuthAppDAO> mocked = mockConstruction(OAuthAppDAO.class, (mock, context) -> {
+                 // mock the method you want
+                 when(mock.getAppInformation(anyString(), anyInt())).thenReturn(mockOAuthApp);
+             }); MockedStatic<OAuthCache> oAuthCacheMockedStatic = mockStatic(OAuthCache.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic = mockStatic(
+                     AuthorizationGrantCache.class)) {
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            oAuthCacheMockedStatic.when(OAuthCache::getInstance).thenReturn(mockOAuthCache);
+            doNothing().when(mockOAuthCache).clearCacheEntry(any(), anyString());
+            when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
+            when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance)
+                    .thenReturn(mockAuthorizationGrantCache);
+            when(mockAuthorizationGrantCache.getValueFromCacheByTokenId(any(), anyString())).thenReturn(null);
+            when(mockAuthorizationGrantCache.getValueFromCacheByTokenId(any(), anyString(), anyString())).thenReturn(
+                    new AuthorizationGrantCacheEntry());
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuthTokenPersistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(oAuthTokenPersistenceFactory);
+            when(oAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            privilegedCarbonContextMockedStatic.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            identityTenantUtilMockedStatic.when((IdentityTenantUtil::resolveTenantDomain)).thenReturn(tenantDomain);
+            when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(10L);
+            when(oAuthServerConfiguration.addAndReturnTokenIssuerInstance(anyString())).thenReturn(mockTokenIssuer);
+            oAuthComponentServiceHolderMockedStatic.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            appInfoCacheMockedStatic.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(anyString(), anyString())).thenReturn(mockOAuthApp);
+
+            when(mockOAuthComponentServiceHolder.getActionExecutorService()).thenReturn(mockActionExecutorService);
+            when(mockActionExecutorService.isExecutionEnabled(any())).thenReturn(false);
+
+            when(oAuthTokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN)).thenReturn(mockValidationBean);
+            when(oAuthTokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO)).thenReturn(mockOAuthApp);
+            when(oAuthTokenReqMessageContext.getAuthorizedUser()).thenReturn(user1);
+            when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+            when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
+            when(mockValidationBean.getAccessTokenValidityInMillis()).thenReturn(10000L);
+            Timestamp currentTime = Timestamp.from(Instant.now());
+            when(mockValidationBean.getIssuedTime()).thenReturn(currentTime);
+            when(mockValidationBean.getAccessToken()).thenReturn("token0");
+            when(mockValidationBean.getValidityPeriodInMillis()).thenReturn(currentTime.getTime() + 500);
+            when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+            when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+            AccessTokenDO accessTokenDO = new AccessTokenDO();
+            accessTokenDO.setIssuedTime(currentTime);
+            accessTokenDO.setConsumerKey(clientId);
+            accessTokenDO.setAccessToken("token");
+            when(refreshTokenGrantProcessor.createAccessTokenBean(any(), any(), any(), anyString())).thenReturn(
+                    accessTokenDO);
+            when(mockTokenIssuer.getAccessTokenType()).thenReturn("JWT");
+            doReturn("token").when(mockTokenIssuer).accessToken(any(OAuthTokenReqMessageContext.class));
+
+            doNothing().when(mockAccessTokenDAO)
+                    .invalidateAndCreateNewAccessToken(anyString(), anyString(), anyString(), anyString(), any(),
+                            anyString(), anyString());
+
+            when(mockValidationBean.getAuthorizedUser()).thenReturn(user1);
+            when(mockValidationBean.getTokenId()).thenReturn("token_id_1");
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO = refreshGrantHandler.issue(oAuthTokenReqMessageContext);
+
+            doNothing().when(authorizationDetailsService)
+                    .replaceAccessTokenAuthorizationDetails(anyString(), any(), any());
+            assertEquals("token", oAuth2AccessTokenRespDTO.getAccessToken());
+
         }
     }
 }
