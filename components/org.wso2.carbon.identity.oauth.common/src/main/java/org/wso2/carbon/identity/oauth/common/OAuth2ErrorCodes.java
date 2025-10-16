@@ -34,7 +34,6 @@ public class OAuth2ErrorCodes {
     public static final String LOGIN_REQUIRED = "login_required";
     public static final String TEMPORARY_UNAVAILABLE = "temporarily_unavailable";
     public static final String CONSENT_REQUIRED = "consent_required";
-    public static final String TOKEN_REFRESH_ERROR_CODE = "invalid_refresh_token";
 
     private OAuth2ErrorCodes() {
 

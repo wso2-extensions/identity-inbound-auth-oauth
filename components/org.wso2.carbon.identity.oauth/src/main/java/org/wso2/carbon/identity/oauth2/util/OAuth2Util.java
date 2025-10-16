@@ -415,8 +415,6 @@ public class OAuth2Util {
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
 
-    public static final String STORE_OPERATION = "STORE";
-
     private OAuth2Util() {
 
     }

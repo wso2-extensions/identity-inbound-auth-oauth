@@ -112,11 +112,11 @@ public class AuthorizationGrantCache extends
     }
 
     /**
-     * Retrieves cache entry by token id.
+     * Retrieves cache entry by token id and operation.
      *
      * @param key     AuthorizationGrantCacheKey
      * @param tokenId TokenId
-     * @param operation Operation
+     * @param operation Operation (STORE, DELETE)
      * @return AuthorizationGrantCacheEntry
      */
     public AuthorizationGrantCacheEntry getValueFromCacheByTokenId(AuthorizationGrantCacheKey key, String tokenId,
@@ -326,10 +326,11 @@ public class AuthorizationGrantCache extends
     }
 
     /**
-     * Retrieve cache entry from SessionDataStore
+     * Retrieve cache entry from SessionDataStore using the given operation.
      *
-     * @param id session data key
-     * @return
+     * @param id session data key.
+     * @param operation Operation (STORE, DELETE)
+     * @return AuthorizationGrantCacheEntry.
      */
     private AuthorizationGrantCacheEntry getFromSessionStore(String id, String operation) {
 

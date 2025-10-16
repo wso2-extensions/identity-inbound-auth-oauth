@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -50,9 +49,8 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProc
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
-import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenBindingMgtDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -74,7 +72,6 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
@@ -374,7 +371,7 @@ public class RefreshGrantHandlerTest {
     }
 
     @Test
-    public void testIssueToken() throws InvalidOAuthClientException, IdentityOAuth2Exception, OAuthSystemException {
+    public void testIssueToken() throws IdentityOAuth2Exception, OAuthSystemException {
 
         String userStoreDomain = "user-store-domain";
         String tenantDomain = "tenant-domain";
