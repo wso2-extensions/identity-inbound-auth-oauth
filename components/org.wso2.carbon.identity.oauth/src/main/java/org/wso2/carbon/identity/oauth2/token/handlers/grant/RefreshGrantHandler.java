@@ -879,6 +879,25 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
                         oldAccessToken.getTokenId());
 
+        /*
+         * When multiple concurrent refresh token requests occur using the same refresh token,
+         * other nodes in the cluster may revoke the cache entries associated with the previous token.
+         * However, since the current node is unaware of these deletions, it may fail to retrieve the
+         * cache entry for the token. This block ensures that the cache is fetched using the given token ID,
+         * even if the cache entry related to the token is marked as deleted.
+         * This is done for JWT tokens and federated users only.
+         */
+        if (grantCacheEntry == null) {
+            if (msgCtx.getAuthorizedUser() != null && msgCtx.getAuthorizedUser().isFederatedUser()) {
+                OAuthAppDO oAuthAppDO = (OAuthAppDO) msgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+                if (oAuthAppDO != null && OAuth2Util.JWT.equals(oAuthAppDO.getTokenType())) {
+                    grantCacheEntry = AuthorizationGrantCache.getInstance()
+                            .getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey, oldAccessToken.getTokenId(),
+                                    OAuth2Constants.STORE_OPERATION);
+                }
+            }
+        }
+
         if (grantCacheEntry != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Getting user attributes cached against the previous access token with access token id: " +

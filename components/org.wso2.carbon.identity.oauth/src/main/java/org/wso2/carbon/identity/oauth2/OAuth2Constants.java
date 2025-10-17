@@ -60,6 +60,7 @@ public class OAuth2Constants {
     public static final String AGENT_IDENTITY_ENABLE = "AgentIdentity.Enabled";
     public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
     public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
+    public static final String STORE_OPERATION = "STORE";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
 
