@@ -337,5 +337,4 @@ public class AuthorizationGrantCache extends
         return (AuthorizationGrantCacheEntry) SessionDataStore.getInstance().getSessionData(id,
                 AUTHORIZATION_GRANT_CACHE_NAME, operation);
     }
-
 }
