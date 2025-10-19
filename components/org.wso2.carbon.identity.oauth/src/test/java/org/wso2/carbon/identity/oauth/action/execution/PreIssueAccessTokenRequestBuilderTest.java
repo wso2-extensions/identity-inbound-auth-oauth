@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,6 +69,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -88,6 +91,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     private static final String ORG_NAME = "test.com";
     private static final String ORG_ID = "2364283-349o34nnv-92713972nx";
+    private static final String ORG_HANDLE = "testhandle";
+    private static final int ORG_DEPTH = 1;
     private PreIssueAccessTokenRequestBuilder preIssueAccessTokenRequestBuilder;
 
     private MockedStatic<ClaimHandlerUtil> claimHandlerUtilMockedStatic;
@@ -177,10 +182,9 @@ public class PreIssueAccessTokenRequestBuilderTest {
     public void testBuildActionExecutionRequest()
             throws ActionExecutionRequestBuilderException, OrganizationManagementException {
 
-        org.wso2.carbon.identity.organization.management.service.model.Organization actualOrg =
-                new org.wso2.carbon.identity.organization.management.service.model.Organization();
-        actualOrg.setId(ORG_ID);
-        actualOrg.setName(ORG_NAME);
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
 
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class)) {
@@ -189,7 +193,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
                     .thenReturn(mockOAuthComponentServiceHolder);
             when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
             when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
-            when(mockOrganizationManager.getOrganization(ORG_ID, false, false)).thenReturn(actualOrg);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
                     buildActionExecutionRequest(

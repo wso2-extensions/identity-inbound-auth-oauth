@@ -353,7 +353,7 @@ public class EndpointUtilTest {
     @Test(dataProvider = "provideDataForUserConsentURL")
     public void testGetUserConsentURL(Object oAuth2ParamObject, boolean isOIDC, boolean cacheEntryExists,
                                       boolean throwError, String queryString, boolean isDebugEnabled,
-                                      boolean isConfigAvailable) throws Exception {
+                                      boolean isAuthEPRedirectParamsConfigAvailable) throws Exception {
 
         setMockedLog(isDebugEnabled);
         OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
@@ -404,7 +404,11 @@ public class EndpointUtilTest {
                 fileBasedConfigurationBuilder.when(
                         FileBasedConfigurationBuilder::getInstance).thenReturn(mockFileBasedConfigurationBuilder);
                 lenient().when(mockFileBasedConfigurationBuilder.isAuthEndpointRedirectParamsConfigAvailable())
-                        .thenReturn(isConfigAvailable);
+                        .thenReturn(isAuthEPRedirectParamsConfigAvailable);
+                if (isAuthEPRedirectParamsConfigAvailable) {
+                    lenient().when(mockFileBasedConfigurationBuilder.isConsentPageRedirectParamsAllowed())
+                            .thenReturn(true);
+                }
 
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -454,7 +458,7 @@ public class EndpointUtilTest {
                         }
                     }
 
-                    if (isConfigAvailable) {
+                    if (isAuthEPRedirectParamsConfigAvailable) {
                         Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
                                 "loggedInUser parameter value is not found in url");
                         Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),

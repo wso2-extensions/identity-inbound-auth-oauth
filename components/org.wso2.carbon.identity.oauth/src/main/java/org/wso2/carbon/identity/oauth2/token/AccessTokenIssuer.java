@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -905,7 +906,7 @@ public class AccessTokenIssuer {
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] authorizedInternalScopes = new String[0];
-        String[] requestedScopes = tokReqMsgCtx.getScope();
+        String[] requestedScopes = getRequestedScopes(tokReqMsgCtx);
         List<String> authorizedScopes = null;
         if (AuthzUtil.isLegacyAuthzRuntime() && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                 !isManagementApp) {
@@ -1030,6 +1031,27 @@ public class AccessTokenIssuer {
             }
         }
         return isValidScope;
+    }
+
+    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        String[] requestedScopes = tokenReqMessageContext.getScope();
+        if (ArrayUtils.isNotEmpty(requestedScopes)) {
+            return requestedScopes;
+        }
+
+        boolean isDefaultScopeForBackChannelGrantEnabled =
+                OAuthServerConfiguration.getInstance().isDefaultScopeForBackChannelGrantEnabled();
+        List<String> defaultScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
+        if (!isDefaultScopeForBackChannelGrantEnabled || CollectionUtils.isEmpty(defaultScopes)) {
+            return requestedScopes;
+        }
+
+        requestedScopes = defaultScopes.toArray(new String[0]);
+        tokenReqMessageContext.setScope(requestedScopes);
+        tokenReqMessageContext.getOauth2AccessTokenReqDTO().setScope(requestedScopes);
+
+        return requestedScopes;
     }
 
     private List<String> getAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx)

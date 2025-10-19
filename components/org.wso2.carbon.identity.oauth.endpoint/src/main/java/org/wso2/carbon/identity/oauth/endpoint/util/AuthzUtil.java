@@ -3910,7 +3910,10 @@ public class AuthzUtil {
             throws OAuthSystemException {
 
         try {
-            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
+            // if the consent is skipped in the server side or in the SP side,
+            // we don't need to check whether user already approved or not.
+            return !isConsentSkipped(oauth2Params) &&
+                    EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
                     OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
                             .isUserAlreadyConsentedForAuthorizationDetails(user, oauth2Params);
         } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
@@ -3931,7 +3934,9 @@ public class AuthzUtil {
 
     private static String getSubjectFromIdToken(String idTokenHint) throws ParseException {
 
-        return SignedJWT.parse(idTokenHint).getJWTClaimsSet().getSubject();
+        SignedJWT signedJWT = SignedJWT.parse(idTokenHint);
+        IdentityUtil.validateJWTDepth(idTokenHint);
+        return signedJWT.getJWTClaimsSet().getSubject();
     }
 
     private static boolean isIdTokenValidationFailed(String idTokenHint) {

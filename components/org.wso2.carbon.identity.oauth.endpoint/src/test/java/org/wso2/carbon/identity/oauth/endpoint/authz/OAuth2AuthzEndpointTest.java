@@ -124,6 +124,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultRespons
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
@@ -1787,8 +1788,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class,
                          Mockito.CALLS_REAL_METHODS);
                  MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
+                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);) {
 
+                identityUtil.when(() -> IdentityUtil.validateJWTDepth(anyString()))
+                        .thenAnswer(invocationOnMock -> null);
+                authzUtil.when(() -> AuthzUtil.isLegacyAuthzRuntime()).thenReturn(false);
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 AuthenticationResult result = setAuthenticationResult(true, null, null,
                         null, null);

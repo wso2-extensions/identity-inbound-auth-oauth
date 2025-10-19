@@ -98,10 +98,12 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -137,6 +139,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -208,6 +211,14 @@ public class OAuth2UtilTest {
     private static final String ES256 = "ES256";
     private static final String PS256 = "PS256";
     private static final String ES384 = "ES384";
+    private static final String COMMONAUTH_COOKIE = "commonAuthId";
+    private static final String TEST_TOKEN_IDENTIFIER = "test_token_identifier";
+    private static final String TEST_BINDING_VALUE = "test_binding_value";
+    private static final String TEST_BINDING_REFERENCE = "test_binding_reference";
+    private static final String TEST_USER_ID = "test-user-id";
+    private static final String TEST_COOKIE_NAME = "test-cookie";
+    private static final String TEST_COOKIE_VALUE = "test-cookie-value";
+    private static final String COOKIE_HEADER = "Cookie";
 
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
@@ -3097,6 +3108,26 @@ public class OAuth2UtilTest {
         assertEquals(OAuth2Util.getAppResidentTenantDomain(), expected);
     }
 
+    @DataProvider(name = "impersonatedRefreshTokenEnabledProvider")
+    public Object[][] impersonatedRefreshTokenEnabledProvider() {
+        return new Object[][]{
+                {"true", true},
+                {"false", false},
+                {null, true}
+        };
+    }
+
+    @Test(dataProvider = "impersonatedRefreshTokenEnabledProvider")
+    public void testIsImpersonatedRefreshTokenEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE))
+                    .thenReturn(configValue);
+            assertEquals(OAuth2Util.isImpersonatedRefreshTokenEnabled(), expected);
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class,
             expectedExceptionsMessageRegExp = "Error occurred while resolving the tenant domain for the " +
                     "organization id.")
@@ -3456,5 +3487,48 @@ public class OAuth2UtilTest {
                 }
             }
         }
+    }
+
+    @DataProvider(name = "tokenBindingValueProvider")
+    public Object[][] tokenBindingValueProvider() {
+
+        String commonAuthCookieValue = "common-auth-cookie-value";
+        String hashedCommonAuthValue = DigestUtils.sha256Hex(commonAuthCookieValue);
+
+        HttpRequestHeader[] noHeaders = new HttpRequestHeader[0];
+        HttpRequestHeader[] headersWithCookie = new HttpRequestHeader[]{new HttpRequestHeader(COOKIE_HEADER,
+                TEST_COOKIE_NAME + "=" + TEST_COOKIE_VALUE)};
+        HttpRequestHeader[] headersWithCommonAuthCookie = new HttpRequestHeader[]{new HttpRequestHeader(COOKIE_HEADER,
+                COMMONAUTH_COOKIE + "=" + commonAuthCookieValue)};
+        HttpRequestHeader[] headersWithMultipleCookies = new HttpRequestHeader[]{new HttpRequestHeader(COOKIE_HEADER,
+                "some-cookie=some-value;" + TEST_COOKIE_NAME + "=" + TEST_COOKIE_VALUE)};
+        HttpRequestHeader[] headersWithBlankCookieValue = new HttpRequestHeader[]{new HttpRequestHeader(COOKIE_HEADER,
+                TEST_COOKIE_NAME + "=")};
+        HttpRequestHeader[] headersWithNoCookieHeader = new HttpRequestHeader[]{new HttpRequestHeader("Some-Header",
+                "some-value")};
+        HttpRequestHeader[] headersWithEmptyValue =
+                new HttpRequestHeader[]{new HttpRequestHeader(COOKIE_HEADER)};
+
+        return new Object[][]{
+                {null, TEST_COOKIE_NAME, Optional.empty()},
+                {noHeaders, TEST_COOKIE_NAME, Optional.empty()},
+                {headersWithCookie, TEST_COOKIE_NAME, Optional.of(TEST_COOKIE_VALUE)},
+                {headersWithCommonAuthCookie, COMMONAUTH_COOKIE, Optional.of(hashedCommonAuthValue)},
+                {headersWithMultipleCookies, TEST_COOKIE_NAME, Optional.of(TEST_COOKIE_VALUE)},
+                {headersWithBlankCookieValue, TEST_COOKIE_NAME, Optional.empty()},
+                {headersWithNoCookieHeader, TEST_COOKIE_NAME, Optional.empty()},
+                {headersWithCookie, "non-existent-cookie", Optional.empty()},
+                {headersWithEmptyValue, TEST_COOKIE_NAME, Optional.empty()}
+        };
+    }
+
+    @Test(dataProvider = "tokenBindingValueProvider")
+    public void testGetTokenBindingValue(HttpRequestHeader[] headers, String cookieName,
+                                         Optional<String> expectedValue) {
+
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setHttpRequestHeaders(headers);
+        Optional<String> tokenBindingValue = OAuth2Util.getTokenBindingValue(reqDTO, cookieName);
+        assertEquals(tokenBindingValue, expectedValue);
     }
 }

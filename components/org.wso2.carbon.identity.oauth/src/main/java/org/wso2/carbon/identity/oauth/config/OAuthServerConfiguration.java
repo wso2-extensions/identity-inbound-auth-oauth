@@ -339,6 +339,8 @@ public class OAuthServerConfiguration {
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
     private List<String> defaultRequestedScopes = new ArrayList<>();
+    // Property to define whether the default scope for back-channel grant is enabled or not.
+    private boolean isDefaultScopeForBackChannelGrantEnabled = false;
 
     // Property to define the filtered claims.
     private List<String> filteredIntrospectionClaims = new ArrayList<>();
@@ -359,6 +361,7 @@ public class OAuthServerConfiguration {
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
             "code id_token", "code id_token token");
     private List<String> configuredHybridResponseTypes = new ArrayList<>();
+    private boolean addTenantDomainToAccessTokenEnabled = false;
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
@@ -551,6 +554,9 @@ public class OAuthServerConfiguration {
         // Read config for default requested scopes.
         parseDefaultRequestedScopesConfiguration(oauthElem);
 
+        // Read default requested scopes for back-channel grant from config.
+        parseDefaultScopeForBackChannelConfig(oauthElem);
+
         // Read config for filtered claims for introspection response.
         parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
 
@@ -592,6 +598,9 @@ public class OAuthServerConfiguration {
 
         // Read config for returning only app associated roles in JWT token.
         parseReturnOnlyApplicationAssociatedRoleClaimInJWTToken(oauthElem);
+
+        // read domain information setting config.
+        isAddTenantDomainToAccessTokenEnabled(oauthElem);
     }
 
     /**
@@ -725,6 +734,17 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseDefaultScopeForBackChannelConfig(OMElement oauthElem) {
+
+        OMElement enableDefaultScopeForBackChannel = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                        ENABLE_DEFAULT_REQUESTED_SCOPES_FOR_BACK_CHANNEL_GRANT));
+        if (enableDefaultScopeForBackChannel != null) {
+            isDefaultScopeForBackChannelGrantEnabled = Boolean.parseBoolean(
+                    enableDefaultScopeForBackChannel.getText().trim());
+        }
+    }
+
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
         OMElement showApplicationNameInConsentPageElement = oauthElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
@@ -798,6 +818,16 @@ public class OAuthServerConfiguration {
         return defaultRequestedScopes;
     }
 
+    /**
+     * Returns the value of isDefaultScopeForBackChannelGrantEnabled configuration.
+     *
+     * @return boolean value of isDefaultScopeForBackChannelGrantEnabled configuration.
+     */
+    public boolean isDefaultScopeForBackChannelGrantEnabled() {
+
+        return isDefaultScopeForBackChannelGrantEnabled;
+    }
+
     public String getOAuth1RequestTokenUrl() {
         return oauth1RequestTokenUrl;
     }
@@ -856,6 +886,11 @@ public class OAuthServerConfiguration {
     public String getDeviceAuthzEPUrl() {
 
         return deviceAuthzEPUrl;
+    }
+
+    public boolean isAddTenantDomainToAccessTokenEnabled() {
+
+        return addTenantDomainToAccessTokenEnabled;
     }
 
     public String getOAuth1RequestTokenUrlV2() {
@@ -970,11 +1005,16 @@ public class OAuthServerConfiguration {
                         if (oauthTokenGeneratorClassName != null) {
                             Class clazz = this.getClass().getClassLoader().loadClass(oauthTokenGeneratorClassName);
                             oauthTokenGenerator = (OAuthIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthTokenGeneratorClassName
-                                    + " is created for OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthTokenGeneratorClassName
+                                        + " is created for OAuth token generation.");
+                            }
                         } else {
                             oauthTokenGenerator = new OAuthIssuerImpl(getTokenValueGenerator());
-                            log.info("The default OAuth token issuer will be used. No custom token generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default OAuth token issuer will be used. " +
+                                        "No custom token generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -1037,12 +1077,16 @@ public class OAuthServerConfiguration {
                             Class clazz = this.getClass().getClassLoader().loadClass
                                     (oauthIdentityTokenGeneratorClassName);
                             oauthIdentityTokenGenerator = (OauthTokenIssuer) clazz.newInstance();
-                            log.info("An instance of " + oauthIdentityTokenGeneratorClassName
-                                    + " is created for Identity OAuth token generation.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("An instance of " + oauthIdentityTokenGeneratorClassName
+                                        + " is created for Identity OAuth token generation.");
+                            }
                         } else {
                             oauthIdentityTokenGenerator = new OauthTokenIssuerImpl();
-                            log.info("The default Identity OAuth token issuer will be used. No custom token " +
-                                            "generator is set.");
+                            if (log.isDebugEnabled()) {
+                                log.debug("The default Identity OAuth token issuer will be used. No custom token " +
+                                        "generator is set.");
+                            }
                         }
                     } catch (Exception e) {
                         String errorMsg = "Error when instantiating the OAuthIssuer : "
@@ -1455,9 +1499,11 @@ public class OAuthServerConfiguration {
     private void setDefaultRequestObjectBuilderClasses() {
         if (requestObjectBuilderClassNames.get(REQUEST_PARAM_VALUE_BUILDER) == null) {
             // if this element is not present, assume the default case.
-            log.info("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
-                    "configured in identity.xml. Therefore instantiating default request object builder: "
-                    + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            if (log.isDebugEnabled()) {
+                log.debug("\'RequestObjectBuilder\' element for Type: " + REQUEST_PARAM_VALUE_BUILDER + "is not " +
+                        "configured in identity.xml. Therefore instantiating default request object builder: "
+                        + REQUEST_PARAM_VALUE_BUILDER_CLASS);
+            }
             requestObjectBuilderClassNames.put(REQUEST_PARAM_VALUE_BUILDER, REQUEST_PARAM_VALUE_BUILDER_CLASS);
         }
     }
@@ -1931,6 +1977,20 @@ public class OAuthServerConfiguration {
 
         // If this element is not present in the XML, we will send true to maintain the backward compatibility.
         return isRefreshTokenAllowed == null ? true : isRefreshTokenAllowed;
+    }
+
+    /**
+     * Return the value of whether the refresh token is allowed for this grant type. Default value will be returned
+     * if there is no tag or empty tag.
+     *
+     * @param grantType Name of the Grant type.
+     * @param defaultValue Default value to be returned if there is no tag or empty tag.
+     * @return True or False if there is a value. Null otherwise.
+     */
+    public String getValueForIsRefreshTokenAllowed(String grantType, String defaultValue) {
+
+        Boolean isRefreshTokenAllowed = refreshTokenAllowedGrantTypes.get(grantType);
+        return isRefreshTokenAllowed == null ? defaultValue : isRefreshTokenAllowed.toString();
     }
 
     /**
@@ -3022,8 +3082,10 @@ public class OAuthServerConfiguration {
                     oauthTokenIssuer.setPersistAccessTokenAlias(
                             supportedTokenIssuers.get(tokenType).isPersistAccessTokenAlias());
                     oauthTokenIssuerMap.put(tokenType, oauthTokenIssuer);
-                    log.info("An instance of " + tokenIssuerDO.getTokenImplClass()
-                            + " is created for Identity OAuth token generation.");
+                    if (log.isDebugEnabled()) {
+                        log.debug("An instance of " + tokenIssuerDO.getTokenImplClass()
+                                + " is created for Identity OAuth token generation.");
+                    }
                 } else {
                     oauthTokenIssuer = oauthTokenIssuerMap.get(tokenType);
                 }
@@ -3906,6 +3968,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Checks whether configuration add tenant domain to the access token is enabled.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
+
+        OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN));
+        if (enableAddDomainElem != null) {
+            addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AddTenantDomainToAccessToken was set to : " + addTenantDomainToAccessTokenEnabled);
+        }
+    }
+
+    /**
      * Parses the map federated users to local configuration.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -3976,7 +4055,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block
      * token introspection from other tenants.
      *
      * @param oauthConfigElem oauthConfigElem.
@@ -4001,7 +4080,7 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens
      * for the OAuth configuration in identity.xml.
      */
     public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
@@ -4333,6 +4412,8 @@ public class OAuthServerConfiguration {
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
+        // Enable/Disable adding domain information to the token.
+        private static final String ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
@@ -4495,6 +4576,9 @@ public class OAuthServerConfiguration {
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
         // Allowed Default Requested Scopes Config.
         private static final String DEFAULT_REQUESTED_SCOPES_ELEMENT = "DefaultRequestedScopes";
+        // Enable Default Requested Scopes For Back Channel Grant Config.
+        private static final String ENABLE_DEFAULT_REQUESTED_SCOPES_FOR_BACK_CHANNEL_GRANT =
+                "EnableDefaultRequestedScopesForBackChannelGrant";
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";

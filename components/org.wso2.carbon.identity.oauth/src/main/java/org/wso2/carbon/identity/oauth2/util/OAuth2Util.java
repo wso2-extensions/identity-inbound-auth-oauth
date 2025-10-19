@@ -141,6 +141,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -174,6 +175,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -209,8 +211,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
@@ -840,16 +844,16 @@ public class OAuth2Util {
      * Build the cache key string when storing token info in cache.
      * Use {@link #buildCacheKeyStringForTokenWithUserId(String, String, String, String, String)} instead.
      *
-     * @param clientId         ClientId of the App.
-     * @param scope            Scopes used.
-     * @param authorizedUser   Authorised user.
-     * @param authenticatedIDP Authenticated IdP.
+     * @param clientId              ClientId of the App.
+     * @param scope                 Scopes used.
+     * @param authorizedUser        Authorised user.
+     * @param authenticatedIDP      Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
     @Deprecated
     public static String buildCacheKeyStringForToken(String clientId, String scope, String authorizedUser,
-            String authenticatedIDP, String tokenBindingReference) {
+                                                     String authenticatedIDP, String tokenBindingReference) {
 
         AuthenticatedUser authenticatedUser = OAuth2Util.getUserFromUserName(authorizedUser);
         try {
@@ -864,16 +868,16 @@ public class OAuth2Util {
     /**
      * Build the cache key string when storing token info in cache.
      *
-     * @param clientId         ClientId of the App.
-     * @param scope            Scopes used.
-     * @param authorizedUserId   Authorised user.
-     * @param authenticatedIDP Authenticated IdP.
+     * @param clientId              ClientId of the App.
+     * @param scope                 Scopes used.
+     * @param authorizedUserId      Authorised user.
+     * @param authenticatedIDP      Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
     @Deprecated
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
-                                                     String authenticatedIDP, String tokenBindingReference) {
+                                                               String authenticatedIDP, String tokenBindingReference) {
 
         String oauthCacheKey =
                 clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference;
@@ -886,10 +890,10 @@ public class OAuth2Util {
     /**
      * Build the cache key string when storing token info in cache.
      *
-     * @param clientId         ClientId of the App.
-     * @param scope            Scopes used.
-     * @param authorizedUserId   Authorised user.
-     * @param authenticatedIDP Authenticated IdP.
+     * @param clientId              ClientId of the App.
+     * @param scope                 Scopes used.
+     * @param authorizedUserId      Authorised user.
+     * @param authenticatedIDP      Authenticated IdP.
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
@@ -906,12 +910,13 @@ public class OAuth2Util {
         }
         return oauthCacheKey;
     }
+
     /**
      * Build the cache key string when storing token info in cache.
      *
      * @param clientId         ClientId of the App.
      * @param scope            Scopes used.
-     * @param authorizedUserId   Authorised user.
+     * @param authorizedUserId Authorised user.
      * @param authenticatedIDP Authenticated IdP.
      * @return Cache key string combining the input parameters.
      */
@@ -1363,9 +1368,9 @@ public class OAuth2Util {
     /**
      * Util method to calculate the validity period.
      *
-     * @param issuedTimeInMillis    Issued time in milliseconds.
-     * @param validityPeriodMillis  Validity period in milliseconds.
-     * @param considerSkew          Consider timestamp skew when calculating exipry time.
+     * @param issuedTimeInMillis   Issued time in milliseconds.
+     * @param validityPeriodMillis Validity period in milliseconds.
+     * @param considerSkew         Consider timestamp skew when calculating exipry time.
      * @return skew corrected validity period in milliseconds.
      */
     public static long getTimeToExpire(long issuedTimeInMillis, long validityPeriodMillis, boolean considerSkew) {
@@ -1682,8 +1687,8 @@ public class OAuth2Util {
     /**
      * This method is used to generate the device flow authentication completed page URI.
      *
-     * @param appName       Service provider name.
-     * @param tenantDomain  Tenant domain.
+     * @param appName      Service provider name.
+     * @param tenantDomain Tenant domain.
      * @return Redirection URI
      */
     public static String getDeviceFlowCompletionPageURI(String appName, String tenantDomain)
@@ -1711,8 +1716,8 @@ public class OAuth2Util {
      * precedence to the file configurations in the legacy mode and returns the absolute url build from file
      * configuration context.
      *
-     * @param defaultContext              Default URL context.
-     * @param getValueFromFileBasedConfig File-based Configuration.
+     * @param defaultContext                Default URL context.
+     * @param getValueFromFileBasedConfig   File-based Configuration.
      * @param getValueFromFileBasedConfigV2 File-based Configuration V2.
      * @return Absolute URL.
      */
@@ -1736,11 +1741,11 @@ public class OAuth2Util {
      * precedence to the file configurations in the legacy mode and returns the absolute url build from file
      * configuration context.
      *
-     * @Deprecated use @link #buildUrlWithHostname(String, Supplier, Supplier, String) instead.
      * @param defaultContext              Default URL context.
      * @param getValueFromFileBasedConfig File-based Configuration.
      * @param hostname                    hostname of the service
      * @return Absolute URL.
+     * @Deprecated use @link #buildUrlWithHostname(String, Supplier, Supplier, String) instead.
      */
     @Deprecated
     private static String buildUrlWithHostname(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
@@ -1780,11 +1785,11 @@ public class OAuth2Util {
      * Returns the public service url given the default context and the url picked from the configuration based on
      * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
-     * @Deprecated use @link #buildServiceUrl(String, String, String) instead.
-     * @param defaultContext default url context path
-     * @param oauth2EndpointURLInFile  url picked from the file configuration
+     * @param defaultContext          default url context path
+     * @param oauth2EndpointURLInFile url picked from the file configuration
      * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
      * from the file config
+     * @Deprecated use @link #buildServiceUrl(String, String, String) instead.
      */
     @Deprecated
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile) {
@@ -1832,12 +1837,12 @@ public class OAuth2Util {
      * Returns the public service url given the default context and the url picked from the configuration based on
      * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
-     * @Deprecated use @link #buildServiceUrlWithHostname(String, String, String, String) instead.
      * @param defaultContext          default url context path
      * @param oauth2EndpointURLInFile url picked from the file configuration
      * @param hostname                hostname of the service
      * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
      * from the file config
+     * @Deprecated use @link #buildServiceUrlWithHostname(String, String, String, String) instead.
      */
     @Deprecated
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
@@ -2135,7 +2140,7 @@ public class OAuth2Util {
             List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
             ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
                     .getClaimMetadataManagementService();
-            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+            List<ExternalClaim> oidcDialectClaims = claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
                     tenantDomain);
             Set<String> oidcClaimsMappedToScopes = scopeClaimsList.stream()
                     .flatMap(scopeDTO -> Arrays.stream(scopeDTO.getClaim()))
@@ -2509,8 +2514,8 @@ public class OAuth2Util {
      *
      * @param clientId Client id of the application.
      * @return Oauth app information.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     @Deprecated
     public static OAuthAppDO getAppInformationByClientId(String clientId)
@@ -2531,11 +2536,11 @@ public class OAuth2Util {
     /**
      * Get Oauth application information.
      *
-     * @param clientId      Client id of the application.
-     * @param tenantDomain  Tenant domain of the application.
+     * @param clientId     Client id of the application.
+     * @param tenantDomain Tenant domain of the application.
      * @return Oauth app information.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static OAuthAppDO getAppInformationByClientId(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2562,8 +2567,8 @@ public class OAuth2Util {
      *
      * @param clientId Client id of the application.
      * @return Oauth app information.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static OAuthAppDO getAppInformationByClientIdOnly(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2589,8 +2594,8 @@ public class OAuth2Util {
      *
      * @param accessTokenDO Access token data object.
      * @return Oauth app information.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static OAuthAppDO getAppInformationByAccessTokenDO(AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2634,8 +2639,8 @@ public class OAuth2Util {
      *
      * @param clientId Consumer key of Application.
      * @return Tenant Domain.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static String getTenantDomainOfOauthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2650,8 +2655,8 @@ public class OAuth2Util {
      *
      * @param clientId Consumer key of Application.
      * @return Tenant Domain.
-     * @throws IdentityOAuth2Exception      Error while retrieving the application.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static String getTenantDomainOfOauthApp(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2674,9 +2679,9 @@ public class OAuth2Util {
      * Get all the OAuth applications for the client ID.
      *
      * @param clientId Client ID.
-     * @return  Array of OAuthApp data objects.
-     * @throws IdentityOAuth2Exception      If an error occurred while retrieving the applications.
-     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     * @return Array of OAuthApp data objects.
+     * @throws IdentityOAuth2Exception     If an error occurred while retrieving the applications.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID.
      */
     public static OAuthAppDO[] getAppsForClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2691,7 +2696,7 @@ public class OAuth2Util {
      *
      * @param consumerKey Consumer Key provided by the user.
      * @return Consumer Secret.
-     * @throws IdentityOAuth2Exception Error when loading the application.
+     * @throws IdentityOAuth2Exception     Error when loading the application.
      * @throws InvalidOAuthClientException Error when loading the application.
      */
     @Deprecated
@@ -2709,11 +2714,11 @@ public class OAuth2Util {
     /**
      * Get the client secret of the application.
      *
-     * @param consumerKey   Consumer Key provided by the user.
-     * @param tenantDomain  Tenant domain of the application.
+     * @param consumerKey  Consumer Key provided by the user.
+     * @param tenantDomain Tenant domain of the application.
      * @return Consumer Secret.
-     * @throws IdentityOAuth2Exception      Error when loading the application.
-     * @throws InvalidOAuthClientException  Error when loading the application.
+     * @throws IdentityOAuth2Exception     Error when loading the application.
+     * @throws InvalidOAuthClientException Error when loading the application.
      */
     public static String getClientSecret(String consumerKey, String tenantDomain) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
@@ -2885,7 +2890,9 @@ public class OAuth2Util {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String tenantDomain;
         try {
-            String clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
+            SignedJWT signedJWTIdToken = SignedJWT.parse(idToken);
+            IdentityUtil.validateJWTDepth(idToken);
+            String clientId = signedJWTIdToken.getJWTClaimsSet().getAudience().get(0);
             if (isJWTSignedWithSPKey) {
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
                 tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
@@ -3026,14 +3033,14 @@ public class OAuth2Util {
         if (StringUtils.isBlank(jwksUri)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Jwks uri is not configured for the service provider associated with " +
-                                "client_id: %s. Checking for x509 certificate", clientId));
+                        "client_id: %s. Checking for x509 certificate", clientId));
             }
             publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             thumbPrint = getThumbPrint(publicCert);
 
         } else {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Fetching public keys for the client %s from jwks uri %s", clientId,  jwksUri));
+                log.debug(String.format("Fetching public keys for the client %s from jwks uri %s", clientId, jwksUri));
             }
             publicCert = getPublicCertFromJWKS(jwksUri);
             thumbPrint = getJwkThumbPrint(publicCert);
@@ -3112,7 +3119,7 @@ public class OAuth2Util {
         Key publicKey = publicCert.getPublicKey();
         if (publicKey == null) {
             throw new IdentityOAuth2Exception("Error while retrieving public key from X509 cert of oauth app with "
-                   + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
+                    + "client_id: " + clientId + " of tenantDomain: " + spTenantDomain);
         }
         String kid = getThumbPrint(publicCert);
         return encryptWithPublicKey(publicKey, signedJwt, encryptionAlgorithm, encryptionMethod,
@@ -3178,7 +3185,7 @@ public class OAuth2Util {
     /**
      * Get encryption jwk from JWKS list when JWKS Uri is given.
      *
-     * @param jwksUri - JWKS Uri
+     * @param jwksUri             - JWKS Uri
      * @param encryptionAlgorithm encryption algorithm
      * @return - encryption JWK from the jwks url
      * @throws IdentityOAuth2Exception - IdentityOAuth2Exception
@@ -3335,7 +3342,7 @@ public class OAuth2Util {
      * Create JWSSigner using the server level configurations and return.
      *
      * @param privateKey RSA Private key.
-     * @return  JWSSigner
+     * @return JWSSigner
      */
     public static JWSSigner createJWSSigner(RSAPrivateKey privateKey) {
 
@@ -3443,7 +3450,6 @@ public class OAuth2Util {
      * @param certThumbprint
      * @param signatureAlgorithm
      * @return
-     *
      */
     public static String getKID(String certThumbprint, JWSAlgorithm signatureAlgorithm) {
 
@@ -3468,7 +3474,7 @@ public class OAuth2Util {
      *
      * @param certificate        Signing Certificate.
      * @param signatureAlgorithm relevant signature algorithm.
-     * @return                   KID value as a String.
+     * @return KID value as a String.
      * @throws IdentityOAuth2Exception
      */
     public static String getPreviousKID(Certificate certificate, JWSAlgorithm signatureAlgorithm, String tenantDomain)
@@ -3730,14 +3736,8 @@ public class OAuth2Util {
         String userStoreDomain = OAuth2Util.getUserStoreDomainFromUserId(authenticatedUser.toString());
         if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && authenticatedUser.
                 isFederatedUser()) {
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                // When the IDP_ID column is available it was decided to set the
-                // domain name for federated users to 'FEDERATED'.
-                // This is a system reserved word and users stores cannot be created with this name.
-                userStoreDomain = FrameworkConstants.FEDERATED_IDP_NAME;
-            } else {
-                userStoreDomain = OAuth2Util.getFederatedUserDomain(authenticatedUser.getFederatedIdPName());
-            }
+            userStoreDomain = FrameworkConstants.FEDERATED_IDP_NAME;
+
         }
         return userStoreDomain;
     }
@@ -3832,9 +3832,9 @@ public class OAuth2Util {
     /**
      * Get Authenticated user object.
      *
-     * @param userId          User id of the user.
-     * @param tenantDomain    Tenant domain of the user.
-     * @param clientId        Client id of the application.
+     * @param userId       User id of the user.
+     * @param tenantDomain Tenant domain of the user.
+     * @param clientId     Client id of the application.
      * @return An Authenticated user object.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -3862,9 +3862,9 @@ public class OAuth2Util {
     /**
      * Get Authenticated user object.
      *
-     * @param userId          User id of the user.
-     * @param tenantDomain    Tenant domain of the user.
-     * @param clientId        Client id of the application.
+     * @param userId       User id of the user.
+     * @param tenantDomain Tenant domain of the user.
+     * @param clientId     Client id of the application.
      * @return An Authenticated user object.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -3918,15 +3918,15 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
     public static AuthenticatedUser getAuthenticatedUser(String userId, String userName,
-                                                          String tenantDomain, String userStoreDomain, String clientId,
-                                                          String subjectIdentifier)
+                                                         String tenantDomain, String userStoreDomain, String clientId,
+                                                         String subjectIdentifier)
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
         authenticatedImpersonatingUser.setUserId(userId);
         authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
                 getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userStoreDomain,
-                clientId));
+                        clientId));
         authenticatedImpersonatingUser.setUserName(userName);
         authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
         authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
@@ -3997,7 +3997,6 @@ public class OAuth2Util {
      * @param tenantDomain    Tenant domain.
      * @param userStoreDomain User store domain.
      * @param clientId        Client id.
-     *
      * @return Authenticated user subject identifier.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -4051,7 +4050,6 @@ public class OAuth2Util {
      * @param tenantDomain    Tenant domain.
      * @param userStoreDomain User store domain.
      * @param clientId        Client id.
-     *
      * @return Authenticated user subject identifier.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -4110,12 +4108,11 @@ public class OAuth2Util {
      * @param subjectIdentifier Subject identifier value.
      * @param clientId          Client id of the application.
      * @param tenantDomain      Tenant domain.
-     *
      * @return Subject claim value.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the subject claim.
      */
     public static String getSubjectClaimFromSubjectIdentifier(String subjectIdentifier, String clientId,
-                                                           String tenantDomain)
+                                                              String tenantDomain)
             throws IdentityOAuth2Exception {
 
         String subjectClaimValue = subjectIdentifier;
@@ -4158,9 +4155,9 @@ public class OAuth2Util {
     /**
      * Get authenticated user from subject identifier.
      *
-     * @param claimValue    Subject identifier value.
-     * @param tenantDomain  Tenant domain.
-     * @param clientId      Client id of the application.
+     * @param claimValue   Subject identifier value.
+     * @param tenantDomain Tenant domain.
+     * @param clientId     Client id of the application.
      * @return Authenticated user object.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -4187,11 +4184,11 @@ public class OAuth2Util {
     /**
      * Get authenticated user from subject identifier.
      *
-     * @param claimValue          Subject identifier value.
-     * @param tenantDomain        Tenant domain.
-     * @param userAccessingOrgId  Organization id of the user accessing the resource.
-     * @param userResidentOrgId   Organization id of the user resident organization.
-     * @param clientId            Client id of the application.
+     * @param claimValue         Subject identifier value.
+     * @param tenantDomain       Tenant domain.
+     * @param userAccessingOrgId Organization id of the user accessing the resource.
+     * @param userResidentOrgId  Organization id of the user resident organization.
+     * @param clientId           Client id of the application.
      * @return Authenticated user object.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
@@ -4419,7 +4416,7 @@ public class OAuth2Util {
      * Publish event on token generation error.
      *
      * @param exception Exception occurred.
-     * @param params Additional parameters.
+     * @param params    Additional parameters.
      */
     public static void triggerOnTokenExceptionListeners(Throwable exception, Map<String, Object> params) {
 
@@ -4448,7 +4445,7 @@ public class OAuth2Util {
      * @param
      */
     public static void triggerOnIntrospectionExceptionListeners(OAuth2TokenValidationRequestDTO introspectionRequest,
-            OAuth2IntrospectionResponseDTO introspectionResponse) {
+                                                                OAuth2IntrospectionResponseDTO introspectionResponse) {
 
         Map<String, Object> params = new HashMap<>();
         params.put("error", introspectionResponse.getError());
@@ -4678,11 +4675,8 @@ public class OAuth2Util {
         if (StringUtils.startsWith(userStoreDomain, OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX) &&
                 !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal()) {
             authenticatedUser.setFederatedUser(true);
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                authenticatedUser.setFederatedIdPName(idpName);
-            } else {
-                authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
-            }
+            authenticatedUser.setFederatedIdPName(idpName);
+
             authenticatedUser.setUserId(getUserIdOfFederatedUser(username, tenantDomain, idpName));
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
@@ -4700,12 +4694,12 @@ public class OAuth2Util {
     /**
      * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
      *
-     * @param username        Username of the user.
-     * @param userStoreDomain User store domain.
-     * @param tenantDomain    Tenant domain.
-     * @param idpName         Idp name.
+     * @param username              Username of the user.
+     * @param userStoreDomain       User store domain.
+     * @param tenantDomain          Tenant domain.
+     * @param idpName               Idp name.
      * @param accessingOrganization The organization where the user is authorized to access.
-     * @param appTenantID The tenant ID of the application where user get authenticated.
+     * @param appTenantID           The tenant ID of the application where user get authenticated.
      * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
      */
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
@@ -4724,12 +4718,12 @@ public class OAuth2Util {
     /**
      * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
      *
-     * @param username        Username of the user.
-     * @param userStoreDomain User store domain.
-     * @param tenantDomain    Tenant domain.
-     * @param idpName         Idp name.
+     * @param username              Username of the user.
+     * @param userStoreDomain       User store domain.
+     * @param tenantDomain          Tenant domain.
+     * @param idpName               Idp name.
      * @param accessingOrganization The organization where the user is authorized to access.
-     * @param appTenantDomain The tenant domain of the application where user get authenticated.
+     * @param appTenantDomain       The tenant domain of the application where user get authenticated.
      * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
      */
     public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
@@ -4816,10 +4810,10 @@ public class OAuth2Util {
     public static String getIssuerLocation(String tenantDomain) throws IdentityOAuth2Exception {
 
         /*
-        * IMPORTANT:
-        * This method should only honor the given tenant.
-        * Do not add any auto tenant resolving logic.
-        */
+         * IMPORTANT:
+         * This method should only honor the given tenant.
+         * Do not add any auto tenant resolving logic.
+         */
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() || isBuildIssuerWithHostname()) {
             try {
                 startTenantFlow(tenantDomain);
@@ -4950,7 +4944,7 @@ public class OAuth2Util {
 
         AccessTokenDO accessTokenDO;
         if (tokenIssuerMap != null) {
-            for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
+            for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry : tokenIssuerMap.entrySet()) {
                 try {
                     OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
                     String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
@@ -4991,7 +4985,7 @@ public class OAuth2Util {
     /**
      * Differentiate default token issuers from all available token issuers map.
      *
-     * @param allOAuthTokenIssuerMap Map of all available token issuers.
+     * @param allOAuthTokenIssuerMap     Map of all available token issuers.
      * @param defaultOAuthTokenIssuerMap default token issuers
      */
     private static void extractDefaultOauthTokenIssuers(Map<String, OauthTokenIssuer> allOAuthTokenIssuerMap,
@@ -5067,7 +5061,7 @@ public class OAuth2Util {
      *
      * @param newTokenBean token DO to be added to the cache.
      */
-    public static void addTokenDOtoCache(AccessTokenDO newTokenBean) throws IdentityOAuth2Exception  {
+    public static void addTokenDOtoCache(AccessTokenDO newTokenBean) throws IdentityOAuth2Exception {
 
         OauthTokenIssuer tokenIssuer = null;
         try {
@@ -5112,28 +5106,22 @@ public class OAuth2Util {
     public static String getAuthenticatedIDP(AuthenticatedUser user) {
 
         String authenticatedIDP;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
-                authenticatedIDP = user.getFederatedIdPName();
-                if (log.isDebugEnabled()) {
-                    log.debug("IDP_ID column is available. User is federated and not mapped to local users. " +
-                            "Authenticated IDP is set to:" + authenticatedIDP + " for user:"
-                            + user.getLoggableUserId());
-                }
-            } else {
-                authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
-                if (log.isDebugEnabled()) {
-                    log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
-                            " for user:" + user.getLoggableUserId());
-                }
-            }
-        } else {
+
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
             authenticatedIDP = user.getFederatedIdPName();
             if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available. Authenticated IDP is set to:" + authenticatedIDP +
+                log.debug("User is federated and not mapped to local users. " +
+                        "Authenticated IDP is set to:" + authenticatedIDP + " for user:"
+                        + user.getLoggableUserId());
+            }
+        } else {
+            authenticatedIDP = FrameworkConstants.LOCAL_IDP_NAME;
+            if (log.isDebugEnabled()) {
+                log.debug("IDP_ID column is available. Authenticated IDP is set to:" + authenticatedIDP +
                         " for user:" + user.getLoggableUserId());
             }
         }
+
 
         return authenticatedIDP;
     }
@@ -5147,33 +5135,20 @@ public class OAuth2Util {
     public static String getUserStoreDomain(AuthenticatedUser user) {
 
         String userDomain;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled() &&
-                !OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
+        if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
             if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is available. User is federated and not mapped to local users.");
+                log.debug(" User is federated and not mapped to local users.");
             }
-            // When the IDP_ID column is available it was decided to set the
-            // domain name for federated users to 'FEDERATED'.
-            // This is a system reserved word and users stores cannot be created with this name.
             userDomain = FrameworkConstants.FEDERATED_IDP_NAME;
-        } else if (!OAuthServerConfiguration.getInstance().isMapFederatedUsersToLocal() && user.isFederatedUser()) {
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available. User is federated and not mapped to local users.");
-            }
-            userDomain = OAuth2Util.getFederatedUserDomain(user.getFederatedIdPName());
         } else {
             userDomain = user.getUserStoreDomain();
             if (log.isDebugEnabled()) {
-                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                    log.debug("IDP_ID column is available. User is not federated or mapped to local users.");
-                } else {
-                    log.debug("IDP_ID column is not available. User is not federated or mapped to local users.");
-                }
+                log.debug("IDP_ID column is available. User is not federated or mapped to local users.");
             }
         }
         String sanitizedUserDomain = OAuth2Util.getSanitizedUserStoreDomain(userDomain);
         if (log.isDebugEnabled()) {
-            log.debug("User domain is set to:" + sanitizedUserDomain  + " for user:" + user.getLoggableUserId());
+            log.debug("User domain is set to:" + sanitizedUserDomain + " for user:" + user.getLoggableUserId());
         }
 
         return sanitizedUserDomain;
@@ -5277,7 +5252,7 @@ public class OAuth2Util {
      * Check whether required token binding available in the request.
      *
      * @param tokenBinding token binding.
-     * @param request http request.
+     * @param request      http request.
      * @return true if binding is valid.
      */
     public static boolean isValidTokenBinding(TokenBinding tokenBinding, HttpServletRequest request) {
@@ -5476,8 +5451,8 @@ public class OAuth2Util {
             return Optional.empty();
         }
 
-       String tenantDomainFromContext =
-               tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
+        String tenantDomainFromContext =
+                tokenReqDTO.getParameters().get(OAuthConstants.TENANT_DOMAIN_FROM_CONTEXT);
         if (StringUtils.isNotBlank(tenantDomainFromContext)) {
             return Optional.of(tenantDomainFromContext);
         }
@@ -5577,7 +5552,7 @@ public class OAuth2Util {
      * Get a filtered set of scopes after dropping unregistered scopes.
      *
      * @param requestedScopesArr Array of requested scopes.
-     * @param tenantDomain Tenant domain.
+     * @param tenantDomain       Tenant domain.
      * @return Filtered set of scopes after dropping unregistered scopes.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception
      */
@@ -5763,7 +5738,7 @@ public class OAuth2Util {
     /**
      * Check whether the application should be FAPI conformant.
      *
-     * @param clientId       Client ID of the application.
+     * @param clientId Client ID of the application.
      * @return Whether the application should be FAPI conformant.
      * @throws IdentityOAuth2Exception InvalidOAuthClientException
      */
@@ -5838,7 +5813,7 @@ public class OAuth2Util {
             authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
         }
 
-        if (StringUtils.isNotEmpty(authorizationHeader)  &&
+        if (StringUtils.isNotEmpty(authorizationHeader) &&
                 authorizationHeader.toLowerCase().startsWith(BEARER_AUTHORIZATION_PREFIX.toLowerCase())) {
             return OAuthUtils.getAuthHeaderField(authorizationHeader);
         } else {
@@ -5850,7 +5825,7 @@ public class OAuth2Util {
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *
-     * @return     Client authentication methods supported by the server.
+     * @return Client authentication methods supported by the server.
      */
     public static String[] getSupportedClientAuthMethods() {
 
@@ -5865,7 +5840,7 @@ public class OAuth2Util {
     /**
      * Retrieve the list of client authentication methods supported by the server with the authenticator display name.
      *
-     * @return     Client authentication methods supported by the server.
+     * @return Client authentication methods supported by the server.
      */
     public static HashSet<ClientAuthenticationMethodModel> getSupportedAuthenticationMethods() {
 
@@ -5879,6 +5854,23 @@ public class OAuth2Util {
             }
         }
         return supportedClientAuthMethods;
+    }
+
+    /**
+     * Check if impersonated refresh token is enabled.
+     *
+     * @return True if impersonated refresh token is enabled.
+     */
+    public static boolean isImpersonatedRefreshTokenEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.IMPERSONATED_REFRESH_TOKEN_ENABLE));
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Impersonated refresh token configuration not found, " +
+                    "using default: " + OAuth2Constants.DEFAULT_IMPERSONATED_REFRESH_TOKEN_ENABLED);
+        }
+        return OAuth2Constants.DEFAULT_IMPERSONATED_REFRESH_TOKEN_ENABLED;
     }
 
     /**
@@ -5915,7 +5907,7 @@ public class OAuth2Util {
     /**
      * Retrieve the list of token binding types supported by the server.
      *
-     * @return     Token binding types supported by the server.
+     * @return Token binding types supported by the server.
      */
     public static List<String> getSupportedTokenBindingTypes() {
 
@@ -6079,6 +6071,7 @@ public class OAuth2Util {
 
     /**
      * Check whether the request URL is a mtls endpoint.
+     *
      * @param requestUrl Request URL.
      * @return True if the request URL is a mtls endpoint.
      */
@@ -6099,7 +6092,7 @@ public class OAuth2Util {
     }
 
     private static void addOrganizationUserDetails(AuthenticatedUser authenticatedUser, String accessingOrganization,
-                                            String tenantDomain, String appTenantDomain)
+                                                   String tenantDomain, String appTenantDomain)
             throws IdentityOAuth2Exception {
 
         authenticatedUser.setAccessingOrganization(accessingOrganization);
@@ -6108,7 +6101,7 @@ public class OAuth2Util {
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
-  
+
     public static boolean isPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
@@ -6297,5 +6290,47 @@ public class OAuth2Util {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
                 realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.isExistingUser(MultitenantUtils.getTenantAwareUsername(userName));
+    }
+
+    /**
+     * Get token binding value from the request headers.
+     *
+     * @param oAuth2AccessTokenReqDTO OAuth2AccessTokenReqDTO
+     * @param cookieName              Cookie name
+     * @return Token binding value
+     */
+    public static Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO,
+                                                        String cookieName) {
+
+        HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
+        if (ArrayUtils.isEmpty(httpRequestHeaders)) {
+            return Optional.empty();
+        }
+
+        for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+            if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
+                if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
+                    return Optional.empty();
+                }
+
+                String[] cookies = httpRequestHeader.getValue()[0].split(";");
+                String cookiePrefix = cookieName + "=";
+                for (String cookie : cookies) {
+                    if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix) &&
+                            !HttpCookie.parse(cookie).isEmpty()) {
+                        String cookieValue = HttpCookie.parse(cookie).get(0).getValue();
+                        if (StringUtils.isNotBlank(cookieValue)) {
+                            if (COMMONAUTH_COOKIE.equals(cookieName)) {
+                                // For sso-session binding, token binding value will be the session context id.
+                                return Optional.of(DigestUtils.sha256Hex(cookieValue));
+                            } else {
+                                return Optional.of(cookieValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
     }
 }

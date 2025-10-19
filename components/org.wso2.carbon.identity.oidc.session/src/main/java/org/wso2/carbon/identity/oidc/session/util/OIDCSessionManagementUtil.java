@@ -461,6 +461,10 @@ public class OIDCSessionManagementUtil {
         However here for the sake of backward compatibility we are ignoring this,
         as there are clients who send encrypted claimSet.
         */
+        if (decryptedIDToken instanceof EncryptedJWT && ((EncryptedJWT) decryptedIDToken).getPayload() != null) {
+            String payloadJson = ((EncryptedJWT) decryptedIDToken).getPayload().toString();
+            IdentityUtil.validateJWTDepthOfJWTPayload(payloadJson);
+        }
         String clientId = (String) decryptedIDToken.getJWTClaimsSet().getClaims()
                 .get(OIDCSessionConstants.OIDC_ID_TOKEN_AZP_CLAIM);
         if (StringUtils.isBlank(clientId)) {

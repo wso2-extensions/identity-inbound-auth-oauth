@@ -118,6 +118,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -477,7 +478,7 @@ public class OAuthAdminServiceImpl {
                                 validateFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
-                                      OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
+                                        OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
                             }
                             app.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSigningAlgorithm);
                         }
@@ -1665,9 +1666,26 @@ public class OAuthAdminServiceImpl {
                     AccessTokenDO scopedToken;
                     String scopeString = buildScopeString(accessTokenDO.getScope());
                     try {
-                        scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                scopeString, true);
+                        TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+                        String tokenBindingType = StringUtils.EMPTY;
+                        String tokenBindingReference = NONE;
+                        if (tokenBinding != null) {
+                            if (StringUtils.isNotBlank(tokenBinding.getBindingType())) {
+                                tokenBindingType = tokenBinding.getBindingType();
+                            }
+                            if (StringUtils.isNotBlank(tokenBinding.getBindingReference())) {
+                                tokenBindingReference = tokenBinding.getBindingReference();
+                            }
+                        }
+                        if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
+                            scopedToken = OAuthTokenPersistenceFactory.getInstance().
+                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
+                                            scopeString, tokenBindingReference, true);
+                        } else {
+                            scopedToken = OAuthTokenPersistenceFactory.getInstance().
+                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
+                                            scopeString, true);
+                        }
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
                             if (LOG.isDebugEnabled()) {
@@ -1756,10 +1774,16 @@ public class OAuthAdminServiceImpl {
                             //Clear cache with AccessTokenDO
                             authzUser = accessTokenDO.getAuthzUser();
 
+                            String tokenBindingType = StringUtils.EMPTY;
                             String tokenBindingReference = NONE;
-                            if (accessTokenDO.getTokenBinding() != null && StringUtils
-                                    .isNotBlank(accessTokenDO.getTokenBinding().getBindingReference())) {
-                                tokenBindingReference = accessTokenDO.getTokenBinding().getBindingReference();
+                            TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+                            if (tokenBinding != null) {
+                                if (StringUtils.isNotBlank(tokenBinding.getBindingReference())) {
+                                    tokenBindingReference = tokenBinding.getBindingReference();
+                                }
+                                if (StringUtils.isNotBlank(tokenBinding.getBindingType())) {
+                                    tokenBindingType = tokenBinding.getBindingType();
+                                }
                             }
                             OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), authzUser,
                                     buildScopeString(accessTokenDO.getScope()), tokenBindingReference);
@@ -1769,15 +1793,29 @@ public class OAuthAdminServiceImpl {
                             OAuthUtil.clearOAuthCache(accessTokenDO);
                             AccessTokenDO scopedToken;
                             try {
-                                // Retrieve latest access token for particular client, user and scope combination if
-                                // its ACTIVE or EXPIRED.
-                                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                                        .getLatestAccessToken(
-                                                appDTO.getOauthConsumerKey(), user,
-                                                userStoreDomain,
-                                                buildScopeString(
-                                                        accessTokenDO.getScope()),
-                                                true);
+                                if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                            .getLatestAccessToken(
+                                                    appDTO.getOauthConsumerKey(), user,
+                                                    userStoreDomain,
+                                                    buildScopeString(
+                                                            accessTokenDO.getScope()),
+                                                    tokenBindingReference,
+                                                    true);
+                                } else {
+                                    /*
+                                     Retrieve latest access token for particular client, user and scope combination if
+                                     its ACTIVE or EXPIRED.
+                                    */
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                            .getLatestAccessToken(
+                                                    appDTO.getOauthConsumerKey(), user,
+                                                    userStoreDomain,
+                                                    buildScopeString(
+                                                            accessTokenDO.getScope()),
+                                                    true);
+
+                                }
                             } catch (IdentityOAuth2Exception e) {
                                 String errorMsg = "Error occurred while retrieving latest " +
                                         "access token issued for Client ID : " +
