@@ -410,7 +410,10 @@ public class JWTTokenIssuerTest {
             mockCustomClaimsCallbackHandler();
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(anyString())).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyString(), anyBoolean())).
+                    thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(Collections.singletonList
                     (DUMMY_CLIENT_ID));
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
@@ -520,6 +523,8 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
             oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenCallRealMethod();
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any(), anyBoolean()))
+                    .thenAnswer((Answer<Void>) invocation -> null);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any(), any(), anyBoolean()))
                     .thenAnswer((Answer<Void>) invocation -> null);
             oAuth2Util.when(() -> OAuth2Util.getKID(any(Certificate.class), any(JWSAlgorithm.class), anyString()))
                     .thenAnswer((Answer<Void>) invocation -> null);

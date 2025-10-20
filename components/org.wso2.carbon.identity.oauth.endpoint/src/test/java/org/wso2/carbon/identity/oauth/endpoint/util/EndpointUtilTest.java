@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.ArrayUtils;
@@ -70,6 +71,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
@@ -1003,6 +1005,48 @@ public class EndpointUtilTest {
             EndpointUtil.validateFAPIAllowedResponseTypeAndMode(responseType, responseMode);
         } catch (OAuthProblemException e) {
             Assert.assertFalse(shouldPass, "Expected exception not thrown");
+        }
+    }
+
+    @Test
+    public void testParseJsonTokenRequest() throws Exception {
+
+        // Case 1: Valid JSON with simple and nested fields
+        String jsonPayload = "{\n" +
+                "  \"grant_type\": \"client_credentials\",\n" +
+                "  \"scope\": \"openid profile\",\n" +
+                "  \"client_assertion\": {\n" +
+                "    \"assertion_type\": \"jwt\",\n" +
+                "    \"value\": \"abc.def.ghi\"\n" +
+                "  },\n" +
+                "  \"extra\": [\"val1\", \"val2\"]\n" +
+                "}";
+
+        Map<String, List<String>> result = EndpointUtil.parseJsonTokenRequest(jsonPayload);
+
+        // Validate scalar fields
+        assertEquals(result.get("grant_type").get(0), "client_credentials");
+        assertEquals(result.get("scope").get(0), "openid profile");
+
+        // Validate nested JSON object (flattened as JSON string)
+        String clientAssertion = result.get("client_assertion").get(0);
+        ObjectMapper mapper = new ObjectMapper();
+        assertTrue(mapper.readTree(clientAssertion).has("assertion_type"));
+        assertEquals(mapper.readTree(clientAssertion).get("value").asText(), "abc.def.ghi");
+
+        // Validate array flattening
+        String extraArray = result.get("extra").get(0);
+        assertTrue(extraArray.startsWith("["));
+        assertTrue(extraArray.contains("val1"));
+        assertTrue(extraArray.contains("val2"));
+
+        // Case 2: Malformed JSON should throw TokenEndpointBadRequestException
+        String invalidJson = "{ \"key\": \"value\" "; // missing closing brace
+        try {
+            EndpointUtil.parseJsonTokenRequest(invalidJson);
+            Assert.fail("Expected TokenEndpointBadRequestException was not thrown");
+        } catch (TokenEndpointBadRequestException e) {
+            assertTrue(e.getMessage().contains("Malformed or unsupported request payload"));
         }
     }
 
