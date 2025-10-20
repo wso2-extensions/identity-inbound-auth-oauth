@@ -29,12 +29,14 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.Claim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -137,7 +139,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         if (isNotEmpty(addressScopeClaims)) {
             handleAddressClaim(claimsToBeReturned, addressScopeClaims);
         }
-        handleRolesClaim(claimsToBeReturned);
+        handleMappedRolesClaim(claimsToBeReturned, spTenantDomain);
         handleApplicationRolesClaim(claimsToBeReturned);
         handleUpdateAtClaim(claimsToBeReturned);
         handlePhoneNumberVerifiedClaim(claimsToBeReturned);
@@ -486,6 +488,43 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         }
     }
 
+    private void handleMappedRolesClaim(Map<String, Object> returnClaims, String spTenantDomain) {
+
+        // Adding a configuration which will disable the removal of Internal prefix from the roles claim when the
+        // default attribute mapping is changed to preserve backward compatibility.
+        if (!OAuthServerConfiguration.getInstance().isRemoveInternalPrefixFromMappedRolesAttributeInTokenEnabled()) {
+            handleRolesClaim(returnClaims);
+            return;
+        }
+
+        try {
+            String localRolesClaimURI = IdentityUtil.getLocalGroupsClaimURI();
+            Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, spTenantDomain, true);
+            String mappedOidcRoleClaim = oidcToLocalClaimMappings.get(localRolesClaimURI);
+
+            if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled() &&
+                    mappedOidcRoleClaim != null &&
+                    returnClaims.containsKey(mappedOidcRoleClaim) &&
+                    returnClaims.get(mappedOidcRoleClaim) instanceof String) {
+                String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+                List<String> roles = Arrays.asList(returnClaims.get(mappedOidcRoleClaim).toString()
+                        .split(multiAttributeSeparator));
+                for (String role : roles) {
+                    if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
+                        String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
+                        roles.set(roles.indexOf(role), domainRemovedRole);
+                    }
+                }
+                returnClaims.put(mappedOidcRoleClaim, StringUtils.join(roles, multiAttributeSeparator));
+            }
+        } catch (ClaimMetadataException e) {
+            log.error("Error while retrieving claim mappings for tenantDomain: " + spTenantDomain, e);
+            // Revert to previous behavior as a fallback.
+            handleRolesClaim(returnClaims);
+        }
+    }
+
     private void handleRolesClaim(Map<String, Object> returnClaims) {
 
         if (returnClaims.containsKey(ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()
@@ -495,8 +534,8 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
 
             for (String role : roles) {
                 if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
-                   String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
-                   roles.set(roles.indexOf(role), domainRemovedRole);
+                    String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
+                    roles.set(roles.indexOf(role), domainRemovedRole);
                 }
             }
             returnClaims.put(ROLES, StringUtils.join(roles, multiAttributeSeparator));
