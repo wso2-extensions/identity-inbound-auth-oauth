@@ -526,13 +526,32 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+            OAuthConsumerSecretDO secret = getClientSecret(clientId, hashedProvidedSecret);
+            if (secret != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Client Secret found for client ID: " + clientId + " in new secret storage");
+                }
+                // If secret is found, check whether it is expired.
+                boolean isExpired = isClientSecretExpired(secret.getExpiresAt());
+                if (isExpired) {
+                    log.debug("Provided Client Secret has expired");
+                    return false;
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully authenticated the client with client id : " + clientId);
+                    }
+                    return true;
+                }
+            }
+        }
+
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
-        boolean isSecretValid;
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
-            isSecretValid = StringUtils.equals(appClientSecret, clientSecretProvided);
-            if (!isSecretValid && !isMultipleClientSecretsEnabled()) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
@@ -543,21 +562,13 @@ public class OAuth2Util {
             TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-            isSecretValid = StringUtils.equals(appClientSecret, processedProvidedClientSecret);
-            if (!isSecretValid && !isMultipleClientSecretsEnabled()) {
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Provided Client ID : " + clientId +
+                    log.debug("Provided the Client ID : " + clientId +
                             " and Client Secret do not match with the issued credentials.");
                 }
                 return false;
             }
-        }
-
-        // If the single client secret is not valid and the execution reaches here, it means multiple client secrets
-        // feature is enabled. Hence, we will check the provided client secret against the list of secrets associated
-        // with the client
-        if (!isSecretValid && !isClientSecretValid(clientId, clientSecretProvided)) {
-            return false;
         }
 
         if (log.isDebugEnabled()) {
@@ -587,7 +598,8 @@ public class OAuth2Util {
         if (secret == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Provided Client ID : " + clientId +
-                        " and Client Secret do not match with the issued credentials.");
+                        " and Client Secret do not match with the issued credentials in multiple client" +
+                        " secrets support");
             }
             return false;
         }
@@ -610,6 +622,10 @@ public class OAuth2Util {
      */
     public static boolean isClientSecretExpired(Long expiresAt) {
 
+        if (expiresAt == null) {
+            // Never expires
+            return false;
+        }
         Instant nowUtc = Instant.now();
         long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
         Instant expiryInstantWithSkew = Instant.ofEpochMilli(expiresAt).plusSeconds(timeStampSkewInSeconds);
