@@ -1386,6 +1386,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                         oAuth2Parameters.getTenantDomain())).thenReturn(appDO);
                 oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(any())).thenReturn(true);
+                oAuth2Util.when(() -> OAuth2Util.isFapi1Enabled()).thenReturn(true);
 
                 mockEndpointUtil(false, endpointUtil);
                 when(oAuth2Service.isPKCESupportEnabled()).thenReturn(false);

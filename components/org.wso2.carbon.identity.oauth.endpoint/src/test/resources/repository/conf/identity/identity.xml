@@ -324,6 +324,9 @@
             <SkipUserConsent>false</SkipUserConsent>
             <!-- Sign the ID Token with Service Provider Tenant Private Key-->
             <SignJWTWithSPKey>false</SignJWTWithSPKey>
+            <FAPI>
+                <FAPIVersion>1</FAPIVersion>
+            </FAPI>
 
         </OpenIDConnect>
 
