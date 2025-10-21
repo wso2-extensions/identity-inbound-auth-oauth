@@ -423,9 +423,23 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        if (getOAuthConsumerSecret(secretId) != null) {
+        OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
+        if (secretDTO != null) {
+            String consumerKey = secretDTO.getClientId();
+            OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+            List<OAuthConsumerSecretDTO> secretDTOList = getOAuthConsumerSecrets(consumerKey);
+            if (secretDTOList.size() == 1) {
+                String errorMessage = "Cannot remove the secret with id: " + secretId + " as it is the only secret " +
+                        "associated with the client ID: " + consumerKey;
+                throw handleClientError(INVALID_REQUEST, errorMessage);
+            }
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            oAuthAppDAO.removeOAuthConsumerSecret(secretId);
+            boolean needUpdate = false;
+            if (oAuthAppDO.getOauthConsumerSecret().equals(secretDTO.getClientSecret())) {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+                needUpdate = true;
+            }
+            oAuthAppDAO.removeOAuthConsumerSecret(secretId, consumerKey, needUpdate);
         } else {
             throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
         }
@@ -1906,7 +1920,7 @@ public class OAuthAdminServiceImpl {
             String msg = "Cannot find a valid OAuth client for consumerKey: " + consumerKey;
             throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while creating consumer secret for consumerKey: " + consumerKey, e);
+            throw handleError("Error while validating OAuth app existence for consumerKey: " + consumerKey, e);
         }
         return oAuthAppDO;
     }
