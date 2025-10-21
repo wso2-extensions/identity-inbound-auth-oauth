@@ -673,25 +673,24 @@ public class OAuth2Util {
         return !isHashEnabled;
 
     }
-
     /**
-     * Check whether multiple client secrets feature is enabled or not.
+     * Check whether multiple client secret support is enabled or not.
      *
-     * @return Whether multiple client secrets feature is enabled or not.
+     * @return Whether multiple client secret support is enabled or not.
      */
     public static boolean isMultipleClientSecretsEnabled() {
 
-        return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
+        return getClientSecretCount() > 1;
     }
 
-    /**
-     * Get the allowed client secret limit.
+     /**
+     * Get the allowed client secret count.
      *
-     * @return client secret limit.
+     * @return client secret count.
      */
-    public static int getClientSecretLimit() {
+    public static int getClientSecretCount() {
 
-        return OAuthServerConfiguration.getInstance().getClientSecretLimit();
+        return OAuthServerConfiguration.getInstance().getClientSecretCount();
     }
 
     /**
@@ -719,7 +718,7 @@ public class OAuth2Util {
             List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
             currentSecretCount = secrets.size();
         }
-        int clientSecretLimit = getClientSecretLimit();
+        int clientSecretLimit = getClientSecretCount();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
 

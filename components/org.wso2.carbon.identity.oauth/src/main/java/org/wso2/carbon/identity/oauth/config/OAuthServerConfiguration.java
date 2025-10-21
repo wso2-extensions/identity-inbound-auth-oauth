@@ -282,10 +282,8 @@ public class OAuthServerConfiguration {
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
 
-    // Property to define whether multiple client secrets are allowed for a service provider.
-    private boolean isMultipleClientSecretsEnabled = false;
-    // Property to define the limit of client secrets per service provider. default: unlimited
-    private int clientSecretLimit = -1;
+    // Property to define the number of client secrets per service provider. default: 1
+    private int clientSecretCount = 1;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -458,7 +456,7 @@ public class OAuthServerConfiguration {
         parseEnableHashMode(oauthElem);
 
         // read multiple client secrets config
-        parseEnableMultipleClientSecrets(oauthElem);
+        parseClientSecretCount(oauthElem);
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
@@ -1042,12 +1040,8 @@ public class OAuthServerConfiguration {
         return isClientSecretHashEnabled;
     }
 
-    public boolean isMultipleClientSecretsEnabled() {
-        return isMultipleClientSecretsEnabled;
-    }
-
-    public int getClientSecretLimit() {
-        return clientSecretLimit;
+    public int getClientSecretCount() {
+        return clientSecretCount;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -3184,30 +3178,16 @@ public class OAuthServerConfiguration {
      *
      * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
      */
-    private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
+    private void parseClientSecretCount(OMElement oauthConfigElem) {
 
-        OMElement multipleClientSecretsElement = oauthConfigElem
-                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
-        if (multipleClientSecretsElement != null) {
-            OMElement isMultipleClientSecretsEnabledElement = multipleClientSecretsElement
-                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
-            if (isMultipleClientSecretsEnabledElement != null) {
-                isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
-                if (isMultipleClientSecretsEnabled) {
-                    OMElement isClientSecretLimitElement = multipleClientSecretsElement
-                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_LIMIT));
-                    if (isClientSecretLimitElement != null &&
-                            StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
-                        clientSecretLimit = Integer.parseInt(isClientSecretLimitElement.getText());
-                    }
-                }
-            }
+        OMElement clientSecretCountElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_COUNT));
+        if (clientSecretCountElement != null &&
+                StringUtils.isNotBlank(clientSecretCountElement.getText())) {
+            clientSecretCount = Integer.parseInt(clientSecretCountElement.getText());
         }
         if (log.isDebugEnabled()) {
-            log.debug("Multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
-            if (isMultipleClientSecretsEnabled) {
-                log.debug("Client secret limit: " + clientSecretLimit);
-            }
+            log.debug("Client secret count per OAuth application: " + clientSecretCount);
         }
     }
 
@@ -3596,10 +3576,8 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
-        // Multiple Client Secret configs
-        private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
-        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
-        private static final String CLIENT_SECRET_LIMIT = "Limit";
+        // Multiple client secret configurations.
+        private static final String CLIENT_SECRET_COUNT = "ClientSecretCount";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";

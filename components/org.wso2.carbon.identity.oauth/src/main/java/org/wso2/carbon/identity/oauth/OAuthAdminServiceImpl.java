@@ -411,7 +411,7 @@ public class OAuthAdminServiceImpl {
         } else {
             throw handleClientError(CLIENT_SECRET_LIMIT_REACHED,
                     "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
-                            "Clients cannot have more than " + OAuth2Util.getClientSecretLimit() + " secrets.");
+                            "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
         }
     }
 
