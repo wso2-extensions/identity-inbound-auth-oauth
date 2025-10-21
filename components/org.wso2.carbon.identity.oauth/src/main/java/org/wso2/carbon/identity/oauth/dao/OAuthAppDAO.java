@@ -1510,9 +1510,25 @@ public class OAuthAppDAO {
      * @param secretId ID of the secret to be removed.
      * @throws IdentityOAuthAdminException if an error occurs while removing the consumer secret.
      */
-    public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+    public void removeOAuthConsumerSecret(String secretId, String clientId, boolean needUpdate)
+            throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            if (needUpdate) {
+                // Get the latest secret excluding the one to be removed.
+                String latestSecret = getLatestSecretExcluding(clientId, secretId);
+                if (latestSecret != null) {
+                    // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the latest secret.
+                    updateOAuthConsumerSecret(connection, clientId, latestSecret);
+                } else {
+                    String message = "Cannot find an alternative secret for client ID : " + clientId
+                            + " after removing the secret with ID : " + secretId;
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(message);
+                    }
+                    throw new IdentityOAuthAdminException(message);
+                }
+            }
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OAUTH_CONSUMER_SECRET)) {
                 prepStmt.setString(1, secretId);
@@ -1564,6 +1580,28 @@ public class OAuthAppDAO {
                     + consumerKey, e);
         }
         return consumerSecrets;
+    }
+
+    public String getLatestSecretExcluding(String clientId, String excludedSecretID)
+            throws IdentityOAuthAdminException {
+        String secret = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                            .GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT_EXCLUDING_PROVIDED_SECRET)) {
+                prepStmt.setString(1, clientId);
+                prepStmt.setString(2, excludedSecretID);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        secret = resultSet.getString(1);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw handleError("Error occurred while retrieving OAuth consumer secrets for client id : "
+                    + clientId, e);
+        }
+        return secret;
     }
 
     public OAuthConsumerSecretDO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
