@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.NEW_ACCESS_TOKEN;
@@ -80,6 +81,31 @@ public class OAuth2TokenUtil {
         } catch (IdentityEventException e) {
             throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler when " +
                     "issuing the access token id: " + tokenId);
+        }
+    }
+
+    /**
+     * Uses to publish token issuance details.
+     *
+     * @param eventProperties Map containing token issuance details.
+     * @throws IdentityOAuth2Exception when an error occurs while publishing the event.
+     */
+    public static void postIssueToken(Map<String, Object> eventProperties) throws IdentityOAuth2Exception {
+
+        String eventName = OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2;
+        Event postIssueTokenEvent = new Event(eventName, eventProperties);
+        IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
+        try {
+            if (identityEventService != null) {
+                identityEventService.handleEvent(postIssueTokenEvent);
+                if (log.isDebugEnabled()) {
+                    log.debug("The event " + eventName + " triggered after the token "
+                            + eventProperties.get(OIDCConstants.Event.TOKEN_ID) + " is issued.");
+                }
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception("Error while invoking the request object persistence handler when " +
+                    "issuing the access token id: " + eventProperties.get(OIDCConstants.Event.TOKEN_ID));
         }
     }
 
