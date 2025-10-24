@@ -93,6 +93,7 @@ import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_REVOKED;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler.SECONDS_TO_MILISECONDS_FACTOR;
 
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
@@ -294,9 +295,26 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
         tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+        tokReqMsgCtx.setValidityPeriod(cachedTokenValidity);
+        tokReqMsgCtx.setRefreshTokenvalidityPeriod(cachedRefreshTokenValidity);
+        tokReqMsgCtx.setRefreshTokenValidityPeriodInMillis(cachedRefreshTokenValidity * SECONDS_TO_MILISECONDS_FACTOR);
 
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
         assertNotNull(tokenRespDTO.getAccessToken());
+        assertNotNull(tokenRespDTO.getTokenId());
+        assertEquals(tokenRespDTO.getAuthorizedScopes(), "scope1 scope2");
+
+        if (cachedTokenValidity > 0) {
+            assertEquals(tokenRespDTO.getExpiresIn(), cachedTokenValidity);
+        } else {
+            assertEquals(tokenRespDTO.getExpiresIn(), 9223372036854775L);
+        }
+        if (cachedTokenValidity > 0 && cachedRefreshTokenValidity > 0) {
+            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(),
+                    cachedRefreshTokenValidity * SECONDS_TO_MILISECONDS_FACTOR);
+        } else {
+            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(), 9223372036854775807L);
+        }
         PrivilegedCarbonContext.endTenantFlow();
     }
 
