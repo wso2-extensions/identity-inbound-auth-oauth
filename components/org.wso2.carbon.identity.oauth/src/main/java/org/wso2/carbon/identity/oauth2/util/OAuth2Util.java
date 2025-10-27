@@ -702,22 +702,9 @@ public class OAuth2Util {
      */
     public static boolean hasClientSecretLimitReached(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
 
-        int currentSecretCount;
-        if (oAuthAppDO.getOauthConsumerSecret() != null) {
-            // If the oAuthAppDO has a non-null consumer secret, it means the application has been registered
-            // before the multiple client secrets support is enabled. This also means no new secrets has been
-            // created for the application after the multiple client secrets support is enabled. Hence, the secret
-            // count for this application is 1.
-            currentSecretCount = 1;
-        } else {
-            // If the oAuthAppDO has a null consumer secret, it means the application has been registered
-            // after the multiple client secrets support is enabled or new secrets has been created for the
-            // application after the multiple client secrets support is enabled. Hence, we will retrieve the
-            // list of secrets associated with the application and get the count.
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
-            currentSecretCount = secrets.size();
-        }
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
+        int currentSecretCount = secrets.size();
         int clientSecretLimit = getClientSecretCount();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
