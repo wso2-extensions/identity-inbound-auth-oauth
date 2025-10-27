@@ -526,7 +526,7 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
-        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+        if (OAuth2Util.isMultipleClientSecretsAllowed()) {
             String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(clientSecretProvided);
             OAuthConsumerSecretDO secret = getClientSecret(clientId, hashedProvidedSecret);
             if (secret != null) {
@@ -678,7 +678,7 @@ public class OAuth2Util {
      *
      * @return Whether multiple client secret support is enabled or not.
      */
-    public static boolean isMultipleClientSecretsEnabled() {
+    public static boolean isMultipleClientSecretsAllowed() {
 
         return getClientSecretCount() > 1;
     }
