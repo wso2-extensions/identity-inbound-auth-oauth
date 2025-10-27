@@ -527,8 +527,7 @@ public class OAuth2Util {
         }
 
         if (OAuth2Util.isMultipleClientSecretsAllowed()) {
-            String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-            OAuthConsumerSecretDO secret = getClientSecret(clientId, hashedProvidedSecret);
+            OAuthConsumerSecretDO secret = getClientSecret(clientId, clientSecretProvided);
             if (secret != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Client Secret found for client ID: " + clientId + " in new secret storage");
@@ -706,7 +705,7 @@ public class OAuth2Util {
         List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
         int currentSecretCount = secrets.size();
         int clientSecretLimit = getClientSecretCount();
-        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+        return clientSecretLimit <= currentSecretCount;
     }
 
     public static String getLatestValidSecret(String consumerKey) throws IdentityOAuthAdminException {
@@ -2353,10 +2352,11 @@ public class OAuth2Util {
      * @return Consumer Secret retrieved from the DB which matches with the provided secret hash.
      * @throws IdentityOAuthAdminException Error when loading the application.
      */
-    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String secretHash)
-            throws IdentityOAuthAdminException {
+    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
-        return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, secretHash);
+        String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(consumerSecret);
+        return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
     }
 
     /**
