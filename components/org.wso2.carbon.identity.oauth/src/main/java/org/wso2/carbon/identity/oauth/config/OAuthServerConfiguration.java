@@ -282,7 +282,7 @@ public class OAuthServerConfiguration {
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
 
-    // Property to define the number of client secrets per service provider. default: 1
+    // Property to define the number of client secrets per oauth application. default: 1
     private int clientSecretCount = 1;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -3174,7 +3174,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Parses the OAuth configuration XML element to determine whether
-     * the support for multiple client secrets is enabled.
+     * the number of client secrets is allowed for a OAuth application.
      *
      * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
      */
@@ -3576,7 +3576,7 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
 
-        // Multiple client secret configurations.
+        // Client secret count configuration.
         private static final String CLIENT_SECRET_COUNT = "ClientSecretCount";
 
         // Token introspection Configs
