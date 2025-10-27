@@ -399,6 +399,11 @@ public class OAuthAdminServiceImpl {
         }
         String consumerKey = consumerSecretDTO.getClientId();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+        // Validate the provided expiry time to check whether it's in the past.
+        if (OAuth2Util.isClientSecretExpired(consumerSecretDTO.getExpiresAt())) {
+            throw handleClientError(INVALID_REQUEST,
+                    "The provided expiry time for the new client secret is in the past.");
+        }
         if (!OAuth2Util.hasClientSecretLimitReached(oAuthAppDO)) {
             // Clear the cache before adding a new secret. This is because the latest secret is added to the
             // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
