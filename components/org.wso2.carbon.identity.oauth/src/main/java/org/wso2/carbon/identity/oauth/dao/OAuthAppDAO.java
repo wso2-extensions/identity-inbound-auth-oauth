@@ -1423,20 +1423,14 @@ public class OAuthAppDAO {
      * @param consumerSecretDO OAuthConsumerSecretDO containing the details of the consumer secret to be added
      * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
      */
-    public void addOAuthConsumerSecret(OAuthAppDO appDO, OAuthConsumerSecretDO consumerSecretDO)
+    public void addOAuthConsumerSecret(OAuthAppDO appDO, OAuthConsumerSecretDO consumerSecretDO, boolean needCopying)
             throws IdentityOAuthAdminException {
 
         Connection connection = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection(true);
-            List<OAuthConsumerSecretDO> existingSecrets = getOAuthConsumerSecrets(consumerSecretDO.getClientId());
-            if (existingSecrets == null || existingSecrets.isEmpty()) {
-                // No existing secrets found for the client ID in the IDN_OAUTH_CONSUMER_SECRETS table. Hence, copy the
-                // secret found in IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("No existing secrets found for client ID: " + consumerSecretDO.getClientId()
-                            + " in new storage. Proceeding to copy secret from old storage to the new storage.");
-                }
+            if (needCopying) {
+                // Copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
                 addConsumerSecret(connection, consumerSecretDO.getClientId(), appDO.getOauthConsumerSecret());
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
@@ -1486,6 +1480,14 @@ public class OAuthAppDAO {
         }
     }
 
+    /**
+     * Update an existing OAuth consumer secret.
+     *
+     * @param connection        DB connection to be used.
+     * @param consumerKey       Consumer key (client ID) whose secret is to be updated.
+     * @param newConsumerSecret New consumer secret value.
+     * @throws IdentityOAuthAdminException if an error occurs while updating the consumer secret.
+     */
     public void updateOAuthConsumerSecret(Connection connection, String consumerKey, String newConsumerSecret)
             throws SQLException, IdentityOAuthAdminException {
 
@@ -1516,8 +1518,13 @@ public class OAuthAppDAO {
                 // Get the latest secret excluding the one to be removed.
                 String latestSecret = getLatestSecretExcluding(clientId, secretId);
                 if (latestSecret != null) {
-                    // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the latest secret.
-                    updateOAuthConsumerSecret(connection, clientId, latestSecret);
+                    try {
+                        // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the latest secret.
+                        updateOAuthConsumerSecret(connection, clientId, latestSecret);
+                    } catch (SQLException e) {
+                        throw handleError("Error occurred while updating OAuth consumer secret for " +
+                                "client id : " + clientId, e);
+                    }
                 } else {
                     String message = "Cannot find an alternative secret for client ID : " + clientId
                             + " after removing the secret with ID : " + secretId;
@@ -1566,6 +1573,9 @@ public class OAuthAppDAO {
                         secret.setSecretValue(resultSet.getString(4));
                         secret.setSecretHash(resultSet.getString(5));
                         long expiresAt = resultSet.getLong(6);
+                        // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0
+                        // for NULL. This is important to distinguish between an actual expiry time of 0 and a NULL
+                        // value.
                         if (!resultSet.wasNull()) {
                             secret.setExpiresAt(expiresAt);
                         }
@@ -1618,6 +1628,9 @@ public class OAuthAppDAO {
                         secret.setSecretValue(resultSet.getString(4));
                         secret.setSecretHash(resultSet.getString(5));
                         long expiresAt = resultSet.getLong(6);
+                        // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0
+                        // for NULL. This is important to distinguish between an actual expiry time of 0 and a NULL
+                        // value.
                         if (!resultSet.wasNull()) {
                             secret.setExpiresAt(expiresAt);
                         }
