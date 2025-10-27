@@ -382,7 +382,7 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is disabled by server configuration.");
         }
@@ -447,7 +447,7 @@ public class OAuthAdminServiceImpl {
      */
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is disabled by server configuration.");
         }
@@ -484,7 +484,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is disabled by server configuration.");
         }
@@ -589,13 +589,8 @@ public class OAuthAdminServiceImpl {
         String errorMessage = "Error while updating the app information.";
         String oauthConsumerKey = consumerAppDTO.getOauthConsumerKey();
 
-        if (StringUtils.isEmpty(oauthConsumerKey)) {
-            if (!OAuth2Util.isMultipleClientSecretsEnabled() &&
-                    StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
-                errorMessage = "ConsumerKey or ConsumerSecret is not provided for updating the OAuth application.";
-            } else {
-                errorMessage = "ConsumerKey is not provided for updating the OAuth application.";
-            }
+        if (StringUtils.isEmpty(oauthConsumerKey) || StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
+            errorMessage = "ConsumerKey or ConsumerSecret is not provided for updating the OAuth application.";
             if (LOG.isDebugEnabled()) {
                 LOG.debug(errorMessage);
             }
@@ -615,15 +610,13 @@ public class OAuthAdminServiceImpl {
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-            if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-                if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
-                    errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
-                            "consumerKey: " + oauthConsumerKey;
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(errorMessage);
-                    }
-                    throw handleClientError(INVALID_REQUEST, errorMessage);
+            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+                errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
+                        "consumerKey: " + oauthConsumerKey;
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(errorMessage);
                 }
+                throw handleClientError(INVALID_REQUEST, errorMessage);
             }
         } catch (InvalidOAuthClientException e) {
             String msg = "Cannot find a valid OAuth client for consumerKey: " + oauthConsumerKey;
@@ -985,7 +978,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+        if (OAuth2Util.isMultipleClientSecretsAllowed()) {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
                     "to generate a new client secret.");

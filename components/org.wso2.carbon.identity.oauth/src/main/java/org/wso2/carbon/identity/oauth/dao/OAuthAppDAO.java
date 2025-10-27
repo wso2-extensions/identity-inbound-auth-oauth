@@ -165,8 +165,8 @@ public class OAuthAppDAO {
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
-                    // If multiple client secret feature is enabled, store the client secret in a separate table.
-                    if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                    // If multiple client secrets are allowed, store the client secret in a separate table.
+                    if (OAuth2Util.isMultipleClientSecretsAllowed()) {
                         addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(), processedClientSecret);
                     }
                     IdentityDatabaseUtil.commitTransaction(connection);
@@ -1119,6 +1119,7 @@ public class OAuthAppDAO {
             throws SQLException, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
+        consumerSecretDO.setDescription("System generated secret");
         consumerSecretDO.setClientId(consumerKey);
         consumerSecretDO.setSecretValue(consumerSecret);
         addOAuthConsumerSecret(connection, consumerSecretDO);
@@ -1447,9 +1448,6 @@ public class OAuthAppDAO {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw handleError("Error occurred while adding OAuth consumer secret for client id : "
                     + consumerSecretDO.getClientId(), e);
-        } catch (IdentityOAuthAdminException e) {
-            throw handleError("Error occurred while processing the client secret by TokenPersistenceProcessor",
-                    e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
         }
