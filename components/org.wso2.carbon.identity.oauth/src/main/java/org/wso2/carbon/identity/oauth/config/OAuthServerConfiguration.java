@@ -237,6 +237,7 @@ public class OAuthServerConfiguration {
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
     private boolean isReturnOnlyAppAssociatedRolesInUserInfo = false;
     private boolean isReturnOnlyAppAssociatedRolesInJWTToken = false;
+    private boolean removeInternalPrefixFromMappedRolesAttributeInToken = false;
 
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -601,6 +602,9 @@ public class OAuthServerConfiguration {
 
         // read domain information setting config.
         isAddTenantDomainToAccessTokenEnabled(oauthElem);
+
+        // Read config for removing internal prefix from mapped roles attribute in JWT tokens.
+        parseRemoveInternalPrefixFromMappedRolesAttributeInToken(oauthElem);
     }
 
     /**
@@ -4201,6 +4205,32 @@ public class OAuthServerConfiguration {
         return useLegacyPermissionAccessForUserBasedAuth;
     }
 
+    /**
+     * Returns whether Internal prefix should be removed from mapped attribute to local role claim in JWT tokens.
+     *
+     * @return True if Internal prefix should be removed from mapped attribute to local role claim in JWT tokens.
+     */
+    public boolean isRemoveInternalPrefixFromMappedRolesAttributeInTokenEnabled() {
+
+        return removeInternalPrefixFromMappedRolesAttributeInToken;
+    }
+
+    /**
+     * Parse the removeInternalPrefixFromMappedRolesAttributeInToken configuration that used to remove Internal
+     * prefix from mapped attribute to local role claim in JWT tokens.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseRemoveInternalPrefixFromMappedRolesAttributeInToken(OMElement oauthConfigElem) {
+
+        OMElement removeInternalPrefixFromMappedRolesAttributeInTokenElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE));
+        if (removeInternalPrefixFromMappedRolesAttributeInTokenElem != null) {
+            removeInternalPrefixFromMappedRolesAttributeInToken =
+                    Boolean.parseBoolean(removeInternalPrefixFromMappedRolesAttributeInTokenElem.getText());
+        }
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -4627,6 +4657,8 @@ public class OAuthServerConfiguration {
         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
         private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
+        private static final String REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE =
+                "RemoveInternalPrefixFromMappedRolesAttributeInToken";
     }
 
 }
