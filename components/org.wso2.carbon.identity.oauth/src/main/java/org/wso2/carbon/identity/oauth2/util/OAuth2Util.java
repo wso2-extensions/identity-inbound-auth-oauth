@@ -526,7 +526,7 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
-        if (OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
             OAuthConsumerSecretDO secret = getClientSecret(clientId, clientSecretProvided);
             if (secret != null) {
                 if (log.isDebugEnabled()) {
@@ -677,9 +677,9 @@ public class OAuth2Util {
      *
      * @return Whether multiple client secret support is enabled or not.
      */
-    public static boolean isMultipleClientSecretsAllowed() {
+    public static boolean isMultipleClientSecretsEnabled() {
 
-        return getClientSecretCount() > 1;
+        return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
     }
 
      /**
@@ -705,7 +705,7 @@ public class OAuth2Util {
         List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
         int currentSecretCount = secrets.size();
         int clientSecretLimit = getClientSecretCount();
-        return clientSecretLimit <= currentSecretCount;
+        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
 
     public static String getLatestValidSecret(String consumerKey) throws IdentityOAuthAdminException {
