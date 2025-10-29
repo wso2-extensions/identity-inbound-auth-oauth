@@ -1447,6 +1447,8 @@ public class AccessTokenIssuer {
                                                        OAuth2AccessTokenRespDTO tokenRespDTO, boolean isFederatedUser) {
 
         AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
+        // If the user is a federated user, we always add the cache entry since the user attributes are fetched
+        // from the federated IDP and may change frequently.
         if (isFederatedUser ||
                 AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
             authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
