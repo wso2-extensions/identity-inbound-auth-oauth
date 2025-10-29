@@ -578,42 +578,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Validates whether the provided client secret is correct and not expired for the given client ID.
-     *
-     * @param clientId        The client ID of the consumer application.
-     * @param providedSecret  The raw client secret value provided for validation.
-     * @return {@code true} if the provided secret matches a stored secret and is not expired,
-     *         {@code false} otherwise.
-     * @throws IdentityOAuth2Exception     If an error occurs while processing the secret or
-     *                                     performing OAuth-related operations.
-     * @throws IdentityOAuthAdminException If an error occurs while retrieving or accessing
-     *                                     the stored client secret from the persistence layer.
-     */
-    public static boolean isClientSecretValid(String clientId, String providedSecret)
-            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
-
-        String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(providedSecret);
-        OAuthConsumerSecretDO secret = getClientSecret(clientId, hashedProvidedSecret);
-        if (secret == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Provided Client ID : " + clientId +
-                        " and Client Secret do not match with the issued credentials in multiple client" +
-                        " secrets support");
-            }
-            return false;
-        }
-        // If secret is found, check whether it is expired.
-        if (secret.getExpiresAt() != null) {
-            boolean isExpired = isClientSecretExpired(secret.getExpiresAt());
-            if (isExpired) {
-                log.debug("Provided Client Secret has expired");
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * Check whether the client secret is expired.
      *
      * @param expiresAt expiry timestamp of client secret since epoch
@@ -706,35 +670,6 @@ public class OAuth2Util {
         int currentSecretCount = secrets.size();
         int clientSecretLimit = getClientSecretCount();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
-    }
-
-    public static String getLatestValidSecret(String consumerKey) throws IdentityOAuthAdminException {
-
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-        String latestValidSecret = null;
-
-        // Secrets list will be containing secrets generated for the application in the ascending order of creation
-        // time. Hence, we will iterate the list in the reverse order to get the latest valid secret
-        for (int i = secrets.size() - 1; i >= 0; i--) {
-            OAuthConsumerSecretDO secret = secrets.get(i);
-
-            // Check if secret is not expired
-            if (!isClientSecretExpired(secret.getExpiresAt())) {
-                latestValidSecret = secret.getSecretValue();
-                break; // found the latest valid secret
-            }
-        }
-
-        if (latestValidSecret != null) {
-            return latestValidSecret;
-        } else {
-            // No valid secret found. Hence return the latest secret (even if it is expired).
-            if (!secrets.isEmpty()) {
-                return secrets.get(secrets.size() - 1).getSecretValue();
-            }
-        }
-        return null;
     }
 
     /**
