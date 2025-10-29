@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -319,7 +320,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
-            if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            if (isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO)
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
@@ -493,5 +495,18 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Check whether token revocation after session termination is enabled for the given OAuth application.
+     *
+     * @param oAuthAppDO OAuth application.
+     * @return true if token revocation after logout is enabled, false otherwise.
+     */
+    private boolean isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(OAuthAppDO oAuthAppDO) {
+
+        boolean isLegacyTokenRevocationEnabled = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
+        // If the legacy token revocation is disabled, revoke the tokens regardless of the application setting.
+        return  !isLegacyTokenRevocationEnabled || oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
     }
 }
