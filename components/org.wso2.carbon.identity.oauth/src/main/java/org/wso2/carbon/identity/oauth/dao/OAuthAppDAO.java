@@ -166,7 +166,7 @@ public class OAuthAppDAO {
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                     // If multiple client secrets are allowed, store the client secret in a separate table.
-                    if (OAuth2Util.isMultipleClientSecretsAllowed()) {
+                    if (OAuth2Util.isMultipleClientSecretsEnabled()) {
                         addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(), processedClientSecret);
                     }
                     IdentityDatabaseUtil.commitTransaction(connection);

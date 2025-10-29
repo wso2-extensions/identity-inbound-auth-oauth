@@ -386,7 +386,7 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
             throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
         }
         String consumerKey = consumerSecretDTO.getClientId();
@@ -441,7 +441,7 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
         }
         OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
@@ -480,7 +480,7 @@ public class OAuthAdminServiceImpl {
      */
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
         }
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
@@ -516,7 +516,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        if (!OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
         }
 
@@ -997,6 +997,11 @@ public class OAuthAdminServiceImpl {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
+                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
+                    "to generate a new client secret.");
+        }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
@@ -1009,7 +1014,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        if (OAuth2Util.isMultipleClientSecretsAllowed()) {
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
                     "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
                     "to generate a new client secret.");
