@@ -466,7 +466,9 @@ public class AccessTokenIssuer {
         }
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
+        boolean isFederatedUser = false;
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            isFederatedUser = true;
             boolean skipTenantDomainOverWriting = false;
             if (authenticatedUser.getTenantDomain() != null) {
                 skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
@@ -698,7 +700,7 @@ public class AccessTokenIssuer {
             }
         }
         if (authorizationGrantCacheEntry.isPresent()) {
-            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO);
+            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO, isFederatedUser);
         }
 
         if (GrantType.PASSWORD.toString().equals(grantType)) {
@@ -1439,12 +1441,16 @@ public class AccessTokenIssuer {
      *
      * @param authorizationGrantCacheEntry
      * @param tokenRespDTO
+     * @param isFederatedUser indicates whether the user is a federated user.
      */
     private void cacheUserAttributesAgainstAccessToken(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                       OAuth2AccessTokenRespDTO tokenRespDTO) {
+                                                       OAuth2AccessTokenRespDTO tokenRespDTO, boolean isFederatedUser) {
 
         AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-        if (AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
+        // If the user is a federated user, we always add the cache entry since the user attributes are fetched
+        // from the federated IDP and may change frequently.
+        if (isFederatedUser ||
+                AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
             authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
