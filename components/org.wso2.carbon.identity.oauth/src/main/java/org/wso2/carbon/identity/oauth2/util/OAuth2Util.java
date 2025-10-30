@@ -417,7 +417,7 @@ public class OAuth2Util {
     private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY =
-            "OAuth.AllowSessionBoundTokensAfterSessionExpiry";
+            "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
 
     private OAuth2Util() {
 
