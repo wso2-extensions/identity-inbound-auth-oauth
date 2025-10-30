@@ -625,21 +625,33 @@ public class TokenValidationHandlerTest {
     @DataProvider(name = "ssoSessionBoundTokenDataProvider")
     public Object[][] ssoSessionBoundTokenDataProvider() {
 
-        SessionContext activeSession = new SessionContext();
         return new Object[][]{
-                //isSessionActive, isTokenRevocationEnabled, expectedActiveState
-                {true, false, true},
-                {true, true, true},
-                {false, false, false},
-                {false, true, false}
+                {false, false, false, false, false},
+                {false, false, false, true,  false},
+                {false, false, true,  false, false},
+                {false, false, true,  true,  false},
+                {false, true,  false, false, true},
+                {false, true,  false, true,  false},
+                {false, true,  true,  false, true},
+                {false, true,  true,  true,  true},
+                {true,  false, false, false, true},
+                {true,  false, false, true,  true},
+                {true,  false, true,  false, true},
+                {true,  false, true,  true,  true},
+                {true,  true,  false, false, true},
+                {true,  true,  false, true,  true},
+                {true,  true,  true,  false, true},
+                {true,  true,  true,  true,  true}
         };
     }
 
     @Test(dataProvider = "ssoSessionBoundTokenDataProvider")
-    public void testBuildIntrospectionResponseForSSOSessionBoundToken(boolean isSessionActive,
-                                                                      boolean isTokenRevocationEnabled,
-                                                                      boolean expectedActiveState)
-            throws Exception {
+    public void testBuildIntrospectionResponseForSSOSessionBoundToken(
+            boolean isSessionActive,
+            boolean isLegacySessionBoundTokenBehaviourEnabled,
+            boolean isSessionBoundTokensAllowedAfterSessionExpiry,
+            boolean isAppLevelTokenRevocationEnabled,
+            boolean expectedActiveState) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -658,7 +670,7 @@ public class TokenValidationHandlerTest {
                     .thenReturn(sessionContext);
 
             OAuthAppDO appDO = new OAuthAppDO();
-            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
+            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(isAppLevelTokenRevocationEnabled);
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
@@ -717,9 +729,14 @@ public class TokenValidationHandlerTest {
             oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(1000L);
             // As the token is dummy, no point in getting actual tenant details.
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn(StringUtils.EMPTY);
+            oAuth2Util.when(OAuth2Util::isSessionBoundTokensAllowedAfterSessionExpiry)
+                    .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
+            oAuth2Util.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
+                    .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
 
             DefaultOAuth2RevocationProcessor revocationProcessor = null;
-            if (!isSessionActive && isTokenRevocationEnabled) {
+            if ((!isLegacySessionBoundTokenBehaviourEnabled || !isSessionBoundTokensAllowedAfterSessionExpiry &&
+                    isAppLevelTokenRevocationEnabled) && !isSessionActive) {
                 revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
                 when(oAuth2ServiceComponentHolderInstance.getRevocationProcessor()).thenReturn(revocationProcessor);
             }
@@ -729,7 +746,8 @@ public class TokenValidationHandlerTest {
             assertNotNull(introspectionResponse, "Introspection response should not be null");
             assertEquals(introspectionResponse.isActive(), expectedActiveState);
 
-            if (!isSessionActive && isTokenRevocationEnabled) {
+            if ((!isLegacySessionBoundTokenBehaviourEnabled || !isSessionBoundTokensAllowedAfterSessionExpiry &&
+                    isAppLevelTokenRevocationEnabled) && !isSessionActive) {
                 oAuthUtil.verify(() -> OAuthUtil.clearOAuthCache(accessTokenDO));
                 verify(revocationProcessor, times(1)).revokeAccessToken(
                         any(), eq(accessTokenDO));

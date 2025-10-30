@@ -219,7 +219,10 @@ public class OAuth2UtilTest {
     private static final String TEST_COOKIE_NAME = "test-cookie";
     private static final String TEST_COOKIE_VALUE = "test-cookie-value";
     private static final String COOKIE_HEADER = "Cookie";
-
+    private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
+            "OAuth.EnableLegacySessionBoundTokenBehaviour";
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
+            "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
 
@@ -3531,4 +3534,63 @@ public class OAuth2UtilTest {
         Optional<String> tokenBindingValue = OAuth2Util.getTokenBindingValue(reqDTO, cookieName);
         assertEquals(tokenBindingValue, expectedValue);
     }
+
+    @DataProvider(name = "legacySessionBoundTokenBehaviourProvider")
+    public Object[][] legacySessionBoundTokenBehaviourProvider() {
+
+        return new Object[][]{
+                // propertyValue, expectedResult
+                {"true", true},
+                {"false", false},
+                {null, false},
+                {"", false},
+                {"invalid", false}
+        };
+    }
+
+    @Test(dataProvider = "legacySessionBoundTokenBehaviourProvider")
+    public void testIsLegacySessionBoundTokenBehaviourEnabled(String propertyValue, boolean expectedResult) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR))
+                    .thenReturn(propertyValue);
+
+            boolean result = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
+            Assert.assertEquals(result, expectedResult);
+        }
+    }
+
+    @DataProvider(name = "sessionBoundTokensAfterSessionExpiryProvider")
+    public Object[][] sessionBoundTokensAfterSessionExpiryProvider() {
+
+        return new Object[][]{
+                // legacyBehaviourEnabled, allowAfterExpiryValue, expectedResult
+                {"true", "true", true},
+                {"true", "false", false},
+                {"true", null, false},
+                {"true", "", false},
+                {"true", "invalid", false},
+                {"false", "true", false},  // Should return false when legacy behaviour is disabled
+                {"false", "false", false},
+                {"false", null, false}
+        };
+    }
+
+    @Test(dataProvider = "sessionBoundTokensAfterSessionExpiryProvider")
+    public void testIsSessionBoundTokensAllowedAfterSessionExpiry(String legacyBehaviourValue,
+                                                                  String allowAfterExpiryValue,
+                                                                  boolean expectedResult) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR))
+                    .thenReturn(legacyBehaviourValue);
+            identityUtil.when(() -> IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY))
+                    .thenReturn(allowAfterExpiryValue);
+            boolean result = OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry();
+            Assert.assertEquals(result, expectedResult);
+        }
+    }
+
+
 }

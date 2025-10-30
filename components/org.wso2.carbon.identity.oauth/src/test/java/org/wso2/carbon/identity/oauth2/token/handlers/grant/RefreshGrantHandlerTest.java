@@ -278,16 +278,24 @@ public class RefreshGrantHandlerTest {
     public Object[][] ssoSessionInactiveDataProvider() {
 
         return new Object[][]{
-                {true},
-                {false}
+                {true,  true,  true},
+                {true,  true,  false},
+                {true,  false, true},
+                {true,  false, false},
+                {false, true,  true},
+                {false, true,  false},
+                {false, false, true},
+                {false, false, false}
         };
     }
 
     @Test(dataProvider = "ssoSessionInactiveDataProvider",
             description = "Ensure the refresh grant flow fails for an SSO session-bound token if the corresponding " +
                     "session has expired, even with a valid refresh token.")
-    public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession(boolean isTokenRevocationEnabled)
-            throws Exception {
+    public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession(
+            boolean isLegacySessionBoundTokenBehaviourEnabled,
+            boolean isSessionBoundTokensAllowedAfterSessionExpiry,
+            boolean isAppLevelTokenRevocationEnabled) throws Exception {
 
         when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
         when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
@@ -316,7 +324,8 @@ public class RefreshGrantHandlerTest {
 
         when(oAuthAppDO.getTokenBindingType())
                 .thenReturn(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
-        when(oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()).thenReturn(isTokenRevocationEnabled);
+        when(oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()).thenReturn(
+                isAppLevelTokenRevocationEnabled);
 
         DefaultOAuth2RevocationProcessor revocationProcessor = mock(DefaultOAuth2RevocationProcessor.class);
 
@@ -336,6 +345,10 @@ public class RefreshGrantHandlerTest {
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
                     .thenReturn(oAuthAppDO);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isSessionBoundTokensAllowedAfterSessionExpiry)
+                    .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
+                    .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
@@ -345,7 +358,8 @@ public class RefreshGrantHandlerTest {
 
             frameworkUtilsMockedStatic.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
                     .thenReturn(null);
-            if (isTokenRevocationEnabled) {
+            if (!isLegacySessionBoundTokenBehaviourEnabled ||
+                    !isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
                 AccessTokenDO accessTokenDO = mock(AccessTokenDO.class);
                 oAuth2UtilMockedStatic
                         .when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), eq(true)))
@@ -360,7 +374,8 @@ public class RefreshGrantHandlerTest {
                 refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
                 fail("Expected exception was not thrown.");
             } catch (IdentityOAuth2Exception e) {
-                if (isTokenRevocationEnabled) {
+                if (!isLegacySessionBoundTokenBehaviourEnabled ||
+                        !isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
                     verify(revocationProcessor, times(1)).revokeAccessToken(
                             any(), any(AccessTokenDO.class));
                 } else {

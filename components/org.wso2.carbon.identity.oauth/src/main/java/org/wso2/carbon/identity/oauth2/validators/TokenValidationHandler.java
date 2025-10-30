@@ -684,12 +684,18 @@ public class TokenValidationHandler {
 
                 // Validate SSO session bound token.
                 if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
-                    if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
-                        log.debug("Token is not bound to an active SSO session.");
-                        // Revoke the SSO session bound access token if the session is invalid/terminated.
-                        revokeSSOSessionBoundToken(accessTokenDO);
-                        introResp.setActive(false);
-                        return introResp;
+                    OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey,
+                            getAppResidentTenantDomain(accessTokenDO));
+                    if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
+                            || (appDO.isTokenRevocationWithIDPSessionTerminationEnabled()
+                            && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                        if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
+                            log.debug("Token is not bound to an active SSO session.");
+                            // Revoke the SSO session bound access token if the session is invalid/terminated.
+                            revokeSSOSessionBoundToken(accessTokenDO);
+                            introResp.setActive(false);
+                            return introResp;
+                        }
                     }
                 }
             }
@@ -1095,18 +1101,13 @@ public class TokenValidationHandler {
 
         String consumerKey = accessTokenDO.getConsumerKey();
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey,
-                    getAppResidentTenantDomain(accessTokenDO));
-                    
-            if (appDO != null && appDO.isTokenRevocationWithIDPSessionTerminationEnabled()) {
-                OAuthUtil.clearOAuthCache(accessTokenDO);
-                OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
-                revokeRequestDTO.setConsumerKey(consumerKey);
-                revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
-                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
-                        .revokeAccessToken(revokeRequestDTO, accessTokenDO);
-            }
-        } catch (InvalidOAuthClientException | IdentityOAuth2Exception | UserIdNotFoundException e) {
+            OAuthUtil.clearOAuthCache(accessTokenDO);
+            OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+            revokeRequestDTO.setConsumerKey(consumerKey);
+            revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
+        } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
             log.error("Error while revoking SSO session bound access token.", e);
         } 
     }

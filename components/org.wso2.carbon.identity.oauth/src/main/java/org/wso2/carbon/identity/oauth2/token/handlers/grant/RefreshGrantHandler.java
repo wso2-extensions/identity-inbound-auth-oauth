@@ -1027,12 +1027,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         // Validate SSO session bound token.
         if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())) {
-            if (!isTokenBoundToActiveSSOSession(tokenBinding.getBindingValue(),
-                    validationDataDO.getAuthorizedUser())) {
-                // Revoke the SSO session bound access token if the session is invalid/terminated.
-                revokeSSOSessionBoundToken(oAuthAppDO, validationDataDO.getAccessToken());
-                throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
-                        "active SSO session.");
+
+            if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
+                    || (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()
+                    && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                if (!isTokenBoundToActiveSSOSession(tokenBinding.getBindingValue(),
+                        validationDataDO.getAuthorizedUser())) {
+                    // Revoke the SSO session bound access token if the session is invalid/terminated.
+                    revokeSSOSessionBoundToken(validationDataDO.getAccessToken());
+                    throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
+                            "active SSO session.");
+                }
             }
         }
 
@@ -1117,22 +1122,19 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
      * Revoke the SSO session bound access token if the associated session is terminated.
      * This is only applicable for the applications that have enabled 'revokeTokensWhenIdPSessionTerminated'.
      *
-     * @param appDO                 OAuth application data object.
      * @param accessTokenIdentifier Access token identifier.
      */
-    private void revokeSSOSessionBoundToken(OAuthAppDO appDO, String accessTokenIdentifier) {
+    private void revokeSSOSessionBoundToken(String accessTokenIdentifier) {
 
         try {
-            if (appDO.isTokenRevocationWithIDPSessionTerminationEnabled()) {
-                AccessTokenDO accessTokenDO =
-                        OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, true);
-                OAuthUtil.clearOAuthCache(accessTokenDO);
-                OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
-                revokeRequestDTO.setConsumerKey(accessTokenDO.getConsumerKey());
-                revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
-                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
-                        .revokeAccessToken(revokeRequestDTO, accessTokenDO);
-            }
+            AccessTokenDO accessTokenDO =
+                    OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, true);
+            OAuthUtil.clearOAuthCache(accessTokenDO);
+            OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+            revokeRequestDTO.setConsumerKey(accessTokenDO.getConsumerKey());
+            revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
         } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
             log.error("Error while revoking SSO session bound access token.", e);
         }

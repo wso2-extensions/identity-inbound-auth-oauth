@@ -414,6 +414,10 @@ public class OAuth2Util {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
+    private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
+            "OAuth.EnableLegacySessionBoundTokenBehaviour";
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
+            "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
 
     private OAuth2Util() {
 
@@ -6332,5 +6336,29 @@ public class OAuth2Util {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Check whether the legacy session bound token behaviour is enabled.
+     * Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isLegacySessionBoundTokenBehaviourEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR));
+    }
+
+    /**
+     * Check whether session bound tokens are allowed after session expiry.
+     * Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isSessionBoundTokensAllowedAfterSessionExpiry() {
+
+        // This setting is only applicable if legacy session bound token behaviour is enabled.
+        return isLegacySessionBoundTokenBehaviourEnabled() &&
+                Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
 }
