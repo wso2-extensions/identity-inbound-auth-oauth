@@ -278,10 +278,14 @@ public class RefreshGrantHandlerTest {
     public Object[][] ssoSessionInactiveDataProvider() {
 
         return new Object[][]{
-                {true, false},
-                {true, true},
-                {false, true},
-                {false, false}
+                {true,  true,  true},
+                {true,  true,  false},
+                {true,  false, true},
+                {true,  false, false},
+                {false, true,  true},
+                {false, true,  false},
+                {false, false, true},
+                {false, false, false}
         };
     }
 
@@ -289,9 +293,9 @@ public class RefreshGrantHandlerTest {
             description = "Ensure the refresh grant flow fails for an SSO session-bound token if the corresponding " +
                     "session has expired, even with a valid refresh token.")
     public void testValidateGrantForSSOSessionBoundTokenWithInactiveSession(
-            boolean isAppLevelTokenRevocationEnabled,
             boolean isLegacySessionBoundTokenBehaviourEnabled,
-            boolean isSessionBoundTokensAllowedAfterSessionExpiry) throws Exception {
+            boolean isSessionBoundTokensAllowedAfterSessionExpiry,
+            boolean isAppLevelTokenRevocationEnabled) throws Exception {
 
         when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
         when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
@@ -343,6 +347,8 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(oAuthAppDO);
             oAuth2UtilMockedStatic.when(OAuth2Util::isSessionBoundTokensAllowedAfterSessionExpiry)
                     .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
+                    .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
@@ -352,7 +358,8 @@ public class RefreshGrantHandlerTest {
 
             frameworkUtilsMockedStatic.when(() -> FrameworkUtils.getSessionContextFromCache(anyString(), anyString()))
                     .thenReturn(null);
-            if (!isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
+            if (!isLegacySessionBoundTokenBehaviourEnabled ||
+                    !isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
                 AccessTokenDO accessTokenDO = mock(AccessTokenDO.class);
                 oAuth2UtilMockedStatic
                         .when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), eq(true)))
@@ -367,7 +374,8 @@ public class RefreshGrantHandlerTest {
                 refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
                 fail("Expected exception was not thrown.");
             } catch (IdentityOAuth2Exception e) {
-                if (!isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
+                if (!isLegacySessionBoundTokenBehaviourEnabled ||
+                        !isSessionBoundTokensAllowedAfterSessionExpiry && isAppLevelTokenRevocationEnabled) {
                     verify(revocationProcessor, times(1)).revokeAccessToken(
                             any(), any(AccessTokenDO.class));
                 } else {

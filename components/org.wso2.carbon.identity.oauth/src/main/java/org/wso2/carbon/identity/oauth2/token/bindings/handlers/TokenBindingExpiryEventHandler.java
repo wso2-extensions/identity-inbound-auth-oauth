@@ -321,7 +321,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-            if (isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO)
+            if (isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO, tokenBindingType)
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
@@ -501,12 +501,23 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      * Check whether token revocation after session termination is enabled for the given OAuth application.
      *
      * @param oAuthAppDO OAuth application.
+     * @param tokenBindingType Token binding type.
      * @return true if token revocation after logout is enabled, false otherwise.
      */
-    private boolean isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(OAuthAppDO oAuthAppDO) {
+    private boolean isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(OAuthAppDO oAuthAppDO,
+                                                                                 String tokenBindingType) {
 
-        boolean isLegacyTokenRevocationEnabled = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
-        // If the legacy token revocation is disabled, revoke the tokens regardless of the application setting.
-        return  !isLegacyTokenRevocationEnabled || oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
+        if (oAuthAppDO == null) {
+            return false;
+        }
+
+        // If the session binding type is SSO session based, token is revoked regardless of the application config.
+        if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(tokenBindingType)) {
+            boolean isLegacyTokenRevocationEnabled = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
+            // Check to preserve the legacy behaviour if the relevant config is enabled.
+            return !isLegacyTokenRevocationEnabled || oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
+        }
+
+        return oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
     }
 }

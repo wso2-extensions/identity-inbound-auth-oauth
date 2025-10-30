@@ -1027,8 +1027,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         // Validate SSO session bound token.
         if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())) {
-            
-            if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()) {
+
+            if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
+                    || (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()
+                    && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
                 if (!isTokenBoundToActiveSSOSession(tokenBinding.getBindingValue(),
                         validationDataDO.getAuthorizedUser())) {
                     // Revoke the SSO session bound access token if the session is invalid/terminated.
@@ -1036,14 +1038,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                     throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
                             "active SSO session.");
                 }
-            } else if (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()
-                        && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry()
-                        && !isTokenBoundToActiveSSOSession(tokenBinding.getBindingValue(),
-                                validationDataDO.getAuthorizedUser())) {
-                // Revoke the SSO session bound access token if the session is invalid/terminated.
-                revokeSSOSessionBoundToken(validationDataDO.getAccessToken());
-                throw new IdentityOAuth2Exception("Token binding validation failed. Token is not bound to an " +
-                        "active SSO session.");
             }
         }
 

@@ -687,20 +687,15 @@ public class TokenValidationHandler {
                     OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey,
                             getAppResidentTenantDomain(accessTokenDO));
                     if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
-                            && !isTokenBoundToActiveSSOSession(accessTokenDO)) {
-                        log.debug("Token is not bound to an active SSO session.");
-                        // Revoke the SSO session bound access token if the session is invalid/terminated.
-                        revokeSSOSessionBoundToken(accessTokenDO);
-                        introResp.setActive(false);
-                        return introResp;
-                    } else if (appDO.isTokenRevocationWithIDPSessionTerminationEnabled()
-                            && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry()
-                            && !isTokenBoundToActiveSSOSession(accessTokenDO)) {
-                        log.debug("Token is not bound to an active SSO session.");
-                        // Revoke the SSO session bound access token if the session is invalid/terminated.
-                        revokeSSOSessionBoundToken(accessTokenDO);
-                        introResp.setActive(false);
-                        return introResp;
+                            || (appDO.isTokenRevocationWithIDPSessionTerminationEnabled()
+                            && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                        if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
+                            log.debug("Token is not bound to an active SSO session.");
+                            // Revoke the SSO session bound access token if the session is invalid/terminated.
+                            revokeSSOSessionBoundToken(accessTokenDO);
+                            introResp.setActive(false);
+                            return introResp;
+                        }
                     }
                 }
             }

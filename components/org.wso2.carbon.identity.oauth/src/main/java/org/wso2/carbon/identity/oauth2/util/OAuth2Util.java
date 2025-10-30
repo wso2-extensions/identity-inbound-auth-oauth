@@ -415,9 +415,9 @@ public class OAuth2Util {
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
     private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
-            "oauth.enableLegacySessionBoundTokenBehaviour";
+            "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY =
-            "oauth.allowSessionBoundTokensAfterSessionExpiry";
+            "OAuth.AllowSessionBoundTokensAfterSessionExpiry";
 
     private OAuth2Util() {
 
