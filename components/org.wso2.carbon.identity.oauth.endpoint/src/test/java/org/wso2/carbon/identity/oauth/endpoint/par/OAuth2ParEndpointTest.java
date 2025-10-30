@@ -536,5 +536,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 new HashMap<String, RequestObjectBuilder>() {{
                     put("request_param_value_builder", new RequestParamRequestObjectBuilder());
                 }});
+        lenient().when(mockOAuthServerConfiguration.getFapiVersion()).thenReturn("1");
+
     }
 }

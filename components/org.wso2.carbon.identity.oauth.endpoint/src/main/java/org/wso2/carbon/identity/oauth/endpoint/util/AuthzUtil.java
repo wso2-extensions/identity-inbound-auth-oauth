@@ -113,6 +113,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OpenIDConnectClaimFilterFactory;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
+import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
@@ -2395,7 +2396,7 @@ public class AuthzUtil {
             validateNonceParameter(params.getNonce());
         }
 
-        if (isFapiConformant(params.getClientId())) {
+        if (isFapiConformant(params.getClientId()) && OAuth2Util.isFapi1Enabled()) {
             EndpointUtil.validateFAPIAllowedResponseTypeAndMode(params.getResponseType(), params.getResponseMode());
         }
 
@@ -2742,7 +2743,18 @@ public class AuthzUtil {
             scopeSet.add("");
             params.setScopes(scopeSet);
         }
-        params.setState(oauthRequest.getState());
+
+        if (isFapiConformant(oAuthMessage.getClientId()) && OAuth2Util.isFapi2Enabled()) {
+            /* For FAPI 2.0 compliance, state parameter sent in the par request should be returned in the
+               authorization response */
+            Object parState = oAuthMessage.getRequest().getAttribute(ParConstants.PAR_STATE);
+            if (parState != null) {
+                params.setState(parState.toString());
+            }
+        } else {
+            params.setState(oauthRequest.getState());
+        }
+
         params.setApplicationName(validationResponse.getApplicationName());
 
         String spDisplayName = getSpDisplayName(clientId);
@@ -2895,9 +2907,9 @@ public class AuthzUtil {
         } else if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
-        /* Mandate request object for FAPI requests.
+        /* Mandate request object for FAPI 1.0 Advanced requests.
            https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)  */
-        if (isFapiConformant(oAuthMessage.getClientId())) {
+        if (isFapiConformant(oAuthMessage.getClientId()) && OAuth2Util.isFapi1Enabled()) {
             if (requestObjValue == null) {
                 throw new InvalidRequestException("Request Object is mandatory for FAPI Conformant Applications.",
                         OAuth2ErrorCodes.INVALID_REQUEST, "Request object is missing.");

@@ -21,12 +21,16 @@ package org.wso2.carbon.identity.oauth2.responsemode.provider.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -127,10 +131,22 @@ public class QueryResponseModeProvider extends AbstractResponseModeProvider {
                 appendQueryParam(queryParams, OAuthConstants.SUBJECT_TOKEN, subjectToken);
             }
 
+            try {
+                if (OAuth2Util.isFapiConformantApp(authorizationResponseDTO.getClientId()) &&
+                        OAuth2Util.isFapi2Enabled()) {
+                    // For FAPI 2.0 compliance, issuer should be included in the authorization response
+                    appendQueryParam(queryParams, OAuth2Util.ISS, OAuth2Util.getIdTokenIssuer(
+                            authorizationResponseDTO.getSigningTenantDomain()));
+                }
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                throw new OAuthRuntimeException("Error occurred while retrieving application details. ", e);
+            }
+
             redirectUrl = FrameworkUtils.appendQueryParamsStringToUrl(redirectUrl,
                     String.join("&", queryParams));
         } else {
-            redirectUrl += "?" +
+            String paramSeparator = redirectUrl.contains("?") ? "&" : "?";
+            redirectUrl += paramSeparator +
                     OAuthConstants.OAUTH_ERROR + "=" + authorizationResponseDTO.getErrorResponseDTO().getError() +
                     "&" + OAuthConstants.OAUTH_ERROR_DESCRIPTION + "=" +
                     authorizationResponseDTO.getErrorResponseDTO().getErrorDescription()
