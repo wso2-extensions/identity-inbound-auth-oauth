@@ -111,9 +111,6 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
-    private static final String SECRET_OPERATION_NOT_SUPPORTED = "The requested operation is not supported as the " +
-            "multiple client secret support is disabled by server configuration.";
-
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
      * consumer secret at a time. Calling this method again and again will update the existing
@@ -387,7 +384,8 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
         String consumerKey = consumerSecretDTO.getClientId();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
@@ -442,7 +440,8 @@ public class OAuthAdminServiceImpl {
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
         OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
         if (secretDTO != null) {
@@ -481,7 +480,8 @@ public class OAuthAdminServiceImpl {
     public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
@@ -517,7 +517,8 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, SECRET_OPERATION_NOT_SUPPORTED);
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -998,9 +999,8 @@ public class OAuthAdminServiceImpl {
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
-                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
-                    "to generate a new client secret.");
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
@@ -1015,9 +1015,8 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST, "The requested operation is not supported as the multiple " +
-                    "client secret support is enabled by server configuration. Use 'createClientSecret' operation " +
-                    "to generate a new client secret.");
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
 
         Properties properties = new Properties();
