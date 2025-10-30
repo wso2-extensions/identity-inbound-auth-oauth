@@ -221,7 +221,7 @@ public class OAuth2UtilTest {
     private static final String COOKIE_HEADER = "Cookie";
     private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
-    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY =
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
@@ -3585,7 +3585,7 @@ public class OAuth2UtilTest {
 
             identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR))
                     .thenReturn(legacyBehaviourValue);
-            identityUtil.when(() -> IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY))
+            identityUtil.when(() -> IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY))
                     .thenReturn(allowAfterExpiryValue);
             boolean result = OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry();
             Assert.assertEquals(result, expectedResult);

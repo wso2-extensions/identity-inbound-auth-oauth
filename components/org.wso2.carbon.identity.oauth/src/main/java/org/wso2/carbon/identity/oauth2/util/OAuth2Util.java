@@ -416,7 +416,7 @@ public class OAuth2Util {
     private static final String DEFAULT_IDP_NAME = "default";
     private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
-    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY =
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
 
     private OAuth2Util() {
@@ -6359,6 +6359,6 @@ public class OAuth2Util {
 
         // This setting is only applicable if legacy session bound token behaviour is enabled.
         return isLegacySessionBoundTokenBehaviourEnabled() &&
-                Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_SESSION_EXPIRY));
+                Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
 }
