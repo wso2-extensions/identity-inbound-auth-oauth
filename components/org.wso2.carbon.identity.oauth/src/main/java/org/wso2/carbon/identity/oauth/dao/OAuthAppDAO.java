@@ -85,6 +85,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ISSUER_CONFIGURATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -1119,6 +1120,10 @@ public class OAuthAppDAO {
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ISSUER_CONFIGURATION, oauthAppDO.getIssuerConfiguration(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1845,6 +1850,9 @@ public class OAuthAppDAO {
                     OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
                     String.valueOf(consumerAppDO.getHybridFlowResponseType()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ISSUER_CONFIGURATION, consumerAppDO.getIssuerConfiguration());
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -2015,6 +2023,11 @@ public class OAuthAppDAO {
         String subjectTokenExpiryTime = getFirstPropertyValue(spOIDCProperties, SUBJECT_TOKEN_EXPIRY_TIME);
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
+        }
+
+        String issuerConfiguration = getFirstPropertyValue(spOIDCProperties, ISSUER_CONFIGURATION);
+        if (issuerConfiguration != null) {
+            oauthApp.setIssuerConfiguration(issuerConfiguration);
         }
 
         String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);

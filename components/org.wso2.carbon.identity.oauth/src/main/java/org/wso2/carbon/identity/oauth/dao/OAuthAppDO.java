@@ -114,6 +114,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    private String issuerConfiguration;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -554,6 +555,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public String getIssuerConfiguration() {
+
+        return issuerConfiguration;
+    }
+
+    public void setIssuerConfiguration(String issuerConfiguration) {
+
+        this.issuerConfiguration = issuerConfiguration;
     }
 
     /**

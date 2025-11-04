@@ -1545,6 +1545,29 @@ public class EndpointUtil {
     }
 
     /**
+     * This method retrieves the service provider tenant domain using the client ID.
+     * However, internally it uses the tenant present in the carbon context.
+     *
+     * @param clientId Client id of the application.
+     * @return Tenant domain of the service provider.
+     */
+    public static String getSPTenantDomainFromClientId(String clientId, String tenantDomain) {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting oauth app for client Id: " + clientId, e);
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while getting oauth app for client Id: " + clientId, e);
+            }
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+    }
+
+    /**
      * Extract information related to the token request and exception and publish the event to listeners.
      *
      * @param exception Exception occurred.

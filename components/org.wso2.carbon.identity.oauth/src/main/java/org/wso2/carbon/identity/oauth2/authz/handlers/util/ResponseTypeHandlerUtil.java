@@ -294,6 +294,12 @@ public class ResponseTypeHandlerUtil {
                 authorizationReqDTO.getConsumerKey(), authorizationCode, codeId,
                 authorizationReqDTO.getPkceCodeChallenge(), authorizationReqDTO.getPkceCodeChallengeMethod());
         authzCodeDO.setRequestedActor(authorizationReqDTO.getRequestedActor());
+        String appResidentOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotBlank(appResidentOrganizationId)) {
+            authzCodeDO.getAuthorizedUser().setAccessingOrganization(appResidentOrganizationId);
+            authzCodeDO.getAuthorizedUser().setUserResidentOrganization(appResidentOrganizationId);
+        }
         String appTenant = authorizationReqDTO.getTenantDomain();
         if (StringUtils.isNotEmpty(appTenant)) {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()

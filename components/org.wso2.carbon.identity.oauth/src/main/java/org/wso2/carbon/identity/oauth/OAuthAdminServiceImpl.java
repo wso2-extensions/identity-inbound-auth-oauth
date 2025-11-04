@@ -84,7 +84,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementClientException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -560,6 +562,15 @@ public class OAuthAdminServiceImpl {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
                         }
+                        if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                            if (validateIssuer(tenantDomain, application.getIssuerConfiguration())) {
+                                app.setIssuerConfiguration(application.getIssuerConfiguration());
+                            }
+                        } else {
+                            throw new OrganizationManagementClientException("Invalid Request", "Cannot create " +
+                                    "applications with issuer configurations in tenant level.",
+                                    INVALID_REQUEST.getErrorCode());
+                        }
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -612,10 +623,40 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityApplicationManagementException e) {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
+        } catch (OrganizationManagementException e) {
+            throw handleClientError(INVALID_REQUEST, "Cannot create applications with issuer configurations in " +
+                    "tenant level.", e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
         return oAuthConsumerAppDTO;
+    }
+
+    private boolean validateIssuer(String tenantDomain, String issuerConfig) {
+
+        try {
+            String currentOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            String rootOrganization = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getPrimaryOrganizationId(currentOrgId);
+            String rootTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(rootOrganization);
+            // ToDo : Check whether the rootTenantDomain allowed the sub organization / tenantDomain to use the
+            //  rootTenantDomain issuer by calling the resource sharing policy store.
+            String rootTenantIssuer = OAuth2Util.getIdTokenIssuer(rootTenantDomain);
+            String currentOrgIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
+            List<String> allowedIssuers = new ArrayList<>();
+            allowedIssuers.add(rootTenantIssuer);
+            allowedIssuers.add(currentOrgIssuer);
+            if (allowedIssuers.contains(issuerConfig)) {
+                return true;
+            }
+            return false;
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException(e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -998,6 +1039,7 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            oAuthAppDO.setIssuerConfiguration(consumerAppDTO.getIssuerConfiguration());
 
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                 // We check if the AT claims separation enabled at server level and

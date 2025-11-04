@@ -4787,6 +4787,12 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
+                // Organization application can have issuer configurations. If that exists then that will be return.
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(tenantDomain, clientId);
+                if (OrganizationManagementUtil.isOrganization(tenantDomain) &&
+                        StringUtils.isNotBlank(oAuthAppDO.getIssuerConfiguration())) {
+                    return oAuthAppDO.getIssuerConfiguration();
+                }
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
                                 PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
@@ -4794,6 +4800,10 @@ public class OAuth2Util {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
                 throw new IdentityOAuth2Exception(errorMsg, e);
+            } catch (InvalidOAuthClientException e) {
+                throw new RuntimeException(e);
+            } catch (OrganizationManagementException e) {
+                throw new RuntimeException(e);
             }
         } else {
             return getIssuerLocation(tenantDomain);
