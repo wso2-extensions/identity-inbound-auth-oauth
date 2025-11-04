@@ -62,11 +62,16 @@ import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 
@@ -165,6 +170,11 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         boolean isExistingUser = false;
         String tenantAwareUsername = null;
 
+        if (authzUser == null) {
+            log.error("Authorized user not found in the token validation response.");
+            return;
+        }
+
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(authzUser);
 
@@ -224,28 +234,27 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
 
             ClaimCacheKey cacheKey = null;
-            UserClaims result = null;
+            UserClaims userClaimsFromCache = null;
 
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
             authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(tenantAwareUsername));
             authenticatedUser.setUserStoreDomain(IdentityUtil.extractDomainFromName(tenantAwareUsername));
             authenticatedUser.setTenantDomain(tenantDomain);
 
-            if (requestedClaims != null) {
+            if (requestedClaims != null && requestedClaims.length > 0) {
                 cacheKey = new ClaimCacheKey(authenticatedUser);
-                result = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
+                userClaimsFromCache = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
             }
 
             SortedMap<String, String> claimValues = null;
-            if (result != null) {
-                claimValues = result.getClaimValues();
+            if (userClaimsFromCache != null) {
+                // Retain only requested claims from the cache; fetch any requested claims missing from the cache
+                // using claimsRetriever and update the cache with newly obtained values.
+                claimValues = filterClaimsFromCache(authenticatedUser, cacheKey, tenantDomain, authzUser,
+                        requestedClaims, userClaimsFromCache, isExistingUser);
             } else if (isExistingUser) {
                 claimValues = claimsRetriever.getClaims(authzUser, requestedClaims);
-                UserClaims userClaims = new UserClaims(claimValues);
-                claimsLocalCache.addToCache(cacheKey, userClaims, tenantDomain);
-
-                ClaimMetaDataCache.getInstance().addToCache(new ClaimMetaDataCacheKey(authenticatedUser),
-                        new ClaimMetaDataCacheEntry(cacheKey), tenantDomain);
+                updateClaimCache(authenticatedUser, claimValues, cacheKey, tenantDomain);
             }
 
             if (isExistingUser) {
@@ -292,6 +301,60 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         messageContext.getResponseDTO().setAuthorizationContextToken(token);
     }
 
+    private SortedMap<String, String> filterClaimsFromCache(AuthenticatedUser authenticatedUser, ClaimCacheKey cacheKey,
+                                                            String tenantDomain, String authzUser,
+                                                            String[] requestedClaims,
+                                                            UserClaims userClaimsCache, boolean isExistingUser)
+            throws IdentityOAuth2Exception {
+
+        SortedMap<String, String> cachedClaims = userClaimsCache.getClaimValues();
+        Set<String> requestedSet = new LinkedHashSet<>(Arrays.asList(requestedClaims));
+        SortedMap<String, String> filtered = new TreeMap<>();
+
+        // Filter only the requested claims from the cached claims.
+        for (String req : requestedSet) {
+            if (cachedClaims.containsKey(req)) {
+                filtered.put(req, cachedClaims.get(req));
+            }
+        }
+
+        // Identify missing requested claims and try to fetch them from claimsRetriever.
+        List<String> missing = new ArrayList<>();
+        for (String req : requestedSet) {
+            if (!filtered.containsKey(req)) {
+                missing.add(req);
+            }
+        }
+        if (!missing.isEmpty() && isExistingUser) {
+            SortedMap<String, String> fetched = claimsRetriever.getClaims(authzUser,
+                    missing.toArray(new String[0]));
+            if (fetched != null) {
+                for (Map.Entry<String, String> e : fetched.entrySet()) {
+                    if (requestedSet.contains(e.getKey())) {
+                        filtered.put(e.getKey(), e.getValue());
+                    }
+                }
+            }
+            // Update cache with the newly obtained claims (if any)
+            if (!filtered.isEmpty()) {
+                updateClaimCache(authenticatedUser, filtered, cacheKey, tenantDomain);
+            }
+        }
+
+        return filtered;
+    }
+
+    private void updateClaimCache(AuthenticatedUser authenticatedUser, SortedMap<String, String> claimValues,
+                                  ClaimCacheKey cacheKey , String tenantDomain) {
+
+        if (!claimValues.isEmpty()) {
+            UserClaims userClaims = new UserClaims(claimValues);
+            claimsLocalCache.addToCache(cacheKey, userClaims, tenantDomain);
+            ClaimMetaDataCache.getInstance().addToCache(new ClaimMetaDataCacheKey(authenticatedUser),
+                    new ClaimMetaDataCacheEntry(cacheKey), tenantDomain);
+        }
+
+    }
     /**
      * Sign with given RSA Algorithm
      *
