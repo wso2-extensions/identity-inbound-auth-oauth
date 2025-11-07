@@ -340,9 +340,7 @@ public class RequestObjectValidatorUtil {
                     return false;
                 }
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Public key is not an EC public key.");
-                }
+                log.debug("Public key is not an EC public key.");
                 return false;
             }
         } else {
