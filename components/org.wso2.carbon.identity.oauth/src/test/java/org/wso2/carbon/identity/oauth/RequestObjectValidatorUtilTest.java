@@ -37,8 +37,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.testng.Assert.*;
 import static org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil.NIMBUS_ERROR_JWT_BEFORE_USE_TIME;
 import static org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil.NIMBUS_ERROR_JWT_EXPIRED;
 
@@ -213,5 +212,56 @@ public class RequestObjectValidatorUtilTest {
         when(mockCert.getPublicKey()).thenReturn(mockPk);
 
         RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
+    }
+
+    @Test
+    public void testSignatureVerifiedWithECMismatchCert() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+
+        Certificate mockCert = mock(Certificate.class);
+        ECPublicKey mockPk = mock(ECPublicKey.class);
+
+        when(mockCert.getPublicKey()).thenReturn(mockPk);
+
+        RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
+    }
+
+    @Test
+    public void testSignatureVerifiedWithRSAMismatchCert() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.ES256);
+
+        Certificate mockCert = mock(Certificate.class);
+        RSAPublicKey mockPk = mock(RSAPublicKey.class);
+
+        when(mockCert.getPublicKey()).thenReturn(mockPk);
+
+        RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
+    }
+
+    @Test
+    public void testSignatureVerifiedUnsupportedAlgo() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.EdDSA);
+
+        Certificate mockCert = mock(Certificate.class);
+
+        assertFalse(RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert));
     }
 }
