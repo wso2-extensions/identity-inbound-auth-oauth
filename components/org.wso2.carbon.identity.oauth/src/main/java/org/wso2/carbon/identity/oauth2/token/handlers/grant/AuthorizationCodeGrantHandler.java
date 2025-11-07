@@ -92,7 +92,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             // If redirect_uri was given in the authorization request,
             // token request should send matching redirect_uri value.
             validateCallbackUrlFromRequest(tokenReq.getCallbackURI(), authzCodeBean.getCallbackUrl());
-            validatePKCECode(authzCodeBean, tokenReq.getPkceCodeVerifier());
+            validatePKCECode(authzCodeBean, tokenReq.getPkceCodeVerifier(), tokenReq.getTenantDomain());
             validateRequestedActor(authzCodeBean, tokReqMsgCtx);
             setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, authzCodeBean);
         } finally {
@@ -589,12 +589,12 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
      * @return true if PKCE is validated
      * @throws IdentityOAuth2Exception
      */
-    private boolean validatePKCECode(AuthzCodeDO authzCodeBean, String verificationCode)
+    private boolean validatePKCECode(AuthzCodeDO authzCodeBean, String verificationCode, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         String pkceCodeChallenge = authzCodeBean.getPkceCodeChallenge();
         String pkceCodeChallengeMethod = authzCodeBean.getPkceCodeChallengeMethod();
-        OAuthAppDO oAuthApp = getOAuthAppDO(authzCodeBean.getConsumerKey());
+        OAuthAppDO oAuthApp = getOAuthAppDO(authzCodeBean.getConsumerKey(), tenantDomain);
         if (!validatePKCE(pkceCodeChallenge, verificationCode, pkceCodeChallengeMethod, oAuthApp)) {
             //possible malicious oAuthRequest
             log.warn("Failed PKCE Verification for oAuth 2.0 request");
@@ -653,9 +653,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-    private OAuthAppDO getOAuthAppDO(String clientId) throws IdentityOAuth2Exception {
+    private OAuthAppDO getOAuthAppDO(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
         try {
-            return OAuth2Util.getAppInformationByClientId(clientId);
+            return OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client: " + clientId);
         }
