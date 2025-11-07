@@ -64,6 +64,7 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -4789,7 +4790,22 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is
+             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+             used as the issuer is the root tenant.
+            */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application resident organization id is found in the carbon context. " +
+                        "Using the root tenant domain to build the id token issuer.");
+            }
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -6360,5 +6376,27 @@ public class OAuth2Util {
         // This setting is only applicable if legacy session bound token behaviour is enabled.
         return isLegacySessionBoundTokenBehaviourEnabled() &&
                 Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
+    }
+
+    /**
+     * Return the login tenant domain by evaluating the privileged carbon context.
+     *
+     * @return login tenant domain.
+     * @throws IdentityOAuth2Exception if an error occurs when resolving tenant domain.
+     */
+    public static String getLoginTenant() throws IdentityOAuth2Exception {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = FrameworkUtils.resolveTenantDomainFromOrganizationId(applicationResidentOrgId);
+            } catch (FrameworkException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization " +
+                        "id: " + applicationResidentOrgId, e);
+            }
+        }
+        return tenantDomain;
     }
 }
