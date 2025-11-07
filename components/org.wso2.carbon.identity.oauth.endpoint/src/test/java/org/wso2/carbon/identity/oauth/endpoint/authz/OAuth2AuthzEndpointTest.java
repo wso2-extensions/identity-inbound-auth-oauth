@@ -547,7 +547,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<OAuthAdminServiceFactory> oAuthAdminServiceFactory =
                          mockStatic(OAuthAdminServiceFactory.class);
                  MockedStatic<OAuth2TokenValidatorServiceFactory> oAuth2TokenValidatorServiceFactory =
-                         mockStatic(OAuth2TokenValidatorServiceFactory.class);) {
+                         mockStatic(OAuth2TokenValidatorServiceFactory.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class)) {
                 AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
 
                 Map<String, String[]> requestParams = new HashMap<>();
@@ -587,6 +588,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
                 identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId)
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+                authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
                 IdentityEventService eventServiceMock = mock(IdentityEventService.class);
                 centralLogMgtServiceComponentHolder.when(
                                 CentralLogMgtServiceComponentHolder::getInstance)

@@ -428,7 +428,8 @@ public class OAuth2ServiceTest {
         oAuthAppDO.setState("ACTIVE");
         oAuthAppDO.setCallbackUrl(callbackUrl);
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain)).thenReturn(tenantDomain);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)).thenReturn(oAuthAppDO);
         return oAuthAppDO;
     }
 
