@@ -37,7 +37,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil.NIMBUS_ERROR_JWT_BEFORE_USE_TIME;
 import static org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil.NIMBUS_ERROR_JWT_EXPIRED;
 
