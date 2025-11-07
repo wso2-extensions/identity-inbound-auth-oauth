@@ -28,6 +28,10 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 
+import java.security.cert.Certificate;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
+
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -155,5 +159,59 @@ public class RequestObjectValidatorUtilTest {
                             .contains("Error occurred while validating request object signature using jwks endpoint"),
                     "Expected fallback error message to be present");
         }
+    }
+
+    @Test
+    public void testPS256SignatureVerifiedWithRSACert() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+
+        Certificate mockCert = mock(Certificate.class);
+        RSAPublicKey mockPk = mock(RSAPublicKey.class);
+
+        when(mockCert.getPublicKey()).thenReturn(mockPk);
+
+        RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
+    }
+
+    @Test
+    public void testRS256SignatureVerifiedWithRSACert() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.RS256);
+
+        Certificate mockCert = mock(Certificate.class);
+        RSAPublicKey mockPk = mock(RSAPublicKey.class);
+
+        when(mockCert.getPublicKey()).thenReturn(mockPk);
+
+        RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
+    }
+
+    @Test
+    public void testSignatureVerifiedWithECCert() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.ES256);
+
+        Certificate mockCert = mock(Certificate.class);
+        ECPublicKey mockPk = mock(ECPublicKey.class);
+
+        when(mockCert.getPublicKey()).thenReturn(mockPk);
+
+        RequestObjectValidatorUtil.isSignatureVerified(mockJwt, mockCert);
     }
 }
