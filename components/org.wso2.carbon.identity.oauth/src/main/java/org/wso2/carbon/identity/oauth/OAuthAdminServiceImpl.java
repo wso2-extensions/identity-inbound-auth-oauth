@@ -507,6 +507,8 @@ public class OAuthAdminServiceImpl {
         }
         if (!duplicateSecretFound && oAuthAppDO.getOauthConsumerSecret() != null) {
             OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
+            oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+            oAuthConsumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
             oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
             oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
             consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));

@@ -1119,7 +1119,7 @@ public class OAuthAppDAO {
             throws SQLException, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
-        consumerSecretDO.setDescription("System generated secret");
+        consumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
         consumerSecretDO.setClientId(consumerKey);
         consumerSecretDO.setSecretValue(consumerSecret);
         addOAuthConsumerSecret(connection, consumerSecretDO);
