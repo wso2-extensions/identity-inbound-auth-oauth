@@ -63,6 +63,10 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
             return;
         }
         if (StringUtils.equals(event.getEventName(), EventName.SESSION_TERMINATE.name())) {
+            Object context = event.getEventProperties().get(EventProperty.CONTEXT);
+            if (context != null) {
+                return;
+            }
             String opbsCookieId = getopbsCookieId(event);
             if (StringUtils.isNotEmpty(opbsCookieId)) {
                 if (LOG.isDebugEnabled()) {
