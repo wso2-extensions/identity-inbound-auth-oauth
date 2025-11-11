@@ -237,6 +237,10 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             authenticatedUser.setTenantDomain(tenantDomain);
 
             if (requestedClaims != null && requestedClaims.length > 0) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Processing " + requestedClaims.length + " requested claims for user in tenant: " +
+                            tenantDomain);
+                }
                 cacheKey = new ClaimCacheKey(authenticatedUser);
                 userClaimsFromCache = claimsLocalCache.getValueFromCache(cacheKey, tenantDomain);
             }
@@ -321,6 +325,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
         }
         if (!missing.isEmpty() && isExistingUser) {
+            if (log.isDebugEnabled()) {
+                log.debug("Fetching " + missing.size() + " missing claims from claims retriever for user: " + authzUser);
+            }
             SortedMap<String, String> fetched = claimsRetriever.getClaims(authzUser,
                     missing.toArray(new String[0]));
             if (fetched != null) {
