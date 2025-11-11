@@ -59,6 +59,8 @@ public class OAuth2Parameters implements Serializable {
     private String requestedSubjectId;
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
+    private String requestOrgTenantDomain;
+    private String appOrgTenantDomain;
 
     public String getRequestedSubjectId() {
 
@@ -363,5 +365,25 @@ public class OAuth2Parameters implements Serializable {
     public void setRequestedActor(String requestedActor) {
 
         this.requestedActor = requestedActor;
+    }
+
+    public String getRequestOrgTenantDomain() {
+
+        return requestOrgTenantDomain;
+    }
+
+    public void setRequestOrgTenantDomain(String requestOrgTenantDomain) {
+
+        this.requestOrgTenantDomain = requestOrgTenantDomain;
+    }
+
+    public String getAppOrgTenantDomain() {
+
+        return appOrgTenantDomain;
+    }
+
+    public void setAppOrgTenantDomain(String appOrgTenantDomain) {
+
+        this.appOrgTenantDomain = appOrgTenantDomain;
     }
 }
