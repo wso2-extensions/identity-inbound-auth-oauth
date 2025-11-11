@@ -326,7 +326,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         }
         if (!missing.isEmpty() && isExistingUser) {
             if (log.isDebugEnabled()) {
-                log.debug("Fetching " + missing.size() + " missing claims from claims retriever for user: " + authzUser);
+                log.debug("Fetching " + missing.size() + " missing claims from claims retriever for user: "
+                        + authzUser);
             }
             SortedMap<String, String> fetched = claimsRetriever.getClaims(authzUser,
                     missing.toArray(new String[0]));
