@@ -68,6 +68,8 @@ public class OAuth2AuthorizeReqDTO {
     private AuthorizationDetails authorizationDetails;
     private boolean isImpersonationRequest;
     private String requestedActor;
+    private String requestOrgTenantDomain;
+    private String appOrgTenantDomain;
 
     public boolean isImpersonationRequest() {
 
@@ -362,5 +364,25 @@ public class OAuth2AuthorizeReqDTO {
     public void setRequestedActor(String requestedActor) {
 
         this.requestedActor = requestedActor;
+    }
+
+    public String getRequestOrgTenantDomain() {
+
+        return requestOrgTenantDomain;
+    }
+
+    public void setRequestOrgTenantDomain(String requestOrgTenantDomain) {
+
+        this.requestOrgTenantDomain = requestOrgTenantDomain;
+    }
+
+    public String getAppOrgTenantDomain() {
+
+        return appOrgTenantDomain;
+    }
+
+    public void setAppOrgTenantDomain(String appOrgTenantDomain) {
+
+        this.appOrgTenantDomain = appOrgTenantDomain;
     }
 }
