@@ -5167,6 +5167,7 @@ public class OAuth2Util {
     @Deprecated
     public static boolean checkIDPIdColumnAvailable() {
 
+        log.debug("checkIDPIdColumnAvailable method is deprecated and always returns true.");
         return true;
     }
 
