@@ -192,20 +192,8 @@ public class TokenValidationHandlerTest {
         assertNotNull(responseDTO);
     }
 
-    /**
-     * This data provider is added to enable affected test cases to be tested in both
-     * where the IDP_ID column is available and not available in the relevant tables.
-     */
-    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
-    public Object[][] idpIDColumnAvailabilityDataProvider() {
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
-
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testFindOAuthConsumerIfTokenIsValid(boolean isIDPIdColumnEnabled) throws Exception {
+    @Test
+    public void testFindOAuthConsumerIfTokenIsValid() throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
@@ -213,7 +201,6 @@ public class TokenValidationHandlerTest {
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
                      mockStatic(OAuth2ServiceComponentHolder.class);) {
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
 
             AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
@@ -256,13 +243,13 @@ public class TokenValidationHandlerTest {
     @DataProvider(name = "CommonDataProvider")
     public Object[][] commonDataProvider() {
         return new Object[][]{
-                {true, "1234"},
-                {false, "12345"}
+                {"1234"},
+                {"12345"}
         };
     }
 
     @Test(dataProvider = "CommonDataProvider")
-    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
+    public void testBuildIntrospectionResponse(String accessTokenId) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -274,7 +261,6 @@ public class TokenValidationHandlerTest {
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString())).
                     thenReturn(false);
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
             OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                     Mockito.mock(OAuth2ServiceComponentHolder.class);
@@ -675,7 +661,6 @@ public class TokenValidationHandlerTest {
 
             organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
                     .thenReturn(false);
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
 
             oAuthServerConfiguration.when(

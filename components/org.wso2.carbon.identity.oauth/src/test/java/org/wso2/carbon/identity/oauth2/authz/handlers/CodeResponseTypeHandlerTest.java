@@ -24,7 +24,6 @@ import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
@@ -42,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 
 import static org.mockito.Mockito.mock;
@@ -106,22 +104,9 @@ public class CodeResponseTypeHandlerTest {
                 .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
     }
 
-    /**
-     * This data provider is added to enable affected test cases to be tested in both
-     * where the IDP_ID column is available and not available in the relevant tables.
-     */
-    @DataProvider(name = "IdpIDColumnAvailabilityDataProvider")
-    public Object[][] idpIDColumnAvailabilityDataProvider() {
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
+    @Test
+    public void testIssue() throws Exception {
 
-    @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
-    public void testIssue(boolean isIDPIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setGrantTypes("implicit");
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);

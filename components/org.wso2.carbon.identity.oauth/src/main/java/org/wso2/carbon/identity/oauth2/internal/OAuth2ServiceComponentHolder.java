@@ -191,11 +191,23 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.audienceEnabled = audienceEnabled;
     }
 
+    /**
+     * Check whether IDP ID column is enabled in the OAuth2 token DB tables.
+     * @return true if enabled, false otherwise.
+     * @deprecated deprecated since IDP_ID column is available in all the relevant tables from WSO2 IS 7.0.0 onwards.
+     */
+    @Deprecated
     public static boolean isIDPIdColumnEnabled() {
 
         return idpIdColumnEnabled;
     }
 
+    /**
+     * Set whether IDP ID column is enabled in the OAuth2 token DB tables.
+     * @param idpIdColumnEnabled true if enabled, false otherwise.
+     * @deprecated deprecated since IDP_ID column is available in all the relevant tables from WSO2 IS 7.0.0 onwards.
+     */
+    @Deprecated
     public static void setIDPIdColumnEnabled(boolean idpIdColumnEnabled) {
 
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
