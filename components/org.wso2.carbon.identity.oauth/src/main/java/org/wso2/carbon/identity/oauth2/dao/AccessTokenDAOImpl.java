@@ -180,13 +180,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             log.debug("Userstore domain for user: " + username + " is " + userDomain);
         }
 
-        String sql;
-
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN;
-        } else {
-            sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME;
-        }
+        String sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN_WITH_IDP_NAME_WITH_CONSENTED_TOKEN;
 
         sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
         String sqlAddScopes = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.INSERT_OAUTH2_TOKEN_SCOPE,
@@ -266,20 +260,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
             }
 
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
-                insertTokenPrepStmt.setString(21, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                insertTokenPrepStmt.setInt(22, appTenantId);
-                insertTokenPrepStmt.setString(23, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                insertTokenPrepStmt.setInt(24, appTenantId);
-            } else {
-                insertTokenPrepStmt.setString(20, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                insertTokenPrepStmt.setInt(21, appTenantId);
-                insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
-                insertTokenPrepStmt.setInt(23, appTenantId);
-            }
+            insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
+            insertTokenPrepStmt.setString(21, authenticatedIDP);
+            // Set tenant ID of the IDP by considering it is same as appTenantID.
+            insertTokenPrepStmt.setInt(22, appTenantId);
+            insertTokenPrepStmt.setString(23, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            insertTokenPrepStmt.setInt(24, appTenantId);
 
             insertTokenPrepStmt.executeUpdate();
 
@@ -559,10 +545,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
                     String grantType = resultSet.getString(11);
-                    String isConsentedToken = StringUtils.EMPTY;
-                    if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                        isConsentedToken = resultSet.getString(12);
-                    }
+                    String isConsentedToken = resultSet.getString(12);
+
                     // data loss at dividing the validity period but can be neglected
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
                             tenantDomain, authenticatedIDP);
@@ -612,7 +596,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
         String sql;
 
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
             if (connection.getMetaData().getDriverName().contains("MySQL")
                     || connection.getMetaData().getDriverName().contains(FrameworkConstants.H2)
                     || connection.getMetaData().getDriverName().contains(FrameworkConstants.MARIA_DB)) {
@@ -638,25 +621,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 sql = SQLQueries.
                         GET_LATEST_ACCESS_TOKEN_WITH_CONSENTED_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
             }
-        } else {
-            if (connection.getMetaData().getDriverName().contains("MySQL")
-                    || connection.getMetaData().getDriverName().contains("H2")) {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MYSQL;
-            } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_DB2SQL;
-            } else if (connection.getMetaData().getDriverName().contains("MS SQL")) {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-            } else if (connection.getMetaData().getDriverName().contains("Microsoft")) {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_MSSQL;
-            } else if (connection.getMetaData().getDriverName().contains("PostgreSQL")) {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_POSTGRESQL;
-            } else if (connection.getMetaData().getDriverName().contains("Informix")) {
-                // Driver name = "IBM Informix JDBC Driver for IBM Informix Dynamic Server"
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_INFORMIX;
-            } else {
-                sql = SQLQueries.RETRIEVE_LATEST_ACCESS_TOKEN_BY_CLIENT_ID_USER_SCOPE_IDP_NAME_ORACLE;
-            }
-        }
 
         return sql;
     }
@@ -964,12 +928,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             if (includeExpired) {
                 sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_IDP_NAME;
             } else {
-                if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
-                    isConsentedColumnDataFetched = true;
-                } else {
-                    sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME;
-                }
+                sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_IDP_NAME_WITH_CONSENTED_TOKEN;
+                isConsentedColumnDataFetched = true;
 
             }
 
@@ -2028,11 +1988,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         boolean tokenUpdateSuccessful;
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         try {
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled() && !accessTokenDO.isConsentedToken()) {
-                // Check whether the previous token is issued for a consent required grant or not.
-                boolean isPreviousTokenConsented = isPreviousTokenConsented(connection, oldAccessTokenId);
-                accessTokenDO.setIsConsentedToken(isPreviousTokenConsented);
-            }
+            boolean isPreviousTokenConsented = isPreviousTokenConsented(connection, oldAccessTokenId);
+            accessTokenDO.setIsConsentedToken(isPreviousTokenConsented);
             // update existing token as inactive
             updateAccessTokenState(connection, oldAccessTokenId, tokenState, tokenStateId, userStoreDomain, grantType);
 
@@ -3172,32 +3129,25 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     public void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
             throws IdentityOAuth2Exception {
 
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            if (log.isDebugEnabled()) {
-                log.debug("Updating the token's last issued grant type for token with id: " + tokenId + " to: " +
-                        isConsentedGrant);
-            }
+        if (log.isDebugEnabled()) {
+            log.debug("Updating the token's last issued grant type for token with id: " + tokenId + " to: " +
+                    isConsentedGrant);
+        }
 
-            String sql = SQLQueries.UPDATE_TOKEN_CONSENTED_TOKEN;
-            try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-                try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
-                    prepStmt.setString(1, Boolean.toString(isConsentedGrant));
-                    prepStmt.setString(2, tokenId);
-                    prepStmt.executeUpdate();
-                    IdentityDatabaseUtil.commitTransaction(connection);
-                } catch (SQLException e) {
-                    IdentityDatabaseUtil.rollbackTransaction(connection); // ToDo add the exception here
-                    throw new IdentityOAuth2Exception("Error while updating the access token.", e);
-                }
+        String sql = SQLQueries.UPDATE_TOKEN_CONSENTED_TOKEN;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, Boolean.toString(isConsentedGrant));
+                prepStmt.setString(2, tokenId);
+                prepStmt.executeUpdate();
+                IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
-                throw new IdentityOAuth2Exception("Error while updating Access Token with ID: " + tokenId +
-                        " to last issued grant type : ", e);
+                IdentityDatabaseUtil.rollbackTransaction(connection); // ToDo add the exception here
+                throw new IdentityOAuth2Exception("Error while updating the access token.", e);
             }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("CONSENTED_TOKEN column is not available. Since not updating the token with id: "
-                        + tokenId + " to: " + isConsentedGrant);
-            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while updating Access Token with ID: " + tokenId +
+                    " to last issued grant type : ", e);
         }
     }
 

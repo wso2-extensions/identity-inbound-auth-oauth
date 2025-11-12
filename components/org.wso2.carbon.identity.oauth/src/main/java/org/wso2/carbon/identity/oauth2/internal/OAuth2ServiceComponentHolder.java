@@ -213,11 +213,27 @@ public class OAuth2ServiceComponentHolder {
         OAuth2ServiceComponentHolder.idpIdColumnEnabled = idpIdColumnEnabled;
     }
 
+    /**
+     * Check whether CONSENTED_TOKEN column is enabled in the OAuth2 token DB tables.
+     *
+     * @return true if enabled, false otherwise.
+     * @deprecated deprecated since Consent_token column is available in all the relevant tables
+     * from WSO2 IS 7.0.0 onwards.
+     */
+    @Deprecated
     public static boolean isConsentedTokenColumnEnabled() {
 
         return consentedTokenColumnEnabled;
     }
 
+    /**
+     * Set whether CONSENTED_TOKEN column is enabled in the OAuth2 token DB tables.
+     *
+     * @param consentedTokenColumnEnabled true if enabled, false otherwise.
+     * @deprecated deprecated since Consent_token column is available in all the relevant tables
+     * from WSO2 IS 7.0.0 onwards.
+     */
+    @Deprecated
     public static void setConsentedTokenColumnEnabled(boolean consentedTokenColumnEnabled) {
 
         OAuth2ServiceComponentHolder.consentedTokenColumnEnabled = consentedTokenColumnEnabled;
