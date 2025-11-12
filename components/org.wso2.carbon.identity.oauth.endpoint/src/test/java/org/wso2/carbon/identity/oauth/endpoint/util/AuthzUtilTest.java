@@ -490,6 +490,8 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 OAuthServerConfiguration.class);) {
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class,
+                         Mockito.CALLS_REAL_METHODS);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
                  MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
@@ -537,6 +539,19 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 frameworkUtils.when(() -> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
                 frameworkUtils.when(FrameworkUtils::endTenantFlow).thenAnswer(invocation -> null);
 
+                OAuthAppDO appDO = new OAuthAppDO();
+                appDO.setState("ACTIVE");
+                AuthenticatedUser user = new AuthenticatedUser();
+                user.setUserName(USERNAME);
+                user.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                appDO.setUser(user);
+                if (expectedStatus == HttpServletResponse.SC_FOUND) {
+                    oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                            .thenReturn(appDO);
+                } else {
+                    oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString(), anyString()))
+                            .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                }
                 loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(diagnosticLogsEnabled);
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
                         .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);

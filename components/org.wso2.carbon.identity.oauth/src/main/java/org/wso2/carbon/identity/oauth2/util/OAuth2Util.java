@@ -4785,7 +4785,22 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is
+             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+             used as the issuer is the root tenant.
+            */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application resident organization id is found in the carbon context. " +
+                        "Using the root tenant domain to build the id token issuer.");
+            }
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(

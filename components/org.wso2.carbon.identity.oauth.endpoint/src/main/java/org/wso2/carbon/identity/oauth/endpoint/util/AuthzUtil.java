@@ -43,6 +43,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -151,6 +152,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -2429,7 +2431,16 @@ public class AuthzUtil {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO;
+            String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appResidentOrgId)) {
+                String appResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appResidentOrgId);
+                appDO = OAuth2Util.getAppInformationByClientId(clientId, appResidentTenantDomain);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            }
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {
@@ -2437,7 +2448,7 @@ public class AuthzUtil {
             }
             validationResponse.setApplicationName(appDO.getApplicationName());
             validationResponse.setPkceSupportPlain(appDO.isPkceSupportPlain());
-        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception | OrganizationManagementException e) {
             throw new OAuthSystemException("Error while retrieving app information for client_id : " + clientId, e);
         }
     }
@@ -2834,7 +2845,8 @@ public class AuthzUtil {
         try {
             // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
             // tenantDomain.
-            return OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            return OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
@@ -2851,6 +2863,20 @@ public class AuthzUtil {
 
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+        String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appResidentOrgId)) {
+            String appResidentTenantDomain;
+            try {
+                appResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new InvalidRequestException("Error resolving tenant domain from organization id: "
+                        + appResidentOrgId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
+                        .UNEXPECTED_SERVER_ERROR);
+            }
+            return EndpointUtil.getSPTenantDomainFromClientId(clientId, appResidentTenantDomain);
+        }
         if (StringUtils.isBlank(loginTenantDomain)) {
             return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
         }

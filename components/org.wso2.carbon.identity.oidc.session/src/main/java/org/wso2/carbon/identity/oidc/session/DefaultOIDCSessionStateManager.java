@@ -26,6 +26,9 @@ import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.charset.StandardCharsets;
@@ -109,18 +112,28 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            if (isOrganizationQualifiedRequest()) {
-                // Handling the cookie path for request coming with the path `/o/<org-id>`.
-                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/");
-            } else {
-                if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
-                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
-                    cookie.setPath("/");
+            try {
+                if (OrganizationManagementUtil.isOrganization(loginTenantDomain)) {
+                    // Handling the cookie path for request coming with the path `/t/<tenant-domain>/o/<org-id>`.
+                    // The cookie will be set to the root tenant path.
+                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX +
+                            getPrimaryTenantDomain(loginTenantDomain));
+                } else if (isOrganizationQualifiedRequest()) {
+                    // Handling the cookie path for request coming with the path `/o/<org-id>`.
+                    String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+                    cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/");
                 } else {
-                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
-                }
+                    if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
+                            MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
+                        cookie.setPath("/");
+                    } else {
+                        cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                    }
 
+                }
+            } catch (OrganizationManagementException e) {
+                log.error("Error while checking organization for tenant: " + loginTenantDomain +
+                        ". Setting the cookie path to tenant context path.", e);
             }
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
@@ -195,5 +208,20 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
     private static boolean isOrganizationQualifiedRequest() {
 
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId() != null;
+    }
+
+    private static String getPrimaryTenantDomain(String loginTenantDomain) {
+
+        try {
+            String loginOrgId = OIDCSessionManagementComponentServiceHolder.getInstance()
+                    .getOrganizationManager().resolveOrganizationId(loginTenantDomain);
+            String primaryOrgId = OIDCSessionManagementComponentServiceHolder.getInstance()
+                    .getOrganizationManager().getPrimaryOrganizationId(loginOrgId);
+            return OIDCSessionManagementComponentServiceHolder.getInstance()
+                    .getOrganizationManager().resolveTenantDomain(primaryOrgId);
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }
