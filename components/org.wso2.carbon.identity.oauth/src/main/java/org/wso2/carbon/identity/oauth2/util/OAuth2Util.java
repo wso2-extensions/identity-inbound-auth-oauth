@@ -5162,30 +5162,12 @@ public class OAuth2Util {
      * Check if the IDP_ID column is available in the relevant tables.
      *
      * @return True if IDP_ID column is available in all the relevant table.
+     * @deprecated deprecated since IDP_ID column is available in all the relevant tables from WSO2 IS 7.0.0 onwards.
      */
+    @Deprecated
     public static boolean checkIDPIdColumnAvailable() {
 
-        boolean isIdpIdAvailableInAuthzCodeTable;
-        boolean isIdpIdAvailableInTokenTable;
-        boolean isIdpIdAvailableInTokenAuditTable;
-        String columnIdpId = "IDP_ID";
-
-        isIdpIdAvailableInAuthzCodeTable = FrameworkUtils
-                .isTableColumnExists("IDN_OAUTH2_AUTHORIZATION_CODE", columnIdpId);
-        isIdpIdAvailableInTokenTable = FrameworkUtils
-                .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", columnIdpId);
-        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
-            isIdpIdAvailableInTokenAuditTable = FrameworkUtils
-                    .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN_AUDIT", columnIdpId);
-        } else {
-            isIdpIdAvailableInTokenAuditTable = true;
-            if (log.isDebugEnabled()) {
-                log.debug("Retaining old access tokens in IDN_OAUTH2_ACCESS_TOKEN_AUDIT is disabled, therefore " +
-                        "ignoring the availability of IDP_ID column in IDN_OAUTH2_ACCESS_TOKEN_AUDIT table.");
-            }
-        }
-
-        return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+        return true;
     }
 
     public static boolean isAccessTokenExtendedTableExist() {
