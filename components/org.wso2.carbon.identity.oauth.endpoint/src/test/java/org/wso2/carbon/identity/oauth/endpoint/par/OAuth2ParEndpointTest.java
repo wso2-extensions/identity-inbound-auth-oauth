@@ -404,6 +404,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 parAuthServiceFactory.when(ParAuthServiceFactory::getParAuthService).thenReturn(parAuthService);
                 identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
 
                 loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
@@ -412,7 +413,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
                 if (Objects.equals(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE),
                         RESPONSE_TYPE_CODE_ID_TOKEN)) {
-                    OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE);
+                    OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE, "carbon.super");
                     oauthAppDO.setHybridFlowEnabled(true);
                     oauthAppDO.setHybridFlowResponseType(RESPONSE_TYPE_CODE_ID_TOKEN);
                 }

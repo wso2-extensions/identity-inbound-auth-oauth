@@ -104,7 +104,8 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         try {
-            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
             validateRequestTenantDomain(appTenantDomain);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -125,7 +126,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (diagnosticLogBuilder != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId);
             }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain);
             String appState = appDO.getState();
 
             if (StringUtils.isEmpty(appState)) {
