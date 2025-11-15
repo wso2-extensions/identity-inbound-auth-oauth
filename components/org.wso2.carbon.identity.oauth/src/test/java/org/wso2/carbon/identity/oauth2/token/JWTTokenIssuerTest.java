@@ -467,7 +467,6 @@ public class JWTTokenIssuerTest {
             assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
             assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
             // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
-            OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(true);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(false);
             jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                     (OAuthAuthzReqMessageContext) authzReqMessageContext,

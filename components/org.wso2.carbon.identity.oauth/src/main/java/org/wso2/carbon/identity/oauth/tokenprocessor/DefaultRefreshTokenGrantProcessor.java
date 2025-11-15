@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
@@ -100,26 +99,25 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            String previousGrantType = validationBean.getGrantType();
-            // Check if the previous grant type is consent refresh token type or not.
-            if (!OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(previousGrantType)) {
-                // If the previous grant type is not a refresh token, then check if it's a consent token or not.
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
-                    accessTokenDO.setIsConsentedToken(true);
-                }
-            } else {
-                /* When previousGrantType == refresh_token, we need to check whether the original grant type
-                 is consented or not. */
-                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
-                        validationBean.getAccessToken(), false);
-                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+        String previousGrantType = validationBean.getGrantType();
+        // Check if the previous grant type is consent refresh token type or not.
+        if (!OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(previousGrantType)) {
+            // If the previous grant type is not a refresh token, then check if it's a consent token or not.
+            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(previousGrantType)) {
+                accessTokenDO.setIsConsentedToken(true);
             }
-
-            if (accessTokenDO.isConsentedToken()) {
-                tokReqMsgCtx.setConsentedToken(true);
-            }
+        } else {
+            /* When previousGrantType == refresh_token, we need to check whether the original grant type
+             is consented or not. */
+            AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
+                    validationBean.getAccessToken(), false);
+            accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
         }
+
+        if (accessTokenDO.isConsentedToken()) {
+            tokReqMsgCtx.setConsentedToken(true);
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Setting access token extended attributes for token request in refresh token flow for client: "
                     + tokenReq.getClientId() + " with token id: " + tokenId);
