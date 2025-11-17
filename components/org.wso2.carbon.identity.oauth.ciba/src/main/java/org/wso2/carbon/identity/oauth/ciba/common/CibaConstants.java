@@ -45,6 +45,16 @@ public class CibaConstants {
     public static final String TRANSACTION_CONTEXT = "transaction_context";
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
+    public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_auth";
+    public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
+    public static final String DEFAULT_CIBA_USER_LOGIN_TEMPLATE_NAME = "CIBANotification";
+    public static final String CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME = "user-login-link";
+    public static final String CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME = "binding-message";
+    public static final String CIBA_APP_PLACEHOLDER_NAME = "application-name";
+    public static final String SMS_EVENT_TRIGGER_NAME = "TRIGGER_SMS_NOTIFICATION_LOCAL";
+    public static final String TEMPLATE_TYPE = "TEMPLATE_TYPE";
+    public static final String ARBITRARY_SEND_TO = "send-to";
+    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
 
     private CibaConstants() {
 
