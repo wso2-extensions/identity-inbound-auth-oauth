@@ -110,7 +110,7 @@ public class LogoutRequestSender {
         if (workQueueSizeInt > 0) {
             workQueue = new ArrayBlockingQueue<Runnable>(workQueueSizeInt);
         } else if (workQueueSizeInt == -1) {
-            LOG.warn("Work queue size is set to -1. Using unbounded work queue.");
+            LOG.warn("Work queue size is set to -1. Using unbounded work queue for logout request sender.");
             workQueue = new LinkedBlockingQueue<Runnable>();
         } else {
             workQueueSizeInt = Integer.parseInt(
@@ -128,11 +128,9 @@ public class LogoutRequestSender {
         }
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("LogoutRequestSender thread pool initialized with pool size: " + poolSizeInt +
-                    ", work queue size: " + workQueueSizeInt + ", keep alive time: " + keepAliveTimeLong +
-                    ". Request parameters: httpConnectTimeout: " + httpConnectTimeout +
-                    ", httpSocketTimeout: " + httpSocketTimeout +
-                    ", hostNameVerificationEnabled: " + hostNameVerificationEnabled);
+            LOG.debug("LogoutRequestSender thread pool initialized with pool size: {}, work queue size: {}, keep alive time: {}. " +
+                    "Request parameters: httpConnectTimeout: {}, httpSocketTimeout: {}, hostNameVerificationEnabled: {}",
+                    poolSizeInt, workQueueSizeInt, keepAliveTimeLong, httpConnectTimeout, httpSocketTimeout, hostNameVerificationEnabled);
         }
     }
 
@@ -169,7 +167,7 @@ public class LogoutRequestSender {
         if (opbsCookie != null) {
             sendLogoutRequests(opbsCookie.getValue());
         } else {
-            LOG.error("No opbscookie exists in the request");
+            LOG.error("No OPBS cookie found in the logout request");
         }
     }
 
@@ -221,11 +219,11 @@ public class LogoutRequestSender {
             DefaultLogoutTokenBuilder logoutTokenBuilder = new DefaultLogoutTokenBuilder();
             logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
-            LOG.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
+            LOG.error("Error initializing DefaultLogoutTokenBuilder", e);
         } catch (InvalidOAuthClientException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Error while obtaining logout token list for the obpsCookie: " + opbsCookie +
-                                "& tenant domain: " + tenantDomain, e);
+                LOG.debug("Error obtaining logout token list for OPBS cookie: {} in tenant domain: {}: {}", 
+                                opbsCookie, tenantDomain, e.getMessage());
             }
         }
         return logoutTokenList;
@@ -251,7 +249,7 @@ public class LogoutRequestSender {
         public void run() {
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Starting backchannel logout request to: " + backChannelLogouturl);
+                LOG.debug("Starting backchannel logout request to: {}", backChannelLogouturl);
             }
 
             List<NameValuePair> logoutReqParams = new ArrayList<NameValuePair>();
@@ -270,7 +268,7 @@ public class LogoutRequestSender {
                 try {
                     httpPost.setEntity(new UrlEncodedFormEntity(logoutReqParams));
                 } catch (UnsupportedEncodingException e) {
-                    LOG.error("Error while encoding logout request parameters.", e);
+                    LOG.error("Error encoding logout request parameters: {}", e.getMessage(), e);
                 }
                 RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(httpConnectTimeout)
                         .setSocketTimeout(httpSocketTimeout).build();
@@ -278,18 +276,18 @@ public class LogoutRequestSender {
 
                 HttpResponse response = httpClient.execute(httpPost);
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Backchannel logout response: " + response.getStatusLine());
+                    LOG.debug("Backchannel logout response: {}", response.getStatusLine());
                 }
             } catch (SocketTimeoutException e) {
-                LOG.error("Timeout occurred while sending logout requests to: " + backChannelLogouturl);
+                LOG.error("Timeout occurred while sending logout request to: {}", backChannelLogouturl);
             } catch (IOException e) {
-                LOG.error("Error sending logout requests to: " + backChannelLogouturl, e);
+                LOG.error("Error sending logout request to: {}", backChannelLogouturl, e);
             } finally {
                 if (httpClient != null) {
                     try {
                         httpClient.close();
                     } catch (IOException e) {
-                        LOG.error("Error closing http client.", e);
+                        LOG.error("Error closing HTTP client after logout request: {}", e.getMessage(), e);
                     }
                 }
             }
