@@ -665,16 +665,15 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setGrantType(grantType);
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            if (existingTokenBean != null) {
-                newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
-            } else {
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
-                    newTokenBean.setIsConsentedToken(true);
-                }
+        if (existingTokenBean != null) {
+            newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
+        } else {
+            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
+                newTokenBean.setIsConsentedToken(true);
             }
-            oauthAuthzMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
+        oauthAuthzMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
+
         newTokenBean.setAccessToken(getNewAccessToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         setRefreshTokenDetails(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean, newTokenBean, oauthIssuerImpl,
                 timestamp);
