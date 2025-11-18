@@ -38,8 +38,9 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(entry.getKey().getRemoteClaim()
-                        .getClaimUri())) {
+                if (entry.getKey().getRemoteClaim() != null &&
+                        IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(entry.getKey().getRemoteClaim()
+                                .getClaimUri())) {
                     continue;
                 }
                 String claimValue = entry.getValue();
