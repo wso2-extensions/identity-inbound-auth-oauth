@@ -763,11 +763,31 @@ public class OAuthAdminServiceImpl {
 
     private void validateCallbackURI(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
+        String callbackUrl = application.getCallbackUrl();
+        // Validation 1: If callback URI is required for the given grant types, ensure it is provided.
         boolean isCallbackUriRequired = application.getGrantTypes().contains(AUTHORIZATION_CODE) ||
                 application.getGrantTypes().contains(IMPLICIT);
-
         if (isCallbackUriRequired && StringUtils.isEmpty(application.getCallbackUrl())) {
             throw handleClientError(INVALID_REQUEST, "Callback URI is mandatory for Code or Implicit grant types");
+        }
+        // Validation 2: Callback URIs must not contain fragment components.
+        String errorMsg = "Callback URI must not contain a fragment component";
+        if (isCallbackUriRequired && StringUtils.isNotEmpty(callbackUrl)) {
+            // If callback is a regexp list, validate each entry.
+            if (callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                List<String> redirectURIs = getRedirectURIList(application);
+                for (String redirectURI : redirectURIs) {
+                    URI uri = URI.create(redirectURI);
+                    if (uri.getFragment() != null) {
+                        throw handleClientError(INVALID_REQUEST, errorMsg);
+                    }
+                }
+            } else {
+                URI uri = URI.create(callbackUrl);
+                if (uri.getFragment() != null) {
+                    throw handleClientError(INVALID_REQUEST, errorMsg);
+                }
+            }
         }
     }
 
