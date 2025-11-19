@@ -119,6 +119,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RESTRICT_FRAGMENT_COMPONENTS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -763,6 +764,7 @@ public class OAuthAdminServiceImpl {
 
     private void validateCallbackURI(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
+        LOG.debug("Validating callback URI for application");
         String callbackUrl = application.getCallbackUrl();
         // Validation 1: If callback URI is required for the given grant types, ensure it is provided.
         boolean isCallbackUriRequired = application.getGrantTypes().contains(AUTHORIZATION_CODE) ||
@@ -770,7 +772,12 @@ public class OAuthAdminServiceImpl {
         if (isCallbackUriRequired && StringUtils.isEmpty(application.getCallbackUrl())) {
             throw handleClientError(INVALID_REQUEST, "Callback URI is mandatory for Code or Implicit grant types");
         }
+
         // Validation 2: Callback URIs must not contain fragment components.
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(RESTRICT_FRAGMENT_COMPONENTS))) {
+            LOG.debug("No validation required, as fragment components are allowed in callback URIs.");
+            return;
+        }
         String errorMsg = "Callback URI must not contain a fragment component";
         if (isCallbackUriRequired && StringUtils.isNotEmpty(callbackUrl)) {
             // If callback is a regexp list, validate each entry.

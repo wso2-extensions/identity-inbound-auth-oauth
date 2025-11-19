@@ -124,6 +124,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AU
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.IMPLICIT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RESTRICT_FRAGMENT_COMPONENTS;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 public class OAuthAdminServiceImplTest {
@@ -1266,36 +1267,44 @@ public class OAuthAdminServiceImplTest {
         String fragmentNotAllowedError = "Callback URI must not contain a fragment component";
 
         return new Object[][]{
-                {"http://TestApp.com", AUTHORIZATION_CODE + " " + IMPLICIT, ""},
-                {"", AUTHORIZATION_CODE + " " + IMPLICIT, callbackURIMandatoryError},
-                {"http://TestApp.com/#fragment", AUTHORIZATION_CODE, fragmentNotAllowedError},
-                {"regexp=(http://TestApp.com/callback#fragment|http://TestApp.com/callback)", AUTHORIZATION_CODE,
+                {"http://TestApp.com", false, AUTHORIZATION_CODE + " " + IMPLICIT, ""},
+                {"", false, AUTHORIZATION_CODE + " " + IMPLICIT, callbackURIMandatoryError},
+                {"http://TestApp.com/#fragment", true, AUTHORIZATION_CODE, fragmentNotAllowedError},
+                {"regexp=(http://TestApp.com/callback#fragment|http://TestApp.com/callback)", true, AUTHORIZATION_CODE,
+                        fragmentNotAllowedError},
+                {"http://TestApp.com/#fragment", false, AUTHORIZATION_CODE, ""},
+                {"regexp=(http://TestApp.com/callback#fragment|http://TestApp.com/callback)", false, AUTHORIZATION_CODE,
                         fragmentNotAllowedError},
                 /*
                  * Note: Though we do not require a redirect URI for client credentials grant type, the server still
                  * accepts. This test case is added to show the developers this is supported. If removing, check
                  * backward compatibility.
                 */
-                {"http://TestApp.com/#fragment", CLIENT_CREDENTIALS, ""},
-                {"http://TestApp.com/#fragment", CLIENT_CREDENTIALS, fragmentNotAllowedError}
+                {"http://TestApp.com/#fragment", false, CLIENT_CREDENTIALS, ""},
+                {"http://TestApp.com/#fragment", false, CLIENT_CREDENTIALS, fragmentNotAllowedError}
         };
     }
 
     @Test(description = "Test validating redirect URI list", dataProvider = "addOrUpdateRedirectURIDataProvider")
-    private void testAddOrUpdateRedirectURILists(String callbackURls, String grantTypes,
-                                                             String expectedErrorMsg) throws Exception {
+    private void testAddOrUpdateRedirectURILists(String callbackURls, boolean restrictFragmentComponents,
+                                                 String grantTypes, String expectedErrorMsg) throws Exception {
 
-        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
-        appDTO.setCallbackUrl(callbackURls);
-        appDTO.setGrantTypes(grantTypes);
-        try {
-            invokePrivateMethod(oAuthAdminService, "validateCallbackURI", appDTO);
-        } catch (InvocationTargetException ex) {
-            Assert.assertTrue(ex.getTargetException() instanceof IdentityOAuthClientException);
-            Assert.assertEquals(((IdentityOAuthClientException) ex.getTargetException()).getErrorCode(),
-                    Error.INVALID_REQUEST.getErrorCode());
-            Assert.assertEquals((ex.getTargetException()).getMessage(), expectedErrorMsg);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);) {
+            identityUtil.when(() -> IdentityUtil.getProperty(RESTRICT_FRAGMENT_COMPONENTS)).thenReturn(
+                    String.valueOf(restrictFragmentComponents));
+
+            OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+            appDTO.setCallbackUrl(callbackURls);
+            appDTO.setGrantTypes(grantTypes);
+            try {
+                invokePrivateMethod(oAuthAdminService, "validateCallbackURI", appDTO);
+            } catch (InvocationTargetException ex) {
+                Assert.assertTrue(ex.getTargetException() instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) ex.getTargetException()).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+                Assert.assertEquals((ex.getTargetException()).getMessage(), expectedErrorMsg);
+            }
         }
     }
 
