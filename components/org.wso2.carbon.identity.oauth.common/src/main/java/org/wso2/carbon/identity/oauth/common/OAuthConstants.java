@@ -132,6 +132,7 @@ public final class OAuthConstants {
     public static final String IS_API_BASED_LOGOUT_WITHOUT_COOKIES = "isAPIBasedLogoutWithoutCookies";
     public static final String ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION = "OAuth.OpenIDConnect" +
             ".EnableHybridFlowAppLevelValidation";
+    public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
 
     /**
      * Enum for OIDC supported subject types.
