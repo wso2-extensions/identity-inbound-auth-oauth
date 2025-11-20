@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -71,6 +72,7 @@ import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementCompo
 import org.wso2.carbon.identity.oidc.session.model.APIError;
 import org.wso2.carbon.identity.oidc.session.model.LogoutContext;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
@@ -369,9 +371,22 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (StringUtils.isBlank(clientId)) {
                 clientId = getClientIdFromIdToken(request, idTokenHint);
             }
-            appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(appResidentOrgId)) {
+                String tenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(appResidentOrgId);
+                appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
+            } else {
+                appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            }
             validateRequestTenantDomain(appTenantDomain);
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO oAuthAppDO;
+            if (StringUtils.isNotBlank(appResidentOrgId)) {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            }
             String spName = getServiceProviderName(clientId, appTenantDomain);
             setSPAttributeToRequest(request, spName, appTenantDomain);
 
@@ -397,6 +412,10 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug(msg, e);
             }
+            redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+            return getRedirectURL(redirectURL, request);
+        } catch (OrganizationManagementException e) {
+            String msg = "Error occurred while resolving tenant domain for organization.";
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
             return getRedirectURL(redirectURL, request);
         }
@@ -1024,7 +1043,16 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
         try {
-            String callbackUrl = OAuth2Util.getAppInformationByClientId(clientId).getCallbackUrl();
+            String callbackUrl;
+            String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(appResidentOrgId)) {
+                String appTenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(appResidentOrgId);
+                callbackUrl = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain).getCallbackUrl();
+            } else {
+                callbackUrl = OAuth2Util.getAppInformationByClientId(clientId).getCallbackUrl();
+            }
             if (validatePostLogoutUri(postLogoutRedirectUri, callbackUrl)) {
                 redirectURL = postLogoutRedirectUri;
             } else {
@@ -1039,6 +1067,10 @@ public class OIDCLogoutServlet extends HttpServlet {
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         } catch (IdentityOAuth2Exception e) {
             String msg = "Error occurred while getting application information. Client id not found.";
+            log.error(msg + " Client id from id token: " + clientId, e);
+            redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
+        } catch (OrganizationManagementException e) {
+            String msg = "Error occurred while resolving tenant domain from application resident org id.";
             log.error(msg + " Client id from id token: " + clientId, e);
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }

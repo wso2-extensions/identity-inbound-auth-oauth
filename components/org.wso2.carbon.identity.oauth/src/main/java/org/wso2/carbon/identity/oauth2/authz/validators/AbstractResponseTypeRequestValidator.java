@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -104,7 +105,17 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         try {
-            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            String appTenantDomain;
+            if (accessingOrgId != null) {
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+                appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+            } else {
+                appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
+            }
+
             validateRequestTenantDomain(appTenantDomain);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -125,7 +136,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (diagnosticLogBuilder != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId);
             }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain);
             String appState = appDO.getState();
 
             if (StringUtils.isEmpty(appState)) {
