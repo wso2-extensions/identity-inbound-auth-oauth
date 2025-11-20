@@ -60,6 +60,7 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -68,6 +69,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint.JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 
 @Listeners(MockitoTestNGListener.class)
 public class JwksEndpointTest {
@@ -131,6 +134,11 @@ public class JwksEndpointTest {
                 "Z5RKDWCCq4ZuXl6wVsUz1iE61suO5yWi8=");
         X5T_ARRAY.put("vgeji34kzLU_6u8pLs985j8kPBRFtAYnZi_-yQdktYU");
         X5T_ARRAY.put("UPDtpYmK86EVwsUIGUlW5-EU_iNHQ-nSL3Ca58uAG70");
+        X5T_ARRAY.put("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5MmVjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+        X5T_ARRAY.put("Wf7dZ0u8qv1n4N2Jb1y1A3Zk3lE");
+        X5T_ARRAY.put("59fedd674bbcaafd67e0dd896f5cb5037664de51");
+
         mockKeystores();
     }
 
@@ -254,6 +262,97 @@ public class JwksEndpointTest {
                 }
 
                 threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+            }
+        }
+    }
+
+    @DataProvider(name = "jwksHexifyAndX5tEnabledProvider")
+    public Object[][] jwksHexifyAndX5tEnabledProvider() {
+
+        return new Object[][]{
+                {false, false},
+                {false, true},
+                {true, true}
+        };
+    }
+
+    @Test(dataProvider = "jwksHexifyAndX5tEnabledProvider")
+    public void testJwks(boolean hexifyRequired, boolean enableX5t) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(false)))
+                        .thenReturn("Wf7dZ0u8qv1n4N2Jb1y1A3Zk3lE");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(true)))
+                        .thenReturn("59fedd674bbcaafd67e0dd896f5cb5037664de51");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                        .thenReturn(String.valueOf(hexifyRequired));
+                identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_ENABLED))
+                        .thenReturn(String.valueOf(enableX5t));
+
+                String result = jwksEndpoint.jwks();
+
+                try {
+                    JSONObject jwksJson = new JSONObject(result);
+                    JSONArray objectArray = jwksJson.getJSONArray("keys");
+                    JSONObject keyObject = objectArray.getJSONObject(0);
+                    assertEquals(keyObject.get("kid"), CERT_THUMB_PRINT, "Incorrect kid value");
+                    assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
+                    assertEquals(keyObject.get("use"), USE, "Incorrect use value");
+                    assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
+                    assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
+                    assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(1),
+                            "Incorrect x5c value");
+                    if (hexifyRequired) {
+                        assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(2), "Incorrect x5t#S256 value");
+                    } else {
+                        assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
+                    }
+                    if (enableX5t) {
+                        if (hexifyRequired) {
+                            assertEquals(keyObject.get("x5t"), X5T_ARRAY.get(4), "Incorrect x5t value");
+                        } else {
+                            assertEquals(keyObject.get("x5t"), X5T_ARRAY.get(3), "Incorrect x5t value");
+                        }
+                    }
+                    String base64UrlEncodedString = (String) keyObject.get("x5t#S256");
+                    byte[] decodedBytes = Base64.getUrlDecoder().decode(base64UrlEncodedString);
+                    if (hexifyRequired) {
+                        assertEquals(decodedBytes.length, 64, "Incorrect x5t#S256 size");
+                    } else {
+                        assertEquals(decodedBytes.length, 32, "Incorrect x5t#S256 size");
+                    }
+                } catch (JSONException e) {
+                    fail("Unexpected exception: " + e.getMessage());
+                }
             }
         }
     }
