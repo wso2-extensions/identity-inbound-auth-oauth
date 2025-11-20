@@ -2819,22 +2819,26 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Get call back URIs as a list
+     * Get call back URIs as a list.
+     *
      * @param application  OAuthConsumerAppDTO
      * @return list of callback urls
      */
     private List<String> getRedirectURIList(OAuthConsumerAppDTO application) {
 
-        List<String> callBackURIList = new ArrayList<>();
         // Need to split the redirect uris for validating the host names since it is combined
         // into one regular expression.
-        if (application.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-            String redirectURI = application.getCallbackUrl();
-            redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
-                    redirectURI.indexOf(")"));
-            callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+        String redirectURI = application.getCallbackUrl();
+        int regexpIndex = redirectURI.indexOf(CALLBACK_URL_REGEXP_PREFIX);
+        if (regexpIndex >= 0) {
+            redirectURI = redirectURI.substring(regexpIndex + CALLBACK_URL_REGEXP_PREFIX.length());
         }
-        return callBackURIList;
+        // Remove the outermost parentheses.
+        if (redirectURI.startsWith("(") && redirectURI.endsWith(")")) {
+            redirectURI = redirectURI.substring(1, redirectURI.length() - 1).trim();
+        }
+
+        return Arrays.asList(redirectURI.split("\\|"));
     }
 
     /**
