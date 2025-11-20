@@ -18,25 +18,19 @@
 
 package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.net.HttpCookie;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.HttpHeaders;
 
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 
@@ -91,39 +85,12 @@ public abstract class AbstractTokenBinder implements TokenBinder {
             String cookieName) {
 
         if (REFRESH_TOKEN.equals(oAuth2AccessTokenReqDTO.getGrantType())) {
-
-            HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
-            if (ArrayUtils.isEmpty(httpRequestHeaders)) {
-                return false;
-            }
-
-            for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
-                if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
-                    if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
-                        return false;
-                    }
-
-                    String[] cookies = httpRequestHeader.getValue()[0].split(";");
-                    String cookiePrefix = cookieName + "=";
-                    for (String cookie : cookies) {
-                        if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix) &&
-                                HttpCookie.parse(cookie).get(0) != null) {
-                            String cookieValue = HttpCookie.parse(cookie).get(0).getValue();
-                            if (StringUtils.isNotBlank(cookieValue)) {
-                                String tokenBindingValue;
-                                if (COMMONAUTH_COOKIE.equals(cookieName)) {
-                                    // For sso-session binding,token binding value will be the session context id.
-                                    tokenBindingValue = DigestUtils.sha256Hex(cookieValue);
-                                } else {
-                                    tokenBindingValue = cookieValue;
-                                }
-                                String receivedBindingReference =
-                                        OAuth2Util.getTokenBindingReference(tokenBindingValue);
-                                return bindingReference.equals(receivedBindingReference);
-                            }
-                        }
-                    }
-                }
+            Optional<String> tokenBindingValueOptional = OAuth2Util.getTokenBindingValue(oAuth2AccessTokenReqDTO,
+                    cookieName);
+            if (tokenBindingValueOptional.isPresent()) {
+                String tokenBindingValue = tokenBindingValueOptional.get();
+                String receivedBindingReference = OAuth2Util.getTokenBindingReference(tokenBindingValue);
+                return bindingReference.equals(receivedBindingReference);
             }
 
             return false;
