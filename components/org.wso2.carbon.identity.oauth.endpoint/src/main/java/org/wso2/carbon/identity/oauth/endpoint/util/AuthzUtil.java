@@ -228,6 +228,7 @@ import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPE
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantDomainOfOauthApp;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.DISPLAY;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.ID_TOKEN_HINT;
@@ -2437,7 +2438,7 @@ public class AuthzUtil {
             if (StringUtils.isNotEmpty(appResidentOrgId)) {
                 String appResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                         .resolveTenantDomain(appResidentOrgId);
-                appDO = OAuth2Util.getAppInformationByClientId(clientId, appResidentTenantDomain);
+                appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, appResidentOrgId);
             } else {
                 appDO = OAuth2Util.getAppInformationByClientId(clientId);
             }
@@ -2846,6 +2847,12 @@ public class AuthzUtil {
             // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
             // tenantDomain.
             String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appResidentOrgId)) {
+                OAuthAppDO appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, appResidentOrgId);
+                return getTenantDomainOfOauthApp(appDO);
+            }
             return OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "

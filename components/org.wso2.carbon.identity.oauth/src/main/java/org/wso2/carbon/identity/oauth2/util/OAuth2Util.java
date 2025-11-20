@@ -98,6 +98,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -156,6 +157,8 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -2587,6 +2590,60 @@ public class OAuth2Util {
             AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
         }
         return oAuthAppDO;
+    }
+
+    public static Optional<OAuthAppDO> getAppInformation(String clientId, String organizationId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        try {
+            tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                    organizationId, e);
+        }
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId, tenantDomain);
+        if (oAuthAppDO != null) {
+            return Optional.of(oAuthAppDO);
+        }
+
+        try {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId,
+                    IdentityTenantUtil.getTenantId(tenantDomain));
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                return Optional.of(oAuthAppDO);
+            }
+            return Optional.empty();
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application not found for clientId: " + clientId +
+                        " in tenantDomain: " + tenantDomain, e);
+            }
+            return Optional.empty();
+        }
+    }
+
+    public static OAuthAppDO getAppInformationFromOrgHierarchy(String clientId, String accessingOrgId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        try {
+            OAuthAppDO oauthAppDO = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
+                    .getResourcesFromOrgHierarchy(accessingOrgId,
+                            LambdaExceptionUtils.rethrowFunction(
+                                    orgId -> getAppInformation(clientId, orgId)),
+                            new FirstFoundAggregationStrategy<>());
+            if (oauthAppDO == null) {
+                throw new InvalidOAuthClientException("Application not found for clientId: " + clientId +
+                        " in the organization hierarchy of organization ID: " + accessingOrgId);
+            }
+            return oauthAppDO;
+        } catch (OrgResourceHierarchyTraverseException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving application info for clientId: " + clientId +
+                    " from organization hierarchy of organization ID: " + accessingOrgId, e);
+        }
     }
 
     /**
@@ -5416,6 +5473,7 @@ public class OAuth2Util {
                     throw new InvalidOAuthClientException("Error while resolving tenant domain from organization id: "
                             + appOrgId, e);
                 }
+                return;
             }
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
@@ -5764,7 +5822,14 @@ public class OAuth2Util {
             return false;
         }
         String tenantDomain = getTenantDomain();
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId();
+        OAuthAppDO oAuthAppDO;
+        if (StringUtils.isNotBlank(appResidentOrgId)) {
+            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, appResidentOrgId);
+        } else {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        }
         return oAuthAppDO.isFapiConformanceEnabled();
     }
 
