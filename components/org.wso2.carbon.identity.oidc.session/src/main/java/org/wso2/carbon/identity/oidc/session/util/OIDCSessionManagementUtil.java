@@ -38,12 +38,10 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
+import org.wso2.carbon.identity.oidc.session.*;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
 import java.io.UnsupportedEncodingException;
@@ -52,6 +50,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.util.Set;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -503,5 +502,70 @@ public class OIDCSessionManagementUtil {
             return false;
         }
     }
+
+
+    /**
+     * Returns signing tenant domain.
+     *
+     * @param oAuthAppDO
+     * @return Signing Tenant Domain
+     */
+    public static String getSigningTenantDomain(OAuthAppDO oAuthAppDO) {
+
+        boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
+        String signingTenantDomain;
+
+        if (isJWTSignedWithSPKey) {
+            // Tenant domain of the SP.
+            signingTenantDomain = getTenantDomain(oAuthAppDO);
+        } else {
+            // Tenant domain of the user.
+            signingTenantDomain = oAuthAppDO.getUser().getTenantDomain();
+        }
+        return signingTenantDomain;
+    }
+
+    /**
+     * Returns the OIDCsessionState of the obps cookie
+     *
+     * @param request
+     * @return Session state
+     */
+    public static OIDCSessionState getSessionState(HttpServletRequest request) {
+
+        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+        if (opbsCookie != null) {
+            String obpsCookieValue = opbsCookie.getValue();
+            OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
+                    .getOIDCSessionState(obpsCookieValue);
+            return sessionState;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Return client id of all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return client id of all the RPs belong to same session
+     */
+    public static Set<String> getSessionParticipants(OIDCSessionState sessionState) {
+
+        return sessionState.getSessionParticipants();
+    }
+
+    /**
+     * Returns the sid of the all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return sid claim from session state
+     */
+    public static String getSidClaim(OIDCSessionState sessionState) {
+
+        String sidClaim = sessionState.getSidClaim();
+        return sidClaim;
+    }
+
 
 }
