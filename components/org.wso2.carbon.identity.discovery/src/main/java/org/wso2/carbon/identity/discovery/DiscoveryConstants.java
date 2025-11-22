@@ -384,4 +384,14 @@ public class DiscoveryConstants {
      * @see <a href='https://datatracker.ietf.org/doc/html/rfc9396.txt#name-metadata'>rfc9396</a>
      */
     public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
+
+    /**
+     * authorization_response_iss_parameter_supported
+     * OPTIONAL. Boolean value specifying whether the OP supports the "iss" parameter in the
+     * Authorization Response. This allows RPs to securely determine the issuer of the response.
+     * If omitted, the default value is false.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc9207#as_metadata">rfc9207</a>
+     */
+    public static final String AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED =
+            "authorization_response_iss_parameter_supported";
 }

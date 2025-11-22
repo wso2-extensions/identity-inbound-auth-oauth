@@ -4774,8 +4774,15 @@ public class OAuth2Util {
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
-                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
-                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                /* Returning residentIdpEntityId as issuer when useEntityIDAsIssuer configuration is enabled or
+                   FAPI 2.0 is enabled. */
+                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled() || isFapi2Enabled()) {
+                    return getResidentIdpEntityId(tenantDomain);
+                }
+                if (isMtlsRequest) {
+                    return OAuthURL.getOAuth2MTLSTokenEPUrl();
+                }
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -4790,6 +4797,11 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+            /* Returning residentIdpEntityId as issuer when useEntityIDAsIssuer configuration is enabled or
+               FAPI 2.0 is enabled. */
+            if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled() || isFapi2Enabled()) {
+                return getResidentIdpEntityId(tenantDomain);
+            }
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5738,6 +5750,27 @@ public class OAuth2Util {
         String tenantDomain = getTenantDomain();
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         return oAuthAppDO.isFapiConformanceEnabled();
+    }
+
+    /**
+     * Check whether FAPI 1.0 Advanced is enabled in the server.
+     *
+     * @return Whether FAPI 1.0 Advanced is enabled in the server.
+     */
+    public static boolean isFapi1Enabled() {
+
+        return OAuthConstants.FAPIVersions.FAPI1_ADVANCED.equals(
+                OAuthServerConfiguration.getInstance().getFapiVersion());
+    }
+
+    /**
+     * Check whether FAPI 2.0 is enabled in the server.
+     *
+     * @return Whether FAPI 2.0 is enabled in the server.
+     */
+    public static boolean isFapi2Enabled() {
+
+        return OAuthConstants.FAPIVersions.FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion());
     }
 
     /**
