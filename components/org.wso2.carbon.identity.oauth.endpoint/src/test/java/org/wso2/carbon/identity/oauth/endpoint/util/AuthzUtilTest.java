@@ -139,6 +139,7 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
@@ -490,6 +491,8 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 OAuthServerConfiguration.class);) {
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class,
+                         Mockito.CALLS_REAL_METHODS);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
                  MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
@@ -537,6 +540,19 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 frameworkUtils.when(() -> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
                 frameworkUtils.when(FrameworkUtils::endTenantFlow).thenAnswer(invocation -> null);
 
+                OAuthAppDO appDO = new OAuthAppDO();
+                appDO.setState("ACTIVE");
+                AuthenticatedUser user = new AuthenticatedUser();
+                user.setUserName(USERNAME);
+                user.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                appDO.setUser(user);
+                if (expectedStatus == HttpServletResponse.SC_FOUND) {
+                    oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                            .thenReturn(appDO);
+                } else {
+                    oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString(), anyString()))
+                            .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                }
                 loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(diagnosticLogsEnabled);
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
                         .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -746,6 +762,8 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
             mockSSOConsentService(false);
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class,
+                         Mockito.CALLS_REAL_METHODS);
                  MockedStatic<OIDCSessionManagementUtil> oidcSessionManagementUtil =
                          mockStatic(OIDCSessionManagementUtil.class);
                  MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);
@@ -760,7 +778,9 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                  MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
                  MockedStatic<OAuthServerConfigurationFactory> oAuthServerConfigurationFactory =
                          mockStatic(OAuthServerConfigurationFactory.class);
-                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
+                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class)) {
 
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 Cookie opBrowserStateCookie = (Cookie) cookieObject;
@@ -788,6 +808,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                                 APP_NAME, responseMode, APP_REDIRECT_URL, null);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setPrompt(OAuthConstants.Prompt.LOGIN);
+                oAuth2Params.setLoginTenantDomain("carbon.super");
 
                 mockEndpointUtil(false, endpointUtil);
                 oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
@@ -799,6 +820,11 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 when(oAuth2Service.authorize(any(OAuthAuthzReqMessageContext.class))).thenReturn(authzRespDTO);
 
                 oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(new OAuthAppDO());
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 oidcSessionManagementUtil.when(
                                 () -> OIDCSessionManagementUtil.getOPBrowserStateCookie(any(HttpServletRequest.class)))

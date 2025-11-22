@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -230,7 +232,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            tenantId = IdentityTenantUtil.getLoginTenantId();
+            String appResidentOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appResidentOrganizationId)) {
+                tenantId = IdentityTenantUtil.getTenantId(OAuth2ServiceComponentHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(appResidentOrganizationId));
+            }
+            prepStmt.setInt(2, tenantId);
             //use hash value for search
             prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
             resultSet = prepStmt.executeQuery();
@@ -266,6 +275,12 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                             "for client id " + consumerKey, e);
                 }
                 user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+                if (StringUtils.isNotEmpty(appResidentOrganizationId)) {
+                    String userOrganizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveOrganizationId(tenantDomain);
+                    user.setAccessingOrganization(appResidentOrganizationId);
+                    user.setUserResidentOrganization(userOrganizationId);
+                }
 
                 String tokenId = resultSet.getString(9);
                 String tokenBindingReference = NONE;
@@ -291,6 +306,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
         } catch (SQLException | URLBuilderException e) {
             throw new IdentityOAuth2Exception("Error when validating an authorization code", e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant id for organization.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }

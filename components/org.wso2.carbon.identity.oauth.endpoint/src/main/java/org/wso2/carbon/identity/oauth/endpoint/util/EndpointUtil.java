@@ -1545,6 +1545,29 @@ public class EndpointUtil {
     }
 
     /**
+     * This method retrieves the service provider tenant domain using the client ID and the tenant domain.
+     *
+     * @param clientId Client id of the application.
+     * @param tenantDomain Tenant domain to which the client ID belongs.
+     * @return tenantDomain domain of the service provider.
+     */
+    public static String getSPTenantDomainFromClientId(String clientId, String tenantDomain) {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting oauth app for client Id: " + clientId, e);
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while getting oauth app for client Id: " + clientId, e);
+            }
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+    }
+
+    /**
      * Extract information related to the token request and exception and publish the event to listeners.
      *
      * @param exception Exception occurred.
