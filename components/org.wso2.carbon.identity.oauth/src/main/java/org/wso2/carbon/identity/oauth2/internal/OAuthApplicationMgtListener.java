@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.slf4j.MDC;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
@@ -536,9 +537,24 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 if (oauthCacheEntry != null) {
                     OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
                     OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+                } else {
+                    log.info("Access token not found in cache. Hence not clearing the cache entry. " +
+                            "Correlation-ID: " + getCorrelation());
                 }
             }
         }
+    }
+
+    private String getCorrelation() {
+        String ref = null;
+        if (isCorrelationIDPresent()) {
+            ref = MDC.get("Correlation-ID");
+        }
+        return ref;
+    }
+
+    private boolean isCorrelationIDPresent() {
+        return MDC.get("Correlation-ID") != null;
     }
 
     /**
