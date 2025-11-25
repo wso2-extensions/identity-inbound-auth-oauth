@@ -100,6 +100,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_S256_ENABLED;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
 @WithCarbonHome
@@ -364,28 +366,50 @@ public class JWTTokenIssuerTest {
                         null,
                         authenticatedSubjectIdentifier,
                         DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000,
-                        false
+                        false,
+                        false, // Hexify
+                        true,  // enableX5t
+                        true   // enableX5ts256
                 },
                 {
                         null,
                         tokenReqMessageContext,
                         authenticatedSubjectIdentifier,
                         DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000,
-                        false
+                        false,
+                        false, // Hexify
+                        false, // enableX5t
+                        true   // enableX5ts256
                 },
                 {
                         authzReqMessageContext,
                         null,
                         authenticatedSubjectIdentifier,
                         DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME * 1000,
-                        true
+                        true,
+                        false, // Hexify
+                        true,  // enableX5t
+                        false  // enableX5ts256
                 },
                 {
                         null,
                         tokenReqMessageContext,
                         authenticatedSubjectIdentifier,
                         DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000,
-                        true
+                        true,
+                        true,  // Hexify
+                        false, // enableX5t
+                        true   // enableX5ts256
+                },
+                {
+                        null,
+                        tokenReqMessageContext,
+                        authenticatedSubjectIdentifier,
+                        DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME * 1000,
+                        true,
+                        true,  // Hexify
+                        true,  // enableX5t
+                        true   // enableX5ts256
                 }
         };
     }
@@ -394,7 +418,8 @@ public class JWTTokenIssuerTest {
     public void testCreateJWTClaimSet(Object authzReqMessageContext,
                                       Object tokenReqMessageContext,
                                       String sub,
-                                      long expectedExpiry, boolean ppidEnabled) throws Exception {
+                                      long expectedExpiry, boolean ppidEnabled, boolean hexifyRequired,
+                                      boolean enableX5t, boolean enableX5ts256) throws Exception {
 
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -494,7 +519,8 @@ public class JWTTokenIssuerTest {
     public void testSignJWTWithRSA(Object authzReqMessageContext,
                                    Object tokenReqMessageContext,
                                    String sub,
-                                   long expectedExpiry, boolean ppidEnabled) throws Exception {
+                                   long expectedExpiry, boolean ppidEnabled, boolean hexifyRequired, boolean enableX5t,
+                                   boolean enableX5ts256) throws Exception {
 
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -526,6 +552,16 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
                     .thenAnswer((Answer<Void>) invocation -> null);
 
+            oAuth2Util.when(OAuth2Util::isJWTX5tHexifyingRequired).thenReturn(false);
+
+            oAuth2Util.when(OAuth2Util::isX5tS256Enabled).thenReturn(enableX5ts256);
+            identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_S256_ENABLED))
+                    .thenReturn(String.valueOf(enableX5ts256));
+
+            oAuth2Util.when(OAuth2Util::isX5tEnabled).thenReturn(enableX5t);
+            identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_ENABLED))
+                    .thenReturn(String.valueOf(enableX5t));
+
             oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
             JWSSigner signer = new RSASSASigner(rsaPrivateKey);
             oAuth2Util.when(() -> OAuth2Util.createJWSSigner(any())).thenReturn(signer);
@@ -543,7 +579,9 @@ public class JWTTokenIssuerTest {
                     (OAuthTokenReqMessageContext) tokenReqMessageContext,
                     (OAuthAuthzReqMessageContext) authzReqMessageContext);
             SignedJWT signedJWT = SignedJWT.parse(jwtToken);
-            validateX5tInJWT(jwtToken, cert);
+            if (!hexifyRequired) {
+                validateX5tInJWT(jwtToken, cert);
+            }
             assertNotNull(jwtToken);
             assertNotNull(signedJWT.getHeader());
             assertNotNull(signedJWT.getHeader().getType());
