@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oidc.session;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -109,7 +110,19 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            if (isOrganizationQualifiedRequest()) {
+            String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(appResidentOrgId)) {
+                // Handling the cookie path for request coming with the path `/t/<tenant-domain>/o/<org-id>`.
+                // The cookie will be set to the root tenant path.
+                loginTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
+                    cookie.setPath("/");
+                } else {
+                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                }
+            } else if (isOrganizationQualifiedRequest()) {
                 // Handling the cookie path for request coming with the path `/o/<org-id>`.
                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
                 cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/");
