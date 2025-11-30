@@ -601,6 +601,10 @@ public class EndpointUtil {
         authenticationRequest.setRelyingParty(clientId);
         authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
         authenticationRequest.setRequestQueryParams(reqParams);
+        if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId() != null) {
+            authenticationRequest.setAccessingOrgId(
+                    PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId());
+        }
 
         //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
         return new AuthenticationRequestCacheEntry(authenticationRequest);
