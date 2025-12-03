@@ -167,6 +167,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
@@ -3597,7 +3598,7 @@ public class OAuth2UtilTest {
 
         return new Object[][]{
                 {OAuthConstants.CODE, true},   // Case: Response type is "code"
-                {OAuthConstants.DEVICE, true}, // Case: Response type is "device"
+                {RESPONSE_TYPE_DEVICE, true}, // Case: Response type is "device"
                 {"token", false},              // Case: Response type is not supported
                 {null, false}                  // Case: Response type is null
         };

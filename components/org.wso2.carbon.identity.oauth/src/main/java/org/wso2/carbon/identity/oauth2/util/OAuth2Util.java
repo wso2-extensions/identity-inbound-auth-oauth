@@ -242,6 +242,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -5990,7 +5991,7 @@ public class OAuth2Util {
 
         return StringUtils.equals(OAuthConstants.CODE,
                 request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) ||
-                StringUtils.equals(OAuthConstants.DEVICE,
+                StringUtils.equals(RESPONSE_TYPE_DEVICE,
                         request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
     }
 
