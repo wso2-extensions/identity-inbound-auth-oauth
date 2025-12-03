@@ -119,7 +119,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final String TEST_USER_CODE = "testUserCode";
     private static final String TEST_URL = "testURL";
     private static final String PENDING = "PENDING";
-    private static final String USED = "USED";
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
 
     private static final Date date = new Date();
@@ -174,10 +173,13 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public Object[][] providePostParams() {
 
         return new Object[][]{
-                {TEST_USER_CODE, null, 0, USED, TEST_URL},
-                {null, null, 0, USED, null},
-                {TEST_USER_CODE, CLIENT_ID_VALUE, HttpServletResponse.SC_ACCEPTED, PENDING, TEST_URL},
-                {TEST_USER_CODE, CLIENT_ID_VALUE, HttpServletResponse.SC_ACCEPTED, PENDING, null}
+                {TEST_USER_CODE, null, TEST_URL, false},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, TEST_URL, false},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, null, false},
+                {TEST_USER_CODE, null, TEST_URL, true},
+                {null, null, null, true},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, TEST_URL, true},
+                {TEST_USER_CODE, CLIENT_ID_VALUE, null, true},
         };
     }
 
@@ -186,14 +188,12 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
      *
      * @param userCode      User code of the user.
      * @param clientId      Consumer key of the application.
-     * @param expectedValue Expected http status.
-     * @param status        Status of user code.
      * @param uri           Redirection uri.
      * @throws Exception Error while testing device endpoint.
      */
     @Test(dataProvider = "providePostParams")
-    public void testDeviceAuthorize(String userCode, String clientId, int expectedValue, String status, String uri)
-            throws Exception {
+    public void testDeviceAuthorize(String userCode, String clientId,
+                                    String uri, boolean isAppNative) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -220,9 +220,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 lenient().when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
                 lenient().when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
                 lenient().when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
-                when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
+                when(httpServletRequest.getParameter("user_code")).thenReturn(userCode);
 
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+                oAuth2Util.when(() -> OAuth2Util.isApiBasedAuthenticationFlow(any(HttpServletRequest.class)))
+                        .thenReturn(isAppNative);
                 lenient().when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
                 Response response1;
 

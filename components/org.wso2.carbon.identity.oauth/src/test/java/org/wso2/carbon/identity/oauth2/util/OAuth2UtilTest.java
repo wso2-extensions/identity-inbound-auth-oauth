@@ -3592,5 +3592,26 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "responseTypeProvider")
+    public Object[][] responseTypeProvider() {
 
+        return new Object[][]{
+                {OAuthConstants.CODE, true},   // Case: Response type is "code"
+                {OAuthConstants.DEVICE, true}, // Case: Response type is "device"
+                {"token", false},              // Case: Response type is not supported
+                {null, false}                  // Case: Response type is null
+        };
+    }
+
+    @Test(dataProvider = "responseTypeProvider")
+    public void testIsApiBasedAuthSupportedGrant(String responseType, boolean expectedResult) {
+
+        // Mock the HttpServletRequest
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)).thenReturn(responseType);
+
+        // Call the method and assert the result
+        boolean result = OAuth2Util.isApiBasedAuthSupportedGrant(request);
+        Assert.assertEquals(result, expectedResult, "Unexpected result for response type: " + responseType);
+    }
 }
