@@ -5989,7 +5989,9 @@ public class OAuth2Util {
     public static boolean isApiBasedAuthSupportedGrant(HttpServletRequest request) {
 
         return StringUtils.equals(OAuthConstants.CODE,
-                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) ||
+                StringUtils.equals(OAuthConstants.DEVICE,
+                        request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
     }
 
     /**

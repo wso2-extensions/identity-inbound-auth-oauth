@@ -34,9 +34,11 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -98,6 +100,10 @@ public class UserAuthenticationEndpoint {
                     commonAuthRequestWrapper.setParameter(Constants.SCOPE, scope);
                 }
                 commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
+                // Set the client authentication context to the request for API based authentication flow.
+                if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
+                    setClientAuthnContext(request, clientId);
+                }
                 return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
             } else {
                 if (log.isDebugEnabled()) {
@@ -114,6 +120,14 @@ public class UserAuthenticationEndpoint {
         } catch (URISyntaxException e) {
             return handleURISyntaxException(e);
         }
+    }
+
+    private void setClientAuthnContext(HttpServletRequest request, String clientId) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(clientId);
+        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
     }
 
     private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {

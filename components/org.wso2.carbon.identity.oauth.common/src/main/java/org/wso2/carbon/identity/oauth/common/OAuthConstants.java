@@ -106,6 +106,7 @@ public final class OAuthConstants {
     public static final String TOKEN_TYPE = "token_type";
     public static final String ID_TOKEN = "id_token";
     public static final String CODE = "code";
+    public static final String DEVICE = "device";
     public static final String USERINFO = "userinfo";
     public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     public static final String SESSION_STATE = "session_state";
