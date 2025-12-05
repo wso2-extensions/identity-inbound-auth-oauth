@@ -167,6 +167,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
@@ -3592,5 +3593,26 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "responseTypeProvider")
+    public Object[][] responseTypeProvider() {
 
+        return new Object[][]{
+                {OAuthConstants.CODE, true},   // Case: Response type is "code"
+                {RESPONSE_TYPE_DEVICE, true}, // Case: Response type is "device"
+                {"token", false},              // Case: Response type is not supported
+                {null, false}                  // Case: Response type is null
+        };
+    }
+
+    @Test(dataProvider = "responseTypeProvider")
+    public void testIsApiBasedAuthSupportedGrant(String responseType, boolean expectedResult) {
+
+        // Mock the HttpServletRequest
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)).thenReturn(responseType);
+
+        // Call the method and assert the result
+        boolean result = OAuth2Util.isApiBasedAuthSupportedGrant(request);
+        Assert.assertEquals(result, expectedResult, "Unexpected result for response type: " + responseType);
+    }
 }
