@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.ErrorResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
@@ -79,7 +78,6 @@ public class UserAuthenticationEndpoint {
             throws InvalidRequestParentException, OAuthSystemException {
 
         boolean isApiBasedAuthnFlow = OAuth2Util.isApiBasedAuthenticationFlow(request);
-        ErrorResponse errorResponse;
         try {
             String userCode = request.getParameter(Constants.USER_CODE);
             // True when input(user_code) is not REQUIRED.
@@ -131,22 +129,11 @@ public class UserAuthenticationEndpoint {
                 return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
         } catch (IdentityOAuth2Exception e) {
-            errorResponse = handleIdentityOAuth2Exception(e);
+            return handleIdentityOAuth2Exception(e);
         } catch (URLBuilderException e) {
-            errorResponse = handleURLBuilderException(e);
+            return handleURLBuilderException(e);
         } catch (URISyntaxException e) {
-            errorResponse = handleURISyntaxException(e);
-        }
-        if (isApiBasedAuthnFlow) {
-            return handleApiBasedAuthnErrorResponse(errorResponse.getStatus(),
-                    errorResponse.getCode(), errorResponse.getMessage(), errorResponse.getDescription());
-        } else {
-            OAuthResponse oAuthResponse = OAuthASResponse.errorResponse(errorResponse.getStatus())
-                    .setError(errorResponse.getCode()).setErrorDescription(errorResponse.getDescription())
-                    .buildJSONMessage();
-            return Response.status(oAuthResponse.getResponseStatus())
-                    .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
-                    .entity(oAuthResponse.getBody()).build();
+            return handleURISyntaxException(e);
         }
     }
 
@@ -169,27 +156,35 @@ public class UserAuthenticationEndpoint {
         return Response.status(status).entity(jsonString).build();
     }
 
-    private ErrorResponse handleIdentityOAuth2Exception(IdentityOAuth2Exception e) {
+    private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {
 
         if (log.isDebugEnabled()) {
             log.debug(e.getMessage(), e);
         }
-        return new ErrorResponse(Error.INVALID_REQUEST.getErrorCode(), OAuth2ErrorCodes.INVALID_REQUEST,
-                "Invalid Request", HttpServletResponse.SC_BAD_REQUEST);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid Request").buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    private ErrorResponse handleURLBuilderException(URLBuilderException e) {
+    private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
 
         log.error("Error occurred while sending request to authentication framework.", e);
-        return new ErrorResponse(Error.UNEXPECTED_SERVER_ERROR.getErrorCode(), OAuth2ErrorCodes.SERVER_ERROR,
-                "Internal Server Error", HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
-    private ErrorResponse handleURISyntaxException(URISyntaxException e) {
+    private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
 
         log.error("Error while parsing string as an URI reference.", e);
-        return new ErrorResponse(Error.UNEXPECTED_SERVER_ERROR.getErrorCode(), OAuth2ErrorCodes.SERVER_ERROR,
-                "Internal Server Error", HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
     private boolean isExpiredUserCode(DeviceFlowDO deviceFlowDO) throws IdentityOAuth2Exception {
