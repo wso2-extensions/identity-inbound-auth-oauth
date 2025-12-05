@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model;
 
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
-import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 public class IDToken extends AbstractToken {
 
     private IDToken(AbstractBuilder<?> builder) {
+
         super(builder);
     }
 
@@ -96,7 +96,7 @@ public class IDToken extends AbstractToken {
 
         public static boolean contains(String name) {
 
-            return Arrays.stream(AccessToken.ClaimNames.values())
+            return Arrays.stream(IDToken.ClaimNames.values())
                     .anyMatch(claimName -> claimName.getName().equals(name));
         }
     }

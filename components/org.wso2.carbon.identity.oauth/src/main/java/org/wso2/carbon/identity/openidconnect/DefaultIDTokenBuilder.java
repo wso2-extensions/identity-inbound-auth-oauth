@@ -1137,7 +1137,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Pre-issue token action invocation is enabled at server level.
         // For the System applications, pre issue ID token actions will not be executed.
-        // Fragment apss are used for internal authentication purposes hence action execution is skipped.
+        // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
         return !isSystemApplication(tenantDomain, clientId) && isGrantTypeAllowed &&
                 OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                         .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) &&
@@ -1171,11 +1171,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String responseType = authzReqMessageContext.getAuthorizationReqDTO().getResponseType();
 
+        // Implicit flow(response type id_token token) is not supported.
         boolean isResponseTypeAllowed = OAuthConstants.CODE_IDTOKEN.equals(responseType) ||
                 OAuthConstants.CODE_IDTOKEN_TOKEN.equals(responseType);
         // Pre-issue token action invocation is enabled at server level.
         // For the System applications(Console, MyAccount), pre issue ID token actions will not be executed.
-        // Fragment apss are used for internal authentication purposes hence action execution is skipped.
+        // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
         return !isSystemApplication(tenantDomain, clientId) &&
                 isResponseTypeAllowed && OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                         .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) &&
