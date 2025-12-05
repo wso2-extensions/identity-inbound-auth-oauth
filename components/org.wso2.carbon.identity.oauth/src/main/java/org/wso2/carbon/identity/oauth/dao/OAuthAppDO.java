@@ -84,6 +84,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String[] audiences = new String[0];
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
+    private String extendRenewedRefreshTokenExpiryTime;
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
@@ -364,6 +365,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public String getRenewRefreshTokenEnabled() {
 
         return renewRefreshTokenEnabled;
+    }
+
+    public String isExtendRenewedRefreshTokenExpiryTime() {
+
+        return extendRenewedRefreshTokenExpiryTime;
+    }
+
+    public void setExtendRenewedRefreshTokenExpiryTime(String extendRenewedRefreshTokenExpiryTime) {
+
+        this.extendRenewedRefreshTokenExpiryTime = extendRenewedRefreshTokenExpiryTime;
     }
 
     public String getTokenBindingType() {

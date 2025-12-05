@@ -635,6 +635,7 @@ public final class OAuthConstants {
         public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "extendRenewedRefreshTokenExpiryTime";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
