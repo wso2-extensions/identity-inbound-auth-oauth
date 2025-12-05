@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,10 @@ public class OAuthTokenReqMessageContext {
     private boolean isImpersonationRequest;
 
     private boolean preIssueAccessTokenActionsExecuted;
+
+    private boolean preIssueIDTokenActionsExecuted;
+
+    private IDTokenDTO preIssueIDTokenActionDTO;
 
     private List<String> audiences;
 
@@ -236,6 +241,26 @@ public class OAuthTokenReqMessageContext {
     public void setAdditionalAccessTokenClaims(Map<String, Object> additionalAccessTokenClaims) {
 
         this.additionalAccessTokenClaims = additionalAccessTokenClaims;
+    }
+
+    public boolean isPreIssueIDTokenActionsExecuted() {
+
+        return preIssueIDTokenActionsExecuted;
+    }
+
+    public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
+
+        this.preIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
+    }
+
+    public IDTokenDTO getPreIssueIDTokenActionDTO() {
+
+        return preIssueIDTokenActionDTO;
+    }
+
+    public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
+
+        this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
     }
 
     /**
