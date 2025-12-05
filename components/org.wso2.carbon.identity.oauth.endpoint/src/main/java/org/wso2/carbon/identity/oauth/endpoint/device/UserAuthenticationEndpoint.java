@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -27,16 +28,21 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.oauth.Error;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -71,12 +77,18 @@ public class UserAuthenticationEndpoint {
     public Response deviceAuthorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws InvalidRequestParentException, OAuthSystemException {
 
+        boolean isApiBasedAuthnFlow = OAuth2Util.isApiBasedAuthenticationFlow(request);
         try {
             String userCode = request.getParameter(Constants.USER_CODE);
             // True when input(user_code) is not REQUIRED.
             if (StringUtils.isBlank(userCode)) {
                 if (log.isDebugEnabled()) {
                     log.debug("user_code is missing in the request.");
+                }
+                if (isApiBasedAuthnFlow) {
+                    return handleApiBasedAuthnErrorResponse(HttpServletResponse.SC_BAD_REQUEST,
+                            Error.INVALID_REQUEST.getErrorCode(), INVALID_CODE_ERROR_KEY,
+                            "user_code is missing in the request.");
                 }
                 String error = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
                         .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
@@ -98,10 +110,19 @@ public class UserAuthenticationEndpoint {
                     commonAuthRequestWrapper.setParameter(Constants.SCOPE, scope);
                 }
                 commonAuthRequestWrapper.setParameter(Constants.NONCE, userCode);
+                // Set the client authentication context to the request for API based authentication flow.
+                if (isApiBasedAuthnFlow) {
+                    setClientAuthnContext(request, clientId);
+                }
                 return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Incorrect user_code.");
+                }
+                if (isApiBasedAuthnFlow) {
+                    return handleApiBasedAuthnErrorResponse(HttpServletResponse.SC_BAD_REQUEST,
+                            Error.INVALID_REQUEST.getErrorCode(), INVALID_CODE_ERROR_KEY,
+                            "user_code is invalid or expired.");
                 }
                 String error = ServiceURLBuilder.create().addPath(Constants.DEVICE_ENDPOINT_PATH)
                         .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
@@ -114,6 +135,25 @@ public class UserAuthenticationEndpoint {
         } catch (URISyntaxException e) {
             return handleURISyntaxException(e);
         }
+    }
+
+    private void setClientAuthnContext(HttpServletRequest request, String clientId) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(clientId);
+        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+    }
+
+    private Response handleApiBasedAuthnErrorResponse(int status, String code, String message, String description) {
+
+        APIError apiError = new APIError();
+        apiError.setCode(code);
+        apiError.setMessage(message);
+        apiError.setDescription(description);
+        apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
+        String jsonString = new Gson().toJson(apiError);
+        return Response.status(status).entity(jsonString).build();
     }
 
     private Response handleIdentityOAuth2Exception(IdentityOAuth2Exception e) throws OAuthSystemException {
