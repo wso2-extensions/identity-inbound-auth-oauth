@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -165,6 +166,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
@@ -3592,5 +3594,80 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "fragmentAppTestCases")
+    public Object[][] fragmentAppTestCases() {
 
+        return new Object[][] {
+                // description, properties, expectedResult
+                {"property exists and is true",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "true")}, true},
+
+                {"property exists and is false",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "false")}, false},
+
+                {"property value is invalid",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "invalid")}, false},
+
+                {"properties array is null", null, false},
+
+                {"properties array is empty", new ServiceProviderProperty[0], false},
+
+                {"fragment property does not exist",
+                        new ServiceProviderProperty[]{createProperty("otherProperty", "true")}, false},
+
+                {"fragment property exists among multiple",
+                        new ServiceProviderProperty[] {
+                                createProperty("otherProperty1", "value1"),
+                                createProperty(IS_FRAGMENT_APP, "true"),
+                                createProperty("otherProperty2", "value2")
+                        }, true},
+
+                {"property value is null",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, null)}, false},
+
+                {"property value is case insensitive (TRUE)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "TRUE")}, true},
+
+                {"property value is case insensitive (True)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "True")}, true}
+        };
+    }
+
+    @Test(dataProvider = "fragmentAppTestCases")
+    public void testIsFragmentApp(String description, ServiceProviderProperty[] properties,
+                                  boolean expectedResult) throws Exception {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setSpProperties(properties);
+
+        try (MockedStatic<OAuthAppDO> oAuthAppDO = mockStatic(OAuthAppDO.class)) {
+            oAuthAppDO.when(() -> OAuthAppDO.getOrgApplication(clientId, clientTenantDomain))
+                    .thenReturn(serviceProvider);
+
+            boolean result = OAuth2Util.isFragmentApp(clientId, clientTenantDomain);
+
+            assertEquals(result, expectedResult,
+                    "Failed for case: " + description);
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = ".*Error while checking whether the application is a fragment app.*")
+    public void isFragmentAppThrowsExceptionWhenIdentityApplicationManagementExceptionOccurs()
+            throws IdentityOAuth2Exception {
+        try (MockedStatic<OAuthAppDO> oAuthAppDO = mockStatic(OAuthAppDO.class)) {
+            oAuthAppDO.when(() -> OAuthAppDO.getOrgApplication(clientId, clientTenantDomain))
+                    .thenThrow(new IdentityApplicationManagementException("Error retrieving application"));
+
+            OAuth2Util.isFragmentApp(clientId, clientTenantDomain);
+        }
+    }
+
+    private ServiceProviderProperty createProperty(String name, String value) {
+
+        ServiceProviderProperty property = new ServiceProviderProperty();
+        property.setName(name);
+        property.setValue(value);
+        return property;
+    }
 }

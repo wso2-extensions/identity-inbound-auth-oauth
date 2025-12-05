@@ -37,7 +37,7 @@ public class TokenRequest extends Request {
     private final String redirectUri;
     private final List<String> scopes;
 
-    private TokenRequest(Builder builder) {
+    protected TokenRequest(Builder builder) {
 
         this.clientId = builder.clientId;
         this.grantType = builder.grantType;

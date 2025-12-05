@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 
 import java.io.Serializable;
 import java.util.Properties;
@@ -62,6 +63,11 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private AuthorizationDetails approvedAuthorizationDetails;
 
     private AuthorizationDetails requestedAuthorizationDetails;
+
+    private boolean isPreIssueIDTokenActionExecuted;
+
+    private IDTokenDTO preIssueIDTokenActionDTO;
+
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -272,5 +278,25 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setRequestedAuthorizationDetails(final AuthorizationDetails requestedAuthorizationDetails) {
 
         this.requestedAuthorizationDetails = requestedAuthorizationDetails;
+    }
+
+    public boolean isPreIssueIDTokenActionExecuted() {
+
+        return isPreIssueIDTokenActionExecuted;
+    }
+
+    public void setPreIssueIDTokenActionExecuted(boolean isPreIssueIDTokenActionExecuted) {
+
+        this.isPreIssueIDTokenActionExecuted = isPreIssueIDTokenActionExecuted;
+    }
+
+    public IDTokenDTO getPreIssueIDTokenActionDTO() {
+
+        return preIssueIDTokenActionDTO;
+    }
+
+    public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
+
+        this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
     }
 }

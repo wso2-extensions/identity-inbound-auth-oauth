@@ -163,6 +163,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
 
+        if (checkExecutePreIssueAccessTokensActions(validationBean, tokReqMsgCtx) ||
+                checkExecutePreIssueIdTokensActions(tokReqMsgCtx)) {
+            setCustomizedTokenAttributesToMessageContext(validationBean, tokReqMsgCtx);
+        }
+
         ActionExecutionStatus<?> executionStatus = executePreIssueAccessTokenActions(validationBean, tokReqMsgCtx);
 
         if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
@@ -929,8 +934,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         ActionExecutionStatus<?> executionStatus = null;
         if (checkExecutePreIssueAccessTokensActions(refreshTokenValidationDataDO, tokenReqMessageContext)) {
 
-            setCustomizedAccessTokenAttributesToMessageContext(refreshTokenValidationDataDO, tokenReqMessageContext);
-
             FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
             try {
@@ -955,8 +958,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                                             OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
-                refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain());
+        String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+        String tenantDomain = refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain();
+        OAuthAppDO oAuthAppBean = getOAuthApp(clientId, tenantDomain);
         String grantType = refreshTokenValidationDataDO.getGrantType();
 
         // Allow if refresh token is issued for token requests from following grant types and,
@@ -969,21 +973,57 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
-    private void setCustomizedAccessTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,
-                                                                    OAuthTokenReqMessageContext tokenRequestContext) {
+    /**
+     * Check whether to execute pre issue ID token actions.
+     *
+     * @param tokenReqMessageContext OAuthTokenReqMessageContext
+     * @return true if pre issue ID token actions execution is enabled
+     * @throws IdentityOAuth2Exception Error when checking action execution is failed
+     */
+    private boolean checkExecutePreIssueIdTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+        String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+        boolean isSystemApplication = IdentityTenantUtil.isSystemApplication(
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain(),
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        // Allow for following grant types and for JWT access tokens if,
+        boolean isGrantTypeAllowed = (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType));
+        // Pre-issue ID token action invocation is enabled at server level.
+        // For the System applications, pre issue ID token actions will not be executed.
+        return !isSystemApplication && OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) && isGrantTypeAllowed
+                && !OAuth2Util.isFragmentApp(clientId, tenantDomain);
+    }
+
+    private void setCustomizedTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,
+                                                              OAuthTokenReqMessageContext tokenRequestContext) {
 
         AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(refreshTokenData.getTokenId());
         AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByTokenId(grantCacheKey, refreshTokenData.getTokenId());
 
-        if (grantCacheEntry != null && grantCacheEntry.isPreIssueAccessTokenActionsExecuted()) {
-            tokenRequestContext.setPreIssueAccessTokenActionsExecuted(true);
-            tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
-            tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
-            log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
-                    " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
-            tokenRequestContext.setRefreshTokenValidityPeriodInMillis(
-                    TimeUnit.NANOSECONDS.toMillis(grantCacheEntry.getValidityPeriod()));
+        if (grantCacheEntry != null) {
+            if (grantCacheEntry.isPreIssueAccessTokenActionsExecuted()) {
+                tokenRequestContext.setPreIssueAccessTokenActionsExecuted(true);
+                tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
+                tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
+                log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
+                        " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
+            }
+
+            if (grantCacheEntry.isPreIssueIDTokenActionsExecuted()) {
+                tokenRequestContext.setPreIssueIDTokenActionsExecuted(true);
+                tokenRequestContext.setPreIssueIDTokenActionDTO(grantCacheEntry.getPreIssueIDTokenActionDTO());
+                log.debug("Updated OAuthTokenReqMessageContext with customized ID token attributes in the" +
+                        " AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
+            }
+
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
         }
     }

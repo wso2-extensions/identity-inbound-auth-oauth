@@ -92,6 +92,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -707,7 +708,7 @@ public class AccessTokenIssuer {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
 
-        persistCustomizedAccessTokenAttributesForRefreshToken(tokenRespDTO, tokReqMsgCtx);
+        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
@@ -1491,8 +1492,15 @@ public class AccessTokenIssuer {
         }
     }
 
-    private void persistCustomizedAccessTokenAttributesForRefreshToken(OAuth2AccessTokenRespDTO tokenRespDTO,
+    private void persistCustomizedAccessTokenAttributesForRefreshToken(Optional<AuthorizationGrantCacheEntry>
+                                                                               optionalAuthorizationGrantCacheEntry,
+                                                                       OAuth2AccessTokenRespDTO tokenRespDTO,
                                                                        OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (!(tokReqMsgCtx.isPreIssueIDTokenActionsExecuted() ||
+                tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted())) {
+            return;
+        }
 
         /*
           If pre issue access token actions are executed it may have done modifications to the audience list, claims,
@@ -1500,29 +1508,36 @@ public class AccessTokenIssuer {
           If so, persist those custom modifications against the token id in the transaction session store
           to populate the authorized access token context back at refresh token flow.
          */
+        AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getTokenId());
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                optionalAuthorizationGrantCacheEntry.orElseGet(AuthorizationGrantCacheEntry::new);
+        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+
         if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
-            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getTokenId());
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
-                    new AuthorizationGrantCacheEntry();
-            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+
             authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
             authorizationGrantCacheEntry.setCustomClaims(tokReqMsgCtx.getAdditionalAccessTokenClaims());
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
 
-            if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
-            } else {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
-            }
-            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
-
-            log.debug("Customized audience list and access token attributes from pre issue access token actions " +
-                            "are persisted in the AuthorizationGrantCache against the token id: " +
-                            tokenRespDTO.getTokenId());
         }
+        if (tokReqMsgCtx.isPreIssueIDTokenActionsExecuted()) {
+
+            IDTokenDTO idTokenDTO = tokReqMsgCtx.getPreIssueIDTokenActionDTO();
+            //Optimise idTokenDTO object before caching
+            if (idTokenDTO != null) {
+                idTokenDTO.setIdTokenClaimsSet(null);
+                authorizationGrantCacheEntry.setPreIssueIDTokenActionDTO(
+                        idTokenDTO);
+                authorizationGrantCacheEntry.setPreIssueIDTokenActionsExecuted(true);
+            }
+            log.debug("Customized audience list and access token attributes from pre issue access token actions " +
+                    "are persisted in the AuthorizationGrantCache against the token id: " +
+                    tokenRespDTO.getTokenId());
+        }
+        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
 
     private void clearCacheEntryAgainstAuthorizationCode(String authorizationCode) {
