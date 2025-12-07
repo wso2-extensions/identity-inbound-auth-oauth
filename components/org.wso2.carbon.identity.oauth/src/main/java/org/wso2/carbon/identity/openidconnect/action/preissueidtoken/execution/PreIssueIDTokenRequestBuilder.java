@@ -265,7 +265,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         if (SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
             return resolveSSOFederatedUser(authenticatedUser, grantType, clientID);
         }
-
         return resolveFederatedUser(authenticatedUser, grantType);
     }
 
@@ -321,7 +320,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             // normal federated Login.
             return resolveFederatedUser(authenticatedUser, grantType);
         }
-
     }
 
     private Organization resolveUserAuthenticatedOrganization(AuthenticatedUser authenticatedUser) {
@@ -409,7 +407,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         }
 
         String organizationId = resolveOrganizationId(idTokenIssuingOrganization);
-
         return buildOrganization(organizationId, idTokenIssuingOrganization);
     }
 
@@ -421,7 +418,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
         OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
         try {
-
             MinimalOrganization existingOrganization =
                     organizationManager.getMinimalOrganization(organizationId, tenantDomain);
 

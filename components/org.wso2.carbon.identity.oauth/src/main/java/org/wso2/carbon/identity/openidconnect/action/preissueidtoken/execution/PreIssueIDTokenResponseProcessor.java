@@ -322,8 +322,6 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
                     "Audience added.");
         }
 
-        //todo: In the add path it should be possible to add audience irrespective of the fact the access token
-        // included a set of audiences or not. Need to recheck this.
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                 "Audience claim not found.");
     }
