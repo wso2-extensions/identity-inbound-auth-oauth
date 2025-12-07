@@ -854,56 +854,6 @@ public class PreIssueIDTokenRequestBuilderTest {
         Assert.assertNotNull(event.getUserStore());
     }
 
-//    @Test
-//    public void allowedOperationsIncludeAllClaimTypes() throws ActionExecutionRequestBuilderException {
-//
-//        Map<String, Object> customClaims = new HashMap<>();
-//        customClaims.put("string_claim", "value");
-//        customClaims.put("number_claim", 123);
-//        customClaims.put("boolean_claim", true);
-//        customClaims.put("list_claim", Arrays.asList("item1", "item2"));
-//        customClaims.put("array_claim", new String[]{"val1", "val2"});
-//
-//        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
-//        idTokenDTO.setCustomOIDCClaims(customClaims);
-//
-//        FlowContext flowContext = FlowContext.create()
-//                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
-//                .add(ID_TOKEN_DTO, idTokenDTO)
-//                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
-//
-//        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-//                .buildActionExecutionRequest(flowContext, null);
-//
-//        Assert.assertNotNull(actionExecutionRequest);
-//        List<AllowedOperation> allowedOperations = actionExecutionRequest.getAllowedOperations();
-//
-//        Assert.assertEquals(allowedOperations.size(), 3);
-//
-//        AllowedOperation addOp = allowedOperations.stream()
-//                .filter(op -> op.getOp() == Operation.ADD)
-//                .findFirst()
-//                .orElse(null);
-//        Assert.assertNotNull(addOp);
-//        Assert.assertTrue(addOp.getPaths().contains("/idToken/claims/"));
-//
-//        AllowedOperation removeOp = allowedOperations.stream()
-//                .filter(op -> op.getOp() == Operation.REMOVE)
-//                .findFirst()
-//                .orElse(null);
-//        Assert.assertNotNull(removeOp);
-//        Assert.assertTrue(removeOp.getPaths().contains("/idToken/claims/string_claim"));
-//        Assert.assertTrue(removeOp.getPaths().contains("/idToken/claims/list_claim/"));
-//        Assert.assertTrue(removeOp.getPaths().contains("/idToken/claims/array_claim/"));
-//
-//        AllowedOperation replaceOp = allowedOperations.stream()
-//                .filter(op -> op.getOp() == Operation.REPLACE)
-//                .findFirst()
-//                .orElse(null);
-//        Assert.assertNotNull(replaceOp);
-//        Assert.assertTrue(replaceOp.getPaths().contains("/idToken/claims/expires_in/"));
-//    }
-
     @Test
     public void allowedOperationsHandleComplexClaimStructures() throws ActionExecutionRequestBuilderException {
 
@@ -959,39 +909,6 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .anyMatch(op -> op.getPaths().contains("/idToken/claims/aud/"));
         Assert.assertTrue(hasAudInReplace);
     }
-
-//    @Test
-//    public void buildActionExecutionRequestForAuthzWithNullScopes()
-//            throws ActionExecutionRequestBuilderException {
-//
-//        OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
-//        authzReqDTO.setConsumerKey(CLIENT_ID_TEST);
-//        authzReqDTO.setResponseType(RESPONSE_TYPE_CODE);
-//        authzReqDTO.setTenantDomain(TENANT_DOMAIN_TEST);
-//
-//        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-//        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
-//        authenticatedUser.setUserName(USERNAME_TEST);
-//        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
-//        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
-//        authenticatedUser.setUserId(USER_ID_TEST);
-//        authzReqDTO.setUser(authenticatedUser);
-//
-//        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
-//
-//        FlowContext flowContext = FlowContext.create()
-//                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
-//                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
-//                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
-//
-//        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-//                .buildActionExecutionRequest(flowContext, null);
-//
-//        Assert.assertNotNull(actionExecutionRequest);
-//        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
-//        IDTokenRequest request = (IDTokenRequest) event.getRequest();
-//        Assert.assertNull(request.getScopes());
-//    }
 
     @Test
     public void buildActionExecutionRequestUsesRequestScopeWhenTokenReqScopeIsNull()
@@ -1278,5 +1195,422 @@ public class PreIssueIDTokenRequestBuilderTest {
         idTokenDTO.setExpiresIn(3600000L);
 
         return idTokenDTO;
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithMultipleHeadersForTokenFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        HttpRequestHeader[] headers = new HttpRequestHeader[]{
+                new HttpRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
+                new HttpRequestHeader("Authorization", "Bearer token123"),
+                new HttpRequestHeader("X-Custom-Header", "custom-value"),
+                new HttpRequestHeader("X-Correlation-Id", "correlation-123")
+        };
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
+        tokenReqDTO.setHttpRequestHeaders(headers);
+
+        OAuthTokenReqMessageContext tokenContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        tokenContext.setAuthorizedUser(authenticatedUser);
+        tokenContext.setScope(new String[]{"openid"});
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertEquals(request.getAdditionalHeaders().size(), 4);
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithNullHeadersForTokenFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
+        tokenReqDTO.setHttpRequestHeaders(null);
+
+        OAuthTokenReqMessageContext tokenContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        tokenContext.setAuthorizedUser(authenticatedUser);
+        tokenContext.setScope(new String[]{"openid"});
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertTrue(request.getAdditionalHeaders().isEmpty());
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithMultipleParametersForTokenFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        RequestParameter[] parameters = new RequestParameter[]{
+                new RequestParameter("param1", new String[]{"value1"}),
+                new RequestParameter("param2", new String[]{"value2"}),
+                new RequestParameter("param3", new String[]{"value3a", "value3b"}),
+                new RequestParameter("redirect_uri", new String[]{"https://example.com/callback"})
+        };
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
+        tokenReqDTO.setRequestParameters(parameters);
+
+        OAuthTokenReqMessageContext tokenContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        tokenContext.setAuthorizedUser(authenticatedUser);
+        tokenContext.setScope(new String[]{"openid"});
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertEquals(request.getAdditionalParams().size(), 4);
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithNullParametersForTokenFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
+        tokenReqDTO.setRequestParameters(null);
+
+        OAuthTokenReqMessageContext tokenContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        tokenContext.setAuthorizedUser(authenticatedUser);
+        tokenContext.setScope(new String[]{"openid"});
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertTrue(request.getAdditionalParams().isEmpty());
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithHeadersForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        HttpRequestHeader[] headers = new HttpRequestHeader[]{
+                new HttpRequestHeader("User-Agent", "Mozilla/5.0"),
+                new HttpRequestHeader("Accept", "text/html"),
+                new HttpRequestHeader("X-Forwarded-For", "192.168.1.1")
+        };
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+        authzReqDTO.setHttpRequestHeaders(headers);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertEquals(request.getAdditionalHeaders().size(), 3);
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithNullHeadersForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+        authzReqDTO.setHttpRequestHeaders(null);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertTrue(request.getAdditionalHeaders().isEmpty());
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithParametersFromHttpServletRequestForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+
+        javax.servlet.http.HttpServletRequestWrapper mockRequest =
+                mock(javax.servlet.http.HttpServletRequestWrapper.class);
+
+        Map<String, String[]> parameterMap = new HashMap<>();
+        parameterMap.put("state", new String[]{"state123"});
+        parameterMap.put("nonce", new String[]{"nonce456"});
+        parameterMap.put("redirect_uri", new String[]{"https://example.com/callback"});
+        parameterMap.put("code_challenge", new String[]{"challenge789"});
+
+        when(mockRequest.getParameterMap()).thenReturn(parameterMap);
+
+        authzReqDTO.setHttpServletRequestWrapper(mockRequest);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertEquals(request.getAdditionalParams().size(), 4);
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithNullHttpServletRequestForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+        authzReqDTO.setHttpServletRequestWrapper(null);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertTrue(request.getAdditionalParams().isEmpty());
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithEmptyParameterMapForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+
+        javax.servlet.http.HttpServletRequestWrapper mockRequest =
+                mock(javax.servlet.http.HttpServletRequestWrapper.class);
+
+        when(mockRequest.getParameterMap()).thenReturn(new HashMap<>());
+
+        authzReqDTO.setHttpServletRequestWrapper(mockRequest);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertTrue(request.getAdditionalParams().isEmpty());
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithHeadersAndParametersForTokenFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        HttpRequestHeader[] headers = new HttpRequestHeader[]{
+                new HttpRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
+                new HttpRequestHeader("Authorization", "Bearer token123")
+        };
+
+        RequestParameter[] parameters = new RequestParameter[]{
+                new RequestParameter("grant_type", new String[]{GRANT_TYPE_TEST}),
+                new RequestParameter("code", new String[]{"auth_code_123"})
+        };
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
+        tokenReqDTO.setHttpRequestHeaders(headers);
+        tokenReqDTO.setRequestParameters(parameters);
+
+        OAuthTokenReqMessageContext tokenContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        tokenContext.setAuthorizedUser(authenticatedUser);
+        tokenContext.setScope(new String[]{"openid"});
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertEquals(request.getAdditionalHeaders().size(), 2);
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertEquals(request.getAdditionalParams().size(), 2);
+    }
+
+    @Test
+    public void buildActionExecutionRequestWithHeadersAndParametersForAuthzFlow()
+            throws ActionExecutionRequestBuilderException {
+
+        HttpRequestHeader[] headers = new HttpRequestHeader[]{
+                new HttpRequestHeader("User-Agent", "Mozilla/5.0"),
+                new HttpRequestHeader("Accept", "text/html")
+        };
+
+        OAuth2AuthorizeReqDTO authzReqDTO = getMockOAuth2AuthorizeReqDTO();
+        authzReqDTO.setHttpRequestHeaders(headers);
+
+        javax.servlet.http.HttpServletRequestWrapper mockRequest =
+                mock(javax.servlet.http.HttpServletRequestWrapper.class);
+
+        Map<String, String[]> parameterMap = new HashMap<>();
+        parameterMap.put("state", new String[]{"state123"});
+        parameterMap.put("nonce", new String[]{"nonce456"});
+
+        when(mockRequest.getParameterMap()).thenReturn(parameterMap);
+
+        authzReqDTO.setHttpServletRequestWrapper(mockRequest);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserName(USERNAME_TEST);
+        authenticatedUser.setTenantDomain(TENANT_DOMAIN_TEST);
+        authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
+        authenticatedUser.setUserId(USER_ID_TEST);
+
+        authzReqDTO.setUser(authenticatedUser);
+
+        OAuthAuthzReqMessageContext authzContext = new OAuthAuthzReqMessageContext(authzReqDTO);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzContext)
+                .add(ID_TOKEN_DTO, getMockIDTokenDTO())
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
+                .buildActionExecutionRequest(flowContext, null);
+
+        Assert.assertNotNull(actionExecutionRequest);
+        PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
+        IDTokenRequest request = (IDTokenRequest) event.getRequest();
+        Assert.assertNotNull(request.getAdditionalHeaders());
+        Assert.assertEquals(request.getAdditionalHeaders().size(), 2);
+        Assert.assertNotNull(request.getAdditionalParams());
+        Assert.assertEquals(request.getAdditionalParams().size(), 2);
     }
 }

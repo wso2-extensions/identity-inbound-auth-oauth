@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
@@ -62,6 +64,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequestWrapper;
+
 /**
  * This class is responsible for building the action execution request for the pre issue id token action.
  */
@@ -77,7 +81,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
     private static final String ID_TOKEN_DTO = "idTokenDTO";
     private static final String FEDERATED_USER = "FEDERATED";
     private static final String LOCAL_USER = "LOCAL";
-    private static final String INTERNAL_FEDERATED = "INTERNAL_FEDERATED";
     private static final String SSO_FEDERATED_IDP = "SSO";
 
     @Override
@@ -92,23 +95,24 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             throws ActionExecutionRequestBuilderException {
 
 
-        IDTokenDTO idTokenDTO =
-                flowContext.getValue(ID_TOKEN_DTO, IDTokenDTO.class);
+        IDTokenDTO idTokenDTO = flowContext.getValue(ID_TOKEN_DTO, IDTokenDTO.class);
         Map<String, Object> oidcCustomClaims = idTokenDTO.getCustomOIDCClaims() != null ?
                 idTokenDTO.getCustomOIDCClaims() : new HashMap<>();
 
         String requestType = flowContext.getValue(REQUEST_TYPE, String.class);
-        if (REQUEST_TYPE_TOKEN.equals(requestType)) {
-            return buildActionExecutionRequest(
-                    flowContext.getValue(TOKEN_REQUEST_MESSAGE_CONTEXT, OAuthTokenReqMessageContext.class),
-                    idTokenDTO, oidcCustomClaims);
-        } else if (REQUEST_TYPE_AUTHZ.equals(requestType)) {
-            return buildActionExecutionRequest(
-                    flowContext.getValue(AUTHZ_REQUEST_MESSAGE_CONTEXT, OAuthAuthzReqMessageContext.class),
-                    idTokenDTO, oidcCustomClaims);
+        switch (requestType) {
+            case REQUEST_TYPE_TOKEN:
+                return buildActionExecutionRequest(
+                        flowContext.getValue(TOKEN_REQUEST_MESSAGE_CONTEXT, OAuthTokenReqMessageContext.class),
+                        idTokenDTO, oidcCustomClaims);
+            case REQUEST_TYPE_AUTHZ:
+                return buildActionExecutionRequest(
+                        flowContext.getValue(AUTHZ_REQUEST_MESSAGE_CONTEXT, OAuthAuthzReqMessageContext.class),
+                        idTokenDTO, oidcCustomClaims);
+            default:
+                throw new ActionExecutionRequestBuilderException("Invalid request type found in the flow context: " +
+                        requestType);
         }
-        throw new ActionExecutionRequestBuilderException("Invalid request type found in the flow context: " +
-                requestType);
     }
 
     private ActionExecutionRequest buildActionExecutionRequest(OAuthTokenReqMessageContext tokenMessageContext,
@@ -339,6 +343,20 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         } else {
             tokenRequestBuilder.scopes(Arrays.asList(requestScopes));
         }
+
+        HttpRequestHeader[] httpHeaders = tokenRequestDTO.getHttpRequestHeaders();
+        if (httpHeaders != null) {
+            for (HttpRequestHeader header : httpHeaders) {
+                tokenRequestBuilder.addAdditionalHeader(header.getName(), header.getValue());
+            }
+        }
+
+        RequestParameter[] requestParameters = tokenRequestDTO.getRequestParameters();
+        if (requestParameters != null) {
+            for (RequestParameter parameter : requestParameters) {
+                tokenRequestBuilder.addAdditionalParam(parameter.getKey(), parameter.getValue());
+            }
+        }
         return tokenRequestBuilder.build();
     }
 
@@ -348,6 +366,23 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         tokenRequestBuilder.clientId(authzRequestDTO.getConsumerKey());
         tokenRequestBuilder.responseType(authzRequestDTO.getResponseType());
         tokenRequestBuilder.scopes(Arrays.asList(authzRequestDTO.getScopes()));
+
+        HttpRequestHeader[] httpHeaders = authzRequestDTO.getHttpRequestHeaders();
+        if (httpHeaders != null) {
+            for (HttpRequestHeader header : httpHeaders) {
+                tokenRequestBuilder.addAdditionalHeader(header.getName(), header.getValue());
+            }
+        }
+
+        // Extract request parameters from HttpServletRequestWrapper
+        if (authzRequestDTO.getHttpServletRequestWrapper() != null) {
+            HttpServletRequestWrapper request = authzRequestDTO.getHttpServletRequestWrapper();
+            if (request.getParameterMap() != null) {
+                for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+                    tokenRequestBuilder.addAdditionalParam(entry.getKey(), entry.getValue());
+                }
+            }
+        }
         return tokenRequestBuilder.build();
     }
 
@@ -365,7 +400,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
     private Organization buildIDTokenIssuingOrganization() {
 
-        // Issuing organization is the tenant domain of the login tenant. In Sub organizations, parent organization
+        // Issuing organization is the tenant domain of the login tenant. In Sub organizations, the parent organization
         // issues the ID token, hence issuing organization is resolved using the login tenant domain.
         String idTokenIssuingOrganization = IdentityTenantUtil.getTenantDomain(
                 IdentityTenantUtil.getLoginTenantId());
@@ -375,7 +410,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
         String organizationId = resolveOrganizationId(idTokenIssuingOrganization);
 
-        return buildOrganization(organizationId, null);
+        return buildOrganization(organizationId, idTokenIssuingOrganization);
     }
 
     private Organization buildOrganization(String organizationId, String tenantDomain) {
@@ -409,8 +444,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         try {
             return organizationManager.resolveOrganizationId(tenantDomain);
         } catch (OrganizationManagementException e) {
-            LOG.error(
-                    "Error while retrieving organization Id with tenant: " + tenantDomain, e);
+            LOG.error("Error while retrieving organization Id with tenant: " + tenantDomain, e);
         }
         return null;
     }

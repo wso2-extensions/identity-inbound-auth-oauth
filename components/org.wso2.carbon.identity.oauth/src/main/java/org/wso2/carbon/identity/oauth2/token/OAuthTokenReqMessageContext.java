@@ -243,21 +243,42 @@ public class OAuthTokenReqMessageContext {
         this.additionalAccessTokenClaims = additionalAccessTokenClaims;
     }
 
+    /**
+     * Checks if pre-issue ID token actions have been executed.
+     *
+     * @return true if pre-issue ID token actions have been executed, false otherwise.
+     */
     public boolean isPreIssueIDTokenActionsExecuted() {
 
         return preIssueIDTokenActionsExecuted;
     }
 
+    /**
+     * Sets the status of pre-issue ID token actions execution.
+     * This method updates the flag indicating whether the pre-issue ID token action has been executed which will be
+     * checked before caching of customised attributes.
+     * @param preIssueIDTokenActionsExecuted true if pre-issue ID token actions have been executed, false otherwise.
+     */
     public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
 
         this.preIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
     }
 
+    /**
+     * Gets the IDTokenDTO associated with the pre-issue ID token action.
+     *
+     * @return IDTokenDTO object containing ID token details.
+     */
     public IDTokenDTO getPreIssueIDTokenActionDTO() {
 
         return preIssueIDTokenActionDTO;
     }
 
+    /**
+     * Sets the IDTokenDTO for the pre-issue ID token action.
+     *
+     * @param preIssueIDTokenActionDTO IDTokenDTO object containing ID token details.
+     */
     public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
 
         this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;

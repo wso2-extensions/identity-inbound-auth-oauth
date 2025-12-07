@@ -93,8 +93,7 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
             throws ActionExecutionResponseProcessorException {
 
 
-        IDTokenDTO idTokenDTO =
-                flowContext.getValue(ID_TOKEN_DTO, IDTokenDTO.class);
+        IDTokenDTO idTokenDTO = flowContext.getValue(ID_TOKEN_DTO, IDTokenDTO.class);
 
         PreIssueIDTokenEvent preIssueIdTokenEvent = (PreIssueIDTokenEvent)
                 actionExecutionResponseContext.getActionEvent();
@@ -103,7 +102,6 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
         IDToken requestedIDToken = preIssueIdTokenEvent.getIdToken();
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
-
 
         if (operationsToPerform != null && !operationsToPerform.isEmpty()) {
             for (PerformableOperation operation : operationsToPerform) {
@@ -147,7 +145,6 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
             throw new ActionExecutionResponseProcessorException("Invalid request type found in the flow context: "
                     + tokenType);
         }
-
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
 
@@ -289,9 +286,8 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
         if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + IDToken.ClaimNames.AUD.getName())) {
             return addAudience(operation, requestIDToken, responseIDTokenDTO);
-        } else {
-            return addToOtherClaims(operation, requestIDToken, responseIDTokenDTO);
         }
+        return addToOtherClaims(operation, requestIDToken, responseIDTokenDTO);
     }
 
     private OperationExecutionResult addAudience(PerformableOperation operation,
@@ -410,6 +406,7 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
     private OperationExecutionResult handleRemoveOperation(PerformableOperation operation, IDToken requestedIDToken,
                                                           IDTokenDTO responseIDTokenDTO) {
+
         if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
             return removeClaim(operation, requestedIDToken, responseIDTokenDTO);
         }
@@ -422,9 +419,9 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
         if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + IDToken.ClaimNames.AUD.getName())) {
             return removeAudience(operation, requestIDToken, responseIDTokenDTO);
-        } else {
-            return removeOtherClaims(operation, requestIDToken, responseIDTokenDTO);
         }
+        return removeOtherClaims(operation, requestIDToken, responseIDTokenDTO);
+
     }
 
     private OperationExecutionResult removeAudience(PerformableOperation operation,

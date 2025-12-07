@@ -1519,9 +1519,16 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
             authorizationGrantCacheEntry.setCustomClaims(tokReqMsgCtx.getAdditionalAccessTokenClaims());
-            authorizationGrantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
 
+            if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
+                authorizationGrantCacheEntry.setValidityPeriod(
+                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
+            } else {
+                authorizationGrantCacheEntry.setValidityPeriod(
+                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
+            }
+            log.debug("Customized audience list and access token attributes from pre issue access token actions " +
+                    "are persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
         }
         if (tokReqMsgCtx.isPreIssueIDTokenActionsExecuted()) {
 
@@ -1529,13 +1536,11 @@ public class AccessTokenIssuer {
             //Optimise idTokenDTO object before caching
             if (idTokenDTO != null) {
                 idTokenDTO.setIdTokenClaimsSet(null);
-                authorizationGrantCacheEntry.setPreIssueIDTokenActionDTO(
-                        idTokenDTO);
+                authorizationGrantCacheEntry.setPreIssueIDTokenActionDTO(idTokenDTO);
                 authorizationGrantCacheEntry.setPreIssueIDTokenActionsExecuted(true);
+                log.debug("Customized audience list and ID token attributes from pre issue ID token actions are" +
+                        "persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
             }
-            log.debug("Customized audience list and access token attributes from pre issue access token actions " +
-                    "are persisted in the AuthorizationGrantCache against the token id: " +
-                    tokenRespDTO.getTokenId());
         }
         AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }

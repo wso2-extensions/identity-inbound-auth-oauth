@@ -1062,7 +1062,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
             if (log.isDebugEnabled()) {
                 log.debug(String.format(
-                        "Invoked pre issue access token action for clientID: %s grant types: %s. Status: %s",
+                        "Invoked pre issue ID token action for clientID: %s grant types: %s. Status: %s",
                         tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
                         tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
                         Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
@@ -1101,7 +1101,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
             if (log.isDebugEnabled()) {
                 log.debug(String.format(
-                        "Invoked pre issue access token action for clientID: %s grant types: %s. Status: %s",
+                        "Invoked pre issue ID token action for clientID: %s grant types: %s. Status: %s",
                         authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(),
                         authzReqMessageContext.getAuthorizationReqDTO().getResponseType(),
                         Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));

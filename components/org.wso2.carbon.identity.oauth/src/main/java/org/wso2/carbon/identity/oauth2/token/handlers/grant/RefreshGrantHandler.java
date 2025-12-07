@@ -985,17 +985,18 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
-        boolean isSystemApplication = IdentityTenantUtil.isSystemApplication(
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain(),
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+        boolean isSystemApplication = IdentityTenantUtil.isSystemApplication(tenantDomain, clientId);
 
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         // Allow for following grant types and for JWT access tokens if,
         boolean isGrantTypeAllowed = (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                 OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType));
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
+                OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType) ||
+                OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType));
         // Pre-issue ID token action invocation is enabled at server level.
         // For the System applications, pre issue ID token actions will not be executed.
+        // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
         return !isSystemApplication && OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                 .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) && isGrantTypeAllowed
                 && !OAuth2Util.isFragmentApp(clientId, tenantDomain);

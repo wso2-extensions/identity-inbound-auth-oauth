@@ -6400,6 +6400,11 @@ public class OAuth2Util {
     public static boolean isFragmentApp(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception {
 
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Client ID or Tenant Domain is blank while checking whether the " +
+                    "application is a fragment app.");
+        }
+
         ServiceProviderProperty[] serviceProviderProperties;
         try {
              serviceProviderProperties =
