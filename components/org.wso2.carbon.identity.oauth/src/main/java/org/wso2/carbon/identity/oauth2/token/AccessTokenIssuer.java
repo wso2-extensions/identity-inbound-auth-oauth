@@ -1514,7 +1514,6 @@ public class AccessTokenIssuer {
         authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
 
         if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
-
             authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
@@ -1531,7 +1530,6 @@ public class AccessTokenIssuer {
                     "are persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
         }
         if (tokReqMsgCtx.isPreIssueIDTokenActionsExecuted()) {
-
             IDTokenDTO idTokenDTO = tokReqMsgCtx.getPreIssueIDTokenActionDTO();
             //Optimise idTokenDTO object before caching
             if (idTokenDTO != null) {

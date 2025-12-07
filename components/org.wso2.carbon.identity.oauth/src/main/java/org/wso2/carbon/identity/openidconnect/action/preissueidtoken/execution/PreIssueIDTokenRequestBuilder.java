@@ -421,7 +421,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
         OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
         try {
-
             MinimalOrganization existingOrganization =
                     organizationManager.getMinimalOrganization(organizationId, tenantDomain);
 
