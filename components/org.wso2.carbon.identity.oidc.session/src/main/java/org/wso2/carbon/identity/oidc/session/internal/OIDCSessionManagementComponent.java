@@ -20,30 +20,23 @@ package org.wso2.carbon.identity.oidc.session.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.eclipse.equinox.http.helper.ContextPathServletAdaptor;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.application.authentication.framework.listener.SessionContextMgtListener;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oidc.session.OIDCInboundSessionContextMgtListener;
-import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.backchannellogout.ClaimProviderImpl;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutEventHandler;
 import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
-import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
-import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.core.service.RealmService;
-
-import javax.servlet.Servlet;
 
 /**
  * OIDC session management component class.
@@ -57,34 +50,6 @@ public class OIDCSessionManagementComponent {
     private static final Log log = LogFactory.getLog(OIDCSessionManagementComponent.class);
 
     protected void activate(ComponentContext context) {
-
-        HttpService httpService = OIDCSessionManagementComponentServiceHolder.getHttpService();
-
-        // Register Session IFrame Servlet
-        Servlet sessionIFrameServlet = new ContextPathServletAdaptor(new OIDCSessionIFrameServlet(),
-                OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT);
-        try {
-            httpService.registerServlet(OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT,
-                    sessionIFrameServlet, null, null);
-        } catch (Exception e) {
-            String msg = "Error when registering OIDC Session IFrame Servlet via the HttpService.";
-            log.error(msg, e);
-            throw new RuntimeException(msg, e);
-        }
-
-        Servlet logoutServlet = new ContextPathServletAdaptor(new OIDCLogoutServlet(),
-                OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT);
-        try {
-            httpService.registerServlet(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT, logoutServlet, null,
-                    null);
-        } catch (Exception e) {
-            String msg = "Error when registering OIDC Logout Servlet via the HttpService.";
-            log.error(msg, e);
-            throw new RuntimeException(msg, e);
-        }
-        if (log.isDebugEnabled()) {
-            log.info("OIDC Session Management bundle is activated");
-        }
 
         ClaimProviderImpl claimProviderImpl = new ClaimProviderImpl();
         try {
@@ -117,29 +82,6 @@ public class OIDCSessionManagementComponent {
         if (log.isDebugEnabled()) {
             log.info("OIDC Session Management bundle is deactivated");
         }
-    }
-
-    @Reference(
-            name = "osgi.http.service",
-            service = HttpService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetHttpService"
-    )
-    protected void setHttpService(HttpService httpService) {
-
-        if (log.isDebugEnabled()) {
-            log.info("Setting the HTTP Service in OIDC Session Management bundle");
-        }
-        OIDCSessionManagementComponentServiceHolder.setHttpService(httpService);
-    }
-
-    protected void unsetHttpService(HttpService httpService) {
-
-        if (log.isDebugEnabled()) {
-            log.info("Unsetting the HTTP Service in OIDC Session Management bundle");
-        }
-        OIDCSessionManagementComponentServiceHolder.setHttpService(null);
     }
 
     @Reference(

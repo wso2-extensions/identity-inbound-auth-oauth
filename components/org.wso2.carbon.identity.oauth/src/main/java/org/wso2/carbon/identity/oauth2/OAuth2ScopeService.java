@@ -21,6 +21,7 @@ import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -54,6 +55,13 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages
 /**
  * OAuth2ScopeService use for scope handling
  */
+@Capability(
+        namespace = "osgi.service",
+        attribute = {
+                "objectClass=org.wso2.carbon.identity.oauth2.OAuth2ScopeService",
+                "service.scope=singleton"
+        }
+)
 public class OAuth2ScopeService implements ScopeMetadataService {
 
     private static final Log log = LogFactory.getLog(OAuth2ScopeService.class);

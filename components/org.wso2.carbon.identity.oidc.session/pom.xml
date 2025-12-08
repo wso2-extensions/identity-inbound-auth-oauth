@@ -103,8 +103,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -184,7 +190,6 @@
                             com.nimbusds.jwt; version="${nimbusds.osgi.version.range}",
                             org.json.*,
 
-                            org.eclipse.equinox.http.helper,
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
                             org.osgi.service.http; version="${osgi.service.http.imp.pkg.version.range}",
