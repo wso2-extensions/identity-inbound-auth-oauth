@@ -138,6 +138,9 @@
             <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenRequestBuilderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.rule.PreIssueIDTokenRuleEvaluationDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenResponseProcessorTest"/>
         </classes>
     </test>
 
@@ -227,6 +230,9 @@
             <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilderTest"/>
             <class name="org.wso2.carbon.identity.oauth.action.rule.PreIssueAccessTokenRuleEvaluationDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenRequestBuilderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.rule.PreIssueIDTokenRuleEvaluationDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenResponseProcessorTest"/>
         </classes>
     </test>
 </suite>

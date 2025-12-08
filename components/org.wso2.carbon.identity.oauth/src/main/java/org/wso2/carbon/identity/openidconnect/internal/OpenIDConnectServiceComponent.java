@@ -24,6 +24,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
@@ -36,7 +38,11 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimMetaDataOperationHandler;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenRequestBuilder;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenResponseProcessor;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.rule.PreIssueIDTokenRuleEvaluationDataProvider;
 import org.wso2.carbon.identity.openidconnect.handlers.RequestObjectHandler;
+import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 
 import java.util.Comparator;
 
@@ -65,6 +71,9 @@ public class OpenIDConnectServiceComponent {
                     new OIDCClaimMetaDataOperationHandler(), null);
             bundleContext.registerService(ClaimProvider.class.getName(),
                     new OIDCAgentClaimProviderImpl(), null);
+
+            registerActionRequestBuilderAndResponseProcessor(context);
+            registerRuleEvaluationDataProvider(context);
         } catch (Throwable e) {
             String errMsg = "Error while activating OpenIDConnectServiceComponent.";
             log.error(errMsg, e);
@@ -284,5 +293,22 @@ public class OpenIDConnectServiceComponent {
     protected void unsetAppRolesResolverService(ApplicationRolesResolver applicationRolesResolver) {
 
         OpenIDConnectServiceComponentHolder.getInstance().removeApplicationRolesResolver(applicationRolesResolver);
+    }
+
+    private void registerActionRequestBuilderAndResponseProcessor(ComponentContext context) {
+
+        context.getBundleContext()
+                .registerService(ActionExecutionRequestBuilder.class, new PreIssueIDTokenRequestBuilder(), null);
+        context.getBundleContext()
+                .registerService(ActionExecutionResponseProcessor.class, new PreIssueIDTokenResponseProcessor(),
+                        null);
+    }
+
+    private void registerRuleEvaluationDataProvider(ComponentContext context) {
+
+        context.getBundleContext()
+                .registerService(RuleEvaluationDataProvider.class, new
+                                PreIssueIDTokenRuleEvaluationDataProvider(),
+                        null);
     }
 }

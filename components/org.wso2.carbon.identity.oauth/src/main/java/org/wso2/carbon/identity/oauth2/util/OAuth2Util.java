@@ -76,6 +76,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -218,6 +219,7 @@ import javax.xml.namespace.QName;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -6384,5 +6386,39 @@ public class OAuth2Util {
             }
         }
         return tenantDomain;
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param clientId     OAuth client ID
+     * @param tenantDomain Tenant domain of the OAuth application
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Client ID or Tenant Domain is blank while checking whether the " +
+                    "application is a fragment app.");
+        }
+
+        ServiceProviderProperty[] serviceProviderProperties;
+        try {
+             serviceProviderProperties =
+                    OAuthAppDO.getOrgApplication(clientId, tenantDomain).getSpProperties();
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while checking whether the application is a fragment app. " +
+                    "Client ID: " + clientId + ", Tenant Domain: " + tenantDomain, e);
+        }
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
     }
 }

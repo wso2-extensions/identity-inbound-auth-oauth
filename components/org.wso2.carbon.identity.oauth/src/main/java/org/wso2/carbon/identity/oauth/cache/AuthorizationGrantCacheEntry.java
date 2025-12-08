@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.ArrayList;
@@ -92,6 +93,11 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private Map<String, Object> customClaims;
 
     private boolean isPreIssueAccessTokenActionsExecuted;
+
+
+    private boolean isPreIssueIDTokenActionsExecuted;
+
+    private IDTokenDTO preIssueIDTokenActionDTO;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -413,5 +419,25 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
             Map<ClaimMapping, String> mappedRemoteClaims) {
 
         this.mappedRemoteClaims = mappedRemoteClaims;
+    }
+
+    public IDTokenDTO getPreIssueIDTokenActionDTO() {
+
+        return preIssueIDTokenActionDTO;
+    }
+
+    public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
+
+        this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
+    }
+
+    public boolean isPreIssueIDTokenActionsExecuted() {
+
+        return isPreIssueIDTokenActionsExecuted;
+    }
+
+    public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
+
+        isPreIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
     }
 }
