@@ -94,7 +94,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
                                                               ActionExecutionRequestContext actionExecutionContext)
             throws ActionExecutionRequestBuilderException {
 
-
         IDTokenDTO idTokenDTO = flowContext.getValue(ID_TOKEN_DTO, IDTokenDTO.class);
         Map<String, Object> oidcCustomClaims = idTokenDTO.getCustomOIDCClaims() != null ?
                 idTokenDTO.getCustomOIDCClaims() : new HashMap<>();
@@ -190,7 +189,6 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         return eventBuilder.build();
     }
 
-
     private List<AllowedOperation> getAllowedOperations(Map<String, Object> claimsToAdd) {
 
         List<String> removeOrReplacePaths = getRemoveOrReplacePaths(claimsToAdd);
@@ -280,6 +278,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             if (authenticatedUser.getAccessingOrganization() != null) {
                 accessingOrg = buildOrganization(authenticatedUser.getAccessingOrganization(),
                         authenticatedUser.getTenantDomain());
+                // In case of org switch, if accessing org is not set, it means user is switching to root org.
             } else {
                 accessingOrg = buildOrganization(
                         resolveOrganizationId(authenticatedUser.getTenantDomain()),
