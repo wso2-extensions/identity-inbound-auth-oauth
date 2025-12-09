@@ -82,12 +82,10 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
         (bounded by the "iat", "nbf" and "exp" claims). */
         this.jwtProcessor = new DefaultJWTProcessor<>();
-        Set<JOSEObjectType> allowedTypes = new HashSet<>(Arrays.asList(
-                JOSEObjectType.JWT,
-                new JOSEObjectType("at+jwt"),
-                null
-        ));
-        this.jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(allowedTypes));
+        jwtProcessor.setJWSTypeVerifier((type, context) -> {
+            // Do nothing.
+            // This effectively says "All types are valid" to keep backward compatibility.
+        });
     }
 
     @Override

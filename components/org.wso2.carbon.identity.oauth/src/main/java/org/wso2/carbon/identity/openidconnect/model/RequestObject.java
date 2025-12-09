@@ -86,8 +86,7 @@ public class RequestObject implements Serializable {
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
             Map<String, Object> claims = this.claimsSet.toJSONObject();
-            JSONObject jsonClaims = new JSONObject(claims);
-            processClaimObject(jsonClaims);
+            processClaimObject(claims);
         }
     }
 
@@ -120,8 +119,7 @@ public class RequestObject implements Serializable {
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
             Map<String, Object> claims = this.claimsSet.toJSONObject();
-            JSONObject jsonClaims = new JSONObject(claims);
-            processClaimObject(jsonClaims);
+            processClaimObject(claims);
         }
     }
 
@@ -139,7 +137,7 @@ public class RequestObject implements Serializable {
      * @param jsonObjectRequestedClaims requested claims of the request object
      * @throws ParseException
      */
-    private void processClaimObject(JSONObject jsonObjectRequestedClaims) throws RequestObjectException {
+    private void processClaimObject(Map<String, Object> jsonObjectRequestedClaims) throws RequestObjectException {
 
         try {
             Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();

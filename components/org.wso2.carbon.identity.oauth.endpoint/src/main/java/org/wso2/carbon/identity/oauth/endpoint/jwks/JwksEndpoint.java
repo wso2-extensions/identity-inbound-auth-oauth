@@ -99,7 +99,7 @@ public class JwksEndpoint {
     private String buildResponse(List<CertificateInfo> certInfoList)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
-        ArrayList<Map<String, Object>> jwksArray = new ArrayList<>();
+        List<Map<String, Object>> jwksArray = new ArrayList<>();
         JSONObject jwksJson = new JSONObject();
         OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
         JWSAlgorithm accessTokenSignAlgorithm =
@@ -124,7 +124,7 @@ public class JwksEndpoint {
     }
 
     private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
-                                   ArrayList<Map<String, Object>> jwksArray, String hashingAlgorithm)
+                                   List<Map<String, Object>> jwksArray, String hashingAlgorithm)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
         for (CertificateInfo certInfo : certInfoList) {
@@ -176,7 +176,7 @@ public class JwksEndpoint {
      * @throws ParseException
      */
     @Deprecated
-    private void createKeySetUsingOldKeyID(ArrayList<Map<String, Object>> jwksArray, List<CertificateInfo> certInfoList,
+    private void createKeySetUsingOldKeyID(List<Map<String, Object>> jwksArray, List<CertificateInfo> certInfoList,
                                            JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
         for (CertificateInfo certInfo : certInfoList) {
