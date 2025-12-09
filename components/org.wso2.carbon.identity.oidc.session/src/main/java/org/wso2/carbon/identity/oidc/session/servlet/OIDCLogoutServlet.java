@@ -781,14 +781,14 @@ public class OIDCLogoutServlet extends HttpServlet {
                 throw new RuntimeException(e);
             }
 
-            boolean isFrontchannelLogoutEnabled = false;
-            try {
-                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
-            } catch (IdentityOAuth2Exception e) {
-                throw new RuntimeException(e);
-            } catch (InvalidOAuthClientException e) {
-                throw new RuntimeException(e);
-            }
+            boolean isFrontchannelLogoutEnabled = true;
+//            try {
+//                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
+//            } catch (IdentityOAuth2Exception e) {
+//                throw new RuntimeException(e);
+//            } catch (InvalidOAuthClientException e) {
+//                throw new RuntimeException(e);
+//            }
             String frontchannelLogoutPage = null;
             if (isFrontchannelLogoutEnabled) {
                 // Building Frontchannel Logout HTML page

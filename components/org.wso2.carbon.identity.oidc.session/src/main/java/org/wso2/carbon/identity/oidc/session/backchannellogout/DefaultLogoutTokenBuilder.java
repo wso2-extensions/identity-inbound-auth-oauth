@@ -323,29 +323,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      */
     private String getIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
-        return getIdTokenIssuer(tenantDomain);
-    }
-
-    private String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
-
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            try {
-                // Set the correct tenant domain before creating the path.
-                ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL);
-                if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
-                    String orgId = OIDCSessionManagementComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveOrganizationId(tenantDomain);
-                    return serviceURLBuilder.setOrganization(orgId).build().getAbsolutePublicURL();
-                }
-                return serviceURLBuilder.setTenant(tenantDomain).build().getAbsolutePublicURL();
-            } catch (URLBuilderException | OrganizationManagementException e) {
-                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the"
-                        + " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
-                throw new IdentityOAuth2Exception(errorMsg, e);
-            }
-        } else {
-            return getResidentIdpEntityId(tenantDomain);
-        }
+        return OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
     }
 
     /**

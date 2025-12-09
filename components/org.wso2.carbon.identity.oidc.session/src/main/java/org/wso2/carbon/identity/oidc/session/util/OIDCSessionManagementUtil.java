@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Ses
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -43,6 +45,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.*;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -55,6 +60,9 @@ import java.util.Set;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getResidentIdpEntityId;
 
 /**
  * This class includes all the utility methods with regard to OIDC session management.
@@ -290,7 +298,7 @@ public class OIDCSessionManagementUtil {
      * @param request
      * @return tenantDomain
      */
-    private static String resolveTenantDomain(HttpServletRequest request) {
+    public static String resolveTenantDomain(HttpServletRequest request) {
 
         String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(tenantDomain)) {
@@ -503,28 +511,6 @@ public class OIDCSessionManagementUtil {
         }
     }
 
-
-    /**
-     * Returns signing tenant domain.
-     *
-     * @param oAuthAppDO
-     * @return Signing Tenant Domain
-     */
-    public static String getSigningTenantDomain(OAuthAppDO oAuthAppDO) {
-
-        boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        String signingTenantDomain;
-
-        if (isJWTSignedWithSPKey) {
-            // Tenant domain of the SP.
-            signingTenantDomain = getTenantDomain(oAuthAppDO);
-        } else {
-            // Tenant domain of the user.
-            signingTenantDomain = oAuthAppDO.getUser().getTenantDomain();
-        }
-        return signingTenantDomain;
-    }
-
     /**
      * Returns the OIDCsessionState of the obps cookie
      *
@@ -565,6 +551,28 @@ public class OIDCSessionManagementUtil {
 
         String sidClaim = sessionState.getSidClaim();
         return sidClaim;
+    }
+
+    public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                // Set the correct tenant domain before creating the path.
+                ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL);
+                if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                    String orgId = OIDCSessionManagementComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveOrganizationId(tenantDomain);
+                    return serviceURLBuilder.setOrganization(orgId).build().getAbsolutePublicURL();
+                }
+                return serviceURLBuilder.setTenant(tenantDomain).build().getAbsolutePublicURL();
+            } catch (URLBuilderException | OrganizationManagementException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the"
+                        + " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getResidentIdpEntityId(tenantDomain);
+        }
     }
 
 

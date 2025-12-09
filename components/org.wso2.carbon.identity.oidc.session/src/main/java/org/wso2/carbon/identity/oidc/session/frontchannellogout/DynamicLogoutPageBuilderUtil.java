@@ -21,16 +21,18 @@ package org.wso2.carbon.identity.oidc.session.frontchannellogout;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.io.UnsupportedEncodingException;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -125,8 +127,24 @@ public class DynamicLogoutPageBuilderUtil {
 
                 for (String clientID : sessionParticipants) {
                     try {
-                        oAuthAppDO = OIDCSessionManagementUtil.getOAuthAppDO(clientID);
+                        oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID,
+                                IdentityTenantUtil.resolveTenantDomain());
                         String frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
+                        String sid = sessionState.getSidClaim();
+                        String tenantDomain = OIDCSessionManagementUtil.resolveTenantDomain(request);
+                        String issuer = OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
+                        frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
+
+                        Map<String, String> additionalQueryParams = new HashMap<>();
+                        additionalQueryParams.put("sid", sid);
+                        additionalQueryParams.put("iss", issuer);
+                        try {
+                            frontchannelLogoutURL = FrameworkUtils.buildURLWithQueryParams(frontchannelLogoutURL,
+                                    additionalQueryParams);
+                        } catch (UnsupportedEncodingException e) {
+                            log.warn("Error while encoding frontchannel logout url for client id: " + clientID +
+                                    ". Hence skipping encoding sid and issuer.", e);
+                        }
                         if (frontchannelLogoutURL != null) {
                             if (!frontchannelLogoutURL.equalsIgnoreCase(("null"))) {
                                 frontchannelLogoutURLs.add(frontchannelLogoutURL);
