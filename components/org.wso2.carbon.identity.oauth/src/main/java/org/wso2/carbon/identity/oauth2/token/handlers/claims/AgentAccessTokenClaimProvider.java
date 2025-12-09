@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.claims;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -33,6 +35,7 @@ import java.util.Map;
  */
 public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
 
+    private static final Log LOG = LogFactory.getLog(AgentAccessTokenClaimProvider.class);
     private static final String ACT = "act";
     private static final String SUB = "sub";
     private static final String AGENT = "AGENT";
@@ -47,11 +50,13 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context) throws IdentityOAuth2Exception {
 
+        LOG.debug("Processing additional claims for agent access token");
         String agentIdentityUserStoreName = IdentityUtil.getAgentIdentityUserstoreName();
         if (StringUtils.isNotEmpty(agentIdentityUserStoreName) && agentIdentityUserStoreName
                 .equalsIgnoreCase(context.getAuthorizedUser().getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
+            LOG.debug("Added AGENT as AUT claim based on authorized agent user store domain");
             return agentMap;
         } else if (GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
             && context.getRequestedActor() != null) {
@@ -60,6 +65,7 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
             actMap.put(SUB, context.getRequestedActor());
             actMap.put(AUT, AGENT);
             agentMap.put(ACT, actMap);
+            LOG.debug("Added agent claims in OBO tokens for authorization code grant as requested actor");
             return agentMap;
         }
         return null;
