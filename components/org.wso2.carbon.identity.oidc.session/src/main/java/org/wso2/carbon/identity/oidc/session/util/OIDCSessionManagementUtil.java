@@ -574,6 +574,4 @@ public class OIDCSessionManagementUtil {
             return getResidentIdpEntityId(tenantDomain);
         }
     }
-
-
 }

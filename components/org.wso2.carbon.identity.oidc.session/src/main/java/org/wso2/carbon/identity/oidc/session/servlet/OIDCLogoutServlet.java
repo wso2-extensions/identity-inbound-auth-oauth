@@ -79,7 +79,13 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -782,13 +788,11 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
 
             boolean isFrontchannelLogoutEnabled = true;
-//            try {
-//                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
-//            } catch (IdentityOAuth2Exception e) {
-//                throw new RuntimeException(e);
-//            } catch (InvalidOAuthClientException e) {
-//                throw new RuntimeException(e);
-//            }
+            try {
+                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
+            } catch (IdentityOAuth2Exception|InvalidOAuthClientException e) {
+                throw new RuntimeException(e);
+            }
             String frontchannelLogoutPage = null;
             if (isFrontchannelLogoutEnabled) {
                 // Building Frontchannel Logout HTML page
@@ -830,7 +834,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 if (isFrontchannelLogoutEnabled && frontchannelLogoutPage != null) {
                     frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.setRedirectURL(frontchannelLogoutPage,
                             getRedirectURL(redirectURL, request));
-                    //Frontchannel logout request.
+                    // Frontchannel logout request.
                     doFrontchannelLogout(response, frontchannelLogoutPage);
                 } else {
                     response.sendRedirect(buildRedirectURLAfterLogout(redirectURL, request));
@@ -847,8 +851,6 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
         }
     }
-
-
 
     private void triggerLogoutHandlersForPostLogout(HttpServletRequest request, HttpServletResponse response)
             throws OIDCSessionManagementException {

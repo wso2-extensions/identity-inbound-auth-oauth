@@ -1,8 +1,8 @@
 
 /*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.org) All Rights Reserved.
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  */
 public class DynamicLogoutPageBuilderUtil {
 
-    private static final Log log = LogFactory.getLog(DynamicLogoutPageBuilderUtil.class);
+    private static final Log LOG = LogFactory.getLog(DynamicLogoutPageBuilderUtil.class);
 
     private static final String regex = "\\$\\{([^}]+)\\}";
     private static final Pattern pattern = Pattern.compile(regex);
@@ -142,7 +142,7 @@ public class DynamicLogoutPageBuilderUtil {
                             frontchannelLogoutURL = FrameworkUtils.buildURLWithQueryParams(frontchannelLogoutURL,
                                     additionalQueryParams);
                         } catch (UnsupportedEncodingException e) {
-                            log.warn("Error while encoding frontchannel logout url for client id: " + clientID +
+                            LOG.warn("Error while encoding frontchannel logout url for client id: " + clientID +
                                     ". Hence skipping encoding sid and issuer.", e);
                         }
                         if (frontchannelLogoutURL != null) {
@@ -151,9 +151,9 @@ public class DynamicLogoutPageBuilderUtil {
                             }
                         }
                     } catch (IdentityOAuth2Exception e) {
-                        log.error("Error while getting Logout URL for client id: " + clientID, e);
+                        LOG.error("Error while getting Logout URL for client id: " + clientID, e);
                     } catch (InvalidOAuthClientException e) {
-                        log.error("Client id " + clientID + "is invalid.", e);
+                        LOG.error("Client id " + clientID + "is invalid.", e);
                     }
                 }
             }
