@@ -22,14 +22,18 @@ import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.Map;
 
-import static org.mockito.Mockito.*;
-import static org.testng.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 public class AgentAccessTokenClaimProviderTest {
 
@@ -68,15 +72,16 @@ public class AgentAccessTokenClaimProviderTest {
     @Test
     public void testGetAdditionalClaims_AuthorizationCodeGrantWithRequestedActor() throws Exception {
 
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(mock(org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO.class));
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()).thenReturn(GrantType.AUTHORIZATION_CODE.toString());
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(mock(org.wso2.carbon.identity.oauth2.dto
+                .OAuth2AccessTokenReqDTO.class));
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()).thenReturn("authorization_code");
         when(tokReqMsgCtx.getRequestedActor()).thenReturn(REQUESTED_ACTOR);
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn("OTHER_STORE");
+            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn("AGENT_USER_STORE");
             when(tokReqMsgCtx.getAuthorizedUser()).thenReturn(mock(org.wso2.carbon.identity.application.authentication
                     .framework.model.AuthenticatedUser.class));
-            when(tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain()).thenReturn("OTHER_STORE");
+            when(tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain()).thenReturn("PRIMARY_USER_STORE");
 
             AgentAccessTokenClaimProvider provider = new AgentAccessTokenClaimProvider();
             Map<String, Object> claims = provider.getAdditionalClaims(tokReqMsgCtx);
@@ -93,10 +98,10 @@ public class AgentAccessTokenClaimProviderTest {
     public void testGetAdditionalClaims_NoAgentClaims() throws Exception {
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn("OTHER_STORE");
+            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn("AGENT_USER_STORE");
             when(tokReqMsgCtx.getAuthorizedUser()).thenReturn(mock(org.wso2.carbon.identity.application.authentication
                     .framework.model.AuthenticatedUser.class));
-            when(tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain()).thenReturn("OTHER_STORE");
+            when(tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain()).thenReturn("PRIMARY_USER_STORE");
             when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(mock(org.wso2.carbon.identity.oauth2
                     .dto.OAuth2AccessTokenReqDTO.class));
             when(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()).thenReturn("password");
