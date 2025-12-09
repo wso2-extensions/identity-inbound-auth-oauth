@@ -783,14 +783,14 @@ public class OIDCLogoutServlet extends HttpServlet {
                 if (isBackchannelLogoutEnabled(request)) {
                     doBackChannelLogout(obpsCookieValue, tenantDomain);
                 }
-            } catch (IdentityOAuth2Exception|InvalidOAuthClientException e) {
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 throw new RuntimeException(e);
             }
 
             boolean isFrontchannelLogoutEnabled = true;
             try {
                 isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
-            } catch (IdentityOAuth2Exception|InvalidOAuthClientException e) {
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 throw new RuntimeException(e);
             }
             String frontchannelLogoutPage = null;
@@ -999,12 +999,14 @@ public class OIDCLogoutServlet extends HttpServlet {
         out.close();
     }
 
-    private Boolean isFrontchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    private Boolean isFrontchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
 
         return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT);
     }
 
-    private Boolean isBackchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    private Boolean isBackchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
 
         return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT);
     }

@@ -40,10 +40,13 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oidc.session.*;
+import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -553,6 +556,13 @@ public class OIDCSessionManagementUtil {
         return sidClaim;
     }
 
+    /**
+     * Returns the Id Token issuer for the given tenant domain.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Id Token issuer.
+     * @throws IdentityOAuth2Exception
+     */
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {

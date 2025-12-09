@@ -30,11 +30,16 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * Dynamic HTML Content builder interface for OIDC Frontchannel logout. The HTML page is
@@ -94,7 +99,8 @@ public class DynamicLogoutPageBuilderUtil {
         List<String> frontchannelLogoutURLs = getFrontchannelLogoutURLs(request);
 
         if (!frontchannelLogoutURLs.isEmpty()) {
-            htmlPage = replacePlaceholder(htmlPage, FRONTCHANNEL_LOGOUT_URLS_COUNT, String.valueOf(frontchannelLogoutURLs.size()));
+            htmlPage = replacePlaceholder(htmlPage, FRONTCHANNEL_LOGOUT_URLS_COUNT,
+                    String.valueOf(frontchannelLogoutURLs.size()));
             for (String frontchannelLogoutURL : frontchannelLogoutURLs) {
                 String iframe = replacePlaceholder(IFRAME_TEMPLATE, FRONTCHANNEL_LOGOUT_URL, frontchannelLogoutURL);
                 body.append(iframe);
