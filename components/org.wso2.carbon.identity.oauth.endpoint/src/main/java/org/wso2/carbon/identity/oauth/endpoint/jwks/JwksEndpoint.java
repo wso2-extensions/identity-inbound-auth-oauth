@@ -25,7 +25,6 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.Base64URL;
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -48,6 +47,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -99,7 +99,7 @@ public class JwksEndpoint {
     private String buildResponse(List<CertificateInfo> certInfoList)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
-        JSONArray jwksArray = new JSONArray();
+        List<Map<String, Object>> jwksArray = new ArrayList<>();
         JSONObject jwksJson = new JSONObject();
         OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
         JWSAlgorithm accessTokenSignAlgorithm =
@@ -124,7 +124,7 @@ public class JwksEndpoint {
     }
 
     private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
-                                   JSONArray jwksArray, String hashingAlgorithm)
+                                   List<Map<String, Object>> jwksArray, String hashingAlgorithm)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
         for (CertificateInfo certInfo : certInfoList) {
@@ -176,7 +176,7 @@ public class JwksEndpoint {
      * @throws ParseException
      */
     @Deprecated
-    private void createKeySetUsingOldKeyID(JSONArray jwksArray, List<CertificateInfo> certInfoList,
+    private void createKeySetUsingOldKeyID(List<Map<String, Object>> jwksArray, List<CertificateInfo> certInfoList,
                                            JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
         for (CertificateInfo certInfo : certInfoList) {
