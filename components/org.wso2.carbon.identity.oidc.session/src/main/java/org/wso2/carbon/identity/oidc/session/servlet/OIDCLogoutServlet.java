@@ -780,7 +780,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             // BackChannel logout request.
             try {
-                if (isBackchannelLogoutEnabled(request)) {
+                if (isBackchannelLogoutEnabled(request, tenantDomain)) {
                     doBackChannelLogout(obpsCookieValue, tenantDomain);
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -789,7 +789,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
             boolean isFrontchannelLogoutEnabled = true;
             try {
-                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request);
+                isFrontchannelLogoutEnabled = isFrontchannelLogoutEnabled(request, tenantDomain);
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 throw new RuntimeException(e);
             }
@@ -999,20 +999,20 @@ public class OIDCLogoutServlet extends HttpServlet {
         out.close();
     }
 
-    private Boolean isFrontchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+    private Boolean isFrontchannelLogoutEnabled(HttpServletRequest request, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT);
+        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT, tenantDomain);
     }
 
-    private Boolean isBackchannelLogoutEnabled(HttpServletRequest request) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+    private Boolean isBackchannelLogoutEnabled(HttpServletRequest request, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT);
+        return isLogoutEnabled(request, OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT, tenantDomain);
     }
 
-    private Boolean isLogoutEnabled(HttpServletRequest request, String logoutType) throws IdentityOAuth2Exception,
-            InvalidOAuthClientException {
+    private Boolean isLogoutEnabled(HttpServletRequest request, String logoutType, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionState(request);
         if (sessionState != null) {
@@ -1022,7 +1022,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 String logoutUrl = null;
                 for (String clientID : sessionParticipants) {
                     try {
-                        oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID);
+                        oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID, tenantDomain);
                         if (OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT.equals(logoutType)) {
                             logoutUrl = oAuthAppDO.getFrontchannelLogoutUrl();
                         } else if (OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT.equals(logoutType)) {

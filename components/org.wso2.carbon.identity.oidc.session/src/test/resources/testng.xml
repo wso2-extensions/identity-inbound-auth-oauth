@@ -30,6 +30,8 @@
         <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheTest"/>
         <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
         <class name="org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSenderTest"/>
+        <class name="org.wso2.carbon.identity.oidc.session.frontchannellogout.DynamicLogoutPageBuilderUtilTest"/>
+
     </classes>
 </test>
     <test name="OIDCSessionMgt-Tests-with-info-logs" preserve-order="true" parallel="false">
@@ -45,6 +47,8 @@
             <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
             <class name="org.wso2.carbon.identity.oidc.session.backchannellogout.DefaultLogoutTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.oidc.session.backchannellogout.LogoutRequestSenderTest"/>
+            <class name="org.wso2.carbon.identity.oidc.session.frontchannellogout.DynamicLogoutPageBuilderUtilTest"/>
+
         </classes>
     </test>
 </suite>

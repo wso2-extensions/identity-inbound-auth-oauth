@@ -19,10 +19,12 @@
 
 package org.wso2.carbon.identity.oidc.session.frontchannellogout;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -142,8 +144,8 @@ public class DynamicLogoutPageBuilderUtil {
                         frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
 
                         Map<String, String> additionalQueryParams = new HashMap<>();
-                        additionalQueryParams.put("sid", sid);
-                        additionalQueryParams.put("iss", issuer);
+                        additionalQueryParams.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, sid);
+                        additionalQueryParams.put(OAuth2Util.ISS, issuer);
                         try {
                             frontchannelLogoutURL = FrameworkUtils.buildURLWithQueryParams(frontchannelLogoutURL,
                                     additionalQueryParams);
@@ -151,10 +153,8 @@ public class DynamicLogoutPageBuilderUtil {
                             LOG.warn("Error while encoding frontchannel logout url for client id: " + clientID +
                                     ". Hence skipping encoding sid and issuer.", e);
                         }
-                        if (frontchannelLogoutURL != null) {
-                            if (!frontchannelLogoutURL.equalsIgnoreCase(("null"))) {
-                                frontchannelLogoutURLs.add(frontchannelLogoutURL);
-                            }
+                        if (StringUtils.isNotBlank(frontchannelLogoutURL)) {
+                            frontchannelLogoutURLs.add(frontchannelLogoutURL);
                         }
                     } catch (IdentityOAuth2Exception e) {
                         LOG.error("Error while getting Logout URL for client id: " + clientID, e);
