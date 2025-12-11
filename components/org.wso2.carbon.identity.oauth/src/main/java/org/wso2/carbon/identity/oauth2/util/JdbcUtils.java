@@ -20,6 +20,9 @@ import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DB2;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.H2;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.INFORMIX;
@@ -98,6 +101,19 @@ public class JdbcUtils {
     public static boolean isH2DB() throws DataAccessException {
 
         return isDBTypeOf(H2);
+    }
+
+    /**
+     * Check if the DB is H2.
+     *
+     * @param connection Database connection.
+     * @return true if H2, false otherwise.
+     * @throws SQLException if error occurred while checking the DB metadata.
+     */
+    public static boolean isH2DB(Connection connection) throws SQLException {
+
+        String databaseProductName = connection.getMetaData().getDatabaseProductName();
+        return H2.equalsIgnoreCase(databaseProductName);
     }
 
     /**
