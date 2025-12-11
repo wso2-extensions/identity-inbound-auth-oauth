@@ -216,11 +216,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
-        jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
-        jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
             jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
@@ -276,7 +272,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt),
                 idTokenSignatureAlgorithm);
@@ -338,11 +333,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Set the audience
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
-        jwtClaimsSetBuilder.audience(audience);
 
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
 
         long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
