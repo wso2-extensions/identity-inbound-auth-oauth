@@ -93,8 +93,15 @@ public class DynamicLogoutPageBuilderUtil {
     private static final String BODY = "body";
     private static final String FRONTCHANNEL_LOGOUT_URLS_COUNT = "frontchannelLogoutsCount";
 
+    /**
+     * Build the dynamic logout page for OIDC front-channel logout.
+     *
+     * @param request HttpServletRequest.
+     * @return Dynamic HTML logout page.
+     */
     public static String buildPage(HttpServletRequest request) {
 
+        LOG.debug("Building dynamic logout page for OIDC front-channel logout");
         String htmlPage = STATIC_CONTENT_TEMPLATE;
         StringBuilder body = new StringBuilder();
 
@@ -116,6 +123,12 @@ public class DynamicLogoutPageBuilderUtil {
         return htmlPage;
     }
 
+    /**
+     * Set the redirect URL in the HTML page.
+     * @param htmlPage
+     * @param redirectURL
+     * @return
+     */
     public static String setRedirectURL(String htmlPage, String redirectURL) {
 
         if (htmlPage != null) {

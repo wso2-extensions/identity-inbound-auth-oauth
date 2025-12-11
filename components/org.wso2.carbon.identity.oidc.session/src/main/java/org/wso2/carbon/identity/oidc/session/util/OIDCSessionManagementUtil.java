@@ -527,6 +527,7 @@ public class OIDCSessionManagementUtil {
             String obpsCookieValue = opbsCookie.getValue();
             OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
                     .getOIDCSessionState(obpsCookieValue);
+            log.debug("OIDC session cookie found. Retrieving session state.");
             return sessionState;
         } else {
             return null;

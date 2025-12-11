@@ -781,6 +781,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             // BackChannel logout request.
             try {
                 if (isBackchannelLogoutEnabled(request, tenantDomain)) {
+                    log.debug("Initiating backchannel logout requests to RPs.");
                     doBackChannelLogout(obpsCookieValue, tenantDomain);
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -795,7 +796,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             String frontchannelLogoutPage = null;
             if (isFrontchannelLogoutEnabled) {
-                // Building Frontchannel Logout HTML page
+                log.debug("Building Frontchannel Logout HTML page.");
+                // Building Frontchannel Logout HTML page.
                 frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.buildPage(request);
             }
 
@@ -832,9 +834,11 @@ public class OIDCLogoutServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 if (isFrontchannelLogoutEnabled && frontchannelLogoutPage != null) {
+                    // Set post redirect URL to frontchannel logout html page.
                     frontchannelLogoutPage = DynamicLogoutPageBuilderUtil.setRedirectURL(frontchannelLogoutPage,
                             getRedirectURL(redirectURL, request));
                     // Frontchannel logout request.
+                    log.debug("Initiating frontchannel logout requests to RPs.");
                     doFrontchannelLogout(response, frontchannelLogoutPage);
                 } else {
                     response.sendRedirect(buildRedirectURLAfterLogout(redirectURL, request));
