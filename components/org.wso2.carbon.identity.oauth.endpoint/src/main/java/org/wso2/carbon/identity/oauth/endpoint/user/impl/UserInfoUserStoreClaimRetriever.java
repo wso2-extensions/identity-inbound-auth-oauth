@@ -38,9 +38,9 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                if (entry.getKey().getRemoteClaim() != null &&
-                        IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(entry.getKey().getRemoteClaim()
-                                .getClaimUri())) {
+
+                if (entry.getKey().getRemoteClaim() == null || IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(
+                        entry.getKey().getRemoteClaim().getClaimUri())) {
                     continue;
                 }
                 String claimValue = entry.getValue();
@@ -50,9 +50,9 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                 if (isMultiValueSupportEnabledForUserinfoResponse &&
                         ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
-                    claims.put(entry.getKey().getRemoteClaim().getClaimUri(), attributeValues);
+                    claims.put(claimUri, attributeValues);
                 } else {
-                    claims.put(entry.getKey().getRemoteClaim().getClaimUri(), claimValue);
+                    claims.put(claimUri, claimValue);
                 }
             }
         }
