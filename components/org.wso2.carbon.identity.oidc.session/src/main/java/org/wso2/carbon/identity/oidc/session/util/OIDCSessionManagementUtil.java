@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Ses
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -43,8 +45,12 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -52,10 +58,14 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
+import java.util.Set;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getResidentIdpEntityId;
 
 /**
  * This class includes all the utility methods with regard to OIDC session management.
@@ -291,7 +301,7 @@ public class OIDCSessionManagementUtil {
      * @param request
      * @return tenantDomain
      */
-    private static String resolveTenantDomain(HttpServletRequest request) {
+    public static String resolveTenantDomain(HttpServletRequest request) {
 
         String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(tenantDomain)) {
@@ -504,4 +514,75 @@ public class OIDCSessionManagementUtil {
         }
     }
 
+    /**
+     * Returns the OIDCsessionState of the obps cookie
+     *
+     * @param request
+     * @return Session state
+     */
+    public static OIDCSessionState getSessionState(HttpServletRequest request) {
+
+        Cookie opbsCookie = OIDCSessionManagementUtil.getOPBrowserStateCookie(request);
+        if (opbsCookie != null) {
+            String obpsCookieValue = opbsCookie.getValue();
+            OIDCSessionState sessionState = OIDCSessionManagementUtil.getSessionManager()
+                    .getOIDCSessionState(obpsCookieValue);
+            log.debug("OIDC session cookie found. Retrieving session state.");
+            return sessionState;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Return client id of all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return client id of all the RPs belong to same session
+     */
+    public static Set<String> getSessionParticipants(OIDCSessionState sessionState) {
+
+        return sessionState.getSessionParticipants();
+    }
+
+    /**
+     * Returns the sid of the all the RPs belong to same session.
+     *
+     * @param sessionState
+     * @return sid claim from session state
+     */
+    public static String getSidClaim(OIDCSessionState sessionState) {
+
+        String sidClaim = sessionState.getSidClaim();
+        return sidClaim;
+    }
+
+    /**
+     * Returns the Id Token issuer for the given tenant domain.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Id Token issuer.
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                // Set the correct tenant domain before creating the path.
+                ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL);
+                if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                    String orgId = OIDCSessionManagementComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveOrganizationId(tenantDomain);
+                    return serviceURLBuilder.setOrganization(orgId).build().getAbsolutePublicURL();
+                }
+                return serviceURLBuilder.setTenant(tenantDomain).build().getAbsolutePublicURL();
+            } catch (URLBuilderException | OrganizationManagementException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the"
+                        + " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getResidentIdpEntityId(tenantDomain);
+        }
+    }
 }
