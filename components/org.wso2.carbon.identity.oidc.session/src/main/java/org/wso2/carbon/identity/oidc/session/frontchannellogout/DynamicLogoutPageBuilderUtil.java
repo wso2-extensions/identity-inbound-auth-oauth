@@ -151,28 +151,32 @@ public class DynamicLogoutPageBuilderUtil {
                         oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID,
                                 IdentityTenantUtil.resolveTenantDomain());
                         String frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
-                        String sid = sessionState.getSidClaim();
-                        String tenantDomain = OIDCSessionManagementUtil.resolveTenantDomain(request);
-                        String issuer = OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
-                        frontchannelLogoutURL = oAuthAppDO.getFrontchannelLogoutUrl();
+                        if (StringUtils.isNotBlank(frontchannelLogoutURL) && !StringUtils.equalsIgnoreCase("null",
+                                frontchannelLogoutURL)) {
+                            String sid = sessionState.getSidClaim();
+                            String tenantDomain = OIDCSessionManagementUtil.resolveTenantDomain(request);
+                            String issuer = OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
+                            Map<String, String> additionalQueryParams = new HashMap<>();
+                            additionalQueryParams.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, sid);
+                            additionalQueryParams.put(OAuth2Util.ISS, issuer);
 
-                        Map<String, String> additionalQueryParams = new HashMap<>();
-                        additionalQueryParams.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, sid);
-                        additionalQueryParams.put(OAuth2Util.ISS, issuer);
-                        try {
                             frontchannelLogoutURL = FrameworkUtils.buildURLWithQueryParams(frontchannelLogoutURL,
                                     additionalQueryParams);
-                        } catch (UnsupportedEncodingException e) {
-                            LOG.warn("Error while encoding frontchannel logout url for client id: " + clientID +
-                                    ". Hence skipping encoding sid and issuer.", e);
-                        }
-                        if (StringUtils.isNotBlank(frontchannelLogoutURL)) {
+
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("Frontchannel logout URL after adding sid and issuer for client id: "
+                                        + clientID + " is: " + frontchannelLogoutURL);
+                            }
                             frontchannelLogoutURLs.add(frontchannelLogoutURL);
+
                         }
                     } catch (IdentityOAuth2Exception e) {
                         LOG.error("Error while getting Logout URL for client id: " + clientID, e);
                     } catch (InvalidOAuthClientException e) {
                         LOG.error("Client id " + clientID + "is invalid.", e);
+                    } catch (UnsupportedEncodingException e) {
+                        LOG.error("Error while encoding frontchannel logout url for client id: " + clientID +
+                                ". Hence skipping encoding sid and issuer.", e);
                     }
                 }
             }

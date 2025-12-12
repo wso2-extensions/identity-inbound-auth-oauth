@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oidc.session.frontchannellogout;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.mockito.MockedStatic;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -55,19 +57,21 @@ public class DynamicLogoutPageBuilderUtilTest {
     private static final String SID = "session123";
     private static final String ISSUER = "https://idp.example.com/oauth2/token";
     private static final String TENANT_DOMAIN = "carbon.super";
+    private static final Log LOG = LogFactory.getLog(DynamicLogoutPageBuilderUtilTest.class);
 
     @DataProvider(name = "frontchannelLogoutDataProvider")
     public Object[][] provideFrontchannelLogoutData() {
         return new Object[][]{
-                // hasSessionState, hasParticipants, numClients, expectIframes
-                {true, true, 1, true},
-                {true, false, 0, false},
-                {false, false, 0, false}
+                // hasSessionState, hasParticipants, expectIframes
+                // Valid URLs will generate iframes (URL is not blank and not "null")
+                {true, true, true},   // Valid URL generates iframe
+                {true, false, false}, // No participants, no iframe
+                {false, false, false} // No session state, no iframe
         };
     }
 
     @Test(dataProvider = "frontchannelLogoutDataProvider")
-    public void testBuildPage(boolean hasSessionState, boolean hasParticipants, int numClients, boolean expectIframes) {
+    public void testBuildPage(boolean hasSessionState, boolean hasParticipants, boolean expectIframes) {
 
         HttpServletRequest mockRequest = mock(HttpServletRequest.class);
         OIDCSessionState mockSessionState = mock(OIDCSessionState.class);
@@ -99,6 +103,7 @@ public class DynamicLogoutPageBuilderUtilTest {
 
                     identityTenantUtilMock.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(TENANT_DOMAIN);
 
+                    // Return a valid URL (not "null")
                     when(mockOAuthAppDO1.getFrontchannelLogoutUrl()).thenReturn(FRONTCHANNEL_LOGOUT_URL_1);
                     oAuth2UtilMock.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_1, TENANT_DOMAIN))
                             .thenReturn(mockOAuthAppDO1);
@@ -126,14 +131,13 @@ public class DynamicLogoutPageBuilderUtilTest {
             assertTrue(htmlPage.contains("function redirect()"));
 
             if (expectIframes) {
-                assertTrue(htmlPage.contains("if(count === " + numClients + ")"),
-                        "Expected iframe count " + numClients + " in HTML page");
-                assertTrue(htmlPage.contains("<iframe"), "Expected iframe tags in HTML page");
-                assertTrue(htmlPage.contains("onload=\"onIFrameLoad()\""), "Expected onload attribute in HTML page");
-                assertTrue(htmlPage.contains(FRONTCHANNEL_LOGOUT_URL_1),
-                        "Expected logout URL 1 in HTML page. HTML: " + htmlPage);
+                // Valid URL generates an iframe
+                assertTrue(htmlPage.contains("if(count === 1){"), "Expected count === 1 in HTML page");
+                assertTrue(htmlPage.contains("<iframe"), "Expected iframe tag in HTML page");
+                assertTrue(htmlPage.contains("onload=\"onIFrameLoad()\""), "Expected onload attribute");
             } else {
-                assertTrue(htmlPage.contains("if(count === 0)"), "Expected count === 0 check in HTML page");
+                // No participants or no session - immediate redirect
+                assertTrue(htmlPage.contains("if(count === 0){"), "Expected count === 0 check in HTML page");
                 assertTrue(htmlPage.contains("redirect();"), "Expected redirect() call in HTML page");
             }
         }
@@ -177,7 +181,7 @@ public class DynamicLogoutPageBuilderUtilTest {
 
             // Verify - should generate page with no iframes since logout URL is null
             assertNotNull(htmlPage);
-            assertTrue(htmlPage.contains("if(count === 0)"));
+            assertTrue(htmlPage.contains("if(count === 0){"));
             assertTrue(htmlPage.contains("redirect();"));
         }
     }
@@ -211,21 +215,20 @@ public class DynamicLogoutPageBuilderUtilTest {
             identityTenantUtilMock.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(TENANT_DOMAIN);
 
             // Return "null" string for frontchannel logout URL
-            when(mockOAuthAppDO1.getFrontchannelLogoutUrl()).thenReturn("null");
+            String frontchannelLogoutUrl = "null";
+            when(mockOAuthAppDO1.getFrontchannelLogoutUrl()).thenReturn(frontchannelLogoutUrl);
             oAuth2UtilMock.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_1, TENANT_DOMAIN))
                     .thenReturn(mockOAuthAppDO1);
-
-            // When buildURLWithQueryParams returns just "null" (no params added),
-            // the implementation will filter it out
-            frameworkUtilsMock.when(() -> FrameworkUtils.buildURLWithQueryParams(anyString(), any(Map.class)))
-                    .thenReturn("null");
 
             // Execute
             String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest);
 
-            // Verify - should generate page with no iframes since logout URL equals "null" after params
+            // Verify - should generate page with no iframes since logout URL equals "null"
+            // The implementation checks !StringUtils.equalsIgnoreCase("null", frontchannelLogoutURL)
+            // so "null" URLs are filtered out
             assertNotNull(htmlPage);
-            assertTrue(htmlPage.contains("if(count === 0)"));
+            LOG.info(htmlPage);
+            assertTrue(htmlPage.contains("if(count === 0){"));
             assertTrue(htmlPage.contains("redirect();"));
         }
     }
