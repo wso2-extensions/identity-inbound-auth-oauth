@@ -248,7 +248,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
         }
         jwtClaimsSetBuilder.subject(subjectClaim);
-        Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt);
+        Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
         IDTokenDTO idTokenDTO = getIDTokenDTO(tokenReqMsgCtxt, jwtClaimsSetBuilder, audience,
                 idTokenValidityInMillis, oidcClaimSet);
@@ -361,7 +361,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
-        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext);
+        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
         IDTokenDTO idTokenDTO = getIDTokenDTO(authzReqMessageContext, jwtClaimsSetBuilder, audience,
                 idTokenLifeTimeInMillis, oidcClaimSet);
@@ -460,14 +460,28 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
-    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx)
+    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        JWTClaimsSet oidcCustomClaimSet =
-                claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), tokReqMsgCtx);
-        return oidcCustomClaimSet.getClaims();
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, tokReqMsgCtx);
+
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -517,13 +531,28 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request)
+    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        JWTClaimsSet oidcClaimSet =  claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), request);
-        return oidcClaimSet.getClaims();
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, request);
+
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSpTenantDomain(OAuthAuthzReqMessageContext request) {
