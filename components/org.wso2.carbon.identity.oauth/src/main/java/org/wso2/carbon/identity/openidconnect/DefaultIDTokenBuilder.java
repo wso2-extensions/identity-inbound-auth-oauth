@@ -473,6 +473,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         JWTClaimsSet customClaimsAddedJWTClaimSet =
                 claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, tokReqMsgCtx);
 
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
         Map<String, Object> existingClaimMap = existingClaims.getClaims();
         for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
             if (!existingClaimMap.containsKey(entry.getKey())) {
@@ -544,6 +550,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         JWTClaimsSet customClaimsAddedJWTClaimSet =
                 claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, request);
 
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
         Map<String, Object> existingClaimMap = existingClaims.getClaims();
         for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
             if (!existingClaimMap.containsKey(entry.getKey())) {
