@@ -610,6 +610,57 @@ public class OAuth2Util {
         return true;
     }
 
+    public static boolean authenticateClientFromOrgHierarchy(String clientId, String clientSecretProvided,
+                                                             String accessingOrgId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO appDO;
+        appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        String appTenant = getTenantDomainOfOauthApp(appDO);
+        if (appDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
+            }
+            return false;
+        }
+
+        if (StringUtils.isNotEmpty(appTenant) && !isTenantActive(appTenant)) {
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + appTenant);
+        }
+
+        // Cache miss
+        boolean isHashDisabled = isHashDisabled();
+        String appClientSecret = appDO.getOauthConsumerSecret();
+        if (isHashDisabled) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        } else {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully authenticated the client with client id : " + clientId);
+        }
+
+        return true;
+    }
+
     /**
      * Authenticate the OAuth Consumer.
      *

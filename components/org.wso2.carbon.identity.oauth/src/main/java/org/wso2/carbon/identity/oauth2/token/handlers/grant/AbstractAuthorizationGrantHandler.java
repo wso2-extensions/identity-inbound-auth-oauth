@@ -907,23 +907,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String consumerKey = existingAccessTokenDO.getConsumerKey();
         try {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, the tenant domain should be
-             extracted from the organization id to get the information of the application.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             }
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client_id : " + consumerKey,
                     e);
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: ", e);
         }
 
         if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
@@ -981,21 +974,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private OAuthAppDO getoAuthApp(String consumerKey) throws IdentityOAuth2Exception {
+
         OAuthAppDO oAuthAppBean;
         try {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, the tenant domain should be
-             extracted from the organization id to get the information of the application.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                oAuthAppBean = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            } else {
+                oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             }
-            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             if (log.isDebugEnabled()) {
                 log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
                         ". Application access token expiry time : " + oAuthAppBean.getApplicationAccessTokenExpiryTime()
@@ -1004,8 +993,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: ", e);
         }
         return oAuthAppBean;
     }
