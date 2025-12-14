@@ -216,11 +216,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
-        jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
-        jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
             jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
@@ -252,7 +248,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
         }
         jwtClaimsSetBuilder.subject(subjectClaim);
-        Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt);
+        Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
 
         IDTokenDTO idTokenDTO = getIDTokenDTO(tokenReqMsgCtxt, jwtClaimsSetBuilder, audience,
                 idTokenValidityInMillis, oidcClaimSet);
@@ -276,7 +272,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt),
                 idTokenSignatureAlgorithm);
@@ -338,11 +333,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Set the audience
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
-        jwtClaimsSetBuilder.audience(audience);
 
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
 
         long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
@@ -369,7 +361,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
-        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext);
+        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
         IDTokenDTO idTokenDTO = getIDTokenDTO(authzReqMessageContext, jwtClaimsSetBuilder, audience,
                 idTokenLifeTimeInMillis, oidcClaimSet);
@@ -468,14 +460,34 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
-    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx)
+    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        JWTClaimsSet oidcCustomClaimSet =
-                claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), tokReqMsgCtx);
-        return oidcCustomClaimSet.getClaims();
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, tokReqMsgCtx);
+
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -525,13 +537,34 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request)
+    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        JWTClaimsSet oidcClaimSet =  claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), request);
-        return oidcClaimSet.getClaims();
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, request);
+
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSpTenantDomain(OAuthAuthzReqMessageContext request) {

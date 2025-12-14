@@ -1016,6 +1016,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
                 log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
                         " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
+                tokenRequestContext.setRefreshTokenValidityPeriodInMillis(
+                        TimeUnit.NANOSECONDS.toMillis(grantCacheEntry.getValidityPeriod()));
             }
 
             if (grantCacheEntry.isPreIssueIDTokenActionsExecuted()) {
