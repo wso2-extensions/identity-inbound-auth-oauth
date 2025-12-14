@@ -422,6 +422,7 @@ public class OAuth2Util {
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
+    private static final String DROP_UNREGISTERED_OIDC_SCOPES = "OAuth.DropUnrequestedOIDCScopes";
 
     private OAuth2Util() {
 
@@ -5574,8 +5575,9 @@ public class OAuth2Util {
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             String requestedScopes = StringUtils.join(requestedScopesArr, " ");
+            boolean shouldIncludeOIDCScopes = !shouldDropUnrequestedOIDCScopes();
             Set<Scope> registeredScopeSet = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                    .getRequestedScopesOnly(tenantId, true, requestedScopes);
+                    .getRequestedScopesOnly(tenantId, shouldIncludeOIDCScopes, requestedScopes);
             List<String> filteredScopes = new ArrayList<>();
             registeredScopeSet.forEach(scope -> filteredScopes.add(scope.getName()));
 
@@ -6420,5 +6422,15 @@ public class OAuth2Util {
         return Arrays.stream(serviceProviderProperties).
                 anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
                         Boolean.parseBoolean(property.getValue()));
+    }
+
+    /**
+     * Check whether unrequested OIDC scopes from the application should be dropped in the token response.
+     *
+     * @return true if unrequested OIDC scopes should be dropped, false otherwise.
+     */
+    public static boolean shouldDropUnrequestedOIDCScopes() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(DROP_UNREGISTERED_OIDC_SCOPES));
     }
 }
