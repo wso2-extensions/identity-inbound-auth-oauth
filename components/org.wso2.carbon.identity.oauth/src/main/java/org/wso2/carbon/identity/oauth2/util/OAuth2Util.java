@@ -2481,8 +2481,14 @@ public class OAuth2Util {
 
         OAuthAppDO appDO;
         try {
-            String tenantDomain = getTenantDomain();
-            appDO = getAppInformationByClientId(clientId, tenantDomain);
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getAccessingOrganizationId();
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                appDO = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+                appDO = getAppInformationByClientId(clientId, tenantDomain);
+            }
         } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
         }
@@ -2662,7 +2668,7 @@ public class OAuth2Util {
             return Optional.empty();
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Application not found for clientId: " + clientId + " in tenantDomain: "+
+                log.debug("Application not found for clientId: " + clientId + " in tenantDomain: " +
                         tenantDomain, e);
             }
             return Optional.empty();
@@ -5822,8 +5828,14 @@ public class OAuth2Util {
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
             return false;
         }
-        String tenantDomain = getTenantDomain();
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+        OAuthAppDO oAuthAppDO;
+        if (StringUtils.isNotBlank(accessingOrgId)) {
+            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        } else {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        }
         return oAuthAppDO.isFapiConformanceEnabled();
     }
 
