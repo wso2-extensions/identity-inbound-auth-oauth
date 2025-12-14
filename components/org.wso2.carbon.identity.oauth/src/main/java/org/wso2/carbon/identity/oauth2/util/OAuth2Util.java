@@ -100,6 +100,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -158,6 +159,8 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -2598,6 +2601,75 @@ public class OAuth2Util {
     }
 
     /**
+     * Get Oauth application information from organization hierarchy.
+     *
+     * @param clientId        Client id of the application.
+     * @param accessingOrgId  Organization Id of the accessing organization.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID in org hierarchy.
+     */
+    public static OAuthAppDO getAppInformationFromOrgHierarchy(String clientId, String accessingOrgId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        try {
+            OAuthAppDO oauthAppDO = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
+                    .getResourcesFromOrgHierarchy(accessingOrgId,
+                            LambdaExceptionUtils.rethrowFunction(
+                                    orgId -> getAppInformation(clientId, orgId)),
+                            new FirstFoundAggregationStrategy<>());
+            if (oauthAppDO == null) {
+                throw new InvalidOAuthClientException("Application not found for clientId: " + clientId +
+                        " in the organization hierarchy of organization ID: " + accessingOrgId);
+            }
+            return oauthAppDO;
+        } catch (OrgResourceHierarchyTraverseException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving application info for clientId: " + clientId +
+                    " from organization hierarchy of organization ID: " + accessingOrgId, e);
+        }
+    }
+
+    /**
+     * Get Oauth application information.
+     *
+     * @param clientId       Client id of the application.
+     * @param organizationId Organization Id of the application.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception Error while retrieving the application.
+     */
+    public static Optional<OAuthAppDO> getAppInformation(String clientId, String organizationId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        try {
+            tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                    organizationId, e);
+        }
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId, tenantDomain);
+        if (oAuthAppDO != null) {
+            return Optional.of(oAuthAppDO);
+        }
+        try {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                return Optional.of(oAuthAppDO);
+            }
+            return Optional.empty();
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application not found for clientId: " + clientId + " in tenantDomain: "+
+                        tenantDomain, e);
+            }
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Get Oauth application information given an access token DO.
      *
      * @param accessTokenDO Access token data object.
@@ -2669,17 +2741,13 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
-        if (StringUtils.isNotEmpty(appOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(appOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
-                        appOrgId, e);
-            }
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+        OAuthAppDO oAuthAppDO;
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            oAuthAppDO = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        } else {
+            oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         }
-        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
