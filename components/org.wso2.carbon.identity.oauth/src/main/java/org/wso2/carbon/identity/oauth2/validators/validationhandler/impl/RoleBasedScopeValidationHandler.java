@@ -98,18 +98,18 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 return new ArrayList<>();
             }
             List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds, tenantDomain);
-            /*
-            TODO: Refactor this to drop internal_ scopes when getting associated scopes for roles.
-            When user is not accessing the resident organization, retain only the internal_org_ scopes
-            from system scopes.
-            */
+
             if (StringUtils.isNotBlank(scopeValidationContext.getAuthenticatedUser().getAccessingOrganization())) {
                 List<String> internalOrgScopes = associatedScopes.stream()
                         .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
                         .collect(Collectors.toList());
                 associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX));
                 associatedScopes.addAll(internalOrgScopes);
+            } else {
+                //Remove Organization scopes issues for the root organization
+                associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX));
             }
+
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
             return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
