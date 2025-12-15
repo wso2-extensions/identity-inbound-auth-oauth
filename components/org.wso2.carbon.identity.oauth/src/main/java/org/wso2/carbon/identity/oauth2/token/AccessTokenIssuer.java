@@ -1617,22 +1617,14 @@ public class AccessTokenIssuer {
             IdentityOAuth2Exception {
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-        /*
-         If the applicationResidentOrgId is not null, resolve the tenant domain from the organization id to get the
-         application information by passing the consumer key and the tenant domain.
-        */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                        + applicationResidentOrgId, e);
-            }
+        OAuthAppDO authAppDO;
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            authAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+        } else {
+            authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         }
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

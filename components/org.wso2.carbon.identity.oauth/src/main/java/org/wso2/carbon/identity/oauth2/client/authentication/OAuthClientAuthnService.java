@@ -324,24 +324,16 @@ public class OAuthClientAuthnService {
             throws OAuthClientAuthnException, InvalidOAuthClientException {
 
         String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getApplicationResidentOrganizationId();
-        /*
-         If appOrgId is not empty, then the request comes for an application which is registered directly in the
-         organization of the appOrgId. Therefore, we need to resolve the tenant domain of the organization.
-        */
-        if (StringUtils.isNotEmpty(appOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(appOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new InvalidOAuthClientException("Error while resolving tenant domain for the organization ID: " +
-                        appOrgId, e);
-            }
-        }
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId();
         List<String> configuredClientAuthMethods = new ArrayList<>();
         try {
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            OAuthAppDO oAuthAppDO;
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            }
             String tokenEndpointAuthMethod = oAuthAppDO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
                 configuredClientAuthMethods = Arrays.asList(tokenEndpointAuthMethod);
