@@ -68,6 +68,8 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.OrganizationDiscoveryInput;
+import org.wso2.carbon.identity.application.authentication.framework.model.OrganizationDiscoveryResult;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -5522,16 +5524,68 @@ public class OAuth2Util {
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
 
             String tenantDomainFromContext = getTenantDomain();
-            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                    getApplicationResidentOrganizationId();
-            if (StringUtils.isNotBlank(appOrgId)) {
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getAccessingOrganizationId();
+            if (StringUtils.isNotBlank(accessingOrgId)) {
                 try {
                     tenantDomainFromContext = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(appOrgId);
+                            .resolveTenantDomain(accessingOrgId);
                 } catch (OrganizationManagementException e) {
                     throw new InvalidOAuthClientException("Error while resolving tenant domain from organization id: "
-                            + appOrgId, e);
+                            + accessingOrgId, e);
                 }
+            }
+            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                // This means the tenant domain sent in the request and app's tenant domain do not match.
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid client with the given client_id cannot be found in " +
+                            "tenantDomain: " + tenantDomainFromContext);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
+            }
+        }
+    }
+
+    /**
+     * Validate the request tenant domain with application tenant domain.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @param appId             Application Id.
+     * @throws InvalidOAuthClientException If a valid client with the given client_id cannot be found in the tenant.
+     * @throws IdentityOAuth2Exception   If an error occurs while validating the request tenant domain.
+     */
+    public static void validateRequestTenantDomain(String tenantDomainOfApp, String appId)
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+
+            String tenantDomainFromContext = getTenantDomain();
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                try {
+                    String accessingOrgTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(accessingOrgId);
+                    if (StringUtils.equals(tenantDomainOfApp, accessingOrgTenantDomain)) {
+                        return;
+                    }
+                    OrganizationDiscoveryInput orgDiscoveryInput = new OrganizationDiscoveryInput.Builder()
+                            .orgId(accessingOrgId)
+                            .build();
+                    OrganizationDiscoveryResult organizationDiscoveryResult = OAuth2ServiceComponentHolder
+                            .getInstance().getOrganizationDiscoveryHandler()
+                            .discoverOrganization(orgDiscoveryInput, appId, tenantDomainOfApp);
+                    if (organizationDiscoveryResult.isSuccessful()) {
+                        return;
+                    }
+                } catch (FrameworkException e) {
+                    throw new IdentityOAuth2Exception("Error while discovering organization for id: "
+                            + accessingOrgId, e);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from organization id: "
+                            + accessingOrgId, e);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
             }
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
@@ -5553,7 +5607,7 @@ public class OAuth2Util {
      * @throws InvalidOAuthClientException
      */
     public static void validateRequestTenantDomain(String tenantDomainOfApp, OAuth2AccessTokenReqDTO tokenReqDTO)
-            throws InvalidOAuthClientException {
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
 
@@ -5571,7 +5625,9 @@ public class OAuth2Util {
                             + "tenantDomain: " + tenantDomainFromContext);
                 }
             } else {
-                validateRequestTenantDomain(tenantDomainOfApp);
+                ServiceProvider serviceProvider =
+                        OAuth2Util.getServiceProvider(tokenReqDTO.getClientId(), tenantDomainOfApp);
+                validateRequestTenantDomain(tenantDomainOfApp, serviceProvider.getApplicationResourceId());
             }
         }
     }
