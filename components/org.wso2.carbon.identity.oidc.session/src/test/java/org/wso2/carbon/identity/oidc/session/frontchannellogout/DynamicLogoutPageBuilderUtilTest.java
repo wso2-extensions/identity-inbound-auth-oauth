@@ -122,7 +122,7 @@ public class DynamicLogoutPageBuilderUtilTest {
             }
 
             // Execute
-            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest);
+            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest, mockSessionState);
 
             // Verify
             assertNotNull(htmlPage);
@@ -177,7 +177,7 @@ public class DynamicLogoutPageBuilderUtilTest {
                     .thenReturn(mockOAuthAppDO1);
 
             // Execute
-            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest);
+            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest, mockSessionState);
 
             // Verify - should generate page with no iframes since logout URL is null
             assertNotNull(htmlPage);
@@ -221,7 +221,7 @@ public class DynamicLogoutPageBuilderUtilTest {
                     .thenReturn(mockOAuthAppDO1);
 
             // Execute
-            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest);
+            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest, mockSessionState);
 
             // Verify - should generate page with no iframes since logout URL equals "null"
             // The implementation checks !StringUtils.equalsIgnoreCase("null", frontchannelLogoutURL)
@@ -293,7 +293,7 @@ public class DynamicLogoutPageBuilderUtilTest {
                     .thenReturn(url1WithParams);
 
             // Execute
-            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest);
+            String htmlPage = DynamicLogoutPageBuilderUtil.buildPage(mockRequest, mockSessionState);
             String finalPage = DynamicLogoutPageBuilderUtil.setRedirectURL(htmlPage, REDIRECT_URL);
 
             // Verify
