@@ -561,6 +561,98 @@ public class OAuthAdminServiceImplTest {
         }
     }
 
+    @Test
+    public void testGetOAuthApplicationDataByAppNameWithAccessTokenClaimsSeparationFeatureDisabled()
+            throws Exception {
+
+        String appName = "test-app";
+        String consumerKey = "test-consumer-key";
+        int tenantId = SUPER_TENANT_ID;
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
+
+        // Create oauth application data
+        OAuthAppDO app = buildDummyOAuthAppDO("test-user");
+        app.setOauthConsumerKey(consumerKey);
+        app.setApplicationName(appName);
+
+        try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                (mock, context) -> {
+                    when(mock.getAppInformationByAppName(appName, tenantId)).thenReturn(app);
+                });
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            // Mock IdentityTenantUtil.getTenantDomain
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(tenantId))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+
+            // Mock feature flag to be disabled
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN))
+                    .thenReturn("false");
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO result = oAuthAdminServiceImpl.getOAuthApplicationDataByAppName(appName, tenantId);
+
+            // Verify the result
+            Assert.assertNotNull(result);
+            Assert.assertEquals(result.getApplicationName(), appName);
+            Assert.assertEquals(result.getOauthConsumerKey(), consumerKey);
+        }
+    }
+
+    @Test
+    public void testGetOAuthApplicationDataByAppNameWithAccessTokenClaimsSeparationFeatureEnabled()
+            throws Exception {
+
+        String appName = "test-app-enabled";
+        String consumerKey = "test-consumer-key-enabled";
+        int tenantId = SUPER_TENANT_ID;
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
+
+        // Create oauth application data
+        OAuthAppDO app = buildDummyOAuthAppDO("test-user");
+        app.setOauthConsumerKey(consumerKey);
+        app.setApplicationName(appName);
+
+        try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                (mock, context) -> {
+                    when(mock.getAppInformationByAppName(appName, tenantId)).thenReturn(app);
+                });
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class)) {
+
+            // Mock IdentityTenantUtil.getTenantDomain
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(tenantId))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+
+            // Mock feature flag to be enabled
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN))
+                    .thenReturn("true");
+
+            // Mock service provider and OAuth2Util calls
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setApplicationName(appName);
+            serviceProvider.setApplicationVersion("v1.0.0");
+
+            oauth2Util.when(() -> OAuth2Util.getServiceProvider(consumerKey, SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(serviceProvider);
+            oauth2Util.when(() -> OAuth2Util.isAppVersionAllowed(anyString(), anyString()))
+                    .thenReturn(false); // App not enabled for the new feature
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO result = oAuthAdminServiceImpl.getOAuthApplicationDataByAppName(appName, tenantId);
+
+            // Verify the result
+            Assert.assertNotNull(result);
+            Assert.assertEquals(result.getApplicationName(), appName);
+            Assert.assertEquals(result.getOauthConsumerKey(), consumerKey);
+            
+            // Verify that OAuth2Util.getServiceProvider was called when feature is enabled
+            oauth2Util.verify(() -> OAuth2Util.getServiceProvider(consumerKey, SUPER_TENANT_DOMAIN_NAME), times(1));
+        }
+    }
+
     private OAuthAppDO buildDummyOAuthAppDO(String ownerUserName) {
 
         // / Create oauth application data.
