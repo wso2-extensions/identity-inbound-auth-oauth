@@ -1,0 +1,89 @@
+Subject: [PATCH] internal_org_ remove from root
+---
+Index: components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth2/validators/validationhandler/impl/RoleBasedScopeValidationHandler.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth2/validators/validationhandler/impl/RoleBasedScopeValidationHandler.java b/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth2/validators/validationhandler/impl/RoleBasedScopeValidationHandler.java
+--- a/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth2/validators/validationhandler/impl/RoleBasedScopeValidationHandler.java	(revision b5df1584a54c866b436e22ec28f305ee6135e431)
++++ b/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth2/validators/validationhandler/impl/RoleBasedScopeValidationHandler.java	(date 1765864199332)
+@@ -29,6 +29,7 @@
+ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+ import org.wso2.carbon.identity.core.util.IdentityUtil;
+ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
++import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+@@ -98,17 +99,19 @@
+                 return new ArrayList<>();
+             }
+             List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds, tenantDomain);
+-            /*
+-            TODO: Refactor this to drop internal_ scopes when getting associated scopes for roles.
+-            When user is not accessing the resident organization, retain only the internal_org_ scopes
+-            from system scopes.
+-            */
++
+             if (StringUtils.isNotBlank(scopeValidationContext.getAuthenticatedUser().getAccessingOrganization())) {
+                 List<String> internalOrgScopes = associatedScopes.stream()
+                         .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
+                         .collect(Collectors.toList());
+                 associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX));
+                 associatedScopes.addAll(internalOrgScopes);
++            } else {
++                if (OAuthServerConfiguration.getInstance().isRemoveInternalOrgScopesForRootOrgEnabled()) {
++                    // Remove Organization scopes issues for the root organization
++                    associatedScopes.removeIf(scope ->
++                            scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX));
++                }
+             }
+             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
+                     .collect(Collectors.toList());
+Index: components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth/config/OAuthServerConfiguration.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth/config/OAuthServerConfiguration.java b/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth/config/OAuthServerConfiguration.java
+--- a/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth/config/OAuthServerConfiguration.java	(revision b5df1584a54c866b436e22ec28f305ee6135e431)
++++ b/components/org.wso2.carbon.identity.oauth/src/main/java/org/wso2/carbon/identity/oauth/config/OAuthServerConfiguration.java	(date 1765863316859)
+@@ -365,6 +365,8 @@
+ 
+     private final List<String> restrictedQueryParameters = new ArrayList<>();
+ 
++    private boolean removeInternalOrgScopesForRootOrg = false;
++
+     private OAuthServerConfiguration() {
+         buildOAuthServerConfiguration();
+     }
+@@ -601,6 +603,20 @@
+ 
+         // read domain information setting config.
+         isAddTenantDomainToAccessTokenEnabled(oauthElem);
++
++        parseRemoveInternalOrgScopesForRootOrg(oauthElem);
++    }
++
++    private void parseRemoveInternalOrgScopesForRootOrg(OMElement oauthConfigElem) {
++        OMElement removeScopesElem = oauthConfigElem.getFirstChildWithName(
++                getQNameWithIdentityNS(ConfigElements.REMOVE_INTERNAL_ORG_SCOPES_FOR_ROOT_ORG));
++
++        if (removeScopesElem != null) {
++            removeInternalOrgScopesForRootOrg = Boolean.parseBoolean(removeScopesElem.getText().trim());
++        }
++    }
++    public boolean isRemoveInternalOrgScopesForRootOrgEnabled() {
++        return removeInternalOrgScopesForRootOrg;
+     }
+ 
+     /**
+@@ -4627,6 +4643,7 @@
+         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
+         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+         private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
++        public static final String REMOVE_INTERNAL_ORG_SCOPES_FOR_ROOT_ORG = "RemoveInternalOrgScopesForRootOrg";
+     }
+ 
+ }
