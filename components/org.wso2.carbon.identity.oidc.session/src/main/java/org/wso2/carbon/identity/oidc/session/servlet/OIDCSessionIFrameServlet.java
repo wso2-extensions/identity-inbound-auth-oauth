@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.text.StrSubstitutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -40,14 +41,27 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDCEndpoints.OIDC_SESSION_IFRAME_ENDPOINT;
+
 /**
  * Servlet class of OIDC session IFrame.
  */
+//TODO Check if this servlet is working.
+@Component(
+        service = Servlet.class,
+        immediate = true,
+        property = {
+                "osgi.http.whiteboard.servlet.pattern=" + OIDC_SESSION_IFRAME_ENDPOINT,
+                "osgi.http.whiteboard.servlet.name=OIDCSessionIFrameServlet",
+                "osgi.http.whiteboard.servlet.asyncSupported=true"
+        }
+)
 public class OIDCSessionIFrameServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(OIDCSessionIFrameServlet.class);
