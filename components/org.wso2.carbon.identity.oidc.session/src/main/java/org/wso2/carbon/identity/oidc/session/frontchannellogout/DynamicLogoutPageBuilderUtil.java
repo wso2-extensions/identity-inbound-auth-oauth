@@ -96,8 +96,9 @@ public class DynamicLogoutPageBuilderUtil {
     /**
      * Build the dynamic logout page for OIDC front-channel logout.
      *
-     * @param request HttpServletRequest.
-     * @return Dynamic HTML logout page.
+     * @param request      HttpServletRequest.
+     * @param sessionState OIDCSessionState.
+     * @return HTML page as a String.
      */
     public static String buildPage(HttpServletRequest request, OIDCSessionState sessionState) {
 
