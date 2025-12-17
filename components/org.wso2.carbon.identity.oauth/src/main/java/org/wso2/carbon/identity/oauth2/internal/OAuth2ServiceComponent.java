@@ -1823,7 +1823,7 @@ public class OAuth2ServiceComponent {
             service = OrganizationDiscoveryHandler.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetOrganizationDiscovererHandler"
+            unbind = "unsetOrganizationDiscoveryHandler"
     )
     protected void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
 
