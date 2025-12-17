@@ -4678,7 +4678,8 @@ public class OAuthServerConfiguration {
         private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
         private static final String REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE =
                 "RemoveInternalPrefixFromMappedRolesAttributeInToken";
-        public static final String DISABLE_INTERNAL_ORG_SCOPES_ISSUANCE_FOR_ROOT_ORG = "DisableInternalOrgScopesIssuanceForRootOrg";
+        public static final String DISABLE_INTERNAL_ORG_SCOPES_ISSUANCE_FOR_ROOT_ORG =
+                "DisableInternalOrgScopesIssuanceForRootOrg";
     }
 
 }
