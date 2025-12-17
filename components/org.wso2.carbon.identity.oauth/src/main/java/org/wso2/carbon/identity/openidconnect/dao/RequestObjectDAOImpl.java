@@ -429,6 +429,34 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         }
     }
 
+    @Override
+    public void updateRequestObjectReferenceToTokenByCodeId(String codeId, String tokenId)
+            throws IdentityOAuth2Exception {
+
+        Connection connection = null;
+        PreparedStatement ps = null;
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection(false);
+            deleteRequestObjectReferenceforCode(connection, tokenId);
+            String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_BY_CODE;
+            ps = connection.prepareStatement(sql);
+            ps.setString(1, tokenId);
+            ps.setString(2, null);
+            ps.setString(3, codeId);
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            String errorMsg = "Can not update token id for code id: " + codeId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } catch (IdentityOAuthAdminException e) {
+            String errorMsg = "Can not delete existing entry for the same token id: " + tokenId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+    }
+
     private void deleteRequestObjectReferenceforCode(Connection connection, String tokenId)
             throws IdentityOAuthAdminException {
 
