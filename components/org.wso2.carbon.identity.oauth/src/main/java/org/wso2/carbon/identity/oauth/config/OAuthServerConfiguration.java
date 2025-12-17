@@ -605,15 +605,21 @@ public class OAuthServerConfiguration {
         // read domain information setting config.
         isAddTenantDomainToAccessTokenEnabled(oauthElem);
 
+        // Read config for removing internal prefix from mapped roles attribute in JWT tokens.
+        parseRemoveInternalPrefixFromMappedRolesAttributeInToken(oauthElem);
+
+        //Read config for removing internal_org_ scopes for root org
         parseRemoveInternalOrgScopesForRootOrg(oauthElem);
     }
 
     private void parseRemoveInternalOrgScopesForRootOrg(OMElement oauthConfigElem) {
-        OMElement removeScopesElem = oauthConfigElem.getFirstChildWithName(
+
+        OMElement removeInternalOrgScopesForRootOrgElem = oauthConfigElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.REMOVE_INTERNAL_ORG_SCOPES_FOR_ROOT_ORG));
 
-        if (removeScopesElem != null) {
-            removeInternalOrgScopesForRootOrg = Boolean.parseBoolean(removeScopesElem.getText().trim());
+        if (removeInternalOrgScopesForRootOrgElem != null) {
+            removeInternalOrgScopesForRootOrg = Boolean.parseBoolean(
+                    removeInternalOrgScopesForRootOrgElem.getText().trim());
         }
     }
     public boolean isRemoveInternalOrgScopesForRootOrgEnabled() {
