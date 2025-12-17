@@ -1032,7 +1032,7 @@ public class OAuthAppDAO {
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME,
-                oauthAppDO.isExtendRenewedRefreshTokenExpiryTime(), prepStatementForPropertyAdd,
+                String.valueOf(oauthAppDO.isExtendRenewedRefreshTokenExpiryTime()), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
         if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
@@ -1965,7 +1965,7 @@ public class OAuthAppDAO {
             isExtendRenewedRefreshTokenExpiryTime =
                     String.valueOf(OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled());
         }
-        oauthApp.setExtendRenewedRefreshTokenExpiryTime(isExtendRenewedRefreshTokenExpiryTime);
+        oauthApp.setExtendRenewedRefreshTokenExpiryTime(Boolean.parseBoolean(isExtendRenewedRefreshTokenExpiryTime));
 
         String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
         if (tokenAuthMethod != null) {
