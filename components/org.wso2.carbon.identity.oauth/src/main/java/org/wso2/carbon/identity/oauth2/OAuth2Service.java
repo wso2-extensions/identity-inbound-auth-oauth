@@ -25,6 +25,7 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -219,7 +220,7 @@ public class OAuth2Service extends AbstractAdmin {
 
         try {
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
-            validateRequestTenantDomain(appTenantDomain);
+            validateRequestTenantDomain(appTenantDomain, clientId);
 
             if (StringUtils.isBlank(clientId)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {

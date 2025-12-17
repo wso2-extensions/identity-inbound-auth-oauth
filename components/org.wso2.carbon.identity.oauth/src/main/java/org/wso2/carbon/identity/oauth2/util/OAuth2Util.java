@@ -250,6 +250,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -5550,11 +5551,11 @@ public class OAuth2Util {
      * Validate the request tenant domain with application tenant domain.
      *
      * @param tenantDomainOfApp Tenant domain of the app.
-     * @param appId             Application Id.
+     * @param clientId          Client Id.
      * @throws InvalidOAuthClientException If a valid client with the given client_id cannot be found in the tenant.
      * @throws IdentityOAuth2Exception   If an error occurs while validating the request tenant domain.
      */
-    public static void validateRequestTenantDomain(String tenantDomainOfApp, String appId)
+    public static void validateRequestTenantDomain(String tenantDomainOfApp, String clientId)
             throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
@@ -5563,6 +5564,7 @@ public class OAuth2Util {
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
                     getApplicationResidentOrganizationId();
             if (StringUtils.isNotBlank(accessingOrgId)) {
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomainOfApp);
                 try {
                     String accessingOrgTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                             .resolveTenantDomain(accessingOrgId);
@@ -5574,7 +5576,8 @@ public class OAuth2Util {
                             .build();
                     OrganizationDiscoveryResult organizationDiscoveryResult = OAuth2ServiceComponentHolder
                             .getInstance().getOrganizationDiscoveryHandler()
-                            .discoverOrganization(orgDiscoveryInput, appId, tenantDomainOfApp);
+                            .discoverOrganization(
+                                    orgDiscoveryInput, serviceProvider.getApplicationResourceId(), tenantDomainOfApp);
                     if (organizationDiscoveryResult.isSuccessful()) {
                         return;
                     }
@@ -5625,9 +5628,7 @@ public class OAuth2Util {
                             + "tenantDomain: " + tenantDomainFromContext);
                 }
             } else {
-                ServiceProvider serviceProvider =
-                        OAuth2Util.getServiceProvider(tokenReqDTO.getClientId(), tenantDomainOfApp);
-                validateRequestTenantDomain(tenantDomainOfApp, serviceProvider.getApplicationResourceId());
+                validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO.getClientId());
             }
         }
     }
