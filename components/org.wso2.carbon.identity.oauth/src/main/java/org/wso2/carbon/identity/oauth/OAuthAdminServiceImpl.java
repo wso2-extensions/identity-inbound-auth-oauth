@@ -291,6 +291,13 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = dao.getAppInformationByAppName(appName, tenantID);
             if (app != null) {
+                String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
+                if (isAccessTokenClaimsSeparationFeatureEnabled() &&
+                        !isAccessTokenClaimsSeparationEnabledForApp(app.getOauthConsumerKey(), tenantDomain)) {
+                    // Add requested claims as access token claims if the app is not in the new access token
+                    // claims feature.
+                    addAccessTokenClaims(app, tenantDomain);
+                }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
                 dto = new OAuthConsumerAppDTO();
