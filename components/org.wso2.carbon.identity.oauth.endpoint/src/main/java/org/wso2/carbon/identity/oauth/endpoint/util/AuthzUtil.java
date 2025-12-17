@@ -2862,7 +2862,8 @@ public class AuthzUtil {
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
-            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId(),
+                    IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
         }
         return loginTenantDomain;
     }
