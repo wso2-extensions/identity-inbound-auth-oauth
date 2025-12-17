@@ -366,6 +366,8 @@ public class OAuthServerConfiguration {
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
+    private boolean removeInternalOrgScopesForRootOrg = false;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -605,6 +607,23 @@ public class OAuthServerConfiguration {
 
         // Read config for removing internal prefix from mapped roles attribute in JWT tokens.
         parseRemoveInternalPrefixFromMappedRolesAttributeInToken(oauthElem);
+
+        //Read config for removing internal_org_ scopes for root org
+        parseRemoveInternalOrgScopesForRootOrg(oauthElem);
+    }
+
+    private void parseRemoveInternalOrgScopesForRootOrg(OMElement oauthConfigElem) {
+
+        OMElement removeInternalOrgScopesForRootOrgElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.REMOVE_INTERNAL_ORG_SCOPES_FOR_ROOT_ORG));
+
+        if (removeInternalOrgScopesForRootOrgElem != null) {
+            removeInternalOrgScopesForRootOrg = Boolean.parseBoolean(
+                    removeInternalOrgScopesForRootOrgElem.getText().trim());
+        }
+    }
+    public boolean isRemoveInternalOrgScopesForRootOrgEnabled() {
+        return removeInternalOrgScopesForRootOrg;
     }
 
     /**
@@ -4659,6 +4678,7 @@ public class OAuthServerConfiguration {
         private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
         private static final String REMOVE_INTERNAL_PREFIX_FROM_MAPPED_ROLES_ATTRIBUTE =
                 "RemoveInternalPrefixFromMappedRolesAttributeInToken";
+        public static final String REMOVE_INTERNAL_ORG_SCOPES_FOR_ROOT_ORG = "RemoveInternalOrgScopesForRootOrg";
     }
 
 }

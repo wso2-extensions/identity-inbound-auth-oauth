@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -105,6 +106,12 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                         .collect(Collectors.toList());
                 associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX));
                 associatedScopes.addAll(internalOrgScopes);
+            } else {
+                if (OAuthServerConfiguration.getInstance().isRemoveInternalOrgScopesForRootOrgEnabled()) {
+                    // Remove Organization scopes issues for the root organization
+                    associatedScopes.removeIf(scope ->
+                            scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX));
+                }
             }
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
