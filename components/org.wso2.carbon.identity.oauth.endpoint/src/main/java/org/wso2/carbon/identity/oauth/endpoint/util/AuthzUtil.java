@@ -4834,7 +4834,7 @@ public class AuthzUtil {
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
 
-    private static void raiseApiBasedClientError(String errorMsg) throws AuthServiceClientException {
+    private static void handleApiBasedAuthError(String errorMsg) throws AuthServiceClientException {
         if (StringUtils.isBlank(errorMsg)) {
             errorMsg = AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.description();
         }
@@ -4892,7 +4892,7 @@ public class AuthzUtil {
                         if (isRedirectToClient(location)) {
                             if (isErrorIncluded(queryParams)) {
                                 String errorMsg = getErrorMessageForApiBasedClientError(queryParams, true);
-                                raiseApiBasedClientError(errorMsg);
+                                handleApiBasedAuthError(errorMsg);
                             } else {
                                 SuccessCompleteAuthResponse successCompleteAuthResponse =
                                         new SuccessCompleteAuthResponse(queryParams);
@@ -4905,7 +4905,7 @@ public class AuthzUtil {
                              we can assume it is an error scenario which redirects to the error page. Therefore,
                              we need to handle the response as an API based error response.*/
                             String errorMsg = getErrorMessageForApiBasedClientError(queryParams, false);
-                            raiseApiBasedClientError(errorMsg);
+                            handleApiBasedAuthError(errorMsg);
                         }
                     }
                 }
