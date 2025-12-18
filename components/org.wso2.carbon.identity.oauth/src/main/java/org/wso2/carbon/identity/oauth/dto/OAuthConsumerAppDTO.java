@@ -336,12 +336,12 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         return renewRefreshTokenEnabled;
     }
 
-    public Boolean getExtendRenewedRefreshTokenExpiryTime() {
+    public boolean getExtendRenewedRefreshTokenExpiryTime() {
 
         return extendRenewedRefreshTokenExpiryTime;
     }
 
-    public void setExtendRenewedRefreshTokenExpiryTime(Boolean extendRenewedRefreshTokenExpiryTime) {
+    public void setExtendRenewedRefreshTokenExpiryTime(boolean extendRenewedRefreshTokenExpiryTime) {
 
         this.extendRenewedRefreshTokenExpiryTime = extendRenewedRefreshTokenExpiryTime;
     }
