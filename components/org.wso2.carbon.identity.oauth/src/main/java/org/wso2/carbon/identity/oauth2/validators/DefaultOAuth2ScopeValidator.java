@@ -300,6 +300,7 @@ public class DefaultOAuth2ScopeValidator {
             scopeValidationContext.setPolicyId(policyId);
             scopeValidationContext.setGrantType(grantType);
             scopeValidationContext.setUserType(userType);
+            scopeValidationContext.setAppTenantDomain(tenantDomain);
             for (ScopeValidationHandler scopeValidationHandler : scopeValidationHandlers) {
                 if (scopeValidationHandler.canHandle(scopeValidationContext)) {
                     scopeValidationContext.setValidatedScopesByHandler(validatedScopesByHandler);

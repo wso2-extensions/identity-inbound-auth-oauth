@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
+import org.wso2.carbon.identity.application.authentication.framework.handler.orgdiscovery.OrganizationDiscoveryHandler;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
@@ -1810,5 +1811,35 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.getInstance().setOrgResourceResolverService(null);
         log.debug("OrgResourceResolverService unset in OAuthServiceComponent");
+    }
+
+    /**
+     * This method is used to set the Organization Discovery Handler.
+     *
+     * @param organizationDiscoveryHandler OrganizationDiscoveryHandler instance.
+     */
+    @Reference(
+            name = "organization.discoverer.handler",
+            service = OrganizationDiscoveryHandler.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationDiscoveryHandler"
+    )
+    protected void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
+
+        OAuth2ServiceComponentHolder.getInstance()
+                .setOrganizationDiscoveryHandler(organizationDiscoveryHandler);
+        log.debug("Organization discovery handler is set in oauth2 service component.");
+    }
+
+    /**
+     * This method is used to unset the Organization Discovery Handler.
+     *
+     * @param organizationDiscoveryHandler OrganizationDiscoveryHandler instance.
+     */
+    protected void unsetOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationDiscoveryHandler(null);
+        log.debug("Organization discovery handler is unset in oauth2 service component.");
     }
 }

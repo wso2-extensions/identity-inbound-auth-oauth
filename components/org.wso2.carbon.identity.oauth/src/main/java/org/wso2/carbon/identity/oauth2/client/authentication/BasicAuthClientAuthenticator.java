@@ -94,20 +94,11 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
                         "secret.");
             }
             String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If appOrgId is not empty, then the request comes for an application which is registered directly in the
-             organization of the appOrgId. Therefore, we need to resolve the tenant domain of the organization.
-            */
-            if (StringUtils.isNotEmpty(appOrgId)) {
-                try {
-                    tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(appOrgId);
-                } catch (OrganizationManagementException e) {
-                    throw new InvalidOAuthClientException("Error while resolving tenant domain for the organization " +
-                            "ID: " + appOrgId, e);
-                }
+            if (StringUtils.isNotEmpty(accessingOrgId)){
+                return OAuth2Util.authenticateClientFromOrgHierarchy(oAuthClientAuthnContext.getClientId(),
+                        (String) oAuthClientAuthnContext.getParameter(OAuth.OAUTH_CLIENT_SECRET), accessingOrgId);
             }
             // Authenticating the client with the client id, the client secret and the extracted tenant domain.
             return OAuth2Util.authenticateClient(oAuthClientAuthnContext.getClientId(),

@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -106,7 +107,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
-            validateRequestTenantDomain(appTenantDomain);
+            validateRequestTenantDomain(appTenantDomain, clientId);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,

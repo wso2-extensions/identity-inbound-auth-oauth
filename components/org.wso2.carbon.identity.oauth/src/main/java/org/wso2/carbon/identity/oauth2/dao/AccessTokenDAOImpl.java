@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
@@ -248,22 +249,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
-             tenant domain of the organization to get the application tenant id.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                try {
-                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(applicationResidentOrgId);
-                    appTenantId = OAuth2Util.getTenantId(tenantDomain);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                            + applicationResidentOrgId, e);
-                }
+            if (isNotBlank(accessingOrgId)) {
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+                String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                appTenantId = OAuth2Util.getTenantId(appTenantDomain);
             }
 
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
