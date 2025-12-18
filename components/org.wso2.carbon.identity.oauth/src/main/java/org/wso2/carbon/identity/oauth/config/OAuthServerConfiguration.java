@@ -623,6 +623,7 @@ public class OAuthServerConfiguration {
         }
     }
     public boolean isRemoveInternalOrgScopesIssuanceForRootOrgEnabled() {
+    
         return disableInternalOrgScopeIssuanceForRootOrg;
     }
 
