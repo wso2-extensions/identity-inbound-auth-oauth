@@ -108,7 +108,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 associatedScopes.addAll(internalOrgScopes);
             } else {
                 if (OAuthServerConfiguration.getInstance().isRemoveInternalOrgScopesIssuanceForRootOrgEnabled()) {
-                    // Remove Organization scopes issues for the root organization
+                    // Remove Organization scopes issues for the root organization.
                     associatedScopes.removeIf(scope ->
                             scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX));
                 }
