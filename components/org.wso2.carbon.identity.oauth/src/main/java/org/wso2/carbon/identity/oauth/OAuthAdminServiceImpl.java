@@ -456,6 +456,8 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
+                        app.setExtendRenewedRefreshTokenExpiryTime(
+                                application.getExtendRenewedRefreshTokenExpiryTime());
                         if (isFAPIConformanceEnabled) {
                             validateFAPIBindingType(application.getTokenBindingType());
                         } else {
@@ -918,6 +920,7 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oAuthAppDO.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
+            oAuthAppDO.setExtendRenewedRefreshTokenExpiryTime(consumerAppDTO.getExtendRenewedRefreshTokenExpiryTime());
             if (isFAPIConformanceEnabled) {
                 validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
             } else {
