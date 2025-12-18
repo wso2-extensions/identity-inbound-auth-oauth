@@ -419,6 +419,7 @@
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="renewRefreshTokenEnabled" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="extendRenewedRefreshTokenExpiryTime" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="requestObjectEncryptionAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectEncryptionMethod" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureAlgorithm" nillable="true" type="xs:string"/>
