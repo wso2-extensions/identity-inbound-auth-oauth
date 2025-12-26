@@ -686,6 +686,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
 
         JWTClaimsSet claimsSet = null;
         try {
+            IdentityUtil.validateJWTDepth(signedJWT.serialize());
             claimsSet = signedJWT.getJWTClaimsSet();
         } catch (ParseException e) {
             log.error("Error when trying to retrieve claimsSet from the JWT:", e);

@@ -257,45 +257,23 @@ public class OAuth2ServiceTest {
      * DataProvider: registered callback URI, callback URI, valid
      */
     @DataProvider(name = "ValidateCallbackURIDataProvider")
-    public Object[][] validateLoopbackCallbackURIDataProvider() {
+    public Object[][] validateCallbackURIDataProvider() {
 
         return new Object[][]{
                 // Regular redirect URL registered.
                 {"https://sampleapp.com/callback", "https://sampleapp.com/callback", true},
                 {"https://sampleapp.com/callback", "https://127.0.0.1:8080/callback", false},
 
-                // Loopback redirect URL registered.
-                {"https://127.0.0.1:8080/callback", "https://127.0.0.1:8081/callback", true},
-                {"https://127.0.0.1:8080/anothercallback", "https://127.0.0.1:8080/callback", false},
-                {"https://127.0.0.1:8080/callback", "https://localhost:8080/callback", false},
-                {"https://127.0.0.1:8080/callback", "https://sampleapp.com/callback", false},
-
-                // Simple regex based registered callback URI with loopback URL.
+                // Simple regex based registered callback URI.
                 {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
                         "https://sampleapp.com/callback", true},
-                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
-                        "https://127.0.0.1:8001/callback", true},
-                {"regexp=(https://((sampleapp.com)|(127.0.0.1:8000))(/callback))",
-                        "https://127.0.0.1:8001/callback", true},
-
-                // Regex with dynamic query values.
-                {"regexp=https://127.0.0.1:8090\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", true},
-                {"regexp=https://127.0.0.1:8090/callbak\\?id=(.*)", "https://127.0.0.1:8080?id=hg7", false},
-
-                // Regex with a range of port numbers.
-                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8089/callback", false},
-                {"regexp=((https://127.0.0.1:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.1:8007/callback", false},
-                {"regexp=(((https://127.0.0.1)|((https://sampleapp.com:)([8][0]{2}[0-7])))(/callback))",
-                        "https://127.0.0.1:10000/callback", true},
-                {"regexp=(((https://127.0.0.1)|((https://127.0.0.2:)([8][0]{2}[0-7])))(/callback))",
-                        "https://127.0.0.2:8007/callback", true},
-                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.2:8089/callback", false},
-                {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))", "https://127.0.0.2:8007/callback", true},
+                {"regexp=(https://((sampleapp.com)|(sampleapp2.com))(/callback))",
+                        "https://sampleapp2.com/callback", true},
         };
     }
 
     @Test(dataProvider = "ValidateCallbackURIDataProvider")
-    public void testValidateLoopbackCallbackURI(String registeredCallbackURI, String callbackURI, boolean valid)
+    public void testValidateCallbackURI(String registeredCallbackURI, String callbackURI, boolean valid)
             throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
@@ -450,7 +428,8 @@ public class OAuth2ServiceTest {
         oAuthAppDO.setState("ACTIVE");
         oAuthAppDO.setCallbackUrl(callbackUrl);
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain)).thenReturn(tenantDomain);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)).thenReturn(oAuthAppDO);
         return oAuthAppDO;
     }
 

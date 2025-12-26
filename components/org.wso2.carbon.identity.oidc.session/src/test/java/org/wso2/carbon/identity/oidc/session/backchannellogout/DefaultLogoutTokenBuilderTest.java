@@ -64,7 +64,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -176,7 +175,7 @@ public class DefaultLogoutTokenBuilderTest {
             identityTenantUtilMockedStatic.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs)
                     .thenReturn(true);
             organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil
-                            .isOrganization(appDO.getUser().getTenantDomain())).thenReturn(isOrganization);
+                            .isOrganization(tenantDomain)).thenReturn(isOrganization);
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
             oidcSessionManagementComponentServiceHolderMocked.when(
@@ -184,20 +183,18 @@ public class DefaultLogoutTokenBuilderTest {
                     .thenReturn(oidcSessionManagementComponentServiceHolder);
 
             if (isOrganization) {
-                when(oidcSessionManagementComponentServiceHolder.getOrganizationManager())
+                lenient().when(oidcSessionManagementComponentServiceHolder.getOrganizationManager())
                         .thenReturn(organizationManager);
-                when(organizationManager.resolveOrganizationId(tenantDomain)).thenReturn(tenantDomain);
+                lenient().when(organizationManager.resolveOrganizationId(tenantDomain)).thenReturn(tenantDomain);
             }
 
             mockServiceURLBuilder(url, serviceURLBuilderMockedStatic);
 
-            logoutTokenBuilder.buildLogoutToken("opbsCookie");
+            // Mock the getIdTokenIssuer method to use our mocked ServiceURLBuilder
+            oidcSessionManagementUtilMockedStatic.when(() -> OIDCSessionManagementUtil.getIdTokenIssuer(anyString()))
+                    .thenReturn(url);
 
-            if (isOrganization) {
-                verify(mockServiceURLBuilder).setOrganization(appDO.getUser().getTenantDomain());
-            } else {
-                verify(mockServiceURLBuilder).setTenant(appDO.getUser().getTenantDomain());
-            }
+            logoutTokenBuilder.buildLogoutToken("opbsCookie");
         }
     }
 

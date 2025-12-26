@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -335,6 +336,13 @@ public class JWTTokenIssuerTest {
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
         tokenReqDTO.setTenantDomain("super.wso2");
+        AccessTokenExtendedAttributes accessTokenExtendedAttributes = new AccessTokenExtendedAttributes();
+        accessTokenExtendedAttributes.setExtendedToken(true);
+        HashMap<String, String> params = new HashMap<>();
+        params.put("testExtendingKey", "testExtendingValue");
+        params.put(OAuthConstants.IMPERSONATING_ACTOR, "DUMMY_ACTOR");
+        accessTokenExtendedAttributes.setParameters(params);
+        tokenReqDTO.setAccessTokenExtendedAttributes(accessTokenExtendedAttributes);
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
         AuthenticatedUser authenticatedUserForTokenReq = new AuthenticatedUser(authenticatedUserForAuthz);
         tokenReqMessageContext.setAuthorizedUser(authenticatedUserForTokenReq);
@@ -437,6 +445,12 @@ public class JWTTokenIssuerTest {
             // Validate expiry
             assertNotNull(jwtClaimSet.getIssueTime());
             assertNotNull(jwtClaimSet.getExpirationTime());
+
+            if (tokenReqMessageContext != null) {
+                assertNotNull(jwtClaimSet.getClaim("testExtendingKey"));
+                assertEquals(jwtClaimSet.getClaim("testExtendingKey"), "testExtendingValue");
+                assertNull(jwtClaimSet.getClaim(OAuthConstants.IMPERSONATING_ACTOR));
+            }
 
             if (tokenReqMessageContext != null
                     && ((OAuthTokenReqMessageContext) tokenReqMessageContext).getProperty(EXPIRY_TIME_JWT)

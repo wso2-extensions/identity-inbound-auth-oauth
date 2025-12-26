@@ -93,6 +93,7 @@ import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_REVOKED;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler.SECONDS_TO_MILISECONDS_FACTOR;
 
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
@@ -174,13 +175,12 @@ public class AbstractAuthorizationGrantHandlerTest {
     public void testIssueWithRenewWithoutRevokingExistingEnabled
             (boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
              long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
-             boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean isIDPIdColumnEnabled,
-             boolean setBindingReference) throws Exception {
+             boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean setBindingReference)
+            throws Exception {
 
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
@@ -232,49 +232,49 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @DataProvider(name = "IssueDataProvider")
     public Object[][] issueDataProvider() {
-        return new Object[][] {
-                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
-                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },
-                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
-                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false, false },
-                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
-                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false, false },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false, false },
-                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
-                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false, false },
+        Object[][] objects = {
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
+                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
+                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
+                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false},
+                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false},
+                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, false},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, false},
+                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false},
+                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false},
 
-                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true},
-                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false},
-                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true},
-                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
-                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false},
-                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
-                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
-                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false},
-                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
-                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false},
-                {true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, true},
-                {false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, false}};
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
+                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
+                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
+                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true},
+                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true},
+                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true},
+                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true},
+                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true},
+                {true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true},
+                {false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true}};
+        return objects;
     }
 
     @DataProvider(name = "IssueWithRenewDataProvider")
     public Object[][] issueWithRenewDataProvider() {
         return new Object[][]{
-                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true, true},
-                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true, false}
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true},
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false}
         };
     }
 
     @Test(dataProvider = "IssueDataProvider")
     public void testIssue(boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
                           long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
-                          boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable,
-                          boolean isIDPIdColumnEnabled)
+                          boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable)
             throws Exception {
 
         PrivilegedCarbonContext.startTenantFlow();
@@ -282,7 +282,6 @@ public class AbstractAuthorizationGrantHandlerTest {
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
         supportedGrantTypes.put("refresh_token", refreshGrantHandler);
@@ -294,9 +293,26 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
         tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+        tokReqMsgCtx.setValidityPeriod(cachedTokenValidity);
+        tokReqMsgCtx.setRefreshTokenvalidityPeriod(cachedRefreshTokenValidity);
+        tokReqMsgCtx.setRefreshTokenValidityPeriodInMillis(cachedRefreshTokenValidity * SECONDS_TO_MILISECONDS_FACTOR);
 
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
         assertNotNull(tokenRespDTO.getAccessToken());
+        assertNotNull(tokenRespDTO.getTokenId());
+        assertEquals(tokenRespDTO.getAuthorizedScopes(), "scope1 scope2");
+
+        if (cachedTokenValidity > 0) {
+            assertEquals(tokenRespDTO.getExpiresIn(), cachedTokenValidity);
+        } else {
+            assertEquals(tokenRespDTO.getExpiresIn(), 9223372036854775L);
+        }
+        if (cachedTokenValidity > 0 && cachedRefreshTokenValidity > 0) {
+            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(),
+                    cachedRefreshTokenValidity * SECONDS_TO_MILISECONDS_FACTOR);
+        } else {
+            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(), 9223372036854775807L);
+        }
         PrivilegedCarbonContext.endTenantFlow();
     }
 
@@ -487,10 +503,8 @@ public class AbstractAuthorizationGrantHandlerTest {
         assertEquals(handler.isAuthorizedClient(tokReqMsgCtx), expectedValue);
     }
 
-    @Test(dataProvider = "IssueExistingAccessTokensWithoutConsent")
-    public void testIssueExistingAccessTokensWithoutConsent(boolean idpIdColumnEnabled) throws Exception {
-
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(idpIdColumnEnabled);
+    @Test
+    public void testIssueExistingAccessTokensWithoutConsent() throws Exception {
 
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         oAuth2AccessTokenReqDTO.setClientId(clientId);
@@ -550,14 +564,6 @@ public class AbstractAuthorizationGrantHandlerTest {
             assertNotNull(tokenRespDTO.getAccessToken());
             assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
         }
-    }
-
-    @DataProvider(name = "IssueExistingAccessTokensWithoutConsent")
-    public Object[][] issueExistingAccessTokensWithoutConsent() {
-
-        return new Object[][]{
-                {true}, {false}
-        };
     }
 
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {

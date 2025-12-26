@@ -112,6 +112,30 @@ public class AuthorizationGrantCache extends
     }
 
     /**
+     * Retrieves cache entry by token id and operation.
+     *
+     * @param key     AuthorizationGrantCacheKey
+     * @param tokenId TokenId
+     * @param operation Operation (STORE, DELETE)
+     * @return AuthorizationGrantCacheEntry
+     */
+    public AuthorizationGrantCacheEntry getValueFromCacheByTokenId(AuthorizationGrantCacheKey key, String tokenId,
+                                                                   String operation) {
+
+        AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
+        if (cacheEntry == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting cache entry from session store using tokenId: " + tokenId);
+            }
+            cacheEntry = getFromSessionStore(tokenId, operation);
+            if (cacheEntry != null) {
+                super.addToCache(key, cacheEntry);
+            }
+        }
+        return cacheEntry;
+    }
+
+    /**
      * Retrieves a cache entry by access token.
      *
      * @param key CacheKey
@@ -301,4 +325,16 @@ public class AuthorizationGrantCache extends
         SessionDataStore.getInstance().storeSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME, entry);
     }
 
+    /**
+     * Retrieve cache entry from SessionDataStore using the given operation.
+     *
+     * @param id session data key.
+     * @param operation Operation (STORE, DELETE)
+     * @return AuthorizationGrantCacheEntry.
+     */
+    private AuthorizationGrantCacheEntry getFromSessionStore(String id, String operation) {
+
+        return (AuthorizationGrantCacheEntry) SessionDataStore.getInstance().getSessionData(id,
+                AUTHORIZATION_GRANT_CACHE_NAME, operation);
+    }
 }

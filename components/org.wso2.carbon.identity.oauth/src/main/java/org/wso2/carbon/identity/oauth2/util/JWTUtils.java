@@ -116,6 +116,7 @@ public class JWTUtils {
             throws IdentityOAuth2Exception {
 
         try {
+            IdentityUtil.validateJWTDepth(signedJWT.serialize());
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             return Optional.ofNullable(claimsSet);
         } catch (ParseException e) {
@@ -217,7 +218,7 @@ public class JWTUtils {
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
-                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
+                throw new IdentityOAuth2ClientException("No registered IDP found for the token with issuer name : "
                         + jwtIssuer);
             }
         }

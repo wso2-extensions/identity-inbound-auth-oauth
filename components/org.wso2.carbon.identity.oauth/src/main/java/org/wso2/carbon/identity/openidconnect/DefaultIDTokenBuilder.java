@@ -31,6 +31,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
+import org.wso2.carbon.identity.action.execution.api.model.Error;
+import org.wso2.carbon.identity.action.execution.api.model.Failure;
+import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -43,7 +49,9 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -53,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
 import java.util.ArrayList;
@@ -64,6 +73,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -81,6 +91,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String TOKEN_REQUEST_MESSAGE_CONTEXT = "tokenReqMessageContext";
+    private static final String AUTHZ_REQUEST_MESSAGE_CONTEXT = "authzReqMessageContext";
+    private static final String REQUEST_TYPE = "requestType";
+    private static final String REQUEST_TYPE_TOKEN = "token";
+    private static final String REQUEST_TYPE_AUTHZ = "authz";
+    private static final String ID_TOKEN_DTO = "idTokenDTO";
 
     private static final Log log = LogFactory.getLog(DefaultIDTokenBuilder.class);
     private JWSAlgorithm signatureAlgorithm;
@@ -113,6 +129,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     @Override
     public String buildIDToken(OAuthTokenReqMessageContext tokenReqMsgCtxt,
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
+
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         // Checks if the current application is a system app and sets the value to thread local
@@ -199,11 +216,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.issuer(idTokenIssuer);
-        jwtClaimsSetBuilder.audience(audience);
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenValidityInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
-        jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
         if (authTime != 0) {
             jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
@@ -235,7 +248,22 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
         }
         jwtClaimsSetBuilder.subject(subjectClaim);
-        JWTClaimsSet jwtClaimsSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
+        Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
+
+        IDTokenDTO idTokenDTO = getIDTokenDTO(tokenReqMsgCtxt, jwtClaimsSetBuilder, audience,
+                idTokenValidityInMillis, oidcClaimSet);
+
+        // Execute the Pre-Issue ID Token Action if configured. The changes done by the action are reflected in the
+        // IDTokenDTO.
+        if (checkExecutePreIssueIdTokensActions(tokenReqMsgCtxt)) {
+            ActionExecutionStatus<?> executionStatus = executePreIssueIdTokenActions(tokenReqMsgCtxt, idTokenDTO);
+            if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
+                    executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
+                handleFailureOrError(executionStatus);
+            }
+        }
+
+        JWTClaimsSet jwtClaimsSet = buildJWTClaimSetIdTokenDto(idTokenDTO);
 
         if (isInvalidToken(jwtClaimsSet)) {
             throw new IDTokenValidationFailureException("Error while validating ID Token token for required claims");
@@ -244,7 +272,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt),
                 idTokenSignatureAlgorithm);
@@ -306,11 +333,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         // Set the audience
         List<String> audience = OAuth2Util.getOIDCAudience(clientId, oAuthAppDO);
-        jwtClaimsSetBuilder.audience(audience);
 
         jwtClaimsSetBuilder.claim(AZP, clientId);
-        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(idTokenLifeTimeInMillis, currentTimeInMillis));
-        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
 
         long authTime = getAuthTime(authzReqMessageContext);
         if (authTime != 0) {
@@ -337,8 +361,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
-        JWTClaimsSet jwtClaimsSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
+        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
+        IDTokenDTO idTokenDTO = getIDTokenDTO(authzReqMessageContext, jwtClaimsSetBuilder, audience,
+                idTokenLifeTimeInMillis, oidcClaimSet);
+
+        // Execute the Pre-Issue ID Token Action if configured. The changes done by the action are reflected in the
+        // IDTokenDTO.
+        if (checkExecutePreIssueIdTokensActions(authzReqMessageContext)) {
+            ActionExecutionStatus<?> executionStatus = executePreIssueIdTokenActions(authzReqMessageContext,
+                    idTokenDTO);
+            if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
+                    executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
+                handleFailureOrError(executionStatus);
+            }
+        }
+
+        JWTClaimsSet jwtClaimsSet = buildJWTClaimSetIdTokenDto(idTokenDTO);
         if (isUnsignedIDToken()) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -421,11 +460,34 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
-    private JWTClaimsSet handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx, JWTClaimsSet.Builder
-            jwtClaimsSetBuilder) throws IdentityOAuth2Exception {
+    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
+            throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
+
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokReqMsgCtx);
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, tokReqMsgCtx);
+
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -475,13 +537,34 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private JWTClaimsSet handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
-                                                JWTClaimsSet.Builder jwtClaimsSetBuilder)
+    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
+                                                       JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
+
+        JWTClaimsSet existingClaims = jwtClaimsSetBuilder.build();
+        JWTClaimsSet.Builder jwtClaimsSetBuilderCopy = new JWTClaimsSet.Builder(existingClaims);
+        Map<String, Object> returningClaims = new HashMap<>();
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
-        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, request);
+        JWTClaimsSet customClaimsAddedJWTClaimSet =
+                claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilderCopy, request);
+
+        // The CustomClaimsCallbackHandler is responsible for managing custom claims in the ID token.
+        // When a custom claim has the same name as an existing claim, the handler determines whether to
+        // override or preserve the existing value. This logic respects the handler's decision by:
+        // - Adding truly new claims (no name collision) to returningClaims
+        // - Updating the builder with custom claims that have matching names, allowing the handler's
+        //   choice (whether to override or keep the original) to take effect.
+        Map<String, Object> existingClaimMap = existingClaims.getClaims();
+        for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
+            if (!existingClaimMap.containsKey(entry.getKey())) {
+                returningClaims.put(entry.getKey(), entry.getValue());
+            } else {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
+        return returningClaims;
     }
 
     private String getSpTenantDomain(OAuthAuthzReqMessageContext request) {
@@ -908,6 +991,248 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             throw new IdentityOAuth2Exception("Cannot encrypt the ID token as the service Provider with client_id: "
                     + clientId + " of tenantDomain: " + tenantDomain + " does not have a public certificate or a " +
                     "JWKS endpoint configured.", e);
+        }
+    }
+
+
+    /**
+     * Create a new IDTokenDTO instance.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @param idTokenJwtClaimSetBuilder JWTClaimsSet.Builder
+     * @param audience List<String>
+     * @param expiresIn long
+     * @param oidcClaimSet Map<String, Object>
+     * @return IDTokenDTO
+     */
+    private IDTokenDTO getIDTokenDTO(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                     JWTClaimsSet.Builder idTokenJwtClaimSetBuilder,
+                                     List<String> audience,
+                                     long expiresIn,
+                                     Map<String, Object> oidcClaimSet) {
+
+        IDTokenDTO idTokenDTO = new IDTokenDTO();
+        idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
+        idTokenDTO.setAudience(audience);
+        idTokenDTO.setExpiresIn(expiresIn);
+        idTokenDTO.setCustomOIDCClaims(new HashMap<>(oidcClaimSet));
+        return idTokenDTO;
+    }
+
+    /**
+     * Get IDTokenDTO either from the pre issue ID token action execution if the action was executed during a previous
+     * flow or create a new instance.
+     *
+     * @param tokenReqMessageContext OAuthTokenReqMessageContext
+     * @param idTokenJwtClaimSetBuilder JWTClaimsSet.Builder
+     * @param audience List<String>
+     * @param expiresIn long
+     * @param oidcClaimSet Map<String, Object>
+     * @return IDTokenDTO
+     */
+    private IDTokenDTO getIDTokenDTO(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                     JWTClaimsSet.Builder idTokenJwtClaimSetBuilder,
+                                     List<String> audience,
+                                     long expiresIn,
+                                     Map<String, Object> oidcClaimSet) {
+
+        if (tokenReqMessageContext.isPreIssueIDTokenActionsExecuted()) {
+            IDTokenDTO idTokenDTO = tokenReqMessageContext.getPreIssueIDTokenActionDTO();
+            idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
+            return idTokenDTO;
+        }
+        IDTokenDTO idTokenDTO = new IDTokenDTO();
+        idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
+        idTokenDTO.setAudience(audience);
+        idTokenDTO.setExpiresIn(expiresIn);
+        idTokenDTO.setCustomOIDCClaims(new HashMap<>(oidcClaimSet));
+        return idTokenDTO;
+    }
+
+    /**
+     * Build JWT claim set after executing pre issue ID token actions.
+     *
+     * @param idTokenDTO IDTokenDTO
+     * @return JWTClaimsSet
+     */
+    private JWTClaimsSet buildJWTClaimSetIdTokenDto(IDTokenDTO idTokenDTO) {
+
+        JWTClaimsSet initialJWTClaimsSet = idTokenDTO.getIdTokenClaimsSet();
+        Map<String, Object> customOIDCClaims = idTokenDTO.getCustomOIDCClaims();
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(initialJWTClaimsSet);
+        customOIDCClaims.forEach(jwtClaimsSetBuilder::claim);
+
+        long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
+        jwtClaimsSetBuilder.issueTime(new Date(currentTimeInMillis));
+        jwtClaimsSetBuilder.notBeforeTime(new Date(currentTimeInMillis));
+        jwtClaimsSetBuilder.audience(idTokenDTO.getAudience());
+        jwtClaimsSetBuilder.expirationTime(getIdTokenExpiryInMillis(currentTimeInMillis, idTokenDTO.getExpiresIn()));
+        return jwtClaimsSetBuilder.build();
+    }
+
+    /**
+     * Execute pre issue ID token actions.
+     *
+     * @param tokenReqMessageContext OAuthTokenReqMessageContext
+     * @return ActionExecutionStatus
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception if an error occurs
+     */
+    private ActionExecutionStatus<?> executePreIssueIdTokenActions(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                                   IDTokenDTO idTokenDTO)
+            throws IdentityOAuth2Exception {
+
+        ActionExecutionStatus<?> executionStatus = null;
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, tokenReqMessageContext)
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        try {
+            executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                    .execute(ActionType.PRE_ISSUE_ID_TOKEN, flowContext,
+                            IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                        "Invoked pre issue ID token action for clientID: %s grant types: %s. Status: %s",
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
+            }
+        } catch (ActionExecutionException e) {
+            String errorMsg = "Error occurred while executing pre issue ID token actions for client_id: "
+                    + tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+            throw new IdentityOAuth2Exception(errorMsg, e);
+
+        }
+        return executionStatus;
+    }
+
+    /**
+     * Execute pre issue ID token actions.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @return ActionExecutionStatus
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception if an error occurs
+     */
+    private ActionExecutionStatus<?> executePreIssueIdTokenActions(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                                                   IDTokenDTO idTokenDTO)
+            throws IdentityOAuth2Exception {
+
+        ActionExecutionStatus<?> executionStatus = null;
+
+        FlowContext flowContext = FlowContext.create()
+                .add(AUTHZ_REQUEST_MESSAGE_CONTEXT, authzReqMessageContext)
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
+
+        try {
+            executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                    .execute(ActionType.PRE_ISSUE_ID_TOKEN, flowContext,
+                            IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                        "Invoked pre issue ID token action for clientID: %s grant types: %s. Status: %s",
+                        authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey(),
+                        authzReqMessageContext.getAuthorizationReqDTO().getResponseType(),
+                        Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
+            }
+        } catch (ActionExecutionException e) {
+            String errorMsg = "Error occurred while executing pre issue ID token actions for client_id: "
+                    + authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
+            throw new IdentityOAuth2Exception(errorMsg, e);
+
+        }
+        return executionStatus;
+    }
+
+    /**
+     * Check whether to execute pre issue ID token actions.
+     *
+     * @param tokenReqMessageContext OAuthTokenReqMessageContext
+     * @return true if pre issue ID token actions execution is enabled
+     * @throws IdentityOAuth2Exception Error when checking action execution is failed
+     */
+    private boolean checkExecutePreIssueIdTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+        String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        // PreIssue ID token actions are only executed for the following grant types.
+        boolean isGrantTypeAllowed = (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
+                OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType) ||
+                OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType));
+
+        // Pre-issue token action invocation is enabled at server level.
+        // For the System applications, pre issue ID token actions will not be executed.
+        // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
+        return !isSystemApplication(tenantDomain, clientId) && isGrantTypeAllowed &&
+                OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                        .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) &&
+                !OAuth2Util.isFragmentApp(clientId, tenantDomain);
+    }
+
+    /**
+     * Check whether the given application is a system application.
+     *
+     * @param tenantDomain Tenant domain of the application.
+     * @param clientId     Client ID of the application.
+     * @return true if the application is a system application.
+     * @throws IdentityOAuth2Exception Error when checking system application fails.
+     */
+    private boolean isSystemApplication(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+
+        return IdentityTenantUtil.isSystemApplication(tenantDomain, clientId);
+    }
+
+    /**
+     * Check whether to execute pre issue ID token actions.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @return true if pre issue ID token actions execution is enabled
+     * @throws IdentityOAuth2Exception Error when checking action execution is failed
+     */
+    private boolean checkExecutePreIssueIdTokensActions(OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
+        String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
+        String responseType = authzReqMessageContext.getAuthorizationReqDTO().getResponseType();
+
+        // Implicit flow(response type id_token token) is not supported.
+        boolean isResponseTypeAllowed = OAuthConstants.CODE_IDTOKEN.equals(responseType) ||
+                OAuthConstants.CODE_IDTOKEN_TOKEN.equals(responseType);
+        // Pre-issue token action invocation is enabled at server level.
+        // For the System applications(Console, MyAccount), pre issue ID token actions will not be executed.
+        // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
+        return !isSystemApplication(tenantDomain, clientId) &&
+                isResponseTypeAllowed && OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                        .isExecutionEnabled(ActionType.PRE_ISSUE_ID_TOKEN) &&
+                !OAuth2Util.isFragmentApp(clientId, tenantDomain);
+    }
+
+    /**
+     * Handle failure or error response from action execution.
+     *
+     * @param executionStatus Action execution status
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception
+     */
+    private void handleFailureOrError(ActionExecutionStatus<?> executionStatus)
+            throws IdentityOAuth2Exception {
+
+        if (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED) {
+            Failure failureResponse = (Failure) executionStatus.getResponse();
+            throw new IdentityOAuth2ClientException(failureResponse.getFailureReason(),
+                    failureResponse.getFailureDescription());
+        } else if (executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR) {
+            Error errorResponse = (Error) executionStatus.getResponse();
+            throw new IdentityOAuth2Exception(errorResponse.getErrorMessage(),
+                    errorResponse.getErrorDescription());
         }
     }
 }

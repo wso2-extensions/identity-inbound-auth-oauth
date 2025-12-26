@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -128,20 +129,8 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
         try {
             String sessionIdentifier = getTokenBindingValue((HttpServletRequest) request);
-            if (StringUtils.isBlank(sessionIdentifier)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("CommonAuthId cookie is not found in the request.");
-                }
-                return false;
-            }
-            /* Retrieve session context information using sessionIdentifier in order to check the validity of
-            commonAuthId cookie.*/
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
-            if (sessionContext == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Session context is not found corresponding to the session identifier: " +
-                            sessionIdentifier);
-                }
+            if (!OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry() &&
+                    !isSSOSessionValid(sessionIdentifier)) {
                 return false;
             }
         } catch (OAuthSystemException e) {
@@ -154,6 +143,36 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference) {
 
+        log.debug("Validating SSO session-based token binding for OAuth2 access token request.");
+        Optional<String> sessionIdentifier =
+                OAuth2Util.getTokenBindingValue(oAuth2AccessTokenReqDTO, COMMONAUTH_COOKIE);
+        if (!OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry() &&
+                !isSSOSessionValid(sessionIdentifier.orElse(null))) {
+            return false;
+        }
         return isValidTokenBinding(oAuth2AccessTokenReqDTO, bindingReference, COMMONAUTH_COOKIE);
+    }
+
+    /**
+     * Check whether the session identified by the session identifier is valid.
+     *
+     * @param sessionIdentifier Session identifier.
+     * @return True if the session is valid.
+     */
+    private boolean isSSOSessionValid(String sessionIdentifier) {
+
+        if (StringUtils.isBlank(sessionIdentifier)) {
+            log.debug("Invalid session identifier. CommonAuthId cookie is not found in the request.");
+            return false;
+        }
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " +
+                        sessionIdentifier);
+            }
+            return false;
+        }
+        return true;
     }
 }

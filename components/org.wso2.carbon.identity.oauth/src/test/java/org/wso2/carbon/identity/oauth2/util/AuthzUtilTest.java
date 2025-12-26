@@ -27,12 +27,15 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +43,7 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
@@ -51,18 +55,22 @@ public class AuthzUtilTest {
 
     @Mock
     private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
-
     @Mock
     private OrganizationManager organizationManager;
-
     @Mock
     private RoleManagementService roleManagementService;
+    @Mock
+    private AuthenticatedUser authenticatedUser;
+    @Mock
+    private OAuthServerConfiguration oAuthServerConfiguration;
 
     private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic;
     private MockedStatic<AuthzUtil> authzUtilMockedStatic;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic;
 
     private static final String USER_ID = "test-user-id";
     private static final String ACCESSING_ORGANIZATION = "accessing-org-id";
+    private static final String TENANT_DOMAIN = "tenantDomain";
     private static final String USER_RESIDENT_ORG_TENANT = "resident-tenant";
     private static final String ACCESSING_ORG_TENANT = "accessing-tenant";
 
@@ -73,6 +81,8 @@ public class AuthzUtilTest {
         authzUtilMockedStatic = mockStatic(AuthzUtil.class, Mockito.CALLS_REAL_METHODS);
         oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
                 .thenReturn(oAuth2ServiceComponentHolder);
+        oAuthServerConfigurationMockedStatic = mockStatic(OAuthServerConfiguration.class);
+        lenient().when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
     @AfterMethod
@@ -84,6 +94,100 @@ public class AuthzUtilTest {
         if (authzUtilMockedStatic != null) {
             authzUtilMockedStatic.close();
         }
+        if (oAuthServerConfigurationMockedStatic != null) {
+            oAuthServerConfigurationMockedStatic.close();
+        }
+    }
+
+    @Test
+    public void testGetAuthorizedPermissions() throws Exception {
+
+        List<String> roleIds = Arrays.asList("role1", "role2");
+        List<String> permissions = Arrays.asList("perm1", "perm2");
+
+        when(authenticatedUser.getAccessingOrganization()).thenReturn(null);
+        when(authenticatedUser.getTenantDomain()).thenReturn(TENANT_DOMAIN);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getUserRoles(authenticatedUser, null)).thenReturn(roleIds);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getAssociatedScopesForRoles(roleIds, TENANT_DOMAIN))
+                .thenReturn(permissions);
+        when(oAuthServerConfiguration.isUseLegacyPermissionAccessForUserBasedAuth()).thenReturn(false);
+
+        List<String> authorizedPermissions = AuthzUtil.getAuthorizedPermissions(authenticatedUser);
+        Assert.assertEquals(authorizedPermissions, permissions);
+    }
+
+    @Test
+    public void testGetAuthorizedPermissionsWithAccessingOrg() throws Exception {
+
+        List<String> roleIds = Arrays.asList("role1", "role2");
+        List<String> permissions = Arrays.asList("perm1", "perm2");
+
+        when(authenticatedUser.getAccessingOrganization()).thenReturn(ACCESSING_ORGANIZATION);
+        when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
+        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION)).thenReturn(ACCESSING_ORG_TENANT);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getUserRoles(authenticatedUser, null)).thenReturn(roleIds);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getAssociatedScopesForRoles(roleIds, ACCESSING_ORG_TENANT))
+                .thenReturn(permissions);
+        when(oAuthServerConfiguration.isUseLegacyPermissionAccessForUserBasedAuth()).thenReturn(false);
+
+        List<String> authorizedPermissions = AuthzUtil.getAuthorizedPermissions(authenticatedUser);
+        Assert.assertEquals(authorizedPermissions, permissions);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAuthorizedPermissionsWithRoleManagementException() throws Exception {
+
+        List<String> roleIds = Arrays.asList("role1", "role2");
+
+        when(authenticatedUser.getAccessingOrganization()).thenReturn(null);
+        when(authenticatedUser.getTenantDomain()).thenReturn(USER_RESIDENT_ORG_TENANT);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getUserRoles(authenticatedUser, null)).thenReturn(roleIds);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getAssociatedScopesForRoles(roleIds, USER_RESIDENT_ORG_TENANT))
+                .thenThrow(new IdentityOAuth2Exception(""));
+        when(oAuthServerConfiguration.isUseLegacyPermissionAccessForUserBasedAuth()).thenReturn(false);
+
+        AuthzUtil.getAuthorizedPermissions(authenticatedUser);
+    }
+
+    @Test
+    public void testGetAuthorizedPermissionsWithLegacyPermissions() throws Exception {
+
+        List<String> roleIds = Arrays.asList("role1", "role2");
+        List<String> permissions = Arrays.asList("internal_login", "perm2");
+        List<String> internalScopes = Arrays.asList("internal_login", "internal_other");
+        Map<String, java.util.Set<String>> legacyMap = new HashMap<>();
+        legacyMap.put("internal_login", new java.util.HashSet<>(Arrays.asList("new_scope1")));
+
+        when(authenticatedUser.getAccessingOrganization()).thenReturn(null);
+        when(authenticatedUser.getTenantDomain()).thenReturn(USER_RESIDENT_ORG_TENANT);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getUserRoles(authenticatedUser, null)).thenReturn(roleIds);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getAssociatedScopesForRoles(roleIds, USER_RESIDENT_ORG_TENANT))
+                .thenReturn(new java.util.ArrayList<>(permissions));
+        when(oAuthServerConfiguration.isUseLegacyPermissionAccessForUserBasedAuth()).thenReturn(true);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getInternalScopes(USER_RESIDENT_ORG_TENANT)).thenReturn(
+                internalScopes);
+        when(oAuth2ServiceComponentHolder.getLegacyScopesToNewScopesMap()).thenReturn(legacyMap);
+        when(oAuth2ServiceComponentHolder.getLegacyMultipleScopesToNewScopesMap()).thenReturn(new HashMap<>());
+
+        List<String> authorizedPermissions = AuthzUtil.getAuthorizedPermissions(authenticatedUser);
+        Assert.assertTrue(authorizedPermissions.contains("new_scope1"));
+    }
+
+    @Test
+    public void testGetAuthorizedPermissionsWithNoRoles() throws Exception {
+
+        List<String> roleIds = new ArrayList<>();
+        List<String> permissions = new ArrayList<>();
+
+        when(authenticatedUser.getAccessingOrganization()).thenReturn(null);
+        when(authenticatedUser.getTenantDomain()).thenReturn(USER_RESIDENT_ORG_TENANT);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getUserRoles(authenticatedUser, null)).thenReturn(roleIds);
+        authzUtilMockedStatic.when(() -> AuthzUtil.getAssociatedScopesForRoles(roleIds, USER_RESIDENT_ORG_TENANT))
+                .thenReturn(new java.util.ArrayList<>(permissions));
+        when(oAuthServerConfiguration.isUseLegacyPermissionAccessForUserBasedAuth()).thenReturn(false);
+
+        List<String> authorizedPermissions = AuthzUtil.getAuthorizedPermissions(authenticatedUser);
+        Assert.assertTrue(authorizedPermissions.isEmpty());
     }
 
     @Test
@@ -119,7 +223,7 @@ public class AuthzUtilTest {
     @Test
     public void testGetSubOrgUserRoles_EmptySharedRoles() throws Exception {
 
-        List<String> sharedUserRoles = List.of();
+        List<String> sharedUserRoles = new ArrayList<>();
         Map<String, String> mainAppUserRolesMappings = new HashMap<>();
 
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);

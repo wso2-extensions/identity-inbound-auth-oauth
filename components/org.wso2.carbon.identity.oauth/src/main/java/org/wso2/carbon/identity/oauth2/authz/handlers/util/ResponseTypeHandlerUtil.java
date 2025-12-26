@@ -294,6 +294,16 @@ public class ResponseTypeHandlerUtil {
                 authorizationReqDTO.getConsumerKey(), authorizationCode, codeId,
                 authorizationReqDTO.getPkceCodeChallenge(), authorizationReqDTO.getPkceCodeChallengeMethod());
         authzCodeDO.setRequestedActor(authorizationReqDTO.getRequestedActor());
+        String appResidentOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotBlank(appResidentOrganizationId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting accessing organization id: " + appResidentOrganizationId +
+                        " and user resident organization in the authorization code data object.");
+            }
+            authzCodeDO.getAuthorizedUser().setAccessingOrganization(appResidentOrganizationId);
+            authzCodeDO.getAuthorizedUser().setUserResidentOrganization(appResidentOrganizationId);
+        }
         String appTenant = authorizationReqDTO.getTenantDomain();
         if (StringUtils.isNotEmpty(appTenant)) {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
@@ -495,8 +505,9 @@ public class ResponseTypeHandlerUtil {
                     authorizeReqDTO.getMappedRemoteClaims());
         }
 
-        authorizationGrantCacheEntry
-                .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
+        // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
+        authorizationGrantCacheEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getRefreshTokenValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
     }

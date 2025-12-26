@@ -52,12 +52,15 @@ public class OAuth2Constants {
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
     public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
     public static final String OAUTH_ENABLE_REVOKE_TOKEN_HEADERS = "OAuth.EnableRevokeTokenHeadersInResponse";
+    public static final String IMPERSONATED_REFRESH_TOKEN_ENABLE = "OAuth.ImpersonatedRefreshToken.Enable";
+    public static final boolean DEFAULT_IMPERSONATED_REFRESH_TOKEN_ENABLED = true;
     public static final String CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS = "Console.CallbackURL";
     public static final String MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS = "MyAccount.CallbackURL";
     public static final String TENANT_DOMAIN_PLACEHOLDER = "{TENANT_DOMAIN}";
     public static final String AGENT_IDENTITY_ENABLE = "AgentIdentity.Enabled";
     public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
     public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
+    public static final String STORE_OPERATION = "STORE";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
 

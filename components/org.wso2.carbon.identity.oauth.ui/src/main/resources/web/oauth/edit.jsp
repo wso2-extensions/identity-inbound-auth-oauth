@@ -212,7 +212,7 @@
         session.setAttribute("oauth-consum-secret", app.getOauthConsumerSecret());
 %>
 <script>
-    location.href = '../application/configure-service-provider.jsp?action=<%=action%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';
+    location.href = '../application/configure-service-provider.jsp?action=<%=Encode.forUriComponent(action)%>&display=oauthapp&spName=<%=Encode.forUriComponent(applicationSPName)%>&oauthapp=<%=Encode.forUriComponent(app.getOauthConsumerKey())%>&isHashDisabled=<%=Encode.forUriComponent(String.valueOf(isHashDisabled))%>';
 </script>
 <% } else {
 %>
@@ -710,10 +710,9 @@
                                             } else {
                                             %>
                                             <tr>
-                                                <td><label><input type="checkbox" id=<%="grant_"+grantType%> name=<%=
-                                                "grant_" + grantType%> value=<%=grantType%> <%=(
+                                                <td><label><input type="checkbox" id="<%=Encode.forHtmlAttribute("grant_"+grantType)%>" name="<%=Encode.forHtmlAttribute("grant_" + grantType)%>" value="<%=Encode.forHtmlAttribute(grantType)%>" <%=(
                                                         grants.contains(grantType) ? "checked=\"checked\"" :
-                                                                "")%>/><%=grantType%>
+                                                                "")%>/><%=Encode.forHtml(grantType)%>
                                                 </label></td>
                                             </tr>
                                             <%
@@ -1043,7 +1042,7 @@
                                                 for (String algorithm : supportedIdTokenEncryptionAlgorithms) {
                                                     algorithm = Encode.forHtmlAttribute(algorithm);
                                             %>
-                                            <option value="<%=algorithm%>"><%=algorithm%>
+                                            <option value="<%=algorithm%>"><%=Encode.forHtml(algorithm)%>
                                             </option>
                                             <%
                                                 }
@@ -1061,7 +1060,7 @@
                                                 for (String method : supportedIdTokenEncryptionMethods) {
                                                     method = Encode.forHtmlAttribute(method);
                                             %>
-                                            <option value="<%=method%>"><%=method%>
+                                            <option value="<%=method%>"><%=Encode.forHtml(method)%>
                                             </option>
                                             <%
                                                 }
@@ -1142,7 +1141,7 @@
                                                         %> checked="checked"<%
                                                 } else if (tokenType.equals(app.getTokenType())) { %>
                                                                   checked="checked"<%} %>/>
-                                                    <%=Encode.forHtmlAttribute(tokenType)%>
+                                                    <%=Encode.forHtml(tokenType)%>
                                                 </label></td>
                                             </tr>
                                             <%

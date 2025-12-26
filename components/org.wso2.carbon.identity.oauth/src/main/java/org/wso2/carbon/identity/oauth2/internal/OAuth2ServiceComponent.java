@@ -160,7 +160,6 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkAudienceEnabled;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkConsentedTokenColumnAvailable;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.checkIDPIdColumnAvailable;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getJWTRenewWithoutRevokeAllowedGrantTypes;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
@@ -448,19 +447,6 @@ public class OAuth2ServiceComponent {
                 log.debug("OAuth - OIDC audiences disabled.");
             }
             OAuth2ServiceComponentHolder.setAudienceEnabled(false);
-        }
-        if (checkIDPIdColumnAvailable()) {
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is available in all relevant tables. " +
-                        "Setting isIDPIdColumnEnabled to true.");
-            }
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(true);
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("IDP_ID column is not available in all relevant tables. " +
-                        "Setting isIDPIdColumnEnabled to false.");
-            }
-            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(false);
         }
 
         if (isAccessTokenExtendedTableExist()) {

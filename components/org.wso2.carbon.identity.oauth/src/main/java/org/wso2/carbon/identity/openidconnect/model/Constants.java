@@ -57,6 +57,7 @@ public class Constants {
     public static final int NUMBER_OF_PARTS_IN_JWE = 5;
     public static final String RS = "RS";
     public static final String PS = "PS";
+    public static final String ES = "ES";
     public static final String JWT_PART_DELIMITER = "\\.";
 
     public static final String FULL_STOP_DELIMITER = ".";

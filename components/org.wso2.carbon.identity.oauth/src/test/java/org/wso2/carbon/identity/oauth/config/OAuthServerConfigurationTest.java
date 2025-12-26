@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -511,6 +512,38 @@ public class OAuthServerConfigurationTest {
         Assert.assertTrue(OAuthServerConfiguration.getInstance()
                 .isValidateAuthenticatedUserForRefreshGrantEnabled());
     }
+
+    @Test
+    public void testParseReturnOnlyApplicationAssociatedRoleClaimInJWT() {
+
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isReturnOnlyAppAssociatedRolesInJWTToken());
+    }
+
+    @Test
+    public void testParseReturnOnlyApplicationAssociatedRoleClaimInUserInfo() {
+
+        Assert.assertFalse(OAuthServerConfiguration.getInstance()
+                .isReturnOnlyAppAssociatedRolesInUserInfo());
+    }
+
+    @DataProvider(name = "getDataForRefreshTokenAllowedGrants")
+    public Object[][] getDataForRefreshTokenAllowedGrants() {
+
+        return new Object[][]{
+                {"test_grant", null, null},
+                {"organization_switch", null, "true"}
+        };
+    }
+
+    @Test(dataProvider = "getDataForRefreshTokenAllowedGrants")
+    public void testGetValueForIsRefreshTokenAllowed(String grantType, String defaultValue, String expectedValue) {
+
+        String refreshAllowed = OAuthServerConfiguration.getInstance().
+                getValueForIsRefreshTokenAllowed(grantType, defaultValue);
+        Assert.assertEquals(refreshAllowed, expectedValue);
+    }
+
 
     private String fillURLPlaceholdersForTest(String url) {
 

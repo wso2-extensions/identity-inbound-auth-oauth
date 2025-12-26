@@ -78,6 +78,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
@@ -353,20 +354,18 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(4));
 
                             oauthApp.setCallbackUrl(rSet.getString(5));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                    StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
                                                 oauthApp.getApplicationName()));
                                 if (isRootOrganization(tenantId)) {
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                    StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             oauthApp.setGrantTypes(rSet.getString(6));
@@ -472,7 +471,12 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(4));
 
                             oauthApp.setCallbackUrl(rSet.getString(5));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+
+                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
                                                 oauthApp.getApplicationName()));
@@ -480,12 +484,6 @@ public class OAuthAppDAO {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(tenantId)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(6)));
@@ -572,7 +570,12 @@ public class OAuthAppDAO {
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
 
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
-                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                        } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil.
                                             resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
@@ -581,13 +584,6 @@ public class OAuthAppDAO {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
-                        }
-
-                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                         }
 
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
@@ -659,7 +655,12 @@ public class OAuthAppDAO {
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
 
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
-                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
+                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                        } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil
                                             .resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
@@ -668,13 +669,6 @@ public class OAuthAppDAO {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
-                        }
-
-                        if (!(isRootOrganization(rSet.getInt(TENANT_ID))) &&
-                                StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                            oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                    (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                         }
 
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
@@ -774,7 +768,11 @@ public class OAuthAppDAO {
                             oauthApp.setOauthVersion(rSet.getString(5));
 
                             oauthApp.setCallbackUrl(rSet.getString(6));
-                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            if (!(isRootOrganization(tenantID)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
+                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
+                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
+                            } else if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil
                                                 .resolveOriginUrlFromPlaceholders(rSet.getString(6),
@@ -783,12 +781,6 @@ public class OAuthAppDAO {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
-                            }
-
-                            if (!(isRootOrganization(tenantID)) && StringUtils.isNotBlank(oauthApp.getCallbackUrl()) &&
-                                    oauthApp.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
-                                oauthApp.setCallbackUrl(ApplicationMgtUtil.resolveOriginUrlFromPlaceholders
-                                        (oauthApp.getCallbackUrl(), oauthApp.getApplicationName(), true));
                             }
 
                             oauthApp.setGrantTypes(rSet.getString(7));
@@ -1036,6 +1028,11 @@ public class OAuthAppDAO {
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, RENEW_REFRESH_TOKEN,
                 oauthAppDO.getRenewRefreshTokenEnabled(), prepStatementForPropertyAdd,
+                preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME,
+                String.valueOf(oauthAppDO.isExtendRenewedRefreshTokenExpiryTime()), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
         if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
@@ -1773,6 +1770,9 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME, consumerAppDO.getRenewRefreshTokenEnabled());
+
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
                 consumerAppDO.setTokenBindingType(null);
             }
@@ -1957,6 +1957,15 @@ public class OAuthAppDAO {
 
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
+
+        String isExtendRenewedRefreshTokenExpiryTime = getFirstPropertyValue(spOIDCProperties,
+                EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME);
+        // Overriding null value with server default.
+        if (isExtendRenewedRefreshTokenExpiryTime == null) {
+            isExtendRenewedRefreshTokenExpiryTime =
+                    String.valueOf(OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled());
+        }
+        oauthApp.setExtendRenewedRefreshTokenExpiryTime(Boolean.parseBoolean(isExtendRenewedRefreshTokenExpiryTime));
 
         String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
         if (tokenAuthMethod != null) {

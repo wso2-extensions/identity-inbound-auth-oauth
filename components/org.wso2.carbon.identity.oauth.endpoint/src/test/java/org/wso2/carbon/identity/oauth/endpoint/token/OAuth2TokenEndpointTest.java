@@ -49,6 +49,8 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.UserActor;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidator;
@@ -189,6 +191,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                     }
                 });
         OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+        addActorToIdentityContext();
     }
 
     @AfterMethod
@@ -197,6 +200,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         identityDatabaseUtil.close();
         mockedConstruction.close();
         PrivilegedCarbonContext.endTenantFlow();
+        IdentityContext.destroyCurrentContext();
     }
 
     @DataProvider(name = "testIssueAccessTokenDataProvider")
@@ -680,5 +684,13 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
         lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
+    }
+
+    private void addActorToIdentityContext() {
+
+        UserActor userActor = new UserActor.Builder()
+                .username(USERNAME)
+                .build();
+        IdentityContext.getThreadLocalIdentityContext().setActor(userActor);
     }
 }

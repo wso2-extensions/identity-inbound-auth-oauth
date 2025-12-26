@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
@@ -74,6 +75,7 @@ public class CibaAuthRequestValidator {
             long skewTime = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() *
                     CibaConstants.SEC_TO_MILLISEC_FACTOR;
             SignedJWT signedJWT = SignedJWT.parse(request);
+            IdentityUtil.validateJWTDepth(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
             if (!isValidSignature(signedJWT)) {
@@ -445,6 +447,7 @@ public class CibaAuthRequestValidator {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
+            IdentityUtil.validateJWTDepth(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             String clientId = claimsSet.getIssuer();
 
@@ -494,6 +497,7 @@ public class CibaAuthRequestValidator {
     public void validateClient(String request, String authenticatedClient) throws CibaAuthFailureException {
         try {
             SignedJWT signedJWT = SignedJWT.parse(request);
+            IdentityUtil.validateJWTDepth(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             String clientId = claimsSet.getIssuer();
 
@@ -568,6 +572,7 @@ public class CibaAuthRequestValidator {
 
         try {
             SignedJWT signedJWT = SignedJWT.parse(authRequest);
+            IdentityUtil.validateJWTDepth(authRequest);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
             // Validation to  check if any hints present.
@@ -660,6 +665,7 @@ public class CibaAuthRequestValidator {
                 log.debug("Extracting 'sub' from this id_token_hint " + idTokenHint);
             }
             SignedJWT signedJWT = SignedJWT.parse(idTokenHint);
+            IdentityUtil.validateJWTDepth(idTokenHint);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             return claimsSet.getSubject();
         } catch (ParseException e) {
@@ -693,6 +699,7 @@ public class CibaAuthRequestValidator {
                 log.debug("JWT Payload: " + signedJWT.getPayload().toJSONObject().toString());
                 log.debug("Signature: " + signedJWT.getSignature().toString());
             }
+            IdentityUtil.validateJWTDepth(authRequest);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             if (claimsSet == null) {
                 if (log.isDebugEnabled()) {
@@ -720,7 +727,7 @@ public class CibaAuthRequestValidator {
         try {
 
             SignedJWT signedJWT = SignedJWT.parse(request);
-
+            IdentityUtil.validateJWTDepth(request);
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
 
             // Set the clientID since properly validated.

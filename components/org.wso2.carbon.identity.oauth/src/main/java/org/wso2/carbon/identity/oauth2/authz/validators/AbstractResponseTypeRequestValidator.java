@@ -104,7 +104,8 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         try {
-            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
             validateRequestTenantDomain(appTenantDomain);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -125,7 +126,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (diagnosticLogBuilder != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId);
             }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain);
             String appState = appDO.getState();
 
             if (StringUtils.isEmpty(appState)) {
@@ -350,6 +351,54 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             registeredCallbackUrl =
                     registeredCallbackUrl.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+
+        if (regexp == null) {
+            return registeredCallbackUrl.equals(callbackURI);
+        }
+
+        /*
+        Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
+        but don't touch .* or .+ or .{n} .
+         */
+        String escapedSpecialCharRegexp = regexp
+                .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+        boolean matchWithEnforcedLiteralCharacters = callbackURI.matches(escapedSpecialCharRegexp);
+        if (isLiteralCharactersEnforcedInCallback()) {
+            return matchWithEnforcedLiteralCharacters;
+        }
+
+        boolean matchWithoutEnforcingLiteralCharacters = callbackURI.matches(regexp);
+        if (LoggerUtils.isDiagnosticLogsEnabled() && matchWithoutEnforcingLiteralCharacters &&
+                !matchWithEnforcedLiteralCharacters) {
+            String[] callbackURIs = regexp.split("\\|");
+            if (regexp.startsWith("(") && regexp.endsWith(")")) {
+                callbackURIs = regexp.substring(1, regexp.length() - 1).split("\\|");
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,
+                    VALIDATE_INPUT_PARAMS)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oauthApp.getOauthConsumerKey())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.REDIRECT_URI, callbackURI)
+                    .configParam(LogConstants.InputKeys.APPLICATION_NAME, oauthApp.getApplicationName())
+                    .configParam(OAuthConstants.LogConstants.ConfigKeys.CALLBACK_URI, callbackURIs)
+                    .resultMessage("Provided redirect URI does not match when the characters (., +, ?) " +
+                            "are treated as literals in configured callback URI(s) of the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+        }
+
+        return matchWithoutEnforcingLiteralCharacters;
+    }
+
+    private boolean isLiteralCharactersEnforcedInCallback() {
+
+        String enforceLiteralCharactersInCallbackValue = IdentityUtil.getProperty(
+                "OAuth.Callback.EnforceLiteralCharacters");
+        if (StringUtils.isBlank(enforceLiteralCharactersInCallbackValue)) {
+            return true;
+        }
+
+        return Boolean.parseBoolean(enforceLiteralCharactersInCallbackValue);
     }
 }

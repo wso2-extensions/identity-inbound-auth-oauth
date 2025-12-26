@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -91,6 +92,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -465,7 +467,9 @@ public class AccessTokenIssuer {
         }
 
         AuthenticatedUser authenticatedUser = tokReqMsgCtx.getAuthorizedUser();
+        boolean isFederatedUser = false;
         if (authenticatedUser != null && authenticatedUser.isFederatedUser()) {
+            isFederatedUser = true;
             boolean skipTenantDomainOverWriting = false;
             if (authenticatedUser.getTenantDomain() != null) {
                 skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
@@ -697,14 +701,14 @@ public class AccessTokenIssuer {
             }
         }
         if (authorizationGrantCacheEntry.isPresent()) {
-            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO);
+            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO, isFederatedUser);
         }
 
         if (GrantType.PASSWORD.toString().equals(grantType)) {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
 
-        persistCustomizedAccessTokenAttributesForRefreshToken(tokenRespDTO, tokReqMsgCtx);
+        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
@@ -761,9 +765,38 @@ public class AccessTokenIssuer {
         impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
         AuthenticatedUser impersonatedUser = tokReqMsgCtx.getAuthorizedUser();
         impersonationNotificationRequestDTO.setSubject(impersonatedUser);
-        impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
+        String tenantDomain = getTenantDomain(impersonatedUser);
+        impersonationNotificationRequestDTO.setTenantDomain(tenantDomain);
         ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
         notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
+    }
+
+    /**
+     * Get tenant domain of the impersonated user.
+     * In B2B scenarios, we need to resolve the tenant domain from the organization handle.
+     *
+     * @param impersonatedUser Impersonated user.
+     * @return Tenant domain of the impersonated user.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the tenant domain from the organization
+     *                                 handle.
+     */
+    private String getTenantDomain(AuthenticatedUser impersonatedUser) throws IdentityOAuth2Exception {
+
+        String tenantDomain = impersonatedUser.getTenantDomain();
+        // In B2B user, we need to resolve the tenant domain from the organization handle.
+        if (impersonatedUser.isFederatedUser() && impersonatedUser.getAccessingOrganization() != null) {
+            try {
+                String orgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(impersonatedUser.getAccessingOrganization());
+                if (orgHandle != null) {
+                    tenantDomain = orgHandle;
+                }
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from organization " +
+                        "handle: " + impersonatedUser.getAccessingOrganization(), e);
+            }
+        }
+        return tenantDomain;
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
@@ -873,7 +906,7 @@ public class AccessTokenIssuer {
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] authorizedInternalScopes = new String[0];
-        String[] requestedScopes = tokReqMsgCtx.getScope();
+        String[] requestedScopes = getRequestedScopes(tokReqMsgCtx);
         List<String> authorizedScopes = null;
         if (AuthzUtil.isLegacyAuthzRuntime() && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                 !isManagementApp) {
@@ -998,6 +1031,27 @@ public class AccessTokenIssuer {
             }
         }
         return isValidScope;
+    }
+
+    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        String[] requestedScopes = tokenReqMessageContext.getScope();
+        if (ArrayUtils.isNotEmpty(requestedScopes)) {
+            return requestedScopes;
+        }
+
+        boolean isDefaultScopeForBackChannelGrantEnabled =
+                OAuthServerConfiguration.getInstance().isDefaultScopeForBackChannelGrantEnabled();
+        List<String> defaultScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
+        if (!isDefaultScopeForBackChannelGrantEnabled || CollectionUtils.isEmpty(defaultScopes)) {
+            return requestedScopes;
+        }
+
+        requestedScopes = defaultScopes.toArray(new String[0]);
+        tokenReqMessageContext.setScope(requestedScopes);
+        tokenReqMessageContext.getOauth2AccessTokenReqDTO().setScope(requestedScopes);
+
+        return requestedScopes;
     }
 
     private List<String> getAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -1388,12 +1442,16 @@ public class AccessTokenIssuer {
      *
      * @param authorizationGrantCacheEntry
      * @param tokenRespDTO
+     * @param isFederatedUser indicates whether the user is a federated user.
      */
     private void cacheUserAttributesAgainstAccessToken(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                       OAuth2AccessTokenRespDTO tokenRespDTO) {
+                                                       OAuth2AccessTokenRespDTO tokenRespDTO, boolean isFederatedUser) {
 
         AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-        if (AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
+        // If the user is a federated user, we always add the cache entry since the user attributes are fetched
+        // from the federated IDP and may change frequently.
+        if (isFederatedUser ||
+                AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
             authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
@@ -1403,8 +1461,9 @@ public class AccessTokenIssuer {
                     log.debug("Adding AuthorizationGrantCache entry for the access token");
                 }
             }
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
             authorizationGrantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
         } else {
             if (log.isDebugEnabled()) {
@@ -1433,8 +1492,15 @@ public class AccessTokenIssuer {
         }
     }
 
-    private void persistCustomizedAccessTokenAttributesForRefreshToken(OAuth2AccessTokenRespDTO tokenRespDTO,
+    private void persistCustomizedAccessTokenAttributesForRefreshToken(Optional<AuthorizationGrantCacheEntry>
+                                                                               optionalAuthorizationGrantCacheEntry,
+                                                                       OAuth2AccessTokenRespDTO tokenRespDTO,
                                                                        OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (!(tokReqMsgCtx.isPreIssueIDTokenActionsExecuted() ||
+                tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted())) {
+            return;
+        }
 
         /*
           If pre issue access token actions are executed it may have done modifications to the audience list, claims,
@@ -1442,11 +1508,12 @@ public class AccessTokenIssuer {
           If so, persist those custom modifications against the token id in the transaction session store
           to populate the authorized access token context back at refresh token flow.
          */
+        AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getTokenId());
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                optionalAuthorizationGrantCacheEntry.orElseGet(AuthorizationGrantCacheEntry::new);
+        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+
         if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
-            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getTokenId());
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
-                    new AuthorizationGrantCacheEntry();
-            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
             authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
@@ -1459,12 +1526,21 @@ public class AccessTokenIssuer {
                 authorizationGrantCacheEntry.setValidityPeriod(
                         TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
             }
-            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
-
             log.debug("Customized audience list and access token attributes from pre issue access token actions " +
-                            "are persisted in the AuthorizationGrantCache against the token id: " +
-                            tokenRespDTO.getTokenId());
+                    "are persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
         }
+        if (tokReqMsgCtx.isPreIssueIDTokenActionsExecuted()) {
+            IDTokenDTO idTokenDTO = tokReqMsgCtx.getPreIssueIDTokenActionDTO();
+            //Optimise idTokenDTO object before caching
+            if (idTokenDTO != null) {
+                idTokenDTO.setIdTokenClaimsSet(null);
+                authorizationGrantCacheEntry.setPreIssueIDTokenActionDTO(idTokenDTO);
+                authorizationGrantCacheEntry.setPreIssueIDTokenActionsExecuted(true);
+                log.debug("Customized audience list and ID token attributes from pre issue ID token actions are" +
+                        "persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
+            }
+        }
+        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
 
     private void clearCacheEntryAgainstAuthorizationCode(String authorizationCode) {

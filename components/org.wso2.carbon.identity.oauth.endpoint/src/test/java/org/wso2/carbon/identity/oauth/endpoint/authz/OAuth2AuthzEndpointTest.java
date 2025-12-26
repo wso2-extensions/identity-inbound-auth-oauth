@@ -124,9 +124,11 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultRespons
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -546,7 +548,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<OAuthAdminServiceFactory> oAuthAdminServiceFactory =
                          mockStatic(OAuthAdminServiceFactory.class);
                  MockedStatic<OAuth2TokenValidatorServiceFactory> oAuth2TokenValidatorServiceFactory =
-                         mockStatic(OAuth2TokenValidatorServiceFactory.class);) {
+                         mockStatic(OAuth2TokenValidatorServiceFactory.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class)) {
                 AuthenticatorFlowStatus flowStatus = (AuthenticatorFlowStatus) flowStatusObject;
 
                 Map<String, String[]> requestParams = new HashMap<>();
@@ -586,12 +591,16 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
                 identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId)
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+                authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
                 IdentityEventService eventServiceMock = mock(IdentityEventService.class);
                 centralLogMgtServiceComponentHolder.when(
                                 CentralLogMgtServiceComponentHolder::getInstance)
                         .thenReturn(centralLogMgtServiceComponentHolderMock);
                 when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
                 doNothing().when(eventServiceMock).handleEvent(any());
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 when(httpServletRequest.getServletContext()).thenReturn(servletContext);
                 when(servletContext.getContext(anyString())).thenReturn(servletContext);
@@ -764,6 +773,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                          Mockito.CALLS_REAL_METHODS);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class,
+                         Mockito.CALLS_REAL_METHODS);
                  MockedStatic<AuthorizationHandlerManager> authorizationHandlerManager =
                          mockStatic(AuthorizationHandlerManager.class);
                  MockedStatic<OpenIDConnectUserRPStore> openIDConnectUserRPStore =
@@ -776,7 +787,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<Oauth2ScopeServiceFactory> oAuth2ScopeServiceFactory =
                          mockStatic(Oauth2ScopeServiceFactory.class);
                  MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolder =
-                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
+                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class, Mockito.CALLS_REAL_METHODS)) {
 
                 oAuth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService)
                         .thenReturn(oAuth2ScopeService);
@@ -823,6 +836,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri, testAuthorizationDetails);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setState(STATE);
+                oAuth2Params.setLoginTenantDomain("carbon.super");
                 when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
                 when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
 
@@ -834,6 +848,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
                 oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+                oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString(), anyString()))
+                        .thenReturn("carbon.super");
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 authorizationHandlerManager.when(
                         AuthorizationHandlerManager::getInstance).thenReturn(mockAuthorizationHandlerManager);
@@ -945,7 +965,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(OpenIDConnectUserRPStore.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
                  MockedStatic<EndpointUtil> endpointUtil =
-                         mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);) {
+                         mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class, Mockito.CALLS_REAL_METHODS)) {
 
                 when(authCookie.getValue()).thenReturn("dummyValue");
                 frameworkUtils.when(() -> FrameworkUtils.getAuthCookie(any())).thenReturn(authCookie);
@@ -994,6 +1016,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 OAuth2Parameters oAuth2Params =
                         setOAuth2Parameters(scopes, APP_NAME, RESPONSE_MODE_FORM_POST, redirectUrl, null);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
+                oAuth2Params.setLoginTenantDomain("carbon.super");
+                oAuth2Params.setTenantDomain("carbon.super");
 
                 when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
                 when(consentCacheEntry.getLoggedInUser()).thenReturn(new AuthenticatedUser());
@@ -1010,6 +1034,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
                 oAuth2Util.when(() -> OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
+                oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString(), anyString()))
+                        .thenReturn("carbon.super");
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 mockEndpointUtil(true, endpointUtil);
                 when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
@@ -1354,7 +1382,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
                  MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
                  MockedStatic<Oauth2ScopeServiceFactory> oauth2ScopeServiceFactory = mockStatic(
-                         Oauth2ScopeServiceFactory.class);) {
+                         Oauth2ScopeServiceFactory.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil = mockStatic(
+                         OrganizationManagementUtil.class)) {
 
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 oauth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService).thenReturn(
@@ -1398,6 +1428,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         centralLogMgtServiceComponentHolderMock);
                 when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
                 doNothing().when(eventServiceMock).handleEvent(any());
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 when(httpServletRequest.getServletContext()).thenReturn(servletContext);
                 when(servletContext.getContext(anyString())).thenReturn(servletContext);
@@ -1637,7 +1669,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                          Mockito.CALLS_REAL_METHODS);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
+                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class)) {
                 Map<String, String[]> requestParams = new HashMap<>();
                 Map<String, Object> requestAttributes = new HashMap<>();
 
@@ -1701,6 +1735,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
                 OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
                 when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 OAuth2ServiceComponentHolder.getInstance()
                         .setAuthorizationDetailsService(authorizationDetailsServiceMock);
@@ -1787,8 +1824,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class,
                          Mockito.CALLS_REAL_METHODS);
                  MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
+                 MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class)) {
 
+                identityUtil.when(() -> IdentityUtil.validateJWTDepth(anyString()))
+                        .thenAnswer(invocationOnMock -> null);
+                authzUtil.when(() -> AuthzUtil.isLegacyAuthzRuntime()).thenReturn(false);
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 AuthenticationResult result = setAuthenticationResult(true, null, null,
                         null, null);
@@ -1812,6 +1856,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setPrompt(prompt);
                 oAuth2Params.setIDTokenHint(idTokenHint);
+                oAuth2Params.setLoginTenantDomain("carbon.super");
 
                 sessionDataCache.when(SessionDataCache::getInstance).thenReturn(mockSessionDataCache);
                 SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
@@ -1830,6 +1875,12 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                         thenReturn(hasUserApproved);
 
                 oAuth2Util.when(() -> OAuth2Util.validateIdToken(anyString())).thenReturn(idTokenHintValid);
+
+                oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString(), anyString()))
+                        .thenReturn("carbon.super");
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 if ("invalid".equals(idTokenHint)) {
                     signedJWT.when(() -> SignedJWT.parse(anyString())).thenThrow(new ParseException("error", 1));
@@ -2017,6 +2068,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         oAuth2Parameters.setRedirectURI(redirectUri);
         oAuth2Parameters.setApplicationName(appName);
         oAuth2Parameters.setAuthorizationDetails(new AuthorizationDetails(authorizationDetails));
+        oAuth2Parameters.setLoginTenantDomain("carbon.super");
+        oAuth2Parameters.setClientId(CLIENT_ID_VALUE);
         return oAuth2Parameters;
     }
 

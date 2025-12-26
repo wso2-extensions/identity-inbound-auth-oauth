@@ -152,6 +152,8 @@ import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -1524,7 +1526,7 @@ public class AuthzUtil {
         addMappedRemoteClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
-    private static void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
+    private static void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) throws OAuthSystemException {
 
         String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
         long authTime = getAuthenticatedTimeFromCommonAuthCookieValue(commonAuthIdCookieValue,
@@ -2430,7 +2432,7 @@ public class AuthzUtil {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {
@@ -2835,7 +2837,8 @@ public class AuthzUtil {
         try {
             // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
             // tenantDomain.
-            return OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            return OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
@@ -2853,7 +2856,12 @@ public class AuthzUtil {
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
-            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+            try {
+                return EndpointUtil.verifyAndRetrieveTenantDomain(clientId);
+            } catch (OAuthSystemException e) {
+                throw new InvalidRequestException("Error resolving tenant domain for client id: " + clientId,
+                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);
+            }
         }
         return loginTenantDomain;
     }
@@ -3914,7 +3922,10 @@ public class AuthzUtil {
             throws OAuthSystemException {
 
         try {
-            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
+            // if the consent is skipped in the server side or in the SP side,
+            // we don't need to check whether user already approved or not.
+            return !isConsentSkipped(oauth2Params) &&
+                    EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
                     OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
                             .isUserAlreadyConsentedForAuthorizationDetails(user, oauth2Params);
         } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
@@ -3935,7 +3946,9 @@ public class AuthzUtil {
 
     private static String getSubjectFromIdToken(String idTokenHint) throws ParseException {
 
-        return SignedJWT.parse(idTokenHint).getJWTClaimsSet().getSubject();
+        SignedJWT signedJWT = SignedJWT.parse(idTokenHint);
+        IdentityUtil.validateJWTDepth(idTokenHint);
+        return signedJWT.getJWTClaimsSet().getSubject();
     }
 
     private static boolean isIdTokenValidationFailed(String idTokenHint) {
@@ -4350,10 +4363,29 @@ public class AuthzUtil {
      * @param resultFromLogin The session context.
      * @param cookieValue The cookie string which contains the commonAuthId value.
      */
-    private static void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue) {
+    private static void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue)
+            throws OAuthSystemException {
 
-        SessionContext sessionContext = getSessionContext(cookieValue,
-                resultFromLogin.getoAuth2Parameters().getLoginTenantDomain());
+        String tenantDomain = resultFromLogin.getoAuth2Parameters().getLoginTenantDomain();
+        /*
+         If the app is created in an organization, get the tenant domain of the primary organization since the
+         session is stored against the primary organization.
+        */
+        try {
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(
+                    resultFromLogin.getoAuth2Parameters().getClientId(), tenantDomain);
+            if (OrganizationManagementUtil.isOrganization(appTenantDomain)) {
+                String appOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(appTenantDomain);
+                String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .getPrimaryOrganizationId(appOrgId);
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(primaryOrgId);
+            }
+        } catch (OrganizationManagementException | IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException(e);
+        }
+        SessionContext sessionContext = getSessionContext(cookieValue, tenantDomain);
         if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
                 && sessionContext.getSessionAuthHistory().getHistory() != null) {
             List<String> authMethods = new ArrayList<>();

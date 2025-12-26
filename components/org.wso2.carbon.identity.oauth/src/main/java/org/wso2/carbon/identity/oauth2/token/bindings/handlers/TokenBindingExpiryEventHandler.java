@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -319,7 +320,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
         for (AccessTokenDO accessTokenDO : boundTokens) {
             String consumerKey = accessTokenDO.getConsumerKey();
-            if (OAuth2Util.getAppInformationByClientId(consumerKey).isTokenRevocationWithIDPSessionTerminationEnabled()
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            if (isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO, tokenBindingType)
                     && accessTokenDO.getAuthzUser() != null) {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
                 try {
@@ -493,5 +495,29 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Check whether token revocation after session termination is enabled for the given OAuth application.
+     *
+     * @param oAuthAppDO OAuth application.
+     * @param tokenBindingType Token binding type.
+     * @return true if token revocation after logout is enabled, false otherwise.
+     */
+    private boolean isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(OAuthAppDO oAuthAppDO,
+                                                                                 String tokenBindingType) {
+
+        if (oAuthAppDO == null) {
+            return false;
+        }
+
+        // If the session binding type is SSO session based, token is revoked regardless of the application config.
+        if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(tokenBindingType)) {
+            boolean isLegacyTokenRevocationEnabled = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
+            // Check to preserve the legacy behaviour if the relevant config is enabled.
+            return !isLegacyTokenRevocationEnabled || oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
+        }
+
+        return oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled();
     }
 }

@@ -822,15 +822,15 @@ public class EndpointUtil {
                                                               String consentPageUrl, String sessionDataKeyConsent)
             throws OAuthSystemException {
 
-        if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
-            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
-                    endpointParams);
-        } else if (isConsentPageRedirectParamsAllowed()) {
-            // Return the consent url without filtering the query params for backward compatibility.
-            return consentPageUrl;
-        } else {
+        if (!isConsentPageRedirectParamsAllowed()) {
             return EndpointUtil.getRedirectURLWithFilteredParams(consentPageUrl,
                     endpointParams, sessionDataKeyConsent);
+        } else if (isAuthEndpointRedirectParamsFilterConfigAvailable()) {
+            return FrameworkUtils.getRedirectURLWithFilteredParams(consentPageUrl,
+                    endpointParams);
+        } else {
+            // Return the consent url without filtering the query params for backward compatibility.
+            return consentPageUrl;
         }
     }
 
@@ -1541,6 +1541,29 @@ public class EndpointUtil {
                 log.debug("Error while getting oauth app for client Id: " + clientId, e);
             }
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+    }
+
+    /**
+     * This method verifies the service provider tenant domain using the client ID.
+     *
+     * @param clientId Client id of the application.
+     * @return tenantDomain domain of the service provider.
+     */
+    public static String verifyAndRetrieveTenantDomain(String clientId)
+            throws OAuthSystemException {
+
+        try {
+            String extractedTenantDomain = OAuth2Util.getLoginTenant();
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, extractedTenantDomain);
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+            if (StringUtils.equals(extractedTenantDomain, appTenantDomain)) {
+                return appTenantDomain;
+            }
+            throw new OAuthSystemException("Provided tenant domain: " + extractedTenantDomain + " does not " +
+                    "match with the application's tenant domain: " + appTenantDomain);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException("Error while getting oauth app for client Id: " + clientId, e);
         }
     }
 

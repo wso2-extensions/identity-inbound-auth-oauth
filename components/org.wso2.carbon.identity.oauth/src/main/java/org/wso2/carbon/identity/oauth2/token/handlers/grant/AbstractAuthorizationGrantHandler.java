@@ -468,7 +468,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
-        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
+        return createResponseWithTokenBean(tokReqMsgCtx, existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -501,7 +501,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // Update cache with newly added token.
         updateCacheIfEnabled(newTokenBean, OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()), oauthTokenIssuer);
-        return createResponseWithTokenBean(newTokenBean, newTokenBean.getValidityPeriodInMillis(), scope);
+        return createResponseWithTokenBean(tokReqMsgCtx, newTokenBean, newTokenBean.getValidityPeriodInMillis(), scope);
     }
 
     private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus) {
@@ -896,7 +896,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
-    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(AccessTokenDO existingAccessTokenDO,
+    private OAuth2AccessTokenRespDTO createResponseWithTokenBean(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                                 AccessTokenDO existingAccessTokenDO,
                                                                  long expireTimeMillis, String scope)
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
@@ -934,7 +935,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
             }
             if (supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN)) {
-                tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+                if (!tokenReqMessageContext.isImpersonationRequest()
+                        || OAuth2Util.isImpersonatedRefreshTokenEnabled()) {
+                    tokenRespDTO.setRefreshToken(existingAccessTokenDO.getRefreshToken());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Impersonation request is not allowed to have a refresh token for client_id : " +
+                                consumerKey + ", therefore not issuing a refresh token.");
+                    }
+                }
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Refresh grant is not allowed for client_id : " + consumerKey + ", therefore not " +
@@ -945,9 +954,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (expireTimeMillis > 0) {
             tokenRespDTO.setExpiresIn(expireTimeMillis / SECONDS_TO_MILISECONDS_FACTOR);
             tokenRespDTO.setExpiresInMillis(expireTimeMillis);
+            long refreshTokenExpiresInMillis = existingAccessTokenDO.getRefreshTokenValidityPeriodInMillis();
+            if (refreshTokenExpiresInMillis > 0) {
+                tokenRespDTO.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+            } else {
+                tokenRespDTO.setRefreshTokenExpiresInMillis(Long.MAX_VALUE);
+            }
         } else {
             tokenRespDTO.setExpiresIn(Long.MAX_VALUE / SECONDS_TO_MILISECONDS_FACTOR);
             tokenRespDTO.setExpiresInMillis(Long.MAX_VALUE);
+            tokenRespDTO.setRefreshTokenExpiresInMillis(Long.MAX_VALUE);
         }
         tokenRespDTO.setAuthorizedScopes(scope);
         tokenRespDTO.setIsConsentedToken(existingAccessTokenDO.isConsentedToken());

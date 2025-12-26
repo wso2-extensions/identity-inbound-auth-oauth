@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -193,12 +194,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         try {
             String organizationId;
+            String tenantDomain = authenticatedUser.getTenantDomain();
             if (authenticatedUser.getAccessingOrganization() == null) {
-                organizationId = resolveOrganizationId(authenticatedUser.getTenantDomain());
+                organizationId = resolveOrganizationId(tenantDomain);
             } else {
                 organizationId = authenticatedUser.getAccessingOrganization();
             }
-            Organization organization = buildOrganization(organizationId);
+            Organization organization = buildOrganization(organizationId, tenantDomain);
 
             User user = new User.Builder(authenticatedUser.getUserId())
                     .organization(organization)
@@ -434,10 +436,10 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         String organizationId = resolveOrganizationId(accessTokenIssuedOrganization);
 
-        return buildOrganization(organizationId);
+        return buildOrganization(organizationId, null);
     }
 
-    private Organization buildOrganization(String organizationId) {
+    private Organization buildOrganization(String organizationId, String tenantDomain) {
 
         if (StringUtils.isEmpty(organizationId)) {
             return null;
@@ -446,11 +448,15 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
         try {
 
-            org.wso2.carbon.identity.organization.management.service.model.Organization existingOrganization =
-                    organizationManager.getOrganization(organizationId, false, false);
+            MinimalOrganization existingOrganization =
+                    organizationManager.getMinimalOrganization(organizationId, tenantDomain);
 
-            return new Organization(existingOrganization.getId(), existingOrganization.getName());
-
+            return new Organization.Builder()
+                    .id(existingOrganization.getId())
+                    .name(existingOrganization.getName())
+                    .orgHandle(existingOrganization.getOrganizationHandle())
+                    .depth(existingOrganization.getDepth())
+                    .build();
         } catch (OrganizationManagementException e) {
             LOG.error("Error while retrieving organization with ID: " + organizationId, e);
         }
