@@ -275,6 +275,7 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
             handleStandardClaims(tokenMessageContext, tokenType, issuer, audience, accessTokenBuilder);
             handleSubjectClaim(tokenMessageContext.getAuthorizedUser(), oAuthAppDO, accessTokenBuilder);
             handleTokenBindingClaims(tokenMessageContext, accessTokenBuilder);
+            handleActorClaim(tokenMessageContext, accessTokenBuilder);
             claimsToAdd.forEach(accessTokenBuilder::addClaim);
             return accessTokenBuilder.build();
         } catch (IdentityOAuth2Exception e) {
@@ -342,6 +343,24 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                     OIDCClaimUtil.getSubjectType(oAuthAppDO).getValue());
         }
         accessTokenBuilder.addClaim(AccessToken.ClaimNames.SUB.getName(), sub);
+    }
+
+    private void handleActorClaim(OAuthTokenReqMessageContext tokenMessageContext, AccessToken.Builder builder) {
+
+        String actorStr = tokenMessageContext.getRequestedActor();
+
+        if (StringUtils.isEmpty(actorStr)) {
+            Object impersonator = tokenMessageContext.getProperty(OAuthConstants.IMPERSONATING_ACTOR);
+            if (impersonator instanceof String) {
+                actorStr = (String) impersonator;
+            }
+        }
+
+        if (StringUtils.isNotEmpty(actorStr)) {
+            Map<String, Object> actClaimValue = new HashMap<>();
+            actClaimValue.put(AccessToken.ClaimNames.SUB.getName(), actorStr);
+            builder.addClaim(AccessToken.ClaimNames.ACT.getName(), actClaimValue);
+        }
     }
 
     private Map<String, Object> getAdditionalClaimsToAddToToken(OAuthTokenReqMessageContext tokenMessageContext)
