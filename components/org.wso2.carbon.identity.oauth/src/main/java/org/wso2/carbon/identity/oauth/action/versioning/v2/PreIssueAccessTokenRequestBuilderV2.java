@@ -85,6 +85,10 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
     private static final Log LOG =
             LogFactory.getLog(org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.class);
 
+    private static final String FEDERATED_USER = "FEDERATED";
+    private static final String LOCAL_USER = "LOCAL";
+    private static final String SSO_FEDERATED_IDP = "SSO";
+
     @Override
     public ActionType getSupportedActionType() {
 
@@ -124,9 +128,9 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                 tokenReqDTO.getTenantDomain()));
 
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
-        if (isAuthorizedForUser) {
+        if (isAuthorizedForUser && authorizedUser != null) {
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
-            if (authorizedUser != null && StringUtils.isNotEmpty(authorizedUser.getUserStoreDomain())) {
+            if (StringUtils.isNotEmpty(authorizedUser.getUserStoreDomain())) {
                 eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
             }
         }
@@ -197,20 +201,16 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                                         AuthenticatedUser authenticatedUser, String clientID, String grantType) {
 
         try {
-            String organizationId;
-            String tenantDomain = authenticatedUser.getTenantDomain();
-            if (authenticatedUser.getAccessingOrganization() == null) {
-                organizationId = resolveOrganizationId(tenantDomain);
+            User user;
+            if (authenticatedUser.isFederatedUser()) {
+                user = resolveFederatedUser(authenticatedUser, grantType, clientID);
             } else {
-                organizationId = authenticatedUser.getAccessingOrganization();
+                user = resolveLocalUser(authenticatedUser, grantType);
             }
-            Organization organization = buildOrganization(organizationId, tenantDomain);
 
-            User user = new User.Builder(authenticatedUser.getUserId())
-                    .organization(organization)
-                    .build();
-
-            eventBuilder.user(user);
+            if (user != null) {
+                eventBuilder.user(user);
+            }
         } catch (UserIdNotFoundException e) {
             if (LOG.isDebugEnabled()) {
                 // todo: fall back to a different identifier like username.
@@ -220,6 +220,76 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                                 "for grantType: " + grantType), e);
             }
         }
+    }
+
+    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+            throws UserIdNotFoundException {
+
+        if (SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
+            return resolveSSOFederatedUser(authenticatedUser, grantType, clientID);
+        }
+        return resolveFederatedUser(authenticatedUser, grantType);
+    }
+
+    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType) {
+
+        User.Builder userBuilder = new User.Builder(null);
+        userBuilder.userType(FEDERATED_USER);
+        userBuilder.federatedIdP(authenticatedUser.getFederatedIdPName());
+        userBuilder.organization(resolveUserAuthenticatedOrganization(authenticatedUser));
+
+        if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)) {
+            Organization accessingOrg;
+            if (authenticatedUser.getAccessingOrganization() != null) {
+                accessingOrg = buildOrganization(authenticatedUser.getAccessingOrganization(),
+                        authenticatedUser.getTenantDomain());
+            } else {
+                accessingOrg = buildOrganization(
+                        resolveOrganizationId(authenticatedUser.getTenantDomain()),
+                        authenticatedUser.getTenantDomain());
+            }
+            userBuilder.accessingOrganization(accessingOrg);
+        }
+        return userBuilder.build();
+    }
+
+    private User resolveLocalUser(AuthenticatedUser authenticatedUser, String grantType)
+            throws UserIdNotFoundException {
+
+        User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId());
+        userBuilder.userType(LOCAL_USER);
+        userBuilder.organization(resolveUserAuthenticatedOrganization(authenticatedUser));
+
+        if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)) {
+            userBuilder.accessingOrganization(buildOrganization(authenticatedUser.getAccessingOrganization(),
+                    authenticatedUser.getTenantDomain()));
+        }
+        return userBuilder.build();
+    }
+
+    private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+            throws UserIdNotFoundException {
+
+        try {
+            AuthenticatedUser associatedUser = OAuth2Util.getAuthenticatedUser(
+                    authenticatedUser.getUserId(),
+                    authenticatedUser.getTenantDomain(),
+                    authenticatedUser.getAccessingOrganization(),
+                    authenticatedUser.getUserResidentOrganization(),
+                    clientID);
+            return resolveLocalUser(associatedUser, grantType);
+        } catch (IdentityOAuth2Exception ignored) {
+            return resolveFederatedUser(authenticatedUser, grantType);
+        }
+    }
+
+    private Organization resolveUserAuthenticatedOrganization(AuthenticatedUser authenticatedUser) {
+
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        if (authenticatedUser.getUserResidentOrganization() != null) {
+            return buildOrganization(authenticatedUser.getUserResidentOrganization(), tenantDomain);
+        }
+        return buildOrganization(resolveOrganizationId(tenantDomain), tenantDomain);
     }
 
     private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO) {
