@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.action.versioning;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.oauth.action.constant.PreIssueAccessTokenActionConstants;
-import org.wso2.carbon.identity.oauth.action.versioning.v2.ActionTriggerEvaluatorForVersionV2;
 
 /**
  * Factory class for getting the ActionVersioningHandler by Action version.
@@ -41,8 +40,6 @@ public class ActionTriggerEvaluatorFactory {
         switch (action.getActionVersion()) {
             case PreIssueAccessTokenActionConstants.ACTION_VERSION_V1:
                 return ActionTriggerEvaluatorForVersion.getInstance();
-            case PreIssueAccessTokenActionConstants.ACTION_VERSION_V2:
-                return ActionTriggerEvaluatorForVersionV2.getInstance();
             default:
                 throw new ActionExecutionException("Unsupported action version: " + action.getActionVersion());
         }

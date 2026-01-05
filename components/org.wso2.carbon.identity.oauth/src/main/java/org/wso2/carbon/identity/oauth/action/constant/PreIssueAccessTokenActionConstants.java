@@ -24,7 +24,6 @@ package org.wso2.carbon.identity.oauth.action.constant;
 public class PreIssueAccessTokenActionConstants {
 
     public static final String ACTION_VERSION_V1 = "v1";
-    public static final String ACTION_VERSION_V2 = "v2";
 
     private PreIssueAccessTokenActionConstants() {
 

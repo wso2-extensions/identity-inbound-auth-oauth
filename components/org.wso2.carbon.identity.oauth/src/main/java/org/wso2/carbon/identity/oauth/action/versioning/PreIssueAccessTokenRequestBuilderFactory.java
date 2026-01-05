@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRe
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.oauth.action.constant.PreIssueAccessTokenActionConstants;
 import org.wso2.carbon.identity.oauth.action.versioning.v1.PreIssueAccessTokenRequestBuilderV1;
-import org.wso2.carbon.identity.oauth.action.versioning.v2.PreIssueAccessTokenRequestBuilderV2;
 
 /**
  * Factory class for getting the PreIssueAccessRequestBuilder by Action version.
@@ -43,8 +42,6 @@ public class PreIssueAccessTokenRequestBuilderFactory {
         switch (actionVersion) {
             case PreIssueAccessTokenActionConstants.ACTION_VERSION_V1:
                 return new PreIssueAccessTokenRequestBuilderV1();
-            case PreIssueAccessTokenActionConstants.ACTION_VERSION_V2:
-                return new PreIssueAccessTokenRequestBuilderV2();
             default:
                 throw new ActionExecutionRequestBuilderException(
                         "Unsupported pre-issue-access token action version: " + actionVersion);
