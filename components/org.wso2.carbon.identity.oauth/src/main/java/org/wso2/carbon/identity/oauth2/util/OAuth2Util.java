@@ -6440,6 +6440,9 @@ public class OAuth2Util {
     public static boolean isX5tEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED));
+    }
+
+    /**
      * Return the login tenant domain by evaluating the privileged carbon context.
      *
      * @return login tenant domain.
