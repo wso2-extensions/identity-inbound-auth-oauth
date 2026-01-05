@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.slf4j.MDC;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
@@ -532,13 +533,24 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
                 AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
                 OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessToken);
-                CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
-                if (oauthCacheEntry != null) {
-                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
-                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
-                }
+                // Clearing the cache entry from OAuthCache regardless if the cache entry exists or not, since we 
+                // need to propagate the cache invalidation message in a clustered setup.
+                OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+                OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
             }
         }
+    }
+
+    private String getCorrelation() {
+        String ref = null;
+        if (isCorrelationIDPresent()) {
+            ref = MDC.get("Correlation-ID");
+        }
+        return ref;
+    }
+
+    private boolean isCorrelationIDPresent() {
+        return MDC.get("Correlation-ID") != null;
     }
 
     /**

@@ -1545,6 +1545,29 @@ public class EndpointUtil {
     }
 
     /**
+     * This method verifies the service provider tenant domain using the client ID.
+     *
+     * @param clientId Client id of the application.
+     * @return tenantDomain domain of the service provider.
+     */
+    public static String verifyAndRetrieveTenantDomain(String clientId)
+            throws OAuthSystemException {
+
+        try {
+            String extractedTenantDomain = OAuth2Util.getLoginTenant();
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, extractedTenantDomain);
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+            if (StringUtils.equals(extractedTenantDomain, appTenantDomain)) {
+                return appTenantDomain;
+            }
+            throw new OAuthSystemException("Provided tenant domain: " + extractedTenantDomain + " does not " +
+                    "match with the application's tenant domain: " + appTenantDomain);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException("Error while getting oauth app for client Id: " + clientId, e);
+        }
+    }
+
+    /**
      * Extract information related to the token request and exception and publish the event to listeners.
      *
      * @param exception Exception occurred.

@@ -64,6 +64,7 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -75,6 +76,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -217,6 +219,7 @@ import javax.xml.namespace.QName;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -241,6 +244,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -4831,7 +4835,22 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is
+             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+             used as the issuer is the root tenant.
+            */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application resident organization id is found in the carbon context. " +
+                        "Using the root tenant domain to build the id token issuer.");
+            }
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -6015,7 +6034,9 @@ public class OAuth2Util {
     public static boolean isApiBasedAuthSupportedGrant(HttpServletRequest request) {
 
         return StringUtils.equals(OAuthConstants.CODE,
-                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) ||
+                StringUtils.equals(RESPONSE_TYPE_DEVICE,
+                        request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
     }
 
     /**
@@ -6419,5 +6440,58 @@ public class OAuth2Util {
     public static boolean isX5tEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED));
+     * Return the login tenant domain by evaluating the privileged carbon context.
+     *
+     * @return login tenant domain.
+     * @throws IdentityOAuth2Exception if an error occurs when resolving tenant domain.
+     */
+    public static String getLoginTenant() throws IdentityOAuth2Exception {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = FrameworkUtils.resolveTenantDomainFromOrganizationId(applicationResidentOrgId);
+            } catch (FrameworkException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization " +
+                        "id: " + applicationResidentOrgId, e);
+            }
+        }
+        return tenantDomain;
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param clientId     OAuth client ID
+     * @param tenantDomain Tenant domain of the OAuth application
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Client ID or Tenant Domain is blank while checking whether the " +
+                    "application is a fragment app.");
+        }
+
+        ServiceProviderProperty[] serviceProviderProperties;
+        try {
+             serviceProviderProperties =
+                    OAuthAppDO.getOrgApplication(clientId, tenantDomain).getSpProperties();
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while checking whether the application is a fragment app. " +
+                    "Client ID: " + clientId + ", Tenant Domain: " + tenantDomain, e);
+        }
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
     }
 }

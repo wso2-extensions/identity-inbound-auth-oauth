@@ -113,12 +113,14 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RESTRICT_FRAGMENT_COMPONENTS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -289,6 +291,13 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = dao.getAppInformationByAppName(appName, tenantID);
             if (app != null) {
+                String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
+                if (isAccessTokenClaimsSeparationFeatureEnabled() &&
+                        !isAccessTokenClaimsSeparationEnabledForApp(app.getOauthConsumerKey(), tenantDomain)) {
+                    // Add requested claims as access token claims if the app is not in the new access token
+                    // claims feature.
+                    addAccessTokenClaims(app, tenantDomain);
+                }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
                 dto = new OAuthConsumerAppDTO();
@@ -447,6 +456,8 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
+                        app.setExtendRenewedRefreshTokenExpiryTime(
+                                application.getExtendRenewedRefreshTokenExpiryTime());
                         if (isFAPIConformanceEnabled) {
                             validateFAPIBindingType(application.getTokenBindingType());
                         } else {
@@ -497,7 +508,7 @@ public class OAuthAdminServiceImpl {
                                 // Need to split the redirect uris for validating the host names since it is combined
                                 // into one regular expression.
                                 if (application.getCallbackUrl().startsWith(
-                                        OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                                        CALLBACK_URL_REGEXP_PREFIX)) {
                                     callBackURIList = getRedirectURIList(application);
                                 } else {
                                     callBackURIList.add(application.getCallbackUrl());
@@ -763,11 +774,35 @@ public class OAuthAdminServiceImpl {
 
     private void validateCallbackURI(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
 
+        LOG.debug("Validating callback URI for application");
+        String callbackUrl = application.getCallbackUrl();
+        // Validation 1: If callback URI is required for the given grant types, ensure it is provided.
         boolean isCallbackUriRequired = application.getGrantTypes().contains(AUTHORIZATION_CODE) ||
                 application.getGrantTypes().contains(IMPLICIT);
-
         if (isCallbackUriRequired && StringUtils.isEmpty(application.getCallbackUrl())) {
             throw handleClientError(INVALID_REQUEST, "Callback URI is mandatory for Code or Implicit grant types");
+        }
+
+        // Validation 2: Callback URIs must not contain fragment components.
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(RESTRICT_FRAGMENT_COMPONENTS))) {
+            LOG.debug("No validation required, as fragment components are allowed in callback URIs.");
+            return;
+        }
+        String errorMsg = "Callback URI must not contain a fragment component";
+        if (isCallbackUriRequired && StringUtils.isNotEmpty(callbackUrl)) {
+            // If callback is a regexp list, validate each entry.
+            if (callbackUrl.startsWith(CALLBACK_URL_REGEXP_PREFIX)) {
+                List<String> redirectURIs = getRedirectURIList(application);
+                for (String redirectURI : redirectURIs) {
+                    if (redirectURI.contains("#")) {
+                        throw handleClientError(INVALID_REQUEST, errorMsg);
+                    }
+                }
+            } else {
+                if (application.getCallbackUrl().contains("#")) {
+                    throw handleClientError(INVALID_REQUEST, errorMsg);
+                }
+            }
         }
     }
 
@@ -885,6 +920,7 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oAuthAppDO.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
+            oAuthAppDO.setExtendRenewedRefreshTokenExpiryTime(consumerAppDTO.getExtendRenewedRefreshTokenExpiryTime());
             if (isFAPIConformanceEnabled) {
                 validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
             } else {
@@ -937,7 +973,7 @@ public class OAuthAdminServiceImpl {
                     List<String> callBackURIList = new ArrayList<>();
                     // Need to split the redirect uris for validating the host names since it is combined
                     // into one regular expression.
-                    if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                    if (consumerAppDTO.getCallbackUrl().startsWith(CALLBACK_URL_REGEXP_PREFIX)) {
                         callBackURIList = getRedirectURIList(consumerAppDTO);
                     } else {
                         callBackURIList.add(consumerAppDTO.getCallbackUrl());
@@ -2792,22 +2828,26 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Get call back URIs as a list
+     * Get call back URIs as a list.
+     *
      * @param application  OAuthConsumerAppDTO
      * @return list of callback urls
      */
     private List<String> getRedirectURIList(OAuthConsumerAppDTO application) {
 
-        List<String> callBackURIList = new ArrayList<>();
         // Need to split the redirect uris for validating the host names since it is combined
         // into one regular expression.
-        if (application.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-            String redirectURI = application.getCallbackUrl();
-            redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
-                    redirectURI.indexOf(")"));
-            callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+        String redirectURI = application.getCallbackUrl();
+        int regexpIndex = redirectURI.indexOf(CALLBACK_URL_REGEXP_PREFIX);
+        if (regexpIndex >= 0) {
+            redirectURI = redirectURI.substring(regexpIndex + CALLBACK_URL_REGEXP_PREFIX.length());
         }
-        return callBackURIList;
+        // Remove the outermost parentheses.
+        if (redirectURI.startsWith("(") && redirectURI.endsWith(")")) {
+            redirectURI = redirectURI.substring(1, redirectURI.length() - 1).trim();
+        }
+
+        return Arrays.asList(redirectURI.split("\\|"));
     }
 
     /**
