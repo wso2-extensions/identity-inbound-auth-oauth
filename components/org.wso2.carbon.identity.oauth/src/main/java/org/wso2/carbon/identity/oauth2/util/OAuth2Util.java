@@ -2284,12 +2284,11 @@ public class OAuth2Util {
         }
         return oAuthAppDO.getOauthConsumerSecret();
     }
-
     /**
      * Get the client secret of the application.
      *
      * @param consumerKey Consumer Key of the application.
-     * @param secretHash  Hash of the consumer secret.
+     * @param consumerSecret Consumer Secret of the application.
      * @return Consumer Secret retrieved from the DB which matches with the provided secret hash.
      * @throws IdentityOAuthAdminException Error when loading the application.
      */
