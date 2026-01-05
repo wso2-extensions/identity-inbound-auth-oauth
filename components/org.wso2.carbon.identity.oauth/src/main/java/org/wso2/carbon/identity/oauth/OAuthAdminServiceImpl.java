@@ -494,24 +494,28 @@ public class OAuthAdminServiceImpl {
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-        // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
-        // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
-        boolean duplicateSecretFound = false;
-        for (OAuthConsumerSecretDO secret : secrets) {
-            consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
-            if (oAuthAppDO.getOauthConsumerSecret() != null &&
-                    oAuthAppDO.getOauthConsumerSecret().equals(secret.getSecretValue())) {
-                duplicateSecretFound = true;
+        try {
+            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
+            // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
+            // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
+            boolean duplicateSecretFound = false;
+            for (OAuthConsumerSecretDO secret : secrets) {
+                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
+                if (oAuthAppDO.getOauthConsumerSecret() != null &&
+                        oAuthAppDO.getOauthConsumerSecret().equals(secret.getSecretValue())) {
+                    duplicateSecretFound = true;
+                }
             }
-        }
-        if (!duplicateSecretFound && oAuthAppDO.getOauthConsumerSecret() != null) {
-            OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
-            oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
-            oAuthConsumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
-            oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
-            oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
-            consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
+            if (!duplicateSecretFound && oAuthAppDO.getOauthConsumerSecret() != null) {
+                OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
+                oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+                oAuthConsumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
+                oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
+                oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
+                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
         }
         return consumerSecretsList;
     }

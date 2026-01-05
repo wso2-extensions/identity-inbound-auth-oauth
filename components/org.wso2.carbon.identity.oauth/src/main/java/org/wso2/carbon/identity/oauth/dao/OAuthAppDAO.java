@@ -165,9 +165,11 @@ public class OAuthAppDAO {
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
-                    // If multiple client secrets are allowed, store the client secret in a separate table.
+                    // If multiple client secrets are allowed, store the client secret in the
+                    // IDN_OAUTH_CONSUMER_SECRETS table.
                     if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                        addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(), processedClientSecret);
+                        addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(),
+                                consumerAppDO.getOauthConsumerSecret(), processedClientSecret);
                     }
                     IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
@@ -1105,24 +1107,24 @@ public class OAuthAppDAO {
             }
         }
     }
-
     /**
      * Create the OAuthConsumerSecretDO object to represent the consumer secret and add it to the database.
      *
-     * @param connection     Same db connection used in OAuth2 app creation.
-     * @param consumerKey    Consumer key of the created app.
-     * @param consumerSecret Consumer secret of the created app.
-     * @throws IdentityOAuth2Exception if an error occurs during the process.
+     * @param connection            Same db connection used in OAuth2 app creation.
+     * @param consumerKey           Consumer key of the created app.
+     * @param consumerSecret        Consumer secret of the created app.
+     * @param processedClientSecret Processed client secret.
      * @throws IdentityOAuthAdminException if an error occurs during the process.
      */
-    private void addConsumerSecret(Connection connection, String consumerKey, String consumerSecret)
+    private void addConsumerSecret(Connection connection, String consumerKey, String consumerSecret,
+                                   String processedClientSecret)
             throws SQLException, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
         consumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
         consumerSecretDO.setClientId(consumerKey);
         consumerSecretDO.setSecretValue(consumerSecret);
-        addOAuthConsumerSecret(connection, consumerSecretDO);
+        addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
     }
 
     /**
@@ -1429,19 +1431,24 @@ public class OAuthAppDAO {
         Connection connection = null;
         try {
             connection = IdentityDatabaseUtil.getDBConnection(true);
+            String processedClientSecret =
+                    persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
             if (needCopying) {
                 // Copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
-                addConsumerSecret(connection, consumerSecretDO.getClientId(), appDO.getOauthConsumerSecret());
+                addConsumerSecret(connection, consumerSecretDO.getClientId(), appDO.getOauthConsumerSecret(),
+                        processedClientSecret);
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
-            addOAuthConsumerSecret(connection, consumerSecretDO);
+            addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
             // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the new secret.
-            updateOAuthConsumerSecret(connection, consumerSecretDO.getClientId(), consumerSecretDO.getSecretValue());
+            updateOAuthConsumerSecret(connection, consumerSecretDO.getClientId(), processedClientSecret);
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw handleError("Error occurred while adding OAuth consumer secret for client id : "
                     + consumerSecretDO.getClientId(), e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RuntimeException(e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
         }
@@ -1452,21 +1459,21 @@ public class OAuthAppDAO {
      *
      * @param connection       DB connection to be used.
      * @param consumerSecretDO OAuthConsumerSecretDO containing the details of the consumer secret to be added
+     * @param processedSecret  Processed client secret.
      * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
      */
-    public void addOAuthConsumerSecret(Connection connection, OAuthConsumerSecretDO consumerSecretDO)
+    public void addOAuthConsumerSecret(Connection connection, OAuthConsumerSecretDO consumerSecretDO,
+                                       String processedSecret)
             throws SQLException, IdentityOAuthAdminException {
 
         try (PreparedStatement prepStmt = connection
                 .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER_SECRET)) {
-            String processedClientSecret =
-                    persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
             String hashedClientSecret = hashingPersistenceProcessor
                     .getProcessedClientSecret(consumerSecretDO.getSecretValue());
             prepStmt.setString(1, consumerSecretDO.getSecretId());
             prepStmt.setString(2, consumerSecretDO.getDescription());
             prepStmt.setString(3, consumerSecretDO.getClientId());
-            prepStmt.setString(4, processedClientSecret);
+            prepStmt.setString(4, processedSecret);
             prepStmt.setString(5, hashedClientSecret);
             if (consumerSecretDO.getExpiresAt() != null) {
                 prepStmt.setLong(6, consumerSecretDO.getExpiresAt());
@@ -1483,24 +1490,18 @@ public class OAuthAppDAO {
     /**
      * Update an existing OAuth consumer secret.
      *
-     * @param connection        DB connection to be used.
-     * @param consumerKey       Consumer key (client ID) whose secret is to be updated.
-     * @param newConsumerSecret New consumer secret value.
-     * @throws IdentityOAuthAdminException if an error occurs while updating the consumer secret.
+     * @param connection            DB connection to be used.
+     * @param consumerKey           Consumer key (client ID) whose secret is to be updated.
+     * @param processedClientSecret Processed client secret.
      */
-    public void updateOAuthConsumerSecret(Connection connection, String consumerKey, String newConsumerSecret)
-            throws SQLException, IdentityOAuthAdminException {
+    public void updateOAuthConsumerSecret(Connection connection, String consumerKey, String processedClientSecret)
+            throws SQLException {
 
         try (PreparedStatement prepStmt = connection
                 .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_SECRET_KEY)) {
-            String processedClientSecret =
-                    persistenceProcessor.getProcessedClientSecret(newConsumerSecret);
             prepStmt.setString(1, processedClientSecret);
             prepStmt.setString(2, consumerKey);
             prepStmt.execute();
-        } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error occurred while processing the client secret by TokenPersistenceProcessor",
-                    e);
         }
     }
 
@@ -1557,7 +1558,7 @@ public class OAuthAppDAO {
      * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secrets.
      */
     public List<OAuthConsumerSecretDO> getOAuthConsumerSecrets(String consumerKey)
-            throws IdentityOAuthAdminException {
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         List<OAuthConsumerSecretDO> consumerSecrets = new ArrayList<>();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
@@ -1570,7 +1571,13 @@ public class OAuthAppDAO {
                         secret.setSecretId(resultSet.getString(1));
                         secret.setDescription(resultSet.getString(2));
                         secret.setClientId(resultSet.getString(3));
-                        secret.setSecretValue(resultSet.getString(4));
+                        if (isHashDisabled) {
+                            secret.setSecretValue(persistenceProcessor
+                                    .getPreprocessedClientSecret(resultSet.getString(4)));
+                        } else {
+                            secret.setSecretValue(resultSet.getString(4));
+                        }
+
                         secret.setSecretHash(resultSet.getString(5));
                         long expiresAt = resultSet.getLong(6);
                         // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0

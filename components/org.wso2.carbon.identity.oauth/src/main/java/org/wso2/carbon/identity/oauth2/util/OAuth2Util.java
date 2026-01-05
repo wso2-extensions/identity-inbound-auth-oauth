@@ -188,6 +188,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -666,10 +667,15 @@ public class OAuth2Util {
     public static boolean hasClientSecretLimitReached(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getOauthConsumerKey());
-        int currentSecretCount = secrets.size();
-        int clientSecretLimit = getClientSecretCount();
-        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+        String consumerKey = oAuthAppDO.getOauthConsumerKey();
+        try {
+            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
+            int currentSecretCount = secrets.size();
+            int clientSecretLimit = getClientSecretCount();
+            return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
+        }
     }
 
     /**
