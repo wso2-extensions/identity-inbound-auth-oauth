@@ -28,21 +28,21 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -56,12 +56,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -139,7 +136,8 @@ public class AccessTokenDAOImplTest {
         oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         oAuth2Util.when(() -> OAuth2Util.getTenantId(TEST_TENANT_DOMAIN)).thenReturn(1234);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomain(-1234)).thenReturn("carbon.super");
-        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(any(AuthenticatedUser.class))).thenReturn(PRIMARY_USER_STORE);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(any(AuthenticatedUser.class)))
+                .thenReturn(PRIMARY_USER_STORE);
         oAuth2Util.when(() -> OAuth2Util.getAuthenticatedIDP(any(AuthenticatedUser.class))).thenReturn("LOCAL");
         
         // Mock OAuth token issuer
@@ -151,7 +149,8 @@ public class AccessTokenDAOImplTest {
         // Mock OAuthAppDO
         OAuthAppDO mockOAuthAppDO = mock(OAuthAppDO.class);
         lenient().when(mockOAuthAppDO.getTokenType()).thenReturn("default");
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(mockOAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                .thenReturn(mockOAuthAppDO);
         
         identityUtil.when(() -> IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
 
@@ -353,12 +352,9 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true).thenReturn(false);
         when(mockResultSet.getString(1)).thenReturn("true");
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(true);
-
         
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), anyString(), eq(tokenState), eq(false)))
@@ -370,9 +366,6 @@ public class AccessTokenDAOImplTest {
         assertTrue(accessTokenDO.isConsentedToken(), "Token should be marked as consented");
         oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
                 eq(oldAccessTokenId), anyString(), eq(tokenState), eq(false)), times(1));
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     @Test
@@ -402,13 +395,10 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         when(mockPrepStmt.executeUpdate()).thenReturn(1);
         lenient().when(mockResultSet.next()).thenReturn(false);
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
 
-        
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)))
                 .then(invocation -> null);
@@ -418,9 +408,6 @@ public class AccessTokenDAOImplTest {
 
         oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
                 eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)), times(1));
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     @Test
@@ -449,12 +436,9 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         lenient().when(mockResultSet.next()).thenReturn(false);
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
-
         
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)))
@@ -465,9 +449,6 @@ public class AccessTokenDAOImplTest {
 
         oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
                 eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)), times(1));
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     @Test
@@ -493,8 +474,6 @@ public class AccessTokenDAOImplTest {
 
         lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
         when(mockPrepStmt.executeUpdate()).thenThrow(new SQLException("Database error"));
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
@@ -503,8 +482,6 @@ public class AccessTokenDAOImplTest {
                 accessTokenDAO.invalidateAndCreateNewAccessToken(oldAccessTokenId, tokenState, consumerKey,
                         tokenStateId, accessTokenDO, userStoreDomain, grantType)
         );
-        
-        oauth2ServiceComponentHolder.close();
     }
 
     @Test
@@ -533,12 +510,9 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         lenient().when(mockResultSet.next()).thenReturn(false);
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
-
         
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(false)))
@@ -550,9 +524,6 @@ public class AccessTokenDAOImplTest {
                 accessTokenDAO.invalidateAndCreateNewAccessToken(oldAccessTokenId, tokenState, consumerKey,
                         tokenStateId, accessTokenDO, userStoreDomain, grantType)
         );
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     @Test
@@ -581,12 +552,9 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         lenient().when(mockResultSet.next()).thenReturn(false);
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
-
         
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)))
@@ -597,9 +565,6 @@ public class AccessTokenDAOImplTest {
 
         oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
                 eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)), times(1));
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     @Test
@@ -628,12 +593,9 @@ public class AccessTokenDAOImplTest {
         lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
         lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
         lenient().when(mockResultSet.next()).thenReturn(false);
-
-        
                 
         oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
                 .thenReturn(false);
-
         
         oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
                         eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)))
@@ -644,13 +606,10 @@ public class AccessTokenDAOImplTest {
 
         oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
                 eq(oldAccessTokenId), eq("new-token-id"), eq(tokenState), eq(true)), times(1));
-
-        oauth2ServiceComponentHolder.close();
-        oauth2TokenUtil.close();
     }
 
     /**
-     * Helper method to create a mock AccessTokenDO
+     * Helper method to create a mock AccessTokenDO.
      */
     private AccessTokenDO createMockAccessTokenDO(String accessToken, String consumerKey) {
 

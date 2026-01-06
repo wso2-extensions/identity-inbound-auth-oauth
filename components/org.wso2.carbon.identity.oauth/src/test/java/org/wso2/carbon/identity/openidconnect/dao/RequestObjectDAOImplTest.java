@@ -23,6 +23,8 @@ package org.wso2.carbon.identity.openidconnect.dao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -200,6 +202,195 @@ public class RequestObjectDAOImplTest {
         }
     }
 
+    @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceCodeToToken"})
+    public void testUpdateRequestObjectReferenceToTokenByCodeId() throws Exception {
+
+        String newCodeId = "b6fc0c96db9fb425b74cdc922e7b7b3";
+        String newTokenId = "c7gd1d07ec0gc536c85ded033f8c8c4";
+
+        try {
+            requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
+                    requestedEssentialClaims);
+            insertCodeId(newCodeId);
+            insertTokenId(newTokenId);
+            requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, newCodeId);
+            requestObjectDAO.updateRequestObjectReferenceToTokenByCodeId(newCodeId, newTokenId);
+
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+                String query = "SELECT CODE_ID, TOKEN_ID FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE " +
+                        "SESSION_DATA_KEY=? LIMIT 1";
+                PreparedStatement statement = connection.prepareStatement(query);
+                statement.setString(1, sessionDataKey);
+                ResultSet resultSet = statement.executeQuery();
+
+                if (resultSet.next()) {
+                    // After updateRequestObjectReferenceToTokenByCodeId, CODE_ID should be null.
+                    // and TOKEN_ID should be set.
+                    Assert.assertNull("CODE_ID should be null after update",
+                            resultSet.getString("CODE_ID"));
+                    Assert.assertEquals("TOKEN_ID should match the new token", newTokenId,
+                            resultSet.getString("TOKEN_ID"));
+                } else {
+                    Assert.fail("No record found for the session data key");
+                }
+            }
+        } finally {
+            deleteCodeId(newCodeId);
+            deleteTokenId(newTokenId);
+            requestObjectDAO.deleteRequestObjectReferenceByTokenId(newTokenId);
+        }
+    }
+
+    @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceToTokenByCodeId"})
+    public void testUpdateRequestObjectReferenceToTokenByCodeIdWithExistingToken() throws Exception {
+
+        String existingCodeId = "d8hf3f18ge1hd647d96fef144g9d9d5";
+        String existingTokenId = "e9ig4g29hf2ie758e07gfg255h0e0e6";
+        String newSessionKey = "f0jh5h30ig3jf869f18hgh366i1f1f7";
+
+        try {
+            insertTokenId(existingTokenId);
+            
+            // Insert first request object with token.
+            requestObjectDAO.insertRequestObjectData(consumerKey, newSessionKey,
+                    requestedEssentialClaims);
+            requestObjectDAO.updateRequestObjectReferencebyTokenId(newSessionKey, existingTokenId);
+
+            // Insert second request object with code.
+            String secondSessionKey = "g1ki6i41jh4kg970g29ihi477j2g2g8";
+            requestObjectDAO.insertRequestObjectData(consumerKey, secondSessionKey,
+                    requestedEssentialClaims);
+            insertCodeId(existingCodeId);
+            requestObjectDAO.updateRequestObjectReferencebyCodeId(secondSessionKey, existingCodeId);
+
+            // Update to use existing token - should delete old entry with token and update code entry.
+            requestObjectDAO.updateRequestObjectReferenceToTokenByCodeId(existingCodeId, existingTokenId);
+
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+                // Verify the code entry was updated with token.
+                String query = "SELECT CODE_ID, TOKEN_ID FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE " +
+                        "SESSION_DATA_KEY=?";
+                PreparedStatement statement = connection.prepareStatement(query);
+                statement.setString(1, secondSessionKey);
+                ResultSet resultSet = statement.executeQuery();
+
+                if (resultSet.next()) {
+                    Assert.assertNull("CODE_ID should be null", resultSet.getString("CODE_ID"));
+                    Assert.assertEquals("TOKEN_ID should be set to existing token", existingTokenId, 
+                            resultSet.getString("TOKEN_ID"));
+                } else {
+                    Assert.fail("No record found for the second session data key");
+                }
+
+                // Verify the old entry with the same token was deleted.
+                statement = connection.prepareStatement(query);
+                statement.setString(1, newSessionKey);
+                resultSet = statement.executeQuery();
+                Assert.assertFalse("Old entry with same token should be deleted", resultSet.next());
+            }
+        } finally {
+            deleteCodeId(existingCodeId);
+            deleteTokenId(existingTokenId);
+            requestObjectDAO.deleteRequestObjectReferenceByTokenId(existingTokenId);
+        }
+    }
+
+    @Test(dependsOnMethods = {"testUpdateRequestObjectReferenceToTokenByCodeIdWithExistingToken"},
+            expectedExceptions = IdentityOAuth2Exception.class)
+    public void testUpdateRequestObjectReferenceToTokenByCodeIdWithInvalidConnection() throws Exception {
+
+        String testCodeId = "h2jd6d42kh5lh758h29jhj588k3h3h9";
+        // Use an extremely long token ID that exceeds database column limits to cause SQL error.
+        // during delete operation in deleteRequestObjectReferenceforCode.
+        StringBuilder longTokenId = new StringBuilder();
+        for (int i = 0; i < 500; i++) {
+            longTokenId.append("a");
+        }
+        String testTokenId = longTokenId.toString();
+        String testSessionKey = "j4lf8f64mj7nj970j41ljl700m5j5j1";
+
+        try {
+            insertCodeId(testCodeId);
+            
+            requestObjectDAO.insertRequestObjectData(consumerKey, testSessionKey,
+                    requestedEssentialClaims);
+            requestObjectDAO.updateRequestObjectReferencebyCodeId(testSessionKey, testCodeId);
+
+            try {
+                requestObjectDAO.updateRequestObjectReferenceToTokenByCodeId(testCodeId, testTokenId);
+                Assert.fail("Expected IdentityOAuth2Exception to be thrown");
+            } catch (IdentityOAuth2Exception e) {
+                boolean isExpectedException = e.getMessage().contains("Can not delete existing entry") ||
+                        e.getMessage().contains("Can not update token id");
+                Assert.assertTrue("Exception should be from delete or update operation", isExpectedException);
+                throw e; // Re-throw for expectedExceptions annotation.
+            }
+        } finally {
+            try {
+                deleteCodeId(testCodeId);
+            } catch (Exception e) {
+                // Ignore cleanup errors.
+            }
+        }
+    }
+
+    @Test(dependsOnMethods = {"testUpdateRequestObjectReferenceToTokenByCodeIdWithInvalidConnection"},
+            expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = ".*Can not delete existing entry for the same token id.*")
+    public void testUpdateRequestObjectReferenceToTokenByCodeIdWithDeleteFailure() throws Exception {
+
+        String testCodeId = "m6nh0h64oj9pj192j63njn922o7n7n3";
+        String testTokenId = "n7oi1i75pk0qk203k74oko033p8o8o4";
+        String testSessionKey = "o8pj2j86ql1rl314l85plp144q9p9p5";
+
+        try {
+            insertCodeId(testCodeId);
+            insertTokenId(testTokenId);
+
+            requestObjectDAO.insertRequestObjectData(consumerKey, testSessionKey,
+                    requestedEssentialClaims);
+            requestObjectDAO.updateRequestObjectReferencebyCodeId(testSessionKey, testCodeId);
+
+            // Now mock the database connection to simulate SQLException during DELETE.
+            try (MockedStatic<IdentityDatabaseUtil> mockedDbUtil = Mockito.mockStatic(IdentityDatabaseUtil.class)) {
+                java.sql.Connection mockConnection = Mockito.mock(java.sql.Connection.class);
+                java.sql.PreparedStatement mockPreparedStatement = Mockito.mock(java.sql.PreparedStatement.class);
+                
+                mockedDbUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                        .thenReturn(mockConnection);
+                
+                Mockito.when(mockConnection.prepareStatement(Mockito.anyString()))
+                        .thenReturn(mockPreparedStatement);
+                
+                // Make the execute() throw SQLException to trigger IdentityOAuthAdminException.
+                Mockito.doThrow(new java.sql.SQLException("Simulated DELETE failure"))
+                        .when(mockPreparedStatement).execute();
+
+                mockedDbUtil.when(() -> IdentityDatabaseUtil.closeAllConnections(
+                        Mockito.any(), Mockito.any(), Mockito.any())).then(invocation -> null);
+                mockedDbUtil.when(() -> IdentityDatabaseUtil.rollbackTransaction(Mockito.any()))
+                        .then(invocation -> null);
+
+                // This should trigger IdentityOAuthAdminException in deleteRequestObjectReferenceforCode.
+                // which is then caught and wrapped as IdentityOAuth2Exception with the specific message.
+                requestObjectDAO.updateRequestObjectReferenceToTokenByCodeId(testCodeId, testTokenId);
+
+                Assert.fail("Expected IdentityOAuth2Exception to be thrown");
+            }
+        } finally {
+            try {
+                deleteCodeId(testCodeId);
+            } catch (Exception e) {
+                // Ignore.
+            }
+            try {
+                deleteTokenId(testTokenId);
+            } catch (Exception e) {
+                // Ignore.
+            }
+        }
+    }
+
     private int getConsumerId() throws Exception {
 
         PreparedStatement statement = null;
@@ -260,6 +451,55 @@ public class RequestObjectDAOImplTest {
         } catch (SQLException e) {
             log.error("Error when deleting codeID object.", e);
             throw new IdentityOAuth2Exception("Error when inserting codeID", e);
+        }
+    }
+
+    private void insertTokenId(String tokenId) throws Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String sql = "INSERT INTO IDN_OAUTH2_ACCESS_TOKEN (TOKEN_ID, ACCESS_TOKEN, REFRESH_TOKEN, " +
+                    "CONSUMER_KEY_ID, AUTHZ_USER, TENANT_ID, USER_DOMAIN, USER_TYPE, GRANT_TYPE, " +
+                    "TIME_CREATED, REFRESH_TOKEN_TIME_CREATED, VALIDITY_PERIOD, " +
+                    "REFRESH_TOKEN_VALIDITY_PERIOD, TOKEN_SCOPE_HASH, TOKEN_STATE, TOKEN_STATE_ID, " +
+                    "SUBJECT_IDENTIFIER, ACCESS_TOKEN_HASH, REFRESH_TOKEN_HASH, IDP_ID, AUTHORIZED_ORGANIZATION) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, tokenId);
+            ps.setString(2, UUID.randomUUID().toString());
+            ps.setString(3, UUID.randomUUID().toString());
+            ps.setInt(4, consumerId);
+            ps.setString(5, "admin");
+            ps.setInt(6, TestConstants.TENANT_ID);
+            ps.setString(7, "PRIMARY");
+            ps.setString(8, "APPLICATION_USER");
+            ps.setString(9, "password");
+            ps.setLong(10, 3600);
+            ps.setLong(11, 14400);
+            ps.setString(12, "369db21a386ae433e65c0ff34d35708d"); // Fixed 32-char hash
+            ps.setString(13, "ACTIVE");
+            ps.setString(14, "NONE");
+            ps.setString(15, "admin");
+            ps.setInt(16, 1);
+            ps.setString(17, "NONE");
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            log.error("Error when inserting tokenID object.", e);
+            throw new IdentityOAuth2Exception("Error when inserting tokenID", e);
+        }
+    }
+
+    private void deleteTokenId(String tokenId) throws Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String sql = "DELETE FROM IDN_OAUTH2_ACCESS_TOKEN WHERE TOKEN_ID=?";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, tokenId);
+            ps.executeUpdate();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            log.error("Error when deleting tokenID object.", e);
+            throw new IdentityOAuth2Exception("Error when deleting tokenID", e);
         }
     }
 
