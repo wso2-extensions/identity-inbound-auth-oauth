@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.dao;
 
+/**
+ * OAuth Consumer Secret Data Object.
+ */
 public class OAuthConsumerSecretDO {
     private String secretId;
     private String description;
