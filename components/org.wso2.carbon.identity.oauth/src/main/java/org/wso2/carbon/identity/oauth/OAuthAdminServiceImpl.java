@@ -419,11 +419,21 @@ public class OAuthAdminServiceImpl {
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
 
             // Check whether the secret stored in IDN_OAUTH_CONSUMER_APPS table is already present in the
-            // IDN_OAUTH_CONSUMER_SECRETS table. If not, we need to copy that to the new secrets table as well.
+            // IDN_OAUTH_CONSUMER_SECRETS table. If not, we need to copy that to the new IDN_OAUTH_CONSUMER_SECRETS
+            // table as well.
             boolean needCopying = false;
+            OAuthConsumerSecretDO secret;
             try {
-                OAuthConsumerSecretDO secret = OAuth2Util.
-                        getClientSecret(consumerKey, oAuthAppDO.getOauthConsumerSecret());
+                if (OAuth2Util.isHashDisabled()) {
+                    // If hashing is disabled, we need to hash the secret retrieved from IDN_OAUTH_CONSUMER_APPS table
+                    // to compare with the secrets in IDN_OAUTH_CONSUMER_SECRETS table.
+                    secret = OAuth2Util.
+                            getClientSecret(consumerKey, oAuthAppDO.getOauthConsumerSecret());
+                } else {
+                    // If hashing is enabled, we can directly compare the secret values
+                    secret = oAuthAppDAO.getOAuthConsumerSecret(consumerKey, oAuthAppDO.getOauthConsumerSecret());
+                }
+
                 if (secret == null) {
                     needCopying = true;
                 }
