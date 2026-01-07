@@ -152,15 +152,15 @@ public class RequestObject implements Serializable {
                     Object requestedClaimObject = jsonObjectClaim.get(requesterClaimsMap.getKey());
                     if (requestedClaimObject != null) {
 
-                        // Extract all requested claims if attribute is an JSONObject
-                        if (requestedClaimObject instanceof HashMap) {
-                            Map<String, Object> jsonObjectAllRequestedClaims  = (HashMap) requestedClaimObject;
+                        // Extract all requested claims if attribute is a Map
+                        if (requestedClaimObject instanceof Map) {
+                            Map<String, Object> jsonObjectAllRequestedClaims  = (Map) requestedClaimObject;
                             for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims
                                     .entrySet()) {
                                 Map<String, Object> jsonObjectClaimAttributes = null;
                                 if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
                                     jsonObjectClaimAttributes =
-                                            (HashMap) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                            (Map) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
                                 }
                                 populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
                                         requestedClaims.getKey(), requesterClaimsMap.getKey());
