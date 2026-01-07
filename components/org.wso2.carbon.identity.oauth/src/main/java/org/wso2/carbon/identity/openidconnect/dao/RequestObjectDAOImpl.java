@@ -436,7 +436,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         Connection connection = null;
         PreparedStatement ps = null;
         try {
-            connection = IdentityDatabaseUtil.getDBConnection(false);
+            connection = IdentityDatabaseUtil.getDBConnection(true);
             deleteRequestObjectReferenceforCode(connection, tokenId);
             String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_BY_CODE;
             ps = connection.prepareStatement(sql);
