@@ -356,7 +356,7 @@ public class RequestObjectDAOImplTest {
                 java.sql.Connection mockConnection = Mockito.mock(java.sql.Connection.class);
                 java.sql.PreparedStatement mockPreparedStatement = Mockito.mock(java.sql.PreparedStatement.class);
                 
-                mockedDbUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                mockedDbUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true))
                         .thenReturn(mockConnection);
                 
                 Mockito.when(mockConnection.prepareStatement(Mockito.anyString()))
