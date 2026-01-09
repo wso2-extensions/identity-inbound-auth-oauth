@@ -562,6 +562,7 @@ public class OAuth2Util {
             TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
             if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Provided the Client ID : " + clientId +
