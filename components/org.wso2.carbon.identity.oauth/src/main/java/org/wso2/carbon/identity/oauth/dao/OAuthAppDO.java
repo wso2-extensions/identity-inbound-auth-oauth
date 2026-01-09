@@ -41,6 +41,8 @@ public class OAuthAppDO implements Serializable {
     private int id;
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
+    private String secretDescription;
+    private Long secretExpiryTime;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -333,5 +335,21 @@ public class OAuthAppDO implements Serializable {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
+    }
+
+    public String getSecretDescription() {
+        return secretDescription;
+    }
+
+    public void setSecretDescription(String secretDescription) {
+        this.secretDescription = secretDescription;
+    }
+
+    public Long getSecretExpiryTime() {
+        return secretExpiryTime;
+    }
+
+    public void setSecretExpiryTime(Long secretExpiryTime) {
+        this.secretExpiryTime = secretExpiryTime;
     }
 }

@@ -168,8 +168,13 @@ public class OAuthAppDAO {
                     // If multiple client secrets are allowed, store the client secret in the
                     // IDN_OAUTH_CONSUMER_SECRETS table.
                     if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                        addConsumerSecret(connection, consumerAppDO.getOauthConsumerKey(),
-                                consumerAppDO.getOauthConsumerSecret(), processedClientSecret);
+                        OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
+                        consumerSecretDO.setSecretId(UUID.randomUUID().toString());
+                        consumerSecretDO.setDescription(consumerAppDO.getSecretDescription());
+                        consumerSecretDO.setClientId(consumerAppDO.getOauthConsumerKey());
+                        consumerSecretDO.setSecretValue(consumerAppDO.getOauthConsumerSecret());
+                        consumerSecretDO.setExpiresAt(consumerAppDO.getSecretExpiryTime());
+                        addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
                     }
                     IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
@@ -1443,12 +1448,10 @@ public class OAuthAppDAO {
             // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the new secret.
             updateOAuthConsumerSecret(connection, consumerSecretDO.getClientId(), processedClientSecret);
             IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
+        } catch (SQLException | IdentityOAuth2Exception e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw handleError("Error occurred while adding OAuth consumer secret for client id : "
                     + consumerSecretDO.getClientId(), e);
-        } catch (IdentityOAuth2Exception e) {
-            throw new RuntimeException(e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
         }
@@ -1561,7 +1564,7 @@ public class OAuthAppDAO {
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         List<OAuthConsumerSecretDO> consumerSecrets = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT)) {
                 prepStmt.setString(1, consumerKey);
@@ -1600,7 +1603,7 @@ public class OAuthAppDAO {
     public String getLatestSecretExcluding(String clientId, String excludedSecretID)
             throws IdentityOAuthAdminException {
         String secret = null;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                             .GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT_EXCLUDING_PROVIDED_SECRET)) {
@@ -1622,7 +1625,7 @@ public class OAuthAppDAO {
     public OAuthConsumerSecretDO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
         OAuthConsumerSecretDO secret = null;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(
                     SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_ID)) {
                 prepStmt.setString(1, secretId);
@@ -1663,7 +1666,7 @@ public class OAuthAppDAO {
             throws IdentityOAuthAdminException {
 
         OAuthConsumerSecretDO secret = null;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(
                     SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_HASH)) {
                 prepStmt.setString(1, consumerKey);

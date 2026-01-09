@@ -178,10 +178,10 @@ public final class OAuthConstants {
     public static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
 
     public static final String OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE
-            = "The requested operation is not supported as the multiple client secret support is enabled by server" +
+            = "The requested operation is not supported as the multiple client secret support is enabled by server " +
             "configuration. Use 'createClientSecret' operation to generate a new client secret.";
     public static final String OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE
-            = "The requested operation is not supported as the multiple client secret support is disabled by server" +
+            = "The requested operation is not supported as the multiple client secret support is disabled by server " +
             "configuration.";
     public static final String SYSTEM_GENERATED_SECRET = "System generated secret";
     public static final String DEFAULT_SECRET_ID = "Default_Secret_ID";

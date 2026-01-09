@@ -25,6 +25,8 @@ public class OAuthConsumerAppDTO {
 
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
+    private String secretDescription;
+    private Long secretExpiryTime;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -299,6 +301,22 @@ public class OAuthConsumerAppDTO {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
+    }
+
+    public String getSecretDescription() {
+        return secretDescription;
+    }
+
+    public void setSecretDescription(String secretDescription) {
+        this.secretDescription = secretDescription;
+    }
+
+    public Long getSecretExpiryTime() {
+        return secretExpiryTime;
+    }
+
+    public void setSecretExpiryTime(Long secretExpiryTime) {
+        this.secretExpiryTime = secretExpiryTime;
     }
 }
 
