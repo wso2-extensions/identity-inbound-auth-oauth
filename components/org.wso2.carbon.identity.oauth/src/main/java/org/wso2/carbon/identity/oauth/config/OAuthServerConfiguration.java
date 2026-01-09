@@ -3200,7 +3200,13 @@ public class OAuthServerConfiguration {
                             .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECRET_COUNT));
                     if (isClientSecretLimitElement != null &&
                             StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
-                        clientSecretCount = Integer.parseInt(isClientSecretLimitElement.getText());
+                        String secretCountText = isClientSecretLimitElement.getText().trim();
+                        try {
+                            clientSecretCount = Integer.parseInt(secretCountText);
+                        } catch (NumberFormatException e) {
+                            log.error("Invalid value for client secret count: '" + secretCountText +
+                                    "'. Using default client secret count: unlimited secrets", e);
+                        }
                     }
                 }
             }

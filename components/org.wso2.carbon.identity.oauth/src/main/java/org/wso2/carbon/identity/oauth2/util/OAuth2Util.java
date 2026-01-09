@@ -2285,12 +2285,14 @@ public class OAuth2Util {
         return oAuthAppDO.getOauthConsumerSecret();
     }
     /**
-     * Get the client secret of the application.
+     * Get a client secret information of the application.
      *
-     * @param consumerKey Consumer Key of the application.
-     * @param consumerSecret Consumer Secret of the application.
-     * @return Consumer Secret retrieved from the DB which matches with the provided secret hash.
+     * @param consumerKey     Consumer Key of the application.
+     * @param consumerSecret  Consumer Secret provided of the application.
+     * @return {@link OAuthConsumerSecretDO} containing the consumer secret retrieved from the DB that matches the
+     *                                       provided secret hash, or {@code null} if no matching secret is found.
      * @throws IdentityOAuthAdminException Error when loading the application.
+     * @throws IdentityOAuth2Exception     Error when processing the client secret.
      */
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {

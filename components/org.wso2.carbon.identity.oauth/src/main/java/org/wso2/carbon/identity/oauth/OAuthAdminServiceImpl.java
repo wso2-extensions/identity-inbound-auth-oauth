@@ -348,6 +348,14 @@ public class OAuthAdminServiceImpl {
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                     }
+                    if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                        if (StringUtils.isNotEmpty(application.getSecretDescription())) {
+                            app.setSecretDescription(application.getSecretDescription());
+                        }
+                        if (application.getSecretExpiryTime() != null) {
+                            app.setSecretExpiryTime(application.getSecretExpiryTime());
+                        }
+                    }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                     if (LOG.isDebugEnabled()) {
@@ -403,18 +411,12 @@ public class OAuthAdminServiceImpl {
                     "The provided expiry time for the new client secret is in the past.");
         }
         if (!OAuth2Util.hasClientSecretLimitReached(oAuthAppDO)) {
-            // Clear the cache before adding a new secret. This is because the latest secret is added to the
-            // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
-            // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
-            // here.
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             // Build and persist the new consumer secret
             OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
             consumerSecret.setSecretId(UUID.randomUUID().toString());
             consumerSecret.setDescription(consumerSecretDTO.getDescription());
             consumerSecret.setClientId(consumerKey);
-            String newSecret = OAuthUtil.getRandomNumberSecure();
-            consumerSecret.setSecretValue(newSecret);
+            consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
             consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
 
@@ -441,6 +443,11 @@ public class OAuthAdminServiceImpl {
                 throw handleError("Error while retrieving secret for client ID: " + consumerKey, e);
             }
             oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO, consumerSecret, needCopying);
+            // Clear the cache after adding a new secret. This is because the latest secret is added to the
+            // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
+            // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
+            // here.
+            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
         } else {
             throw handleClientError(CLIENT_SECRET_LIMIT_REACHED,
@@ -473,15 +480,14 @@ public class OAuthAdminServiceImpl {
             }
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
             // Check if the secret to be removed is the one stored in the IDN_OAUTH_CONSUMER_APPS table. If so, we
-            // need to clear the cache. Also, we need to update the IDN_OAUTH_CONSUMER_APPS with another secret
-            // associated with the client Id.
-            boolean needUpdate = false;
-            if (oAuthAppDO.getOauthConsumerSecret() != null &&
-                    oAuthAppDO.getOauthConsumerSecret().equals(secretDTO.getClientSecret())) {
-                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-                needUpdate = true;
-            }
+            // need to update the IDN_OAUTH_CONSUMER_APPS with another secret associated with the client Id.
+            // Also, we need to clear the cache.
+            boolean needUpdate = oAuthAppDO.getOauthConsumerSecret() != null &&
+                    oAuthAppDO.getOauthConsumerSecret().equals(secretDTO.getClientSecret());
             oAuthAppDAO.removeOAuthConsumerSecret(secretId, consumerKey, needUpdate);
+            if (needUpdate) {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            }
         } else {
             throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
         }
