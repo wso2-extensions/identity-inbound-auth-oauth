@@ -475,7 +475,8 @@ public class OAuthAdminServiceImpl {
             List<OAuthConsumerSecretDTO> secretDTOList = getOAuthConsumerSecrets(consumerKey);
             if (secretDTOList.size() == 1) {
                 String errorMessage = "Cannot remove the secret with id: " + secretId + " as it is the only secret " +
-                        "associated with the client ID: " + consumerKey;
+                        "associated with the client ID: " + consumerKey + ". An OAuth application must have " +
+                        "at least one consumer secret.";
                 throw handleClientError(INVALID_DELETE, errorMessage);
             }
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -525,7 +526,6 @@ public class OAuthAdminServiceImpl {
             if (!duplicateSecretFound && oAuthAppDO.getOauthConsumerSecret() != null) {
                 OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
                 oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
-                oAuthConsumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
                 oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
                 oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
                 consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));

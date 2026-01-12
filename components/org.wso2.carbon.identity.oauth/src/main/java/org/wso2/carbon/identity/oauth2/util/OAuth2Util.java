@@ -368,15 +368,36 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
 
-    private static final TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
-
     private OAuth2Util() {
 
     }
 
     /**
-     * @return
+     * Returns the {@link TokenPersistenceProcessor} instance used for processing
+     * OAuth consumer secrets.
+     *
+     * The processor is lazily initialized and shared across all callers in
+     * a thread-safe manner.
+     *
+     * @return the {@link TokenPersistenceProcessor} instance
      */
+    private static TokenPersistenceProcessor getHashingPersistenceProcessor() {
+        return HashingPersistenceProcessorHolder.INSTANCE;
+    }
+
+    /**
+     * Holder class for lazy, thread-safe initialization of {@link TokenPersistenceProcessor}.
+     *
+     * This leverages the JVM's class loading mechanism to ensure that the
+     * {@link HashingPersistenceProcessor} instance is created only when it is
+     * first accessed, while also guaranteeing thread safety without explicit
+     * synchronization.
+     */
+    private static class HashingPersistenceProcessorHolder {
+        private static final TokenPersistenceProcessor INSTANCE =
+                new HashingPersistenceProcessor();
+    }
+
     public static OAuthAuthzReqMessageContext getAuthzRequestContext() {
 
         if (log.isDebugEnabled()) {
@@ -2298,7 +2319,7 @@ public class OAuth2Util {
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
-        String hashedProvidedSecret = hashingPersistenceProcessor.getProcessedClientSecret(consumerSecret);
+        String hashedProvidedSecret = getHashingPersistenceProcessor().getProcessedClientSecret(consumerSecret);
         return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
     }
 
