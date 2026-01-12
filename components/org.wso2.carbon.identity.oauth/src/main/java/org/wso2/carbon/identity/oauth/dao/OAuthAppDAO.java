@@ -1126,7 +1126,6 @@ public class OAuthAppDAO {
             throws SQLException, IdentityOAuthAdminException {
         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
-        consumerSecretDO.setDescription(OAuthConstants.SYSTEM_GENERATED_SECRET);
         consumerSecretDO.setClientId(consumerKey);
         consumerSecretDO.setSecretValue(consumerSecret);
         addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
@@ -1439,9 +1438,11 @@ public class OAuthAppDAO {
             String processedClientSecret =
                     persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
             if (needCopying) {
+                String processedCopyingClientSecret =
+                        persistenceProcessor.getProcessedClientSecret(appDO.getOauthConsumerSecret());
                 // Copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
                 addConsumerSecret(connection, consumerSecretDO.getClientId(), appDO.getOauthConsumerSecret(),
-                        processedClientSecret);
+                        processedCopyingClientSecret);
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
             addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
