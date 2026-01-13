@@ -81,7 +81,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
-import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_DELETE;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
@@ -410,28 +409,24 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST,
                     "The provided expiry time for the new client secret is in the past.");
         }
-        if (!OAuth2Util.hasClientSecretLimitReached(oAuthAppDO)) {
-            // Build and persist the new consumer secret
-            OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
-            consumerSecret.setSecretId(UUID.randomUUID().toString());
-            consumerSecret.setDescription(consumerSecretDTO.getDescription());
-            consumerSecret.setClientId(consumerKey);
-            consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
-            consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            oAuthAppDAO.addOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
-            // Clear the cache after adding a new secret. This is because the latest secret is added to the
-            // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
-            // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
-            // here.
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-            return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
-        } else {
-            throw handleClientError(CLIENT_SECRET_LIMIT_REACHED,
-                    "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
-                            "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
-        }
+
+        // Build and persist the new consumer secret
+        OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
+        consumerSecret.setSecretId(UUID.randomUUID().toString());
+        consumerSecret.setDescription(consumerSecretDTO.getDescription());
+        consumerSecret.setClientId(consumerKey);
+        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+        consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        oAuthAppDAO.addOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
+        // Clear the cache after adding a new secret. This is because the latest secret is added to the
+        // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
+        // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
+        // here.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
+
     /**
      * Remove an existing OAuth consumer secret by the given secret Id.
      *
@@ -486,7 +481,8 @@ public class OAuthAdminServiceImpl {
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
-        return OAuth2Util.getEffectiveConsumerSecrets(consumerKey, oAuthAppDO.getOauthConsumerSecret());
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        return oAuthAppDAO.getEffectiveConsumerSecrets(consumerKey, oAuthAppDO.getOauthConsumerSecret());
     }
 
     /**
