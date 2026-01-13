@@ -38,8 +38,10 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
@@ -73,12 +75,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_DELETE;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_SECRET_ID;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -334,6 +339,14 @@ public class OAuthAdminServiceImpl {
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                     }
+                    if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                        if (StringUtils.isNotEmpty(application.getSecretDescription())) {
+                            app.setSecretDescription(application.getSecretDescription());
+                        }
+                        if (application.getSecretExpiryTime() != null) {
+                            app.setSecretExpiryTime(application.getSecretExpiryTime());
+                        }
+                    }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                     if (LOG.isDebugEnabled()) {
@@ -365,6 +378,126 @@ public class OAuthAdminServiceImpl {
                     "Error resolving user. Failed to register OAuth App", e);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
+    }
+    /**
+     * Create a new OAuth consumer secret for the given client Id.
+     *
+     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, description and expiry time
+     * @return {@link OAuthConsumerSecretDTO} containing the created consumer secret information
+     * @throws IdentityOAuthAdminException Error when persisting the consumer secret information to the persistence
+     * store or if the operation is not supported.
+     */
+    public OAuthConsumerSecretDTO createOAuthConsumerSecret(OAuthConsumerSecretDTO consumerSecretDTO)
+            throws IdentityOAuthAdminException {
+
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
+        String consumerKey = consumerSecretDTO.getClientId();
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+        // Validate the provided expiry time to check whether it's in the past.
+        if (OAuth2Util.isClientSecretExpired(consumerSecretDTO.getExpiresAt())) {
+            throw handleClientError(INVALID_REQUEST,
+                    "The provided expiry time for the new client secret is in the past.");
+        }
+
+        // Build and persist the new consumer secret
+        OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
+        consumerSecret.setSecretId(UUID.randomUUID().toString());
+        consumerSecret.setDescription(consumerSecretDTO.getDescription());
+        consumerSecret.setClientId(consumerKey);
+        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+        consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        oAuthAppDAO.addOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
+        // Clear the cache after adding a new secret. This is because the latest secret is added to the
+        // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
+        // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
+        // here.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
+    }
+
+    /**
+     * Remove an existing OAuth consumer secret by the given secret Id.
+     *
+     * @param secretId Id of the consumer secret to be removed
+     * @throws IdentityOAuthAdminException Error when removing the consumer secret information from the persistence
+     * store or if the operation is not supported.
+     */
+    public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
+        OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
+        if (secretDTO != null) {
+            String consumerKey = secretDTO.getClientId();
+            OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+            List<OAuthConsumerSecretDTO> secretDTOList = getOAuthConsumerSecrets(consumerKey);
+            if (secretDTOList.size() == 1) {
+                String errorMessage = "Cannot remove the secret with id: " + secretId + " as it is the only secret " +
+                        "associated with the client ID: " + consumerKey + ". An OAuth application must have " +
+                        "at least one consumer secret.";
+                throw handleClientError(INVALID_DELETE, errorMessage);
+            }
+            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+            // Check if the secret to be removed is the one stored in the IDN_OAUTH_CONSUMER_APPS table. If so, we
+            // need to update the IDN_OAUTH_CONSUMER_APPS with another secret associated with the client Id.
+            // Also, we need to clear the cache.
+            boolean needUpdate = oAuthAppDO.getOauthConsumerSecret() != null &&
+                    oAuthAppDO.getOauthConsumerSecret().equals(secretDTO.getClientSecret());
+            oAuthAppDAO.removeOAuthConsumerSecret(secretId, consumerKey, needUpdate);
+            if (needUpdate) {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            }
+        } else {
+            throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
+        }
+    }
+
+    /**
+     * Retrieve all OAuth consumer secrets associated with a given consumer key (client ID).
+     *
+     * @param consumerKey Client Id of the OAuth application
+     * @return A list of {@link OAuthConsumerSecretDTO} containing the consumer secret information
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the
+     * persistence store or if the operation is not supported.
+     */
+    public List<OAuthConsumerSecretDTO> getOAuthConsumerSecrets(String consumerKey) throws IdentityOAuthAdminException {
+
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        return oAuthAppDAO.getEffectiveConsumerSecrets(consumerKey, oAuthAppDO.getOauthConsumerSecret());
+    }
+
+    /**
+     * Retrieve an OAuth consumer secret by the given secret Id.
+     *
+     * @param secretId Id of the consumer secret
+     * @return {@link OAuthConsumerSecretDTO} containing the consumer secret information
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret information from the
+     * persistence store or if the operation is not supported.
+     */
+    public OAuthConsumerSecretDTO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
+
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
+
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId);
+        if (secret == null) {
+            throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
+        }
+        return OAuthUtil.buildConsumerSecretDTO(secret);
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -836,6 +969,10 @@ public class OAuthAdminServiceImpl {
      */
     public void updateOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+        }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
@@ -847,6 +984,11 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
+
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw handleClientError(INVALID_REQUEST,
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+        }
 
         Properties properties = new Properties();
         String newSecret = OAuthUtil.getRandomNumberSecure();
@@ -1744,6 +1886,34 @@ public class OAuthAdminServiceImpl {
     OAuth2Service getOAuth2Service() {
 
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
+    }
+
+    /**
+     * Validate whether the OAuth application exists for the given consumer key.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthAppDO OAuth application data object.
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    private OAuthAppDO validateOAuthAppExistence(String consumerKey) throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getOAuthApp(consumerKey);
+            if (oAuthAppDO == null) {
+                String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(msg);
+                }
+                throw handleClientError(INVALID_OAUTH_CLIENT, msg);
+            }
+        } catch (InvalidOAuthClientException e) {
+            String msg = "Cannot find a valid OAuth client for consumerKey: " + consumerKey;
+            throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while validating OAuth app existence for consumerKey: " + consumerKey, e);
+        }
+        return oAuthAppDO;
     }
 
     OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
