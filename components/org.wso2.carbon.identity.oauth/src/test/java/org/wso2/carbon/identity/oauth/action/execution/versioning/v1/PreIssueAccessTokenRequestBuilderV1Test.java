@@ -207,7 +207,7 @@ public class PreIssueAccessTokenRequestBuilderV1Test {
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
                     buildActionExecutionRequest(
-                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
+                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), mockContext);
             Assert.assertNotNull(actionExecutionRequest);
             Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
             assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
