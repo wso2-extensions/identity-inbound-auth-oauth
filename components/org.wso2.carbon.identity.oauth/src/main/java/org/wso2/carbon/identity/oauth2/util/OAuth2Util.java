@@ -87,7 +87,6 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -99,7 +98,6 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
-import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -190,7 +188,6 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
-import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
@@ -679,63 +676,6 @@ public class OAuth2Util {
     public static int getClientSecretCount() {
 
         return OAuthServerConfiguration.getInstance().getClientSecretCount();
-    }
-
-    /**
-     * Check whether the client secret limit has been reached for the given OAuth application.
-     *
-     * @param oAuthAppDO OAuth application data object.
-     * @return true if the client secret limit has been reached, false otherwise.
-     * @throws IdentityOAuthAdminException If an error occurs while checking the client secret limit.
-     */
-    public static boolean hasClientSecretLimitReached(OAuthAppDO oAuthAppDO) throws IdentityOAuthAdminException {
-
-        String consumerKey = oAuthAppDO.getOauthConsumerKey();
-        int clientSecretLimit = getClientSecretCount();
-        List<OAuthConsumerSecretDTO> secrets = getEffectiveConsumerSecrets(consumerKey,
-                oAuthAppDO.getOauthConsumerSecret());
-        int currentSecretCount = secrets.size();
-        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
-    }
-
-    /**
-     * Retrieves all effective consumer secrets for a given consumer key.
-     *
-     * This method merges secrets from the IDN_OAUTH_CONSUMER_SECRETS table
-     * and the legacy consumer secret stored in the IDN_OAUTH_CONSUMER_APPS table.
-     * It ensures backward compatibility when multiple secrets feature is enabled.
-     *
-     * @param consumerKey   The OAuth consumer key.
-     * @param legacySecret  The legacy consumer secret from the IDN_OAUTH_CONSUMER_APPS table.
-     * @return List of {@link OAuthConsumerSecretDTO} containing all consumer secrets.
-     * @throws IdentityOAuthAdminException If there is an error while retrieving secrets.
-     */
-    public static List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey, String legacySecret)
-            throws IdentityOAuthAdminException {
-        List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        try {
-            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-            // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
-            // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
-            boolean duplicateSecretFound = false;
-            for (OAuthConsumerSecretDO secret : secrets) {
-                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
-                if (legacySecret != null && legacySecret.equals(secret.getSecretValue())) {
-                    duplicateSecretFound = true;
-                }
-            }
-            if (!duplicateSecretFound && legacySecret != null) {
-                OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
-                oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
-                oAuthConsumerSecretDO.setClientId(consumerKey);
-                oAuthConsumerSecretDO.setSecretValue(legacySecret);
-                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
-        }
-        return consumerSecretsList;
     }
 
     /**

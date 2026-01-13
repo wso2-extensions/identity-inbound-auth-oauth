@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
@@ -1435,7 +1436,13 @@ public class OAuthAppDAO {
 
         Connection connection = null;
         try {
+            String consumerKey = consumerSecretDO.getClientId();
             connection = IdentityDatabaseUtil.getDBConnection(true);
+            if (hasClientSecretLimitReached(consumerKey, legacySecret, connection)) {
+                throw new IdentityOAuthAdminException(
+                        "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
+                                "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
+            }
             String processedClientSecret =
                     persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
             boolean secretExists;
@@ -1473,6 +1480,29 @@ public class OAuthAppDAO {
     }
 
     /**
+     * Checks whether the client secret limit has been reached for a given OAuth consumer.
+     *
+     * This method retrieves the effective consumer secrets for the specified consumer key
+     * and legacy secret using the provided database connection, and compares the count
+     * against the configured client secret limit.
+     *
+     * @param consumerKey   the OAuth consumer key to check secrets for
+     * @param legacySecret  the legacy secret value, if any, to include in the count
+     * @param connection    the database connection to use for retrieving secrets; must not be {@code null}
+     * @return {@code true} if the client secret limit is greater than zero and the current number
+     *         of effective secrets is greater than or equal to the limit, {@code false} otherwise
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving consumer secrets
+     */
+    public static boolean hasClientSecretLimitReached(String consumerKey, String legacySecret, Connection connection)
+            throws IdentityOAuthAdminException {
+
+        int clientSecretLimit = OAuth2Util.getClientSecretCount();
+        List<OAuthConsumerSecretDTO> secrets = getEffectiveConsumerSecrets(consumerKey, legacySecret, connection);
+        int currentSecretCount = secrets.size();
+        return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
+    }
+
+    /**
      * Check if a consumer secret exists for a given consumer key and secret hash.
      *
      * @param connection  DB connection to be used.
@@ -1493,7 +1523,7 @@ public class OAuthAppDAO {
             ps.setString(2, secretHash);
 
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next(); // IF, not WHILE — existence check only
+                return rs.next();
             }
         } catch (SQLException e) {
             throw handleError("Error while checking existence of consumer secret for client id: "
@@ -1604,37 +1634,35 @@ public class OAuthAppDAO {
      * @return A list of OAuthConsumerSecretDO objects representing the consumer secrets.
      * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secrets.
      */
-    public List<OAuthConsumerSecretDO> getOAuthConsumerSecrets(String consumerKey)
+    public List<OAuthConsumerSecretDO> getOAuthConsumerSecrets(String consumerKey, Connection connection)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         List<OAuthConsumerSecretDO> consumerSecrets = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT)) {
-                prepStmt.setString(1, consumerKey);
-                try (ResultSet resultSet = prepStmt.executeQuery()) {
-                    while (resultSet.next()) {
-                        OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
-                        secret.setSecretId(resultSet.getString(1));
-                        secret.setDescription(resultSet.getString(2));
-                        secret.setClientId(resultSet.getString(3));
-                        if (isHashDisabled) {
-                            secret.setSecretValue(persistenceProcessor
-                                    .getPreprocessedClientSecret(resultSet.getString(4)));
-                        } else {
-                            secret.setSecretValue(resultSet.getString(4));
-                        }
-
-                        secret.setSecretHash(resultSet.getString(5));
-                        long expiresAt = resultSet.getLong(6);
-                        // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0
-                        // for NULL. This is important to distinguish between an actual expiry time of 0 and a NULL
-                        // value.
-                        if (!resultSet.wasNull()) {
-                            secret.setExpiresAt(expiresAt);
-                        }
-                        consumerSecrets.add(secret);
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT)) {
+            prepStmt.setString(1, consumerKey);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
+                    secret.setSecretId(resultSet.getString(1));
+                    secret.setDescription(resultSet.getString(2));
+                    secret.setClientId(resultSet.getString(3));
+                    if (isHashDisabled) {
+                        secret.setSecretValue(persistenceProcessor
+                                .getPreprocessedClientSecret(resultSet.getString(4)));
+                    } else {
+                        secret.setSecretValue(resultSet.getString(4));
                     }
+
+                    secret.setSecretHash(resultSet.getString(5));
+                    long expiresAt = resultSet.getLong(6);
+                    // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0
+                    // for NULL. This is important to distinguish between an actual expiry time of 0 and a NULL
+                    // value.
+                    if (!resultSet.wasNull()) {
+                        secret.setExpiresAt(expiresAt);
+                    }
+                    consumerSecrets.add(secret);
                 }
             }
         } catch (SQLException e) {
@@ -1642,6 +1670,56 @@ public class OAuthAppDAO {
                     + consumerKey, e);
         }
         return consumerSecrets;
+    }
+
+    public List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey, String legacySecret)
+            throws IdentityOAuthAdminException {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            return getEffectiveConsumerSecrets(consumerKey, legacySecret, connection);
+        } catch (SQLException e) {
+            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
+        }
+    }
+
+    /**
+     * Retrieves all effective consumer secrets for a given consumer key.
+     *
+     * This method merges secrets from the IDN_OAUTH_CONSUMER_SECRETS table
+     * and the legacy consumer secret stored in the IDN_OAUTH_CONSUMER_APPS table.
+     * It ensures backward compatibility when multiple secrets feature is enabled.
+     *
+     * @param consumerKey   The OAuth consumer key.
+     * @param legacySecret  The legacy consumer secret from the IDN_OAUTH_CONSUMER_APPS table.
+     * @return List of {@link OAuthConsumerSecretDTO} containing all consumer secrets.
+     * @throws IdentityOAuthAdminException If there is an error while retrieving secrets.
+     */
+    public static List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey, String legacySecret,
+                                                                           Connection connection)
+            throws IdentityOAuthAdminException {
+        List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        try {
+            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey, connection);
+            // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
+            // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
+            boolean duplicateSecretFound = false;
+            for (OAuthConsumerSecretDO secret : secrets) {
+                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
+                if (legacySecret != null && legacySecret.equals(secret.getSecretValue())) {
+                    duplicateSecretFound = true;
+                }
+            }
+            if (!duplicateSecretFound && legacySecret != null) {
+                OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
+                oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+                oAuthConsumerSecretDO.setClientId(consumerKey);
+                oAuthConsumerSecretDO.setSecretValue(legacySecret);
+                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
+        }
+        return consumerSecretsList;
     }
 
     /**
