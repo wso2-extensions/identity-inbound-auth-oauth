@@ -183,7 +183,7 @@ public final class OAuthConstants {
     public static final String OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE
             = "The requested operation is not supported as the multiple client secret support is disabled by server " +
             "configuration.";
-    public static final String DEFAULT_SECRET_ID = "Default_Secret_ID";
+    public static final String DEFAULT_SECRET_ID = "defaultID";
 
     private OAuthConstants() {
 

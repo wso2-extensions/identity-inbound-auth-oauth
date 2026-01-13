@@ -401,7 +401,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         String consumerKey = consumerSecretDTO.getClientId();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
@@ -419,30 +419,7 @@ public class OAuthAdminServiceImpl {
             consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
             consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
             OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-
-            // Check whether the secret stored in IDN_OAUTH_CONSUMER_APPS table is already present in the
-            // IDN_OAUTH_CONSUMER_SECRETS table. If not, we need to copy that to the new IDN_OAUTH_CONSUMER_SECRETS
-            // table as well.
-            boolean needCopying = false;
-            OAuthConsumerSecretDO secret;
-            try {
-                if (OAuth2Util.isHashDisabled()) {
-                    // If hashing is disabled, we need to hash the secret retrieved from IDN_OAUTH_CONSUMER_APPS table
-                    // to compare with the secrets in IDN_OAUTH_CONSUMER_SECRETS table.
-                    secret = OAuth2Util.
-                            getClientSecret(consumerKey, oAuthAppDO.getOauthConsumerSecret());
-                } else {
-                    // If hashing is enabled, we can directly compare the secret values
-                    secret = oAuthAppDAO.getOAuthConsumerSecret(consumerKey, oAuthAppDO.getOauthConsumerSecret());
-                }
-
-                if (secret == null) {
-                    needCopying = true;
-                }
-            } catch (IdentityOAuth2Exception e) {
-                throw handleError("Error while retrieving secret for client ID: " + consumerKey, e);
-            }
-            oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO, consumerSecret, needCopying);
+            oAuthAppDAO.addOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
             // Clear the cache after adding a new secret. This is because the latest secret is added to the
             // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
             // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
@@ -466,7 +443,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
         if (secretDTO != null) {
@@ -506,34 +483,10 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
-        List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        try {
-            List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey);
-            // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
-            // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
-            boolean duplicateSecretFound = false;
-            for (OAuthConsumerSecretDO secret : secrets) {
-                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
-                if (oAuthAppDO.getOauthConsumerSecret() != null &&
-                        oAuthAppDO.getOauthConsumerSecret().equals(secret.getSecretValue())) {
-                    duplicateSecretFound = true;
-                }
-            }
-            if (!duplicateSecretFound && oAuthAppDO.getOauthConsumerSecret() != null) {
-                OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
-                oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
-                oAuthConsumerSecretDO.setClientId(oAuthAppDO.getOauthConsumerKey());
-                oAuthConsumerSecretDO.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
-                consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
-        }
-        return consumerSecretsList;
+        return OAuth2Util.getEffectiveConsumerSecrets(consumerKey, oAuthAppDO.getOauthConsumerSecret());
     }
 
     /**
@@ -548,7 +501,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
 
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -1030,7 +983,7 @@ public class OAuthAdminServiceImpl {
 
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
@@ -1046,7 +999,7 @@ public class OAuthAdminServiceImpl {
 
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_MULTIPLE_CLIENT_SECRET_MODE);
         }
 
         Properties properties = new Properties();
