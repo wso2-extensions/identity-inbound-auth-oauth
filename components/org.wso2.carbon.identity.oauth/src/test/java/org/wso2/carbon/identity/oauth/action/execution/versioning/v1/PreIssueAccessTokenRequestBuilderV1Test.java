@@ -192,8 +192,8 @@ public class PreIssueAccessTokenRequestBuilderV1Test {
 
         ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
         Action mockAction = mock(Action.class);
-        when(mockContext.getAction()).thenReturn(mockAction);
         when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V1);
+        when(mockContext.getAction()).thenReturn(mockAction);
 
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class)) {
