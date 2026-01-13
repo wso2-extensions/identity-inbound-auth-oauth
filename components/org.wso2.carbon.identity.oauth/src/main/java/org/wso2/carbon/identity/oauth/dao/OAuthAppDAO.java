@@ -1426,10 +1426,11 @@ public class OAuthAppDAO {
     /**
      * Add a new OAuth consumer secret.
      *
-     * @param consumerSecretDO OAuthConsumerSecretDO containing the details of the consumer secret to be added
+     * @param consumerSecretDO  OAuthConsumerSecretDO containing the details of the new consumer secret to be added.
+     * @param legacySecret      The existing consumer secret to be copied (if any).
      * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
      */
-    public void addOAuthConsumerSecret(OAuthAppDO appDO, OAuthConsumerSecretDO consumerSecretDO, boolean needCopying)
+    public void addOAuthConsumerSecret(OAuthConsumerSecretDO consumerSecretDO, String legacySecret)
             throws IdentityOAuthAdminException {
 
         Connection connection = null;
@@ -1437,11 +1438,24 @@ public class OAuthAppDAO {
             connection = IdentityDatabaseUtil.getDBConnection(true);
             String processedClientSecret =
                     persistenceProcessor.getProcessedClientSecret(consumerSecretDO.getSecretValue());
-            if (needCopying) {
+            boolean secretExists;
+            if (OAuth2Util.isHashDisabled()) {
+                // If hashing is disabled, we need to hash the secret retrieved from IDN_OAUTH_CONSUMER_APPS table
+                // to compare with the secrets in IDN_OAUTH_CONSUMER_SECRETS table.
+                String hashedProvidedSecret =
+                        hashingPersistenceProcessor.getProcessedClientSecret(legacySecret);
+                secretExists = isConsumerSecretPresent(connection,
+                        consumerSecretDO.getClientId(), hashedProvidedSecret);
+            } else {
+                // If hashing is enabled, we can directly compare the secret values
+                secretExists = isConsumerSecretPresent(connection,
+                        consumerSecretDO.getClientId(), legacySecret);
+            }
+            if (!secretExists && legacySecret != null) {
                 String processedCopyingClientSecret =
-                        persistenceProcessor.getProcessedClientSecret(appDO.getOauthConsumerSecret());
+                        persistenceProcessor.getProcessedClientSecret(legacySecret);
                 // Copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
-                addConsumerSecret(connection, consumerSecretDO.getClientId(), appDO.getOauthConsumerSecret(),
+                addConsumerSecret(connection, consumerSecretDO.getClientId(), legacySecret,
                         processedCopyingClientSecret);
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
@@ -1455,6 +1469,35 @@ public class OAuthAppDAO {
                     + consumerSecretDO.getClientId(), e);
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Check if a consumer secret exists for a given consumer key and secret hash.
+     *
+     * @param connection  DB connection to be used.
+     * @param consumerKey Consumer key (client ID) to check.
+     * @param secretHash  Hash of the consumer secret to check.
+     * @return true if the consumer secret exists, false otherwise.
+     * @throws IdentityOAuthAdminException if an error occurs while checking the existence of the consumer secret.
+     */
+    private boolean isConsumerSecretPresent(Connection connection,
+                                            String consumerKey,
+                                            String secretHash)
+            throws IdentityOAuthAdminException {
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_HASH)) {
+
+            ps.setString(1, consumerKey);
+            ps.setString(2, secretHash);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next(); // IF, not WHILE — existence check only
+            }
+        } catch (SQLException e) {
+            throw handleError("Error while checking existence of consumer secret for client id: "
+                    + consumerKey, e);
         }
     }
 
@@ -1601,6 +1644,15 @@ public class OAuthAppDAO {
         return consumerSecrets;
     }
 
+    /**
+     * Retrieve the latest OAuth consumer secret associated with a given consumer key (client ID),
+     * excluding a specific secret ID.
+     *
+     * @param clientId        The consumer key (client ID).
+     * @param excludedSecretID The secret ID to be excluded from the search.
+     * @return The latest OAuth consumer secret as a string, or null if not found.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secret.
+     */
     public String getLatestSecretExcluding(String clientId, String excludedSecretID)
             throws IdentityOAuthAdminException {
         String secret = null;
@@ -1623,6 +1675,13 @@ public class OAuthAppDAO {
         return secret;
     }
 
+    /**
+     * Retrieve a specific OAuth consumer secret associated with a given secret ID.
+     *
+     * @param secretId The ID of the secret to be retrieved.
+     * @return An OAuthConsumerSecretDO object representing the consumer secret, or null if not found.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secret.
+     */
     public OAuthConsumerSecretDO getOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
         OAuthConsumerSecretDO secret = null;
@@ -1666,31 +1725,62 @@ public class OAuthAppDAO {
     public OAuthConsumerSecretDO getOAuthConsumerSecret(String consumerKey, String secretHash)
             throws IdentityOAuthAdminException {
 
-        OAuthConsumerSecretDO secret = null;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection.prepareStatement(
-                    SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_HASH)) {
-                prepStmt.setString(1, consumerKey);
-                prepStmt.setString(2, secretHash);
-                try (ResultSet resultSet = prepStmt.executeQuery()) {
-                    while (resultSet.next()) {
-                        secret = new OAuthConsumerSecretDO();
-                        secret.setSecretId(resultSet.getString(1));
-                        secret.setDescription(resultSet.getString(2));
-                        secret.setClientId(resultSet.getString(3));
-                        secret.setSecretValue(resultSet.getString(4));
-                        secret.setSecretHash(resultSet.getString(5));
-                        long expiresAt = resultSet.getLong(6);
-                        if (!resultSet.wasNull()) {
-                            secret.setExpiresAt(expiresAt);
-                        }
+            return getOAuthConsumerSecret(connection, consumerKey, secretHash);
+        } catch (SQLException e) {
+            throw handleError("Error occurred while retrieving the OAuth consumer secret for client id : "
+                    + consumerKey, e);
+        }
+    }
+
+    /**
+     * Retrieves an OAuth consumer secret using the provided database connection.
+     * <p>
+     * This method is intended to be used within an existing transaction to ensure
+     * atomicity when checking and modifying consumer secrets.
+     * </p>
+     *
+     * @param connection Active database connection
+     * @param consumerKey OAuth consumer key
+     * @param secretHash Hashed consumer secret
+     * @return OAuthConsumerSecretDO if found, otherwise null
+     * @throws IdentityOAuthAdminException if an error occurs
+     */
+    public OAuthConsumerSecretDO getOAuthConsumerSecret(Connection connection, String consumerKey, String secretHash)
+            throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDO secret = null;
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_HASH)) {
+
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setString(2, secretHash);
+
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                if (resultSet.next()) {
+                    secret = new OAuthConsumerSecretDO();
+                    secret.setSecretId(resultSet.getString(1));
+                    secret.setDescription(resultSet.getString(2));
+                    secret.setClientId(resultSet.getString(3));
+                    secret.setSecretValue(resultSet.getString(4));
+                    secret.setSecretHash(resultSet.getString(5));
+
+                    long expiresAt = resultSet.getLong(6);
+                    // Check if the retrieved expiresAt value was NULL in the database since getLong() returns 0
+                    // for NULL. This is important to distinguish between an actual expiry time of 0 and a NULL
+                    // value.
+                    if (!resultSet.wasNull()) {
+                        secret.setExpiresAt(expiresAt);
                     }
                 }
             }
         } catch (SQLException e) {
-            throw handleError("Error occurred while retrieving the provided OAuth consumer secret  "
-                    + "for client id : " + consumerKey, e);
+            throw handleError("Error occurred while retrieving OAuth consumer secret for client id : "
+                    + consumerKey, e);
         }
+
         return secret;
     }
+
 }
