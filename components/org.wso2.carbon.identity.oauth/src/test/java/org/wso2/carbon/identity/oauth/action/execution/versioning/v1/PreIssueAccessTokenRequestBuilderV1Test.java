@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.action.execution;
+package org.wso2.carbon.identity.oauth.action.execution.versioning.v1;
 
 import org.apache.commons.codec.binary.Base64;
 import org.mockito.Mock;
@@ -28,6 +28,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
 import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
@@ -37,10 +38,12 @@ import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Param;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
+import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
@@ -81,7 +84,7 @@ import static org.testng.AssertJUnit.assertNotNull;
 /**
  * Unit test class for PreIssueAccessTokenRequestBuilder class.
  */
-public class PreIssueAccessTokenRequestBuilderTest {
+public class PreIssueAccessTokenRequestBuilderV1Test {
 
     @Mock
     OrganizationManager mockOrganizationManager;
@@ -112,6 +115,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     private static final String USER_STORE_TEST = "PRIMARY";
     private static final String TEST_URL = "https://test.com/oauth2/token";
     private static final String AUDIENCE_TEST = "audience1";
+    private static final String ACTION_VERSION_V1 = "v1";
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -186,6 +190,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
                 new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
                         .depth(ORG_DEPTH).build();
 
+        ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
+        Action mockAction = mock(Action.class);
+        when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V1);
+        when(mockContext.getAction()).thenReturn(mockAction);
+
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class)) {
 
@@ -198,7 +207,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
                     buildActionExecutionRequest(
-                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
+                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), mockContext);
             Assert.assertNotNull(actionExecutionRequest);
             Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
             assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
