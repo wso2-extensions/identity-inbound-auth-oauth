@@ -397,6 +397,9 @@ public class OAuth2Util {
                 new HashingPersistenceProcessor();
     }
 
+    /**
+     * @return
+     */
     public static OAuthAuthzReqMessageContext getAuthzRequestContext() {
 
         if (log.isDebugEnabled()) {
