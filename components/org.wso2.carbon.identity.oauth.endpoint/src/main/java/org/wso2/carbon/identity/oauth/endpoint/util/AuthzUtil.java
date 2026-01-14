@@ -1995,7 +1995,8 @@ public class AuthzUtil {
         // all went okay
         if (isAuthorizationCodeExists(authzRespDTO)) {
             // Get token binder if it is enabled for the client.
-            Optional<TokenBinder> tokenBinderOptional = getTokenBinder(oauth2Params.getClientId());
+            Optional<TokenBinder> tokenBinderOptional = getTokenBinder(oauth2Params.getClientId(),
+                    oauth2Params.getTenantDomain());
             String tokenBindingValue = null;
             if (tokenBinderOptional.isPresent()) {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
@@ -2069,11 +2070,14 @@ public class AuthzUtil {
                 hasResponseType(responseType, OAuthConstants.SUBJECT_TOKEN);
     }
 
-    private static Optional<TokenBinder> getTokenBinder(String clientId) throws OAuthSystemException {
+    private static Optional<TokenBinder> getTokenBinder(String clientId, String tenantDomain)
+            throws OAuthSystemException {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)
+                    : OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new OAuthSystemException("Failed to retrieve OAuth application with client id: " + clientId, e);
         }

@@ -1058,7 +1058,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
+            String tenantDomain = tokenReqDTO.getTenantDomain();
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId(), tenantDomain)
+                    : OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(
                     "Failed load the application with client id: " + tokenReqDTO.getClientId());
