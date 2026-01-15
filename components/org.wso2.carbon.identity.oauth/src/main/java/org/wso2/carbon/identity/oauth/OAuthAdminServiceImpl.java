@@ -418,12 +418,14 @@ public class OAuthAdminServiceImpl {
         consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
         consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        oAuthAppDAO.addOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
+        // Persist the new secret and update the IDN_OAUTH_CONSUMER_APPS table with the new secret.
+        oAuthAppDAO.rotateOAuthConsumerSecret(consumerSecret, oAuthAppDO.getOauthConsumerSecret());
         // Clear the cache after adding a new secret. This is because the latest secret is added to the
         // IDN_OAUTH_CONSUMER_APPS table as the oauthConsumerSecret column value and the cache is populated from
         // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
         // here.
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        // add secret cache
         return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
 
@@ -436,6 +438,7 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
+        // block deletion of the latest secret
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
@@ -461,6 +464,8 @@ public class OAuthAdminServiceImpl {
             if (needUpdate) {
                 AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             }
+
+            // delete cache by consumer key
         } else {
             throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
         }

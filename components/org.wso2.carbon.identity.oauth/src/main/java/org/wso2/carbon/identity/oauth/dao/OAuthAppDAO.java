@@ -1113,24 +1113,6 @@ public class OAuthAppDAO {
             }
         }
     }
-    /**
-     * Create the OAuthConsumerSecretDO object to represent the consumer secret and add it to the database.
-     *
-     * @param connection            Same db connection used in OAuth2 app creation.
-     * @param consumerKey           Consumer key of the created app.
-     * @param consumerSecret        Consumer secret of the created app.
-     * @param processedClientSecret Processed client secret.
-     * @throws IdentityOAuthAdminException if an error occurs during the process.
-     */
-    private void addConsumerSecret(Connection connection, String consumerKey, String consumerSecret,
-                                   String processedClientSecret)
-            throws SQLException, IdentityOAuthAdminException {
-        OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
-        consumerSecretDO.setSecretId(UUID.randomUUID().toString());
-        consumerSecretDO.setClientId(consumerKey);
-        consumerSecretDO.setSecretValue(consumerSecret);
-        addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
-    }
 
     /**
      * Retrieve all scope validators for specific appId.
@@ -1425,20 +1407,25 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Add a new OAuth consumer secret.
+     * Add a new OAuth consumer secret to the IDN_OAUTH_CONSUMER_SECRETS table and update the existing secret in the
+     * IDN_OAUTH_CONSUMER_APPS table.
      *
-     * @param consumerSecretDO  OAuthConsumerSecretDO containing the details of the new consumer secret to be added.
-     * @param legacySecret      The existing consumer secret to be copied (if any).
+     * @param consumerSecretDO      OAuthConsumerSecretDO containing the details of the new consumer secret to be added.
+     * @param appTableClientSecret  The secret value stored in the IDN_OAUTH_CONSUMER_APPS table against
+     *                              the consumer key.
      * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
      */
-    public void addOAuthConsumerSecret(OAuthConsumerSecretDO consumerSecretDO, String legacySecret)
+    public void rotateOAuthConsumerSecret(OAuthConsumerSecretDO consumerSecretDO, String appTableClientSecret)
             throws IdentityOAuthAdminException {
 
+        if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
+            throw new IdentityOAuthAdminException(OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
         Connection connection = null;
         try {
             String consumerKey = consumerSecretDO.getClientId();
             connection = IdentityDatabaseUtil.getDBConnection(true);
-            if (hasClientSecretLimitReached(consumerKey, legacySecret, connection)) {
+            if (hasClientSecretLimitReached(consumerKey, appTableClientSecret, connection)) {
                 throw new IdentityOAuthAdminException(
                         "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
                                 "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
@@ -1450,20 +1437,23 @@ public class OAuthAppDAO {
                 // If hashing is disabled, we need to hash the secret retrieved from IDN_OAUTH_CONSUMER_APPS table
                 // to compare with the secrets in IDN_OAUTH_CONSUMER_SECRETS table.
                 String hashedProvidedSecret =
-                        hashingPersistenceProcessor.getProcessedClientSecret(legacySecret);
+                        hashingPersistenceProcessor.getProcessedClientSecret(appTableClientSecret);
                 secretExists = isConsumerSecretPresent(connection,
                         consumerSecretDO.getClientId(), hashedProvidedSecret);
             } else {
                 // If hashing is enabled, we can directly compare the secret values
                 secretExists = isConsumerSecretPresent(connection,
-                        consumerSecretDO.getClientId(), legacySecret);
+                        consumerSecretDO.getClientId(), appTableClientSecret);
             }
-            if (!secretExists && legacySecret != null) {
+            if (!secretExists && appTableClientSecret != null) {
                 String processedCopyingClientSecret =
-                        persistenceProcessor.getProcessedClientSecret(legacySecret);
+                        persistenceProcessor.getProcessedClientSecret(appTableClientSecret);
                 // Copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
-                addConsumerSecret(connection, consumerSecretDO.getClientId(), legacySecret,
-                        processedCopyingClientSecret);
+                OAuthConsumerSecretDO existingSecretDO = new OAuthConsumerSecretDO();
+                existingSecretDO.setSecretId(UUID.randomUUID().toString());
+                existingSecretDO.setClientId(consumerKey);
+                existingSecretDO.setSecretValue(appTableClientSecret);
+                addOAuthConsumerSecret(connection, existingSecretDO, processedCopyingClientSecret);
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
             addOAuthConsumerSecret(connection, consumerSecretDO, processedClientSecret);
@@ -1532,7 +1522,7 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Add a new OAuth consumer secret within an existing DB transaction.
+     * Add a new OAuth consumer secret to the IDN_OAUTH_CONSUMER SECRETS table within an existing DB transaction.
      *
      * @param connection       DB connection to be used.
      * @param consumerSecretDO OAuthConsumerSecretDO containing the details of the consumer secret to be added
@@ -1565,7 +1555,7 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Update an existing OAuth consumer secret.
+     * Update an existing OAuth consumer secret in the IDN_OAUTH_CONSUMER_APPS table within an existing DB transaction.
      *
      * @param connection            DB connection to be used.
      * @param consumerKey           Consumer key (client ID) whose secret is to be updated.

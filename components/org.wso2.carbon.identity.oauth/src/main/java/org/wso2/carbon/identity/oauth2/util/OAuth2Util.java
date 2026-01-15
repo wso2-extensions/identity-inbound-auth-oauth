@@ -550,8 +550,12 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
+        // When multiple client secrets support is enabled, check in the IDN_OAUTH_CONSUMER_SECRET table first.
+        // If not found, fall back to the IDN_OAUTH_CONSUMER_APPS table.
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
             OAuthConsumerSecretDO secret = getClientSecret(clientId, clientSecretProvided);
+            // If secret is found in the IDN_OAUTH_CONSUMER_SECRET table, use it for authentication.
+            // Else, fall back to the IDN_OAUTH_CONSUMER_APPS table.
             if (secret != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Client Secret found for client ID: " + clientId + " in new secret storage");
@@ -2300,6 +2304,7 @@ public class OAuth2Util {
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
+        // add a cache
         String hashedProvidedSecret = getHashingPersistenceProcessor().getProcessedClientSecret(consumerSecret);
         return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
     }
