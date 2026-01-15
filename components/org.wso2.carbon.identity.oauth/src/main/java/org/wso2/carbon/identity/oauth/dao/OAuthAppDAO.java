@@ -1467,18 +1467,20 @@ public class OAuthAppDAO {
      * and legacy secret using the provided database connection, and compares the count
      * against the configured client secret limit.
      *
-     * @param consumerKey   the OAuth consumer key to check secrets for
-     * @param legacySecret  the legacy secret value, if any, to include in the count
-     * @param connection    the database connection to use for retrieving secrets; must not be {@code null}
+     * @param consumerKey           The OAuth consumer key to check secrets for
+     * @param appTableClientSecret  The secret value stored in the IDN_OAUTH_CONSUMER_APPS table against
+     *                              the consumer key.
+     * @param connection            The database connection to use for retrieving secrets.
      * @return {@code true} if the client secret limit is greater than zero and the current number
      *         of effective secrets is greater than or equal to the limit, {@code false} otherwise
      * @throws IdentityOAuthAdminException if an error occurs while retrieving consumer secrets
      */
-    public static boolean hasClientSecretLimitReached(String consumerKey, String legacySecret, Connection connection)
+    public static boolean hasClientSecretLimitReached(String consumerKey, String appTableClientSecret,
+                                                      Connection connection)
             throws IdentityOAuthAdminException {
 
         int clientSecretLimit = OAuth2Util.getClientSecretCount();
-        List<OAuthConsumerSecretDTO> secrets = getEffectiveConsumerSecrets(consumerKey, legacySecret, connection);
+        List<OAuthConsumerSecretDTO> secrets = getEffectiveConsumerSecrets(consumerKey, appTableClientSecret, connection);
         int currentSecretCount = secrets.size();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
@@ -1637,35 +1639,35 @@ public class OAuthAppDAO {
      * Retrieves all effective consumer secrets for a given consumer key.
      *
      * This method merges secrets from the IDN_OAUTH_CONSUMER_SECRETS table
-     * and the legacy consumer secret stored in the IDN_OAUTH_CONSUMER_APPS table.
+     * and the secret stored in the IDN_OAUTH_CONSUMER_APPS table.
      * It ensures backward compatibility when multiple secrets feature is enabled.
      *
-     * @param consumerKey   The OAuth consumer key.
-     * @param legacySecret  The legacy consumer secret from the IDN_OAUTH_CONSUMER_APPS table.
+     * @param consumerKey           The OAuth consumer key.
+     * @param appTableClientSecret  The secret value stored in the IDN_OAUTH_CONSUMER_APPS table against
+     *                              the consumer key.
      * @return List of {@link OAuthConsumerSecretDTO} containing all consumer secrets.
      * @throws IdentityOAuthAdminException If there is an error while retrieving secrets.
      */
-    public static List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey, String legacySecret,
+    public static List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey,
+                                                                           String appTableClientSecret,
                                                                            Connection connection)
             throws IdentityOAuthAdminException {
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         try {
+            // Retrieve all secrets from IDN_OAUTH_CONSUMER_SECRETS table.
             List<OAuthConsumerSecretDO> secrets = oAuthAppDAO.getOAuthConsumerSecrets(consumerKey, connection);
-            // Check whether the secrets returned from the IDN_OAUTH_CONSUMER_SECRETS table contains the
-            // secret stored in the IDN_OAUTH_CONSUMER_APPS table. If not, add it to the list as well.
-            boolean duplicateSecretFound = false;
             for (OAuthConsumerSecretDO secret : secrets) {
                 consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(secret));
-                if (legacySecret != null && legacySecret.equals(secret.getSecretValue())) {
-                    duplicateSecretFound = true;
-                }
             }
-            if (!duplicateSecretFound && legacySecret != null) {
+            // If no secrets are found in IDN_OAUTH_CONSUMER_SECRETS table, it means that multiple secrets has not yet
+            // been created for the application and the secret value resides in IDN_OAUTH_CONSUMER_APPS table. This
+            // secret has to be added to the list as a secret of the given consumer key.
+            if (consumerSecretsList.isEmpty() && appTableClientSecret != null) {
                 OAuthConsumerSecretDO oAuthConsumerSecretDO = new OAuthConsumerSecretDO();
                 oAuthConsumerSecretDO.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
                 oAuthConsumerSecretDO.setClientId(consumerKey);
-                oAuthConsumerSecretDO.setSecretValue(legacySecret);
+                oAuthConsumerSecretDO.setSecretValue(appTableClientSecret);
                 consumerSecretsList.add(OAuthUtil.buildConsumerSecretDTO(oAuthConsumerSecretDO));
             }
         } catch (IdentityOAuth2Exception e) {
