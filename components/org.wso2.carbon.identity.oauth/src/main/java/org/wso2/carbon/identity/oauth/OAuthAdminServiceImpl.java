@@ -430,44 +430,38 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Remove an existing OAuth consumer secret by the given secret Id.
+     * Removes an OAuth consumer secret while ensuring that the most recently
+     * added secret for a client is never deleted.
      *
-     * @param secretId Id of the consumer secret to be removed
-     * @throws IdentityOAuthAdminException Error when removing the consumer secret information from the persistence
-     * store or if the operation is not supported.
+     * <p>This constraint is enforced at the database level using an atomic DELETE
+     * statement, making the operation safe against race conditions caused by
+     * concurrent requests or clustered deployments.</p>
+     *
+     * <p>If the given secret ID corresponds to the latest secret, the deletion
+     * will be blocked and a client error will be returned.</p>
+     *
+     * @param secretId the secret ID of the secret to be removed
+     * @throws IdentityOAuthAdminException if deletion is not allowed or fails
      */
     public void removeOAuthConsumerSecret(String secretId) throws IdentityOAuthAdminException {
 
-        // block deletion of the latest secret
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
-        if (secretDTO != null) {
-            String consumerKey = secretDTO.getClientId();
-            OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
-            List<OAuthConsumerSecretDTO> secretDTOList = getOAuthConsumerSecrets(consumerKey);
-            if (secretDTOList.size() == 1) {
-                String errorMessage = "Cannot remove the secret with id: " + secretId + " as it is the only secret " +
-                        "associated with the client ID: " + consumerKey + ". An OAuth application must have " +
-                        "at least one consumer secret.";
-                throw handleClientError(INVALID_DELETE, errorMessage);
-            }
-            OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-            // Check if the secret to be removed is the one stored in the IDN_OAUTH_CONSUMER_APPS table. If so, we
-            // need to update the IDN_OAUTH_CONSUMER_APPS with another secret associated with the client Id.
-            // Also, we need to clear the cache.
-            boolean needUpdate = oAuthAppDO.getOauthConsumerSecret() != null &&
-                    oAuthAppDO.getOauthConsumerSecret().equals(secretDTO.getClientSecret());
-            oAuthAppDAO.removeOAuthConsumerSecret(secretId, consumerKey, needUpdate);
-            if (needUpdate) {
-                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-            }
-
-            // delete cache by consumer key
-        } else {
+        if (secretDTO == null) {
             throw handleClientError(INVALID_SECRET_ID, "Cannot find a secret with secretId: " + secretId);
+        }
+        String consumerKey = secretDTO.getClientId();
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        int rowsDeleted =
+                oAuthAppDAO.removeOAuthConsumerSecretIfNotLatest(secretId, consumerKey);
+
+        if (rowsDeleted == 0) {
+            throw handleClientError(INVALID_DELETE,
+                    "Cannot remove the most recently added consumer secret for client ID: "
+                            + consumerKey);
         }
     }
 

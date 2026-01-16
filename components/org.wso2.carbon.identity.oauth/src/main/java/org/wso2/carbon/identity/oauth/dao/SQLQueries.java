@@ -55,8 +55,15 @@ public class SQLQueries {
         public static final String ADD_OAUTH_CONSUMER_SECRET = "INSERT INTO IDN_OAUTH_CONSUMER_SECRETS " +
                 "(SECRET_ID, DESCRIPTION, CONSUMER_KEY, SECRET_VALUE, SECRET_HASH, EXPIRY_TIME) VALUES (?,?,?,?,?,?)";
 
-        public static final String REMOVE_OAUTH_CONSUMER_SECRET = "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS " +
-                "WHERE SECRET_ID=?";
+        public static final String DELETE_OAUTH_CONSUMER_SECRET_IF_NOT_LATEST =
+                "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS " +
+                        "WHERE SECRET_ID = ? " +
+                        "AND CONSUMER_KEY = ? " +
+                        "AND ID <> ( " +
+                        "    SELECT MAX(ID) " +
+                        "    FROM IDN_OAUTH_CONSUMER_SECRETS " +
+                        "    WHERE CONSUMER_KEY = ? " +
+                        ")";
 
         public static final String GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT = "SELECT SECRET_ID, DESCRIPTION, " +
                 "CONSUMER_KEY, SECRET_VALUE, SECRET_HASH, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS WHERE " +

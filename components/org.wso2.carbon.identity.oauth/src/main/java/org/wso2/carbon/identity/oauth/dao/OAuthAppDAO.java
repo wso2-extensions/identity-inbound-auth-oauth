@@ -1537,40 +1537,30 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Remove an OAuth consumer secret.
+     * Deletes an OAuth consumer secret only if it is NOT the most recently added
+     * secret for the given consumer key.
      *
-     * @param secretId ID of the secret to be removed.
-     * @throws IdentityOAuthAdminException if an error occurs while removing the consumer secret.
+     * <p>This operation is atomic and enforced at the database level to prevent
+     * race conditions in concurrent or clustered environments.</p>
+     *
+     * @param secretId    Secret ID to be removed
+     * @param consumerKey OAuth client ID
+     * @return number of rows deleted (0 if deletion was blocked)
+     * @throws IdentityOAuthAdminException on database errors
      */
-    public void removeOAuthConsumerSecret(String secretId, String clientId, boolean needUpdate)
+    public int removeOAuthConsumerSecretIfNotLatest(String secretId, String consumerKey)
             throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            if (needUpdate) {
-                // Get the latest secret excluding the one to be removed.
-                String latestSecret = getLatestSecretExcluding(clientId, secretId);
-                if (latestSecret != null) {
-                    try {
-                        // Update the secret in IDN_OAUTH_CONSUMER_APPS table to the latest secret.
-                        updateOAuthConsumerSecret(connection, clientId, latestSecret);
-                    } catch (SQLException e) {
-                        throw handleError("Error occurred while updating OAuth consumer secret for " +
-                                "client id : " + clientId, e);
-                    }
-                } else {
-                    String message = "Cannot find an alternative secret for client ID : " + clientId
-                            + " after removing the secret with ID : " + secretId;
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
-                    }
-                    throw new IdentityOAuthAdminException(message);
-                }
-            }
             try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_OAUTH_CONSUMER_SECRET)) {
+                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.DELETE_OAUTH_CONSUMER_SECRET_IF_NOT_LATEST)) {
                 prepStmt.setString(1, secretId);
-                prepStmt.execute();
+                prepStmt.setString(2, consumerKey);
+                prepStmt.setString(3, consumerKey);
+
+                int rows = prepStmt.executeUpdate();
                 IdentityDatabaseUtil.commitTransaction(connection);
+                return rows;
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw handleError("Error occurred while removing OAuth consumer secret for secret id : "
