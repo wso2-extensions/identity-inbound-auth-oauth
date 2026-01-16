@@ -1042,13 +1042,27 @@ public class OAuthServerConfiguration {
         return isClientSecretHashEnabled;
     }
 
-    // Return whether multiple client secrets are enabled for oauth applications
+    /**
+     * Checks whether multiple client secrets are enabled for OAuth applications.
+     *
+     * <p>If multiple client secrets are enabled, an application can have more than
+     * one secret associated with its client ID. Otherwise, only a single secret
+     * is allowed.</p>
+     *
+     * @return {@code true} if multiple client secrets are enabled, {@code false} otherwise.
+     */
     public boolean isMultipleClientSecretsEnabled() {
+
         return isMultipleClientSecretsEnabled;
     }
 
-    // Return the maximum number of client secrets allowed for an oauth application
+    /**
+     * Retrieves the maximum number of client secrets allowed for an OAuth application.
+     *
+     * @return the maximum number of client secrets allowed for an OAuth application.
+     */
     public int getClientSecretCount() {
+
         return clientSecretCount;
     }
 

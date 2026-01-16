@@ -1480,7 +1480,8 @@ public class OAuthAppDAO {
             throws IdentityOAuthAdminException {
 
         int clientSecretLimit = OAuth2Util.getClientSecretCount();
-        List<OAuthConsumerSecretDTO> secrets = getEffectiveConsumerSecrets(consumerKey, appTableClientSecret, connection);
+        List<OAuthConsumerSecretDTO> secrets =
+                getEffectiveConsumerSecrets(consumerKey,appTableClientSecret,connection);
         int currentSecretCount = secrets.size();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
@@ -1618,6 +1619,7 @@ public class OAuthAppDAO {
 
     public List<OAuthConsumerSecretDTO> getEffectiveConsumerSecrets(String consumerKey, String legacySecret)
             throws IdentityOAuthAdminException {
+
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             return getEffectiveConsumerSecrets(consumerKey, legacySecret, connection);
         } catch (SQLException e) {
@@ -1642,6 +1644,7 @@ public class OAuthAppDAO {
                                                                            String appTableClientSecret,
                                                                            Connection connection)
             throws IdentityOAuthAdminException {
+
         List<OAuthConsumerSecretDTO> consumerSecretsList = new ArrayList<>();
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         try {
@@ -1664,37 +1667,6 @@ public class OAuthAppDAO {
             throw handleError("Error while retrieving consumer secrets for consumer key: " + consumerKey, e);
         }
         return consumerSecretsList;
-    }
-
-    /**
-     * Retrieve the latest OAuth consumer secret associated with a given consumer key (client ID),
-     * excluding a specific secret ID.
-     *
-     * @param clientId        The consumer key (client ID).
-     * @param excludedSecretID The secret ID to be excluded from the search.
-     * @return The latest OAuth consumer secret as a string, or null if not found.
-     * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secret.
-     */
-    public String getLatestSecretExcluding(String clientId, String excludedSecretID)
-            throws IdentityOAuthAdminException {
-        String secret = null;
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                            .GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT_EXCLUDING_PROVIDED_SECRET)) {
-                prepStmt.setString(1, clientId);
-                prepStmt.setString(2, excludedSecretID);
-                try (ResultSet resultSet = prepStmt.executeQuery()) {
-                    while (resultSet.next()) {
-                        secret = resultSet.getString(1);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            throw handleError("Error occurred while retrieving OAuth consumer secrets for client id : "
-                    + clientId, e);
-        }
-        return secret;
     }
 
     /**

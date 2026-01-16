@@ -381,6 +381,7 @@ public class OAuth2Util {
      * @return the {@link TokenPersistenceProcessor} instance
      */
     private static TokenPersistenceProcessor getHashingPersistenceProcessor() {
+
         return HashingPersistenceProcessorHolder.INSTANCE;
     }
 
@@ -2304,7 +2305,6 @@ public class OAuth2Util {
     public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
-        // add a cache
         String hashedProvidedSecret = getHashingPersistenceProcessor().getProcessedClientSecret(consumerSecret);
         return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
     }
