@@ -378,6 +378,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
             String userTenantDomain = MultitenantUtils.getTenantDomain(username);
+            // Preserve the original login identifier for error messages.
+            String originalLoginIdentifier = tenantAwareUserName;
             ResolvedUserResult resolvedUserResult =
                     FrameworkUtils.processMultiAttributeLoginIdentification(tenantAwareUserName, userTenantDomain);
             String userId = null;
@@ -390,7 +392,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                     (tokenReq.getResourceOwnerUsername())) || IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                genericErrorUserName = tenantAwareUserName;
+                genericErrorUserName = originalLoginIdentifier;
             }
 
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
@@ -429,12 +431,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                     (tokenReq.getResourceOwnerUsername()))) {
-                throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
+                throw new IdentityOAuth2Exception("Authentication failed for " + originalLoginIdentifier);
             }
             username = tokenReq.getResourceOwnerUsername();
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 // For tenant qualified urls, no need to send fully qualified username in response.
-                username = tenantAwareUserName;
+                username = originalLoginIdentifier;
             }
             throw new IdentityOAuth2Exception("Authentication failed for " + username);
         } catch (UserStoreClientException e) {

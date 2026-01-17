@@ -348,6 +348,81 @@ public class PasswordGrantHandlerTest {
         }
     }
 
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testValidateGrantWithMultiAttributeLoginFailure() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
+            when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
+            when(serverConfiguration.isShowAuthFailureReasonForPasswordGrant()).thenReturn(false);
+
+            // User logs in with email "john@gmail.com", which resolves to username "john"
+            String loginIdentifier = "john@gmail.com";
+            String resolvedUsername = "john";
+
+            when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+            when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(loginIdentifier);
+            when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
+            when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
+            when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("wrongPassword");
+
+            multitenantUtils.when(() -> MultitenantUtils.getTenantDomain(anyString())).thenReturn("carbon.super");
+            multitenantUtils.when(() -> MultitenantUtils.getTenantAwareUsername(anyString())).thenReturn(loginIdentifier);
+
+            OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+            OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+
+            // Multi-attribute login resolves the email to the actual username
+            ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.SUCCESS);
+            org.wso2.carbon.user.core.common.User userObj =
+                    new org.wso2.carbon.user.core.common.User("user-id-123", resolvedUsername, resolvedUsername);
+            userObj.setTenantDomain("carbon.super");
+            resolvedUserResult.setUser(userObj);
+
+            frameworkUtils.when(
+                            () -> FrameworkUtils.processMultiAttributeLoginIdentification(anyString(), anyString())).
+                    thenReturn(resolvedUserResult);
+            frameworkUtils.when(() -> FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
+                    .thenReturn(loginIdentifier);
+
+            when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+            when(serviceProvider.isSaasApp()).thenReturn(false);
+            when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
+                    .thenReturn(localAndOutboundAuthenticationConfig);
+            when(serviceProvider.getSpProperties()).thenReturn(new ServiceProviderProperty[0]);
+
+            when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
+            when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+
+            // Authentication fails (wrong password)
+            AuthenticationResult authenticationResult =
+                    new AuthenticationResult(AuthenticationResult.AuthenticationStatus.FAIL);
+            when(userStoreManager.authenticateWithID(anyString(), anyString(), any(), anyString()))
+                    .thenReturn(authenticationResult);
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(-1234);
+
+            PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
+
+            try {
+                passwordGrantHandler.validateGrant(tokReqMsgCtx);
+            } catch (IdentityOAuth2Exception ex) {
+                // Verify the error message contains the original login identifier (email) not the resolved username
+                assertTrue(ex.getMessage().contains(loginIdentifier),
+                        "Error message should contain original login identifier: " + loginIdentifier);
+                assertTrue(!ex.getMessage().contains("Authentication failed for " + resolvedUsername),
+                        "Error message should not contain resolved username: " + resolvedUsername);
+                throw ex;
+            }
+        }
+    }
+
     @Test
     public void testIssueRefreshToken() throws Exception {
 
