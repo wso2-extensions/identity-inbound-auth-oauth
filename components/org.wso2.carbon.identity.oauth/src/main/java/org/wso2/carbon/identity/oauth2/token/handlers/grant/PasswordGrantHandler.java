@@ -433,10 +433,13 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     (tokenReq.getResourceOwnerUsername()))) {
                 throw new IdentityOAuth2Exception("Authentication failed for " + originalLoginIdentifier);
             }
-            username = tokenReq.getResourceOwnerUsername();
+            // Use the original login identifier for non-super tenant scenarios as well.
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 // For tenant qualified urls, no need to send fully qualified username in response.
                 username = originalLoginIdentifier;
+            } else {
+                // For non-tenant qualified urls, construct the fully qualified username with the original identifier.
+                username = originalLoginIdentifier + "@" + MultitenantUtils.getTenantDomain(tokenReq.getResourceOwnerUsername());
             }
             throw new IdentityOAuth2Exception("Authentication failed for " + username);
         } catch (UserStoreClientException e) {
