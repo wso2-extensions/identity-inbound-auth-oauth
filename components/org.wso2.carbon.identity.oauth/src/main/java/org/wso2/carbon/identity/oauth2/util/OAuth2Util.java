@@ -91,6 +91,9 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretMetadata;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretsCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretsCacheEntry;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -2306,7 +2309,59 @@ public class OAuth2Util {
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         String hashedProvidedSecret = getHashingPersistenceProcessor().getProcessedClientSecret(consumerSecret);
-        return new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
+        // First, try to retrieve the secret from the cache.
+        OAuthClientSecretsCache cache = OAuthClientSecretsCache.getInstance();
+        OAuthClientSecretsCacheEntry cacheEntry = cache.getValueFromCache(consumerKey);
+        if (cacheEntry != null && !cacheEntry.isEmpty()) {
+            for (OAuthClientSecretMetadata metadata : cacheEntry.getSecrets()) {
+                if (StringUtils.equals(metadata.getSecretHash(), hashedProvidedSecret)) {
+                    // Cache hit.
+                    return buildConsumerSecretDO(consumerKey, metadata);
+                }
+            }
+        }
+        // Cache miss or secret not found in cache. Hence, query the database.
+        OAuthConsumerSecretDO secretFromDB =
+                new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
+
+        if (secretFromDB == null) {
+            return null;
+        }
+        // Update the cache with the secret retrieved from the database.
+        if (cacheEntry != null) {
+            cacheEntry.addSecret(
+                    new OAuthClientSecretMetadata(
+                            secretFromDB.getSecretHash(),
+                            secretFromDB.getExpiresAt()));
+            cache.addToCache(consumerKey, cacheEntry);
+        } else {
+            // First time population. Hence, first create the cache entry.
+            OAuthClientSecretsCacheEntry newEntry = new OAuthClientSecretsCacheEntry();
+            newEntry.addSecret(
+                    new OAuthClientSecretMetadata(
+                            secretFromDB.getSecretHash(),
+                            secretFromDB.getExpiresAt()
+                    )
+            );
+            cache.addToCache(consumerKey, newEntry);
+        }
+        return secretFromDB;
+    }
+
+    /**
+     * Build {@link OAuthConsumerSecretDO} from {@link OAuthClientSecretMetadata}.
+     *
+     * @param consumerKey Consumer key of the application.
+     * @param metadata    Metadata of the client secret.
+     * @return Built {@link OAuthConsumerSecretDO}.
+     */
+    private static OAuthConsumerSecretDO buildConsumerSecretDO(String consumerKey, OAuthClientSecretMetadata metadata) {
+
+        OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
+        secret.setClientId(consumerKey);
+        secret.setSecretHash(metadata.getSecretHash());
+        secret.setExpiresAt(metadata.getExpiresAt());
+        return secret;
     }
 
     /**

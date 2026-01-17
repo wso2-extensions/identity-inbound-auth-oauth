@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretsCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -463,6 +464,9 @@ public class OAuthAdminServiceImpl {
                     "Cannot remove the most recently added consumer secret for client ID: "
                             + consumerKey);
         }
+        // Clear the client secrets cache for the consumer key of the removed secret. This is to ensure that
+        // removed secret is removed from the cache as well.
+        OAuthClientSecretsCache.getInstance().clearCacheEntry(consumerKey);
     }
 
     /**
