@@ -1481,7 +1481,7 @@ public class OAuthAppDAO {
 
         int clientSecretLimit = OAuth2Util.getClientSecretCount();
         List<OAuthConsumerSecretDTO> secrets =
-                getEffectiveConsumerSecrets(consumerKey,appTableClientSecret,connection);
+                getEffectiveConsumerSecrets(consumerKey, appTableClientSecret, connection);
         int currentSecretCount = secrets.size();
         return clientSecretLimit > 0 && currentSecretCount >= clientSecretLimit;
     }
