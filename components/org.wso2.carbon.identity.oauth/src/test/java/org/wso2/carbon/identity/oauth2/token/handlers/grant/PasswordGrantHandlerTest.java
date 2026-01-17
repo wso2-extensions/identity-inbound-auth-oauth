@@ -70,6 +70,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
@@ -416,7 +417,7 @@ public class PasswordGrantHandlerTest {
                 // Verify the error message contains the original login identifier (email) not the resolved username
                 assertTrue(ex.getMessage().contains(loginIdentifier),
                         "Error message should contain original login identifier: " + loginIdentifier);
-                assertTrue(!ex.getMessage().contains("Authentication failed for " + resolvedUsername),
+                assertFalse(ex.getMessage().contains("Authentication failed for " + resolvedUsername),
                         "Error message should not contain resolved username: " + resolvedUsername);
                 throw ex;
             }
