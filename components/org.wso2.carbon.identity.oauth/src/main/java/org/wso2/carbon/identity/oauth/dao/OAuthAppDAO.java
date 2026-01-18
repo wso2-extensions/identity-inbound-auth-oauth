@@ -1553,16 +1553,31 @@ public class OAuthAppDAO {
             throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            try (PreparedStatement prepStmt = connection
-                    .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.DELETE_OAUTH_CONSUMER_SECRET_IF_NOT_LATEST)) {
-                prepStmt.setString(1, secretId);
-                prepStmt.setString(2, consumerKey);
-                prepStmt.setString(3, consumerKey);
+            try {
+                // 1. Fetch all secrets for this consumerKey, sorted by ID ascending (oldest first, latest last).
+                List<OAuthConsumerSecretDO> secrets = getOAuthConsumerSecrets(consumerKey, connection);
+                if (secrets.isEmpty()) {
+                    return 0; // Nothing to delete
+                }
+                // 2. Identify the latest secret.
+                OAuthConsumerSecretDO latestSecret = secrets.get(secrets.size() - 1);
 
-                int rows = prepStmt.executeUpdate();
-                IdentityDatabaseUtil.commitTransaction(connection);
-                return rows;
-            } catch (SQLException e) {
+                // 3. If the requested secret is the latest, do not delete.
+                if (latestSecret.getSecretId().equals(secretId)) {
+                    return 0;
+                }
+                // 4. Otherwise, delete the secret
+                try (PreparedStatement prepStmt = connection.prepareStatement(
+                        SQLQueries.OAuthAppDAOSQLQueries.DELETE_OAUTH_CONSUMER_SECRET)) {
+
+                    prepStmt.setString(1, secretId);
+                    prepStmt.setString(2, consumerKey);
+
+                    int rowsDeleted = prepStmt.executeUpdate();
+                    IdentityDatabaseUtil.commitTransaction(connection);
+                    return rowsDeleted;
+                }
+            } catch (SQLException | IdentityOAuth2Exception e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
                 throw handleError("Error occurred while removing OAuth consumer secret for secret id : "
                         + secretId, e);
