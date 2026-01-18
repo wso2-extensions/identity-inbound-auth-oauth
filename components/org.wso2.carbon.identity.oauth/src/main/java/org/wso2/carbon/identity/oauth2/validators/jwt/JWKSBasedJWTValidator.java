@@ -77,6 +77,10 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
         (bounded by the "iat", "nbf" and "exp" claims). */
         this.jwtProcessor = new DefaultJWTProcessor<>();
+        jwtProcessor.setJWSTypeVerifier((type, context) -> {
+            // Do nothing.
+            // This effectively says "All types are valid" to keep backward compatibility.
+        });
     }
 
     @Override
