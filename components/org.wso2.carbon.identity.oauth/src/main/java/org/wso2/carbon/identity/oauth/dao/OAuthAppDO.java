@@ -338,18 +338,22 @@ public class OAuthAppDO implements Serializable {
     }
 
     public String getSecretDescription() {
+
         return secretDescription;
     }
 
     public void setSecretDescription(String secretDescription) {
+
         this.secretDescription = secretDescription;
     }
 
     public Long getSecretExpiryTime() {
+
         return secretExpiryTime;
     }
 
     public void setSecretExpiryTime(Long secretExpiryTime) {
+
         this.secretExpiryTime = secretExpiryTime;
     }
 }
