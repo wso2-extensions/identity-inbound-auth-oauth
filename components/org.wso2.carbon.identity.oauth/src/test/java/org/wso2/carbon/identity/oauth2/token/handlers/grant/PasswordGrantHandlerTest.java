@@ -61,6 +61,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -214,7 +215,7 @@ public class PasswordGrantHandlerTest {
             when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
                     .thenReturn(localAndOutboundAuthenticationConfig);
             when(serviceProvider.getSpProperties()).thenReturn(new ServiceProviderProperty[0]);
-            when(FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
+            when(FrameworkUtils.preprocessUsername(anyString(), anyString(), anyBoolean()))
                     .thenReturn("randomUserwso2.com");
 
             when(localAndOutboundAuthenticationConfig.isUseUserstoreDomainInLocalSubjectIdentifier()).thenReturn(true);
@@ -329,7 +330,7 @@ public class PasswordGrantHandlerTest {
             }
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
-            frameworkUtils.when(() -> FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
+            frameworkUtils.when(() -> FrameworkUtils.preprocessUsername(anyString(), anyString(), anyBoolean()))
                     .thenReturn("randomUserwso2.com");
             PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
 
