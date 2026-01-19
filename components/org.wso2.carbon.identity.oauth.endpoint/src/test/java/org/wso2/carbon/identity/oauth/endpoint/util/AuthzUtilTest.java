@@ -1391,6 +1391,10 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
         claims1.put(OAuthConstants.STATE, "stateInRequestObject");
         claims1.put(OAuthConstants.OAuth20Params.PROMPT, "promptInRequestObject");
 
+        Map<String, Object> claimsMap = new HashMap<>();
+        claimsMap.put("testClaim1", "testClaimValue1");
+        claims1.put("claims", claimsMap);
+
         return new Object[][]{
                 {true, SerializationUtils.clone(oAuth2Parameters), claims1,
                         "Test override claims from request object."},
