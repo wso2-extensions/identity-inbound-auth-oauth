@@ -427,7 +427,7 @@ public class AccessTokenIssuer {
     }
 
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
@@ -735,13 +735,8 @@ public class AccessTokenIssuer {
         JWTClaimsSet claimsSetActorToken = OAuth2TokenUtil.getJWTClaimSet(requestParams.get(ACTOR_TOKEN));
 
         if (claimsSetSubjectToken != null && claimsSetActorToken != null) {
-            Object delegationClaim = claimsSetSubjectToken.getClaim("act");
-            if (delegationClaim == null) {
-                delegationClaim = claimsSetSubjectToken.getClaim(MAY_ACT);
-            }
-
-            if (delegationClaim == null) {
-                throw new IdentityOAuth2Exception("Delegation claim (act or may_act) is not found in the subject token.");
+            if (claimsSetSubjectToken.getClaim(MAY_ACT) == null) {
+                throw new IdentityOAuth2Exception("may_act claim is not found in the subject token.");
             }
 
             String subClaim = claimsSetSubjectToken.getSubject();

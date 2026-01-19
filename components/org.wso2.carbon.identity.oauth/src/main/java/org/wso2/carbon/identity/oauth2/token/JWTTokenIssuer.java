@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -111,6 +112,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
+    private static final String ACT = "act";
+    private static final String ACTOR_SUBJECT = "actor_subject";
+    private static final String IS_DOWNSCOPING_REQUEST = "is_downscoping_request";
+    private static final String ACTOR_AUDIENCE = "actor_audience";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -288,6 +293,110 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
+     * Extracts and logs all nested act claims from a token request context.
+     * This method traverses the entire chain of actor tokens to log all levels of impersonation.
+     *
+     * @param tokenReqMessageContext Token request message context
+     */
+    private void logNestedActClaims(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        if (tokenReqMessageContext == null) {
+            return;
+        }
+
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        if (!"urn:ietf:params:oauth:grant-type:token-exchange".equals(grantType)) {
+            return;
+        }
+
+        try {
+            String actorTokenString = null;
+
+            // Get actor_token from request parameters
+            if (tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters() != null) {
+                for (int i = 0; i < tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters().length; i++) {
+                    if ("actor_token".equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters()[i].getKey())) {
+                        String[] values = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters()[i].getValue();
+                        if (values != null && values.length > 0) {
+                            actorTokenString = values[0];
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (StringUtils.isBlank(actorTokenString)) {
+                return;
+            }
+
+            // Parse the actor token and traverse nested act claims
+            JWT parsedToken = JWTParser.parse(actorTokenString);
+            JWTClaimsSet actorClaimsSet = parsedToken.getJWTClaimsSet();
+
+            if (actorClaimsSet == null) {
+                return;
+            }
+
+            if (log.isDebugEnabled()) {
+                log.debug("Logging nested act claim chain for token exchange:");
+            }
+
+            // Recursively log all nested act claims
+            logActClaimChain(actorClaimsSet, 1);
+
+        } catch (ParseException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error parsing actor token while logging nested act claims", e);
+            }
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while logging nested act claims", e);
+            }
+        }
+    }
+
+    /**
+     * Recursively logs the act claim chain.
+     *
+     * @param claimsSet Current JWT claims set
+     * @param level Current nesting level
+     */
+    private void logActClaimChain(JWTClaimsSet claimsSet, int level) {
+
+        if (claimsSet == null) {
+            return;
+        }
+
+        try {
+            Object actClaim = claimsSet.getClaim(ACT);
+
+            if (actClaim instanceof Map) {
+                Map<String, Object> actMap = (Map<String, Object>) actClaim;
+                Object subClaim = actMap.get(SUB);
+
+                if (subClaim != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Level " + level + " act claim - sub: " + subClaim);
+                    }
+
+                    // Check if there's a nested act claim
+                    Object nestedActClaim = actMap.get(ACT);
+                    if (nestedActClaim instanceof Map) {
+                        // Convert the nested act claim to JWTClaimsSet for recursive processing
+                        JWTClaimsSet.Builder nestedClaimsBuilder = new JWTClaimsSet.Builder();
+                        nestedClaimsBuilder.claim(ACT, nestedActClaim);
+                        logActClaimChain(nestedClaimsBuilder.build(), level + 1);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while traversing act claim at level " + level, e);
+            }
+        }
+    }
+
+    /**
      * Build a signed jwt token from OauthToken request message context.
      *
      * @param request Token request message context.
@@ -303,6 +412,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
+        }
+
+        String grantType = request.getOauth2AccessTokenReqDTO().getGrantType();
+        if ("urn:ietf:params:oauth:grant-type:token-exchange".equals(grantType)) {
+            logNestedActClaims(request);
         }
 
         List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
@@ -691,6 +805,36 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // But we are keeping this in JWT as well.
         jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
                 tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
+
+        if (tokenReqMessageContext != null) {
+            Object isDownscopingRequest = tokenReqMessageContext.getProperty(IS_DOWNSCOPING_REQUEST);
+            if (isDownscopingRequest != null && Boolean.TRUE.equals(isDownscopingRequest)) {
+                Object actorSubject = tokenReqMessageContext.getProperty(ACTOR_SUBJECT);
+                Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+
+                if (actorSubject != null) {
+                    // Create the act claim with only the current actor's subject
+                    Map<String, Object> actClaim = new HashMap<>();
+                    actClaim.put(SUB, actorSubject.toString());
+
+                    // Nest the existing act claim if present (for chained delegations)
+                    if (existingActClaim != null) {
+                        actClaim.put(ACT, existingActClaim);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Nesting existing act claim from subject token into new act claim");
+                        }
+                    }
+
+                    jwtClaimsSetBuilder.claim(ACT, actClaim);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Added 'act' claim for downscoping request. Actor subject: " + actorSubject +
+                                ", Nested existing act: " + (existingActClaim != null));
+                    }
+                }
+            }
+        }
+
 
         JWTClaimsSet jwtClaimsSet;
 
