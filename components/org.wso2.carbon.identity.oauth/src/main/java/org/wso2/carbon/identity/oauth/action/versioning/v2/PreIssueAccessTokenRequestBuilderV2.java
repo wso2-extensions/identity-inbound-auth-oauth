@@ -125,8 +125,10 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         AuthenticatedUser authorizedUser = tokenMessageContext.getAuthorizedUser();
 
         PreIssueAccessTokenEvent.Builder eventBuilder = new PreIssueAccessTokenEvent.Builder();
-        eventBuilder.tenant(new Tenant(String.valueOf(IdentityTenantUtil.getTenantId(tokenReqDTO.getTenantDomain())),
-                tokenReqDTO.getTenantDomain()));
+
+        int loginTenantId = IdentityTenantUtil.getLoginTenantId();
+        eventBuilder.tenant(new Tenant(String.valueOf(loginTenantId),
+                IdentityTenantUtil.getTenantDomain(loginTenantId)));
 
         String[] requestScopes = tokenMessageContext.getScope();
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
