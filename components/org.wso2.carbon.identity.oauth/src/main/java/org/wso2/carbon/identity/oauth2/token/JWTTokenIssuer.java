@@ -844,23 +844,32 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
 
                 if (actorSubject != null) {
-                    // Create the act claim with only the current actor's subject
-                    Map<String, Object> actClaim = new HashMap<>();
-                    actClaim.put(SUB, actorSubject.toString());
-
-                    // Nest the existing act claim if present (for chained delegations)
                     if (existingActClaim != null) {
-                        actClaim.put(ACT, existingActClaim);
-                        if (log.isDebugEnabled()) {
-                            log.debug("Nesting existing act claim from subject token into new act claim");
+                        String existingActorSubject = extractActorSubjectFromExistingActClaim(existingActClaim);
+
+                        if (actorSubject.toString().equals(existingActorSubject)) {
+                            jwtClaimsSetBuilder.claim(ACT, existingActClaim);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Self-delegation detected. Preserving existing act claim without nesting. " +
+                                        "Actor subject: " + actorSubject);
+                            }
+                        } else {
+                            Map<String, Object> actClaim = new HashMap<>();
+                            actClaim.put(SUB, actorSubject.toString());
+                            actClaim.put(ACT, existingActClaim);
+                            jwtClaimsSetBuilder.claim(ACT, actClaim);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Chained delegation detected. Creating new act claim with nested existing claim. " +
+                                        "New actor: " + actorSubject + ", Existing actor: " + existingActorSubject);
+                            }
                         }
-                    }
-
-                    jwtClaimsSetBuilder.claim(ACT, actClaim);
-
-                    if (log.isDebugEnabled()) {
-                        log.debug("Added 'act' claim for downscoping request. Actor subject: " + actorSubject +
-                                ", Nested existing act: " + (existingActClaim != null));
+                    } else {
+                        Map<String, Object> actClaim = new HashMap<>();
+                        actClaim.put(SUB, actorSubject.toString());
+                        jwtClaimsSetBuilder.claim(ACT, actClaim);
+                        if (log.isDebugEnabled()) {
+                            log.debug("First delegation. Creating new act claim. Actor subject: " + actorSubject);
+                        }
                     }
                 }
             }
@@ -901,6 +910,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    private String extractActorSubjectFromExistingActClaim(Object existingActClaim) {
+
+        if (existingActClaim instanceof Map) {
+            Map<String, Object> actMap = (Map<String, Object>) existingActClaim;
+            Object subClaim = actMap.get(SUB);
+            if (subClaim != null) {
+                return subClaim.toString();
+            }
+        }
+        return null;
     }
 
     /**
