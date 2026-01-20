@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.action.versioning.v2;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -127,6 +128,7 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         eventBuilder.tenant(new Tenant(String.valueOf(IdentityTenantUtil.getTenantId(tokenReqDTO.getTenantDomain())),
                 tokenReqDTO.getTenantDomain()));
 
+        String[] requestScopes = tokenMessageContext.getScope();
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser && authorizedUser != null) {
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
@@ -143,7 +145,7 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         if (isRefreshTokenAllowed(oAuthAppDO)) {
             eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
-        eventBuilder.request(getRequest(tokenReqDTO));
+        eventBuilder.request(getRequest(tokenReqDTO, requestScopes));
 
         return eventBuilder.build();
     }
@@ -292,12 +294,16 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         return buildOrganization(resolveOrganizationId(tenantDomain), tenantDomain);
     }
 
-    private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO) {
+    private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO, String[] requestScopes) {
 
         TokenRequest.Builder tokenRequestBuilder = new TokenRequest.Builder();
         tokenRequestBuilder.clientId(tokenRequestDTO.getClientId());
         tokenRequestBuilder.grantType(tokenRequestDTO.getGrantType());
-        tokenRequestBuilder.scopes(Arrays.asList(tokenRequestDTO.getScope()));
+        if (tokenRequestDTO.getScope() != null && !ArrayUtils.isEmpty(tokenRequestDTO.getScope())) {
+            tokenRequestBuilder.scopes(Arrays.asList(tokenRequestDTO.getScope()));
+        } else {
+            tokenRequestBuilder.scopes(Arrays.asList(requestScopes));
+        }
 
         HttpRequestHeader[] httpHeaders = tokenRequestDTO.getHttpRequestHeaders();
         if (httpHeaders != null) {
