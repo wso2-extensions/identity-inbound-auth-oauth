@@ -875,7 +875,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
 
-
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
