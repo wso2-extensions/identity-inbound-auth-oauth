@@ -165,7 +165,7 @@ public class JwksEndpoint {
             jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
 
             // x5t
-            if (IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED) &&
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)) &&
                     Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED))) {
                 log.debug("Adding SHA-1 thumbprint (x5t) to JWK.");  
                 String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
@@ -176,7 +176,7 @@ public class JwksEndpoint {
             jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
 
             // x5t
-            if (IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED) &&
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)) &&
                     Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED))) {
                 String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
                 jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
