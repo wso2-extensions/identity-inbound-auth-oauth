@@ -305,7 +305,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
-        if (!"urn:ietf:params:oauth:grant-type:token-exchange".equals(grantType)) {
+        if (!OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
             return;
         }
 
@@ -415,7 +415,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         String grantType = request.getOauth2AccessTokenReqDTO().getGrantType();
-        if ("urn:ietf:params:oauth:grant-type:token-exchange".equals(grantType)) {
+        if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
             logNestedActClaims(request);
         }
 
@@ -845,7 +845,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
                 if (actorSubject != null) {
                     if (existingActClaim != null) {
-                        String existingActorSubject = extractActorSubjectFromExistingActClaim(existingActClaim);
+                        String existingActorSubject = extractMostRecentActorSubject(existingActClaim);
 
                         if (actorSubject.toString().equals(existingActorSubject)) {
                             jwtClaimsSetBuilder.claim(ACT, existingActClaim);
@@ -912,7 +912,28 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return jwtClaimsSet;
     }
 
-    private String extractActorSubjectFromExistingActClaim(Object existingActClaim) {
+    /**
+     * Extracts the subject of the most recent actor from an existing act claim.
+     *
+     * In OAuth 2.0 Token Exchange, the act (actor) claim represents a chain of delegation.
+     * The top-level act claim contains the subject of the most recent actor in the delegation chain.
+     * This method extracts that subject identifier from the act claim structure.
+     *
+     * The act claim structure is expected to be:
+     * <pre>
+     * {
+     *   "sub": "actor_subject_identifier",
+     *   "act": { ... nested act claim (if any) ... }
+     * }
+     * </pre>
+     *
+     * @param existingActClaim The act claim object from a token, expected to be a Map containing
+     *                         the actor information. Can be null.
+     * @return The subject identifier of the most recent actor if present, or null if the act claim
+     *         is null, not a Map, or doesn't contain a subject.
+     */
+
+    private String extractMostRecentActorSubject(Object existingActClaim) {
 
         if (existingActClaim instanceof Map) {
             Map<String, Object> actMap = (Map<String, Object>) existingActClaim;
