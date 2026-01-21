@@ -630,6 +630,9 @@ public class OAuth2Util {
     public static boolean authenticateClient(String clientId, String clientSecretProvided, String appTenant)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
+        if (!isApplicationAccessible(clientId, appTenant)) {
+            throw new InvalidOAuthClientException("Application is disabled for the client_id: " + clientId);
+        }
         OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
         if (appDO == null) {
             if (log.isDebugEnabled()) {
@@ -672,6 +675,30 @@ public class OAuth2Util {
             log.debug("Successfully authenticated the client with client id : " + clientId);
         }
 
+        return true;
+    }
+
+    private static boolean isApplicationAccessible(String clientId, String appTenant)
+            throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, appTenant);
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_APPLICATION_ENABLED_STATUS);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
+        if (!serviceProvider.isApplicationEnabled()) {
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder
+                        .resultMessage("Application is disabled.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
+            return false;
+        }
         return true;
     }
 
