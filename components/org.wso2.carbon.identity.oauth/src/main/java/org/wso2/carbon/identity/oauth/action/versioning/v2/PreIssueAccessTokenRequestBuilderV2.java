@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
@@ -530,15 +529,16 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
 
     private Organization buildAccessTokenIssuedOrganization() {
 
-        String accessTokenIssuedOrganization =
-                IdentityContext.getThreadLocalIdentityContext().getAccessTokenIssuedOrganization();
-        if (StringUtils.isEmpty(accessTokenIssuedOrganization)) {
+        // Issuing organization is the tenant domain of the login tenant.
+        // In Sub organizations, the parent organization.
+        String accessTokenIssuingOrganization =
+                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+        if (StringUtils.isEmpty(accessTokenIssuingOrganization)) {
             return null;
         }
 
-        String organizationId = resolveOrganizationId(accessTokenIssuedOrganization);
-
-        return buildOrganization(organizationId, null);
+        String organizationId = resolveOrganizationId(accessTokenIssuingOrganization);
+        return buildOrganization(organizationId, accessTokenIssuingOrganization);
     }
 
     private Organization buildOrganization(String organizationId, String tenantDomain) {
