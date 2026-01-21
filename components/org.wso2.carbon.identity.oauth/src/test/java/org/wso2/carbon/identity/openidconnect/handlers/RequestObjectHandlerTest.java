@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.openidconnect.handlers;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -27,12 +29,18 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit Tests for RequestObjectHandler class.
@@ -89,6 +97,37 @@ public class RequestObjectHandlerTest {
         requestObjectHandler.handleEvent(event);
         Assert.assertEquals(requestObjectHandler.getName(), OIDCConstants.Event.HANDLE_REQUEST_OBJECT);
         Assert.assertNotNull(event.getEventProperties().size());
+    }
+
+    @Test
+    public void testRevokeCodeByIdInvokesUpdateRequestObjectReferenceToTokenByCodeId() throws Exception {
+
+        String codeId = "testCodeId123";
+        String tokenId = "testTokenId456";
+        
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(OIDCConstants.Event.CODE_ID, codeId);
+        properties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
+        properties.put(OIDCConstants.Event.TOKEN_STATE, OAuthConstants.AuthorizationCodeState.INACTIVE);
+        properties.put(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW, true);
+        
+        Event event = new Event(OIDCConstants.Event.POST_REVOKE_CODE_BY_ID, properties);
+        
+        // Mock OAuthTokenPersistenceFactory and RequestObjectDAO
+        OAuthTokenPersistenceFactory mockFactory = Mockito.mock(OAuthTokenPersistenceFactory.class);
+        RequestObjectDAO mockRequestObjectDAO = Mockito.mock(RequestObjectDAO.class);
+        
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedStatic = 
+                Mockito.mockStatic(OAuthTokenPersistenceFactory.class)) {
+            
+            mockedStatic.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
+            when(mockFactory.getRequestObjectDAO()).thenReturn(mockRequestObjectDAO);
+            
+            requestObjectHandler.handleEvent(event);
+            
+            verify(mockRequestObjectDAO, times(1))
+                    .updateRequestObjectReferenceToTokenByCodeId(codeId, tokenId);
+        }
     }
 
 }
