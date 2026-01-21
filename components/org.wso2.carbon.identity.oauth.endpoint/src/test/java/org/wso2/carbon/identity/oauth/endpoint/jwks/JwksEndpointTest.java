@@ -71,7 +71,6 @@ import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint.JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED;
 import static org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint.JWKS_IS_X5T_REQUIRED;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 
 @Listeners(MockitoTestNGListener.class)
 public class JwksEndpointTest {
@@ -271,14 +270,14 @@ public class JwksEndpointTest {
     public Object[][] jwksHexifyAndX5tEnabledProvider() {
 
         return new Object[][]{
-                {false, false, false},
-                {false, true, true},
-                {true, true, false}
+                {false, false},
+                {false, true},
+                {true, true}
         };
     }
 
     @Test(dataProvider = "jwksHexifyAndX5tEnabledProvider")
-    public void testJwks(boolean hexifyRequired, boolean enableX5t, boolean enableX5tInJWKS) throws Exception {
+    public void testJwks(boolean hexifyRequired, boolean enableX5tInJWKS) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -316,8 +315,6 @@ public class JwksEndpointTest {
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
                 identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
                         .thenReturn(String.valueOf(hexifyRequired));
-                identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_ENABLED))
-                        .thenReturn(String.valueOf(enableX5t));
                 identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))
                         .thenReturn(String.valueOf(enableX5tInJWKS));
 
@@ -339,7 +336,7 @@ public class JwksEndpointTest {
                     } else {
                         assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
                     }
-                    if (enableX5t && enableX5tInJWKS) {
+                    if (enableX5tInJWKS) {
                         if (hexifyRequired) {
                             assertEquals(keyObject.get("x5t"), X5T_ARRAY.get(4), "Incorrect x5t value");
                         } else {
