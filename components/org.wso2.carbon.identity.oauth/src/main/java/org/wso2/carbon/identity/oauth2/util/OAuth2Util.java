@@ -5241,10 +5241,14 @@ public class OAuth2Util {
      * Check whether the CONSENTED_TOKEN column is available in IDN_OAUTH2_ACCESS_TOKEN table.
      *
      * @return True if the column is available.
+     * @deprecated deprecated since Consent_Token column is available in all the relevant tables
+     * from WSO2 IS 7.0.0 onwards.
      */
+    @Deprecated
     public static boolean checkConsentedTokenColumnAvailable() {
 
-        return FrameworkUtils.isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", "CONSENTED_TOKEN");
+        log.debug("checkConsentedTokenColumnAvailable method is deprecated and always returns true.");
+        return true;
     }
 
     /**
