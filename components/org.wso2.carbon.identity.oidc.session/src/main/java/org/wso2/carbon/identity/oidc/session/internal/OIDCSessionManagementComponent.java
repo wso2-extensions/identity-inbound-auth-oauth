@@ -68,7 +68,7 @@ public class OIDCSessionManagementComponent {
                     sessionIFrameServlet, null, null);
         } catch (Exception e) {
             String msg = "Error when registering OIDC Session IFrame Servlet via the HttpService.";
-            log.error(msg, e);
+            log.error("Error registering OIDC Session IFrame Servlet: {}", e.getMessage(), e);
             throw new RuntimeException(msg, e);
         }
 
@@ -79,11 +79,11 @@ public class OIDCSessionManagementComponent {
                     null);
         } catch (Exception e) {
             String msg = "Error when registering OIDC Logout Servlet via the HttpService.";
-            log.error(msg, e);
+            log.error("Error registering OIDC Logout Servlet: {}", e.getMessage(), e);
             throw new RuntimeException(msg, e);
         }
         if (log.isDebugEnabled()) {
-            log.info("OIDC Session Management bundle is activated");
+            log.debug("OIDC Session Management bundle is activated");
         }
 
         ClaimProviderImpl claimProviderImpl = new ClaimProviderImpl();
@@ -91,7 +91,7 @@ public class OIDCSessionManagementComponent {
             context.getBundleContext().registerService(ClaimProvider.class.getName(), claimProviderImpl, null);
         } catch (Exception e) {
             String msg = "Error when registering ClaimProvider service";
-            log.error(msg, e);
+            log.error("Error registering ClaimProvider service: {}", e.getMessage(), e);
             throw new RuntimeException(msg, e);
         }
 
@@ -104,7 +104,7 @@ public class OIDCSessionManagementComponent {
                     new OIDCLogoutEventHandler(), null);
         } catch (Exception e) {
             String msg = "Error when registering OIDCLogoutEventHandler.";
-            log.error(msg, e);
+            log.error("Error registering OIDCLogoutEventHandler: {}", e.getMessage(), e);
             throw new RuntimeException(msg, e);
         }
 
@@ -115,7 +115,7 @@ public class OIDCSessionManagementComponent {
     protected void deactivate(ComponentContext context) {
 
         if (log.isDebugEnabled()) {
-            log.info("OIDC Session Management bundle is deactivated");
+            log.debug("OIDC Session Management bundle is deactivated");
         }
     }
 
@@ -129,7 +129,7 @@ public class OIDCSessionManagementComponent {
     protected void setHttpService(HttpService httpService) {
 
         if (log.isDebugEnabled()) {
-            log.info("Setting the HTTP Service in OIDC Session Management bundle");
+            log.debug("Setting HTTP Service in OIDC Session Management bundle");
         }
         OIDCSessionManagementComponentServiceHolder.setHttpService(httpService);
     }
@@ -137,7 +137,7 @@ public class OIDCSessionManagementComponent {
     protected void unsetHttpService(HttpService httpService) {
 
         if (log.isDebugEnabled()) {
-            log.info("Unsetting the HTTP Service in OIDC Session Management bundle");
+            log.debug("Unsetting HTTP Service in OIDC Session Management bundle");
         }
         OIDCSessionManagementComponentServiceHolder.setHttpService(null);
     }
@@ -152,7 +152,7 @@ public class OIDCSessionManagementComponent {
     protected void setRealmService(RealmService realmService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting the Realm Service.");
+            log.debug("Setting Realm Service for OIDC Session Management");
         }
         OIDCSessionManagementComponentServiceHolder.setRealmService(realmService);
     }
@@ -160,7 +160,7 @@ public class OIDCSessionManagementComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unsetting the Realm Service.");
+            log.debug("Unsetting Realm Service for OIDC Session Management");
         }
         OIDCSessionManagementComponentServiceHolder.setRealmService(null);
     }
@@ -175,7 +175,7 @@ public class OIDCSessionManagementComponent {
     protected void registerOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
+            log.debug("Registering OIDC Logout Handler: {}", oidcLogoutHandler.getClass().getName());
         }
         OIDCSessionManagementComponentServiceHolder.addPostLogoutHandler(oidcLogoutHandler);
     }
@@ -183,7 +183,7 @@ public class OIDCSessionManagementComponent {
     protected void unregisterOIDCLogoutHandler(OIDCLogoutHandler oidcLogoutHandler) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Un-registering OIDC Logout Handler: " + oidcLogoutHandler.getClass().getName());
+            log.debug("Un-registering OIDC Logout Handler: {}", oidcLogoutHandler.getClass().getName());
         }
         OIDCSessionManagementComponentServiceHolder.removePostLogoutHandler(oidcLogoutHandler);
     }
@@ -198,7 +198,7 @@ public class OIDCSessionManagementComponent {
     protected void setApplicationMgtService(ApplicationManagementService applicationMgtService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("ApplicationManagementService set in OIDC session management bundle");
+            log.debug("ApplicationManagementService set in OIDC Session Management");
         }
         OIDCSessionManagementComponentServiceHolder.setApplicationMgtService(applicationMgtService);
     }
@@ -206,7 +206,7 @@ public class OIDCSessionManagementComponent {
     protected void unsetApplicationMgtService(ApplicationManagementService applicationMgtService) {
 
         if (log.isDebugEnabled()) {
-            log.debug("ApplicationManagementService unset in OIDC session management bundle");
+            log.debug("ApplicationManagementService unset in OIDC Session Management");
         }
         OIDCSessionManagementComponentServiceHolder.setApplicationMgtService(null);
     }
@@ -219,7 +219,7 @@ public class OIDCSessionManagementComponent {
     protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting the token binder for: " + tokenBinderInfo.getBindingType());
+            log.debug("Setting token binder for: {}", tokenBinderInfo.getBindingType());
         }
         if (tokenBinderInfo instanceof TokenBinder) {
             OIDCSessionManagementComponentServiceHolder.getInstance().addTokenBinder((TokenBinder) tokenBinderInfo);
@@ -229,7 +229,7 @@ public class OIDCSessionManagementComponent {
     protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Un-setting the token binder for: " + tokenBinderInfo.getBindingType());
+            log.debug("Unsetting token binder for: {}", tokenBinderInfo.getBindingType());
         }
         if (tokenBinderInfo instanceof TokenBinder) {
             OIDCSessionManagementComponentServiceHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
@@ -246,12 +246,12 @@ public class OIDCSessionManagementComponent {
     protected void setOrganizationManager(OrganizationManager organizationManager) {
 
         OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
-        log.debug("Set the organization management service.");
+        log.debug("Organization management service set for OIDC Session Management");
     }
 
     protected void unsetOrganizationManager(OrganizationManager organizationManager) {
 
         OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
-        log.debug("Unset organization management service.");
+        log.debug("Organization management service unset from OIDC Session Management");
     }
 }

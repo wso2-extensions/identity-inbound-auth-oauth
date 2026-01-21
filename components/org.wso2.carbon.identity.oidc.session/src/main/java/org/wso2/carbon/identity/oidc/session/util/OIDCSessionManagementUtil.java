@@ -323,7 +323,7 @@ public class OIDCSessionManagementUtil {
             URI uri = new URI(url);
             return uri.getScheme() + "://" + uri.getAuthority();
         } catch (URISyntaxException e) {
-            log.error("Error while parsing URL origin of " + url + ". URL seems to be malformed.");
+            log.error("Error parsing URL origin: {}. URL appears to be malformed", url);
         }
 
         return null;
@@ -369,7 +369,7 @@ public class OIDCSessionManagementUtil {
         } catch (UnsupportedEncodingException e) {
             //ignore
             if (log.isDebugEnabled()) {
-                log.debug("Error while encoding the error page url", e);
+                log.debug("Error encoding error page URL: {}", e.getMessage());
             }
         }
 
@@ -408,15 +408,15 @@ public class OIDCSessionManagementUtil {
                 oidcSessionStateManager = (OIDCSessionStateManager) clazz.newInstance();
 
                 if (log.isDebugEnabled()) {
-                    log.debug("An instance of " + oidcSessionStateManagerClassName
-                            + " is created for OIDCSessionManagementUtil.");
+                    log.debug("An instance of {} was created for OIDCSessionManagementUtil", 
+                            oidcSessionStateManagerClassName);
                 }
 
             } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
                 String errorMsg =
                         "Error when instantiating the OIDCSessionStateManager : " + oidcSessionStateManagerClassName
                                 + ". Defaulting to DefaultOIDCSessionStateManager";
-                log.error(errorMsg, e);
+                log.error("{}. Error creating OIDCSessionStateManager instance: {}", errorMsg, e.getMessage(), e);
                 oidcSessionStateManager = new DefaultOIDCSessionStateManager();
             }
         } else {

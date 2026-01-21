@@ -96,9 +96,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                         oAuthAppDO = getOAuthAppDO(clientID);
                     } catch (InvalidOAuthClientException e) {
                         if (LOG.isDebugEnabled()) {
-                            LOG.debug("The application with client id: " + clientID
-                                    + " does not exists. This application may be deleted after"
-                                    + " this session is created. So skipping it in logout token list.", e);
+                            LOG.debug("Application with client ID: {} does not exist. May have been deleted after session creation. Skipping in logout token list.", 
+                                    clientID);
                         }
                         continue;
                     }
@@ -148,9 +147,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             oAuthAppDO = getOAuthAppDO(clientID);
         } catch (InvalidOAuthClientException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("The application with client id: " + clientID
-                        + " does not exists. This application may be deleted after"
-                        + " this session is created. So skipping it in logout token list.", e);
+                LOG.debug("Application with client ID: {} does not exist. May have been deleted after session creation. Skipping in logout token list.", 
+                        clientID);
             }
             return;
         }
@@ -163,7 +161,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             logoutTokenList.put(logoutToken, backChannelLogoutUrl);
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Logout token created for the client: " + clientID);
+                LOG.debug("Logout token created for client ID: {}", clientID);
             }
         }
     }
@@ -225,20 +223,20 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
                 } catch (ParseException e) {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("Error in extracting the client ID from the ID token : " + idToken);
+                        LOG.debug("Error extracting client ID from ID token");
                     }
                 }
                 return clientId;
             }
             clientId = getClientIdFromIDTokenHint(idToken);
         } else {
-            LOG.debug("IdTokenHint is not found in the request ");
+            LOG.debug("IdTokenHint not found in the request");
             return null;
         }
         if (validateIdTokenHint(clientId, idToken)) {
             return clientId;
         } else {
-            LOG.debug("Id Token is not valid");
+            LOG.debug("ID token validation failed");
             return null;
         }
     }
@@ -395,7 +393,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                 clientId = extractClientFromIdToken(idTokenHint);
             } catch (ParseException e) {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Error while decoding the ID Token Hint: " + idTokenHint, e);
+                    LOG.debug("Error decoding ID Token Hint: {}", e.getMessage());
                 }
             }
         }
@@ -442,11 +440,11 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Error occurred while validating id token signature.", e);
+                LOG.debug("Error validating ID token signature: {}", e.getMessage());
             }
             return false;
         } catch (Exception e) {
-            LOG.error("Error occurred while validating id token signature.", e);
+            LOG.error("Error validating ID token signature: {}", e.getMessage(), e);
             return false;
         }
     }
