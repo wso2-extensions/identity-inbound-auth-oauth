@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.webfinger.servlet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.webfinger.WebFingerConstants;
 import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.webfinger.internal.WebFingerServiceComponentHold
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import javax.servlet.Servlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -37,6 +39,16 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * Webfinger endpoint. Servelet is registered for the path /.well-known/webfinger
  */
+//TODO Check if this servlet is working.
+@Component(
+        service = Servlet.class,
+        immediate = true,
+        property = {
+                "osgi.http.whiteboard.servlet.pattern=/.well-known/webfinger",
+                "osgi.http.whiteboard.servlet.name=WebFingerServlet",
+                "osgi.http.whiteboard.servlet.asyncSupported=true"
+        }
+)
 public class WebFingerServlet extends HttpServlet {
     private static final Log log = LogFactory.getLog(WebFingerServlet.class);
 
