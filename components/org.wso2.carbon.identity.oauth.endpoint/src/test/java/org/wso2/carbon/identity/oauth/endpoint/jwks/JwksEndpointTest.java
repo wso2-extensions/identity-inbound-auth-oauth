@@ -339,7 +339,7 @@ public class JwksEndpointTest {
                     } else {
                         assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
                     }
-                    if (enableX5t) {
+                    if (enableX5t && enableX5tInJWKS) {
                         if (hexifyRequired) {
                             assertEquals(keyObject.get("x5t"), X5T_ARRAY.get(4), "Incorrect x5t value");
                         } else {
