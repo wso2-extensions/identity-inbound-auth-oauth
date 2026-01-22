@@ -3736,7 +3736,8 @@ public class OAuthServerConfiguration {
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)) != null) {
                 useEntityIDAsIssuer = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).getText().trim());
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).getText().
+                        trim());
             }
 
             if (openIDConnectConfigElem
