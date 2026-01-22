@@ -427,7 +427,7 @@ public class AccessTokenIssuer {
     }
 
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
