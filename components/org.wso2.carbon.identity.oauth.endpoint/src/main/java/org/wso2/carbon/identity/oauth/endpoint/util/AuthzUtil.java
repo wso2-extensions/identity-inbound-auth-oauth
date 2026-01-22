@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -151,6 +152,8 @@ import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -1523,7 +1526,7 @@ public class AuthzUtil {
         addMappedRemoteClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
-    private static void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
+    private static void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) throws OAuthSystemException {
 
         String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
         long authTime = getAuthenticatedTimeFromCommonAuthCookieValue(commonAuthIdCookieValue,
@@ -1993,7 +1996,8 @@ public class AuthzUtil {
         // all went okay
         if (isAuthorizationCodeExists(authzRespDTO)) {
             // Get token binder if it is enabled for the client.
-            Optional<TokenBinder> tokenBinderOptional = getTokenBinder(oauth2Params.getClientId());
+            Optional<TokenBinder> tokenBinderOptional = getTokenBinder(oauth2Params.getClientId(),
+                    oauth2Params.getTenantDomain());
             String tokenBindingValue = null;
             if (tokenBinderOptional.isPresent()) {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
@@ -2067,11 +2071,14 @@ public class AuthzUtil {
                 hasResponseType(responseType, OAuthConstants.SUBJECT_TOKEN);
     }
 
-    private static Optional<TokenBinder> getTokenBinder(String clientId) throws OAuthSystemException {
+    private static Optional<TokenBinder> getTokenBinder(String clientId, String tenantDomain)
+            throws OAuthSystemException {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)
+                    : OAuth2Util.getAppInformationByClientId(clientId);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new OAuthSystemException("Failed to retrieve OAuth application with client id: " + clientId, e);
         }
@@ -2429,7 +2436,7 @@ public class AuthzUtil {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {
@@ -2834,7 +2841,8 @@ public class AuthzUtil {
         try {
             // At this point we have verified that a valid app exists for the client_id. So we directly get the SP
             // tenantDomain.
-            return OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            return OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
             throw new InvalidRequestException("Error retrieving Service Provider tenantDomain for client_id: "
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
@@ -2852,7 +2860,12 @@ public class AuthzUtil {
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
-            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+            try {
+                return EndpointUtil.verifyAndRetrieveTenantDomain(clientId);
+            } catch (OAuthSystemException e) {
+                throw new InvalidRequestException("Error resolving tenant domain for client id: " + clientId,
+                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);
+            }
         }
         return loginTenantDomain;
     }
@@ -2987,11 +3000,14 @@ public class AuthzUtil {
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint, ignoreClaimsOutsideRequestObject);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt, ignoreClaimsOutsideRequestObject);
 
-            if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
+            Object claimObj = requestObject.getClaim(CLAIMS);
+            if (claimObj instanceof net.minidev.json.JSONObject) {
                 // Claims in the request object is in the type of net.minidev.json.JSONObject,
                 // hence retrieving claims as a JSONObject
-                net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
+                net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) claimObj;
                 params.setEssentialClaims(claims.toJSONString());
+            } else if (claimObj instanceof Map) {
+                params.setEssentialClaims(JSONObjectUtils.toJSONString((Map<String, ?>) claimObj));
             }
 
             if (isPkceSupportEnabled()) {
@@ -4351,10 +4367,29 @@ public class AuthzUtil {
      * @param resultFromLogin The session context.
      * @param cookieValue The cookie string which contains the commonAuthId value.
      */
-    private static void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue) {
+    private static void associateAuthenticationHistory(SessionDataCacheEntry resultFromLogin, String cookieValue)
+            throws OAuthSystemException {
 
-        SessionContext sessionContext = getSessionContext(cookieValue,
-                resultFromLogin.getoAuth2Parameters().getLoginTenantDomain());
+        String tenantDomain = resultFromLogin.getoAuth2Parameters().getLoginTenantDomain();
+        /*
+         If the app is created in an organization, get the tenant domain of the primary organization since the
+         session is stored against the primary organization.
+        */
+        try {
+            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(
+                    resultFromLogin.getoAuth2Parameters().getClientId(), tenantDomain);
+            if (OrganizationManagementUtil.isOrganization(appTenantDomain)) {
+                String appOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(appTenantDomain);
+                String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .getPrimaryOrganizationId(appOrgId);
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(primaryOrgId);
+            }
+        } catch (OrganizationManagementException | IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException(e);
+        }
+        SessionContext sessionContext = getSessionContext(cookieValue, tenantDomain);
         if (sessionContext != null && sessionContext.getSessionAuthHistory() != null
                 && sessionContext.getSessionAuthHistory().getHistory() != null) {
             List<String> authMethods = new ArrayList<>();

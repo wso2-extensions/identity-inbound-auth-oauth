@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
@@ -77,15 +76,14 @@ public class TokenResponseTypeHandlerTest {
     @DataProvider(name = "CommonDataProvider")
     public Object[][] commonDataProvider() {
         return new Object[][]{
-                {true, TEST_CLIENT_ID_1},
-                {false, TEST_CLIENT_ID_2}
+                {TEST_CLIENT_ID_1},
+                {TEST_CLIENT_ID_2}
         };
     }
 
     @Test(dataProvider = "CommonDataProvider")
-    public void testIssue(boolean isIDPIdColumnEnabled, String clientId) throws Exception {
+    public void testIssue(String clientId) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
         AccessTokenResponseTypeHandler tokenResponseTypeHandler = new AccessTokenResponseTypeHandler();
         tokenResponseTypeHandler.init();
 

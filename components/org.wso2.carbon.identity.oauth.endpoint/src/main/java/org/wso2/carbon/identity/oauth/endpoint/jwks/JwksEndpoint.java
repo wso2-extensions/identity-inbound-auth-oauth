@@ -25,7 +25,6 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.Base64URL;
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -48,6 +47,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -68,6 +68,8 @@ public class JwksEndpoint {
     private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     public static final String JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
             ".IsThumbprintHexifyRequired";
+    public static final String JWKS_IS_X5T_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
+            ".IsX5tRequired";
 
     @GET
     @Path(value = "/jwks")
@@ -99,7 +101,7 @@ public class JwksEndpoint {
     private String buildResponse(List<CertificateInfo> certInfoList)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
-        JSONArray jwksArray = new JSONArray();
+        List<Map<String, Object>> jwksArray = new ArrayList<>();
         JSONObject jwksJson = new JSONObject();
         OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
         JWSAlgorithm accessTokenSignAlgorithm =
@@ -124,7 +126,7 @@ public class JwksEndpoint {
     }
 
     private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
-                                   JSONArray jwksArray, String hashingAlgorithm)
+                                   List<Map<String, Object>> jwksArray, String hashingAlgorithm)
             throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
         for (CertificateInfo certInfo : certInfoList) {
@@ -156,10 +158,25 @@ public class JwksEndpoint {
             jwk.x509CertChain(encodedCertList);
         }
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
+            // x5t#S256
             JWK parsedJWK = JWK.parse(certificate);
             jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                log.debug("Adding SHA-1 thumbprint (x5t) to JWK.");  
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
         } else {
+            // x5t#S256
             jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
         }
         return jwk;
     }
@@ -176,7 +193,7 @@ public class JwksEndpoint {
      * @throws ParseException
      */
     @Deprecated
-    private void createKeySetUsingOldKeyID(JSONArray jwksArray, List<CertificateInfo> certInfoList,
+    private void createKeySetUsingOldKeyID(List<Map<String, Object>> jwksArray, List<CertificateInfo> certInfoList,
                                            JWSAlgorithm algorithm) throws IdentityOAuth2Exception, ParseException {
 
         for (CertificateInfo certInfo : certInfoList) {

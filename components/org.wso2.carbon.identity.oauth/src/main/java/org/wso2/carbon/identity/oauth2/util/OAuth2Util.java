@@ -64,6 +64,7 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -75,6 +76,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
@@ -217,6 +219,7 @@ import javax.xml.namespace.QName;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -241,6 +244,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -365,6 +369,9 @@ public class OAuth2Util {
     private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
     // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
     private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
+    public static final String JWT_X5T_HEXIFY_REQUIRED = "OAuth.JWTX5tHexifyingRequired";
+    public static final String JWT_X5T_S256_ENABLED = "OAuth.JWTX5tS256Enabled";
+    public static final String JWT_X5T_ENABLED = "OAuth.JWTX5tEnabled";
 
     private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
     private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
@@ -414,6 +421,10 @@ public class OAuth2Util {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
+    private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
+            "OAuth.EnableLegacySessionBoundTokenBehaviour";
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
+            "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
 
     private OAuth2Util() {
 
@@ -3412,7 +3423,32 @@ public class OAuth2Util {
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain), signatureAlgorithm, tenantDomain));
             Certificate certificate = getCertificate(tenantDomain);
-            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
+
+            if (isJWTX5tHexifyingRequired()) {
+                // Handle x5t.
+                if (IdentityUtil.getProperty(JWT_X5T_ENABLED) == null) {
+                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                    headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+                } else if (Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED))) {
+                    /* When x5t enable is set, set the hexified SHA-1 for x5t header parameter. */
+                    headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, true)));
+                }
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    String certThumbPrint = OAuth2Util.getThumbPrint(certificate, true);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            } else {
+                // Handle x5t.
+                if (OAuth2Util.isX5tEnabled()) {
+                    headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
+                }
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    String certThumbPrint = OAuth2Util.getThumbPrint(certificate, false);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            }
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
@@ -3530,6 +3566,20 @@ public class OAuth2Util {
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
         return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM, true);
+    }
+
+    /**
+     * Method to obtain certificate thumbprint with default SHA-256 algorithm hexified or not.
+     *
+     * @param certificate java.security.cert type certificate.
+     * @return Certificate thumbprint as a String.
+     * @param requireHexifying True, if thumbprint needs to be hexified before encoding.
+     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint.
+     */
+    public static String getThumbPrint(Certificate certificate, boolean requireHexifying)
+            throws IdentityOAuth2Exception {
+
+        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM, requireHexifying);
     }
 
     public static String getThumbPrintWithPrevAlgorithm(Certificate certificate)
@@ -4796,7 +4846,22 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is
+             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+             used as the issuer is the root tenant.
+            */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application resident organization id is found in the carbon context. " +
+                        "Using the root tenant domain to build the id token issuer.");
+            }
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5169,30 +5234,13 @@ public class OAuth2Util {
      * Check if the IDP_ID column is available in the relevant tables.
      *
      * @return True if IDP_ID column is available in all the relevant table.
+     * @deprecated deprecated since IDP_ID column is available in all the relevant tables from WSO2 IS 7.0.0 onwards.
      */
+    @Deprecated
     public static boolean checkIDPIdColumnAvailable() {
 
-        boolean isIdpIdAvailableInAuthzCodeTable;
-        boolean isIdpIdAvailableInTokenTable;
-        boolean isIdpIdAvailableInTokenAuditTable;
-        String columnIdpId = "IDP_ID";
-
-        isIdpIdAvailableInAuthzCodeTable = FrameworkUtils
-                .isTableColumnExists("IDN_OAUTH2_AUTHORIZATION_CODE", columnIdpId);
-        isIdpIdAvailableInTokenTable = FrameworkUtils
-                .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN", columnIdpId);
-        if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
-            isIdpIdAvailableInTokenAuditTable = FrameworkUtils
-                    .isTableColumnExists("IDN_OAUTH2_ACCESS_TOKEN_AUDIT", columnIdpId);
-        } else {
-            isIdpIdAvailableInTokenAuditTable = true;
-            if (log.isDebugEnabled()) {
-                log.debug("Retaining old access tokens in IDN_OAUTH2_ACCESS_TOKEN_AUDIT is disabled, therefore " +
-                        "ignoring the availability of IDP_ID column in IDN_OAUTH2_ACCESS_TOKEN_AUDIT table.");
-            }
-        }
-
-        return isIdpIdAvailableInAuthzCodeTable && isIdpIdAvailableInTokenTable && isIdpIdAvailableInTokenAuditTable;
+        log.debug("checkIDPIdColumnAvailable method is deprecated and always returns true.");
+        return true;
     }
 
     public static boolean isAccessTokenExtendedTableExist() {
@@ -5997,7 +6045,9 @@ public class OAuth2Util {
     public static boolean isApiBasedAuthSupportedGrant(HttpServletRequest request) {
 
         return StringUtils.equals(OAuthConstants.CODE,
-                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) ||
+                StringUtils.equals(RESPONSE_TYPE_DEVICE,
+                        request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
     }
 
     /**
@@ -6343,5 +6393,119 @@ public class OAuth2Util {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Check whether the legacy session bound token behaviour is enabled.
+     * Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isLegacySessionBoundTokenBehaviourEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR));
+    }
+
+    /**
+     * Check whether session bound tokens are allowed after session expiry.
+     * Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isSessionBoundTokensAllowedAfterSessionExpiry() {
+
+        // This setting is only applicable if legacy session bound token behaviour is enabled.
+        return isLegacySessionBoundTokenBehaviourEnabled() &&
+                Boolean.parseBoolean(IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
+    }
+
+    /**
+     * Get the configuration for allowing users to hexify the x5t parameter in JWT token.
+     *
+     * @return True, if it is required to hexify the x5t parameter.
+     */
+    public static boolean isJWTX5tHexifyingRequired() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_HEXIFY_REQUIRED));
+    }
+
+    /**  
+     * Check whether the x5t#s256 (certificate SHA-256 thumbprint) should be included in JWT headers.  
+     *  
+     * @return True if x5t#s256 should be included, false otherwise.  
+     */ 
+    public static boolean isX5tS256Enabled() {
+
+        // Default behaviour is x5t#s256 is enabled.
+        if (IdentityUtil.getProperty(JWT_X5T_S256_ENABLED) == null) {
+            return true;
+        }
+        return Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_S256_ENABLED));
+    }
+
+    /**  
+     * Check whether the x5t (certificate SHA-1 thumbprint) should be included in JWT headers.    
+     *  
+     * @return True if x5t should be included, false otherwise.  
+     */ 
+    public static boolean isX5tEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED));
+    }
+
+    /**
+     * Return the login tenant domain by evaluating the privileged carbon context.
+     *
+     * @return login tenant domain.
+     * @throws IdentityOAuth2Exception if an error occurs when resolving tenant domain.
+     */
+    public static String getLoginTenant() throws IdentityOAuth2Exception {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = FrameworkUtils.resolveTenantDomainFromOrganizationId(applicationResidentOrgId);
+            } catch (FrameworkException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization " +
+                        "id: " + applicationResidentOrgId, e);
+            }
+        }
+        return tenantDomain;
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param clientId     OAuth client ID
+     * @param tenantDomain Tenant domain of the OAuth application
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(clientId) || StringUtils.isBlank(tenantDomain)) {
+            throw new IdentityOAuth2Exception("Client ID or Tenant Domain is blank while checking whether the " +
+                    "application is a fragment app.");
+        }
+
+        ServiceProviderProperty[] serviceProviderProperties;
+        try {
+             serviceProviderProperties =
+                    OAuthAppDO.getOrgApplication(clientId, tenantDomain).getSpProperties();
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while checking whether the application is a fragment app. " +
+                    "Client ID: " + clientId + ", Tenant Domain: " + tenantDomain, e);
+        }
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
     }
 }

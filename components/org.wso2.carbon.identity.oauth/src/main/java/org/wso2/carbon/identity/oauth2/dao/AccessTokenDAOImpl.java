@@ -247,24 +247,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
-            int appTenantId = IdentityTenantUtil.getLoginTenantId();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
-             tenant domain of the organization to get the application tenant id.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                try {
-                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(applicationResidentOrgId);
-                    appTenantId = OAuth2Util.getTenantId(tenantDomain);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                            + applicationResidentOrgId, e);
-                }
-            }
+            int appTenantId = getAppTenantId();
 
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
@@ -750,7 +733,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            int appTenantId = getAppTenantId();
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
@@ -3233,5 +3216,31 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
         OAuth2TokenUtil.postUpdateAccessTokens(tokens, OAuthConstants.TokenStates.
                 TOKEN_STATE_REVOKED);
+    }
+
+    private static int getAppTenantId() throws IdentityOAuth2Exception {
+
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
+         tenant domain of the organization to get the application tenant id.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieving application tenant id for organization id: " + applicationResidentOrgId);
+                }
+                String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                appTenantId = OAuth2Util.getTenantId(tenantDomain);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        return appTenantId;
     }
 }

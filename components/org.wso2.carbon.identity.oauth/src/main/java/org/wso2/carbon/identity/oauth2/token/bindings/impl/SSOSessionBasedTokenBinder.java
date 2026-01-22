@@ -129,7 +129,8 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
         try {
             String sessionIdentifier = getTokenBindingValue((HttpServletRequest) request);
-            if (!isSSOSessionValid(sessionIdentifier)) {
+            if (!OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry() &&
+                    !isSSOSessionValid(sessionIdentifier)) {
                 return false;
             }
         } catch (OAuthSystemException e) {
@@ -145,10 +146,11 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
         log.debug("Validating SSO session-based token binding for OAuth2 access token request.");
         Optional<String> sessionIdentifier =
                 OAuth2Util.getTokenBindingValue(oAuth2AccessTokenReqDTO, COMMONAUTH_COOKIE);
-        if (isSSOSessionValid(sessionIdentifier.orElse(null))) {
-            return isValidTokenBinding(oAuth2AccessTokenReqDTO, bindingReference, COMMONAUTH_COOKIE);
+        if (!OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry() &&
+                !isSSOSessionValid(sessionIdentifier.orElse(null))) {
+            return false;
         }
-        return false;
+        return isValidTokenBinding(oAuth2AccessTokenReqDTO, bindingReference, COMMONAUTH_COOKIE);
     }
 
     /**

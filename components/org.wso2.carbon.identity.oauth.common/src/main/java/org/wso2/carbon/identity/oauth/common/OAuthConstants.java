@@ -132,6 +132,7 @@ public final class OAuthConstants {
     public static final String IS_API_BASED_LOGOUT_WITHOUT_COOKIES = "isAPIBasedLogoutWithoutCookies";
     public static final String ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION = "OAuth.OpenIDConnect" +
             ".EnableHybridFlowAppLevelValidation";
+    public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
 
     /**
      * Enum for OIDC supported subject types.
@@ -317,6 +318,7 @@ public final class OAuthConstants {
         public static final String JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer";
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
+        public static final String DEVICE_CODE_URN = "urn:ietf:params:oauth:grant-type:device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
         public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 
@@ -635,6 +637,7 @@ public final class OAuthConstants {
         public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "extendRenewedRefreshTokenExpiryTime";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";

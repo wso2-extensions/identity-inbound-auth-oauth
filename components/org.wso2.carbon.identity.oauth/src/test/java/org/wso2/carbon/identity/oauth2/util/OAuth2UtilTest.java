@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -165,8 +166,10 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
@@ -219,7 +222,10 @@ public class OAuth2UtilTest {
     private static final String TEST_COOKIE_NAME = "test-cookie";
     private static final String TEST_COOKIE_VALUE = "test-cookie-value";
     private static final String COOKIE_HEADER = "Cookie";
-
+    private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR =
+            "OAuth.EnableLegacySessionBoundTokenBehaviour";
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
+            "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
 
@@ -3530,5 +3536,160 @@ public class OAuth2UtilTest {
         reqDTO.setHttpRequestHeaders(headers);
         Optional<String> tokenBindingValue = OAuth2Util.getTokenBindingValue(reqDTO, cookieName);
         assertEquals(tokenBindingValue, expectedValue);
+    }
+
+    @DataProvider(name = "legacySessionBoundTokenBehaviourProvider")
+    public Object[][] legacySessionBoundTokenBehaviourProvider() {
+
+        return new Object[][]{
+                // propertyValue, expectedResult
+                {"true", true},
+                {"false", false},
+                {null, false},
+                {"", false},
+                {"invalid", false}
+        };
+    }
+
+    @Test(dataProvider = "legacySessionBoundTokenBehaviourProvider")
+    public void testIsLegacySessionBoundTokenBehaviourEnabled(String propertyValue, boolean expectedResult) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR))
+                    .thenReturn(propertyValue);
+
+            boolean result = OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled();
+            Assert.assertEquals(result, expectedResult);
+        }
+    }
+
+    @DataProvider(name = "sessionBoundTokensAfterSessionExpiryProvider")
+    public Object[][] sessionBoundTokensAfterSessionExpiryProvider() {
+
+        return new Object[][]{
+                // legacyBehaviourEnabled, allowAfterExpiryValue, expectedResult
+                {"true", "true", true},
+                {"true", "false", false},
+                {"true", null, false},
+                {"true", "", false},
+                {"true", "invalid", false},
+                {"false", "true", false},  // Should return false when legacy behaviour is disabled
+                {"false", "false", false},
+                {"false", null, false}
+        };
+    }
+
+    @Test(dataProvider = "sessionBoundTokensAfterSessionExpiryProvider")
+    public void testIsSessionBoundTokensAllowedAfterSessionExpiry(String legacyBehaviourValue,
+                                                                  String allowAfterExpiryValue,
+                                                                  boolean expectedResult) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR))
+                    .thenReturn(legacyBehaviourValue);
+            identityUtil.when(() -> IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY))
+                    .thenReturn(allowAfterExpiryValue);
+            boolean result = OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry();
+            Assert.assertEquals(result, expectedResult);
+        }
+    }
+
+    @DataProvider(name = "responseTypeProvider")
+    public Object[][] responseTypeProvider() {
+
+        return new Object[][]{
+                {OAuthConstants.CODE, true},   // Case: Response type is "code"
+                {RESPONSE_TYPE_DEVICE, true}, // Case: Response type is "device"
+                {"token", false},              // Case: Response type is not supported
+                {null, false}                  // Case: Response type is null
+        };
+    }
+    @DataProvider(name = "fragmentAppTestCases")
+    public Object[][] fragmentAppTestCases() {
+
+        return new Object[][] {
+                // description, properties, expectedResult
+                {"property exists and is true",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "true")}, true},
+
+                {"property exists and is false",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "false")}, false},
+
+                {"property value is invalid",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "invalid")}, false},
+
+                {"properties array is null", null, false},
+
+                {"properties array is empty", new ServiceProviderProperty[0], false},
+
+                {"fragment property does not exist",
+                        new ServiceProviderProperty[]{createProperty("otherProperty", "true")}, false},
+
+                {"fragment property exists among multiple",
+                        new ServiceProviderProperty[] {
+                                createProperty("otherProperty1", "value1"),
+                                createProperty(IS_FRAGMENT_APP, "true"),
+                                createProperty("otherProperty2", "value2")
+                        }, true},
+
+                {"property value is null",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, null)}, false},
+
+                {"property value is case insensitive (TRUE)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "TRUE")}, true},
+
+                {"property value is case insensitive (True)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "True")}, true}
+        };
+    }
+
+    @Test(dataProvider = "responseTypeProvider")
+    public void testIsApiBasedAuthSupportedGrant(String responseType, boolean expectedResult) {
+
+        // Mock the HttpServletRequest
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE)).thenReturn(responseType);
+
+        // Call the method and assert the result
+        boolean result = OAuth2Util.isApiBasedAuthSupportedGrant(request);
+        Assert.assertEquals(result, expectedResult, "Unexpected result for response type: " + responseType);
+    }
+    @Test(dataProvider = "fragmentAppTestCases")
+    public void testIsFragmentApp(String description, ServiceProviderProperty[] properties,
+                                  boolean expectedResult) throws Exception {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setSpProperties(properties);
+
+        try (MockedStatic<OAuthAppDO> oAuthAppDO = mockStatic(OAuthAppDO.class)) {
+            oAuthAppDO.when(() -> OAuthAppDO.getOrgApplication(clientId, clientTenantDomain))
+                    .thenReturn(serviceProvider);
+
+            boolean result = OAuth2Util.isFragmentApp(clientId, clientTenantDomain);
+
+            assertEquals(result, expectedResult,
+                    "Failed for case: " + description);
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = ".*Error while checking whether the application is a fragment app.*")
+    public void isFragmentAppThrowsExceptionWhenIdentityApplicationManagementExceptionOccurs()
+            throws IdentityOAuth2Exception {
+        try (MockedStatic<OAuthAppDO> oAuthAppDO = mockStatic(OAuthAppDO.class)) {
+            oAuthAppDO.when(() -> OAuthAppDO.getOrgApplication(clientId, clientTenantDomain))
+                    .thenThrow(new IdentityApplicationManagementException("Error retrieving application"));
+
+            OAuth2Util.isFragmentApp(clientId, clientTenantDomain);
+        }
+    }
+
+    private ServiceProviderProperty createProperty(String name, String value) {
+
+        ServiceProviderProperty property = new ServiceProviderProperty();
+        property.setName(name);
+        property.setValue(value);
+        return property;
     }
 }

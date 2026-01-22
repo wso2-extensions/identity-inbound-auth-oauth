@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oidc.session.servlet;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -579,7 +580,17 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                     invocation -> invocation.getArguments()[0]);
 
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
+            oAuth2Util.when(OAuth2Util::getLoginTenant).thenReturn("wso2.com");
+
+            OAuthAppDO oAuthAppDOWithCallback = new OAuthAppDO();
+            oAuthAppDOWithCallback.setCallbackUrl(CALLBACK_URL);
+            if (StringUtils.equals(clientId, "invalid_client_id")) {
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenCallRealMethod();
+            } else {
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(oAuthAppDOWithCallback);
+            }
             oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass())))
                     .thenReturn("wso2.com");
 
