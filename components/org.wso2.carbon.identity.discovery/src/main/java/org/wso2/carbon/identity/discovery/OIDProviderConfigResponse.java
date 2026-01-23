@@ -79,6 +79,8 @@ public class OIDProviderConfigResponse {
     private String endSessionEndpoint;
     private Boolean backchannelLogoutSupported;
     private Boolean backchannelLogoutSessionSupported;
+    private Boolean frontchannelLogoutSupported;
+    private Boolean frontchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
     private String webFingerEndpoint;
@@ -436,6 +438,15 @@ public class OIDProviderConfigResponse {
         this.backchannelLogoutSessionSupported = backchannelLogoutSessionSupported;
     }
 
+    public void setFrontchannelLogoutSupported(Boolean frontchannelLogoutSupported) {
+        this.frontchannelLogoutSupported = frontchannelLogoutSupported;
+    }
+
+    public void setFrontchannelLogoutSessionSupported(Boolean frontchannelLogoutSessionSupported) {
+        this.frontchannelLogoutSessionSupported = frontchannelLogoutSessionSupported;
+    }
+
+
     public String getIntrospectionEndpoint() {
 
         return introspectionEndpoint;
@@ -603,6 +614,9 @@ public class OIDProviderConfigResponse {
                 .userinfoSigningAlgValuesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
+        configMap.put(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED, this.frontchannelLogoutSupported);
+        configMap.put(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED,
+                this.frontchannelLogoutSessionSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);

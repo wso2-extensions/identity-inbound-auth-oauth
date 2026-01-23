@@ -68,6 +68,7 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setFrontchannelLogoutUri(registrationRequestDTO.getFrontchannelLogoutUri());
         appRegistrationRequest.setIsManagementApp(registrationRequestDTO.isManagementApp());
         appRegistrationRequest.setExtApplicationDisplayName(registrationRequestDTO.getExtApplicationDisplayName());
         appRegistrationRequest.setExtApplicationOwner(registrationRequestDTO.getExtApplicationOwner());
@@ -116,6 +117,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setFrontchannelLogoutUri(updateRequestDTO.getFrontchannelLogoutUri());
         applicationUpdateRequest.setExtApplicationDisplayName(updateRequestDTO.getExtApplicationDisplayName());
         applicationUpdateRequest.setExtApplicationVersion(updateRequestDTO.getExtApplicationVersion());
         applicationUpdateRequest.setExtApplicationOwner(updateRequestDTO.getExtApplicationOwner());
