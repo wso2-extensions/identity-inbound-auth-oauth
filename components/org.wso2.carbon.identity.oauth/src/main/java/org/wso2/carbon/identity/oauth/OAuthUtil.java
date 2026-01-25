@@ -502,6 +502,10 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            dto.setSecretDescription(appDO.getSecretDescription());
+            dto.setSecretExpiryTime(appDO.getSecretExpiryTime());
+        }
         return dto;
     }
 
