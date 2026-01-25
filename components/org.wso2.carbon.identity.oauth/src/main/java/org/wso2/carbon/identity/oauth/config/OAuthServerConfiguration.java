@@ -3026,32 +3026,20 @@ public class OAuthServerConfiguration {
             }
         }
 
-        boolean isRegistered = false;
-        //Adding global token issuer configured in the identity xml as a supported token issuer
-        for (Map.Entry<String, TokenIssuerDO> entry : supportedTokenIssuers.entrySet()) {
-            TokenIssuerDO issuerDO = entry.getValue();
-            if (oauthIdentityTokenGeneratorClassName != null && oauthIdentityTokenGeneratorClassName
-                    .equals(issuerDO.getTokenImplClass())) {
-                isRegistered = true;
-                break;
-            }
-        }
-
-        if (!isRegistered && oauthIdentityTokenGeneratorClassName != null) {
+        // If a server level <IdentityOAuthTokenGenerator> is defined, use it for the "Default" token type.
+        // This ensures that when access_token_type is set to "self_contained", the Default token type
+        // uses the JWT issuer, even if custom token types are also configured.
+        if (oauthIdentityTokenGeneratorClassName != null) {
             boolean isPersistTokenAlias = true;
             if (persistAccessTokenAlias != null) {
                 isPersistTokenAlias = Boolean.parseBoolean(persistAccessTokenAlias);
             }
-
-            // If a server level <IdentityOAuthTokenGenerator> is defined, that will be our first choice for the
-            // "Default" token type issuer implementation.
             supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
                     new TokenIssuerDO(DEFAULT_TOKEN_TYPE, oauthIdentityTokenGeneratorClassName,
                             isPersistTokenAlias));
-        }
-
-        // Adding default token types if not added in the configuration.
-        if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
+        } else if (!supportedTokenIssuers.containsKey(DEFAULT_TOKEN_TYPE)) {
+            // Only add the default opaque token issuer if no IdentityOAuthTokenGenerator is configured
+            // and Default token type is not already configured.
             supportedTokenIssuers.put(DEFAULT_TOKEN_TYPE,
                     new TokenIssuerDO(DEFAULT_TOKEN_TYPE, DEFAULT_OAUTH_TOKEN_ISSUER_CLASS, true));
         }
