@@ -220,8 +220,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 grantCacheEntry.setTokenId(null);
             }
 
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
             grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
 
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,

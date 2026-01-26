@@ -314,12 +314,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokenResp.setAccessToken(accessTokenBean.getAccessToken());
         tokenResp.setTokenId(accessTokenBean.getTokenId());
         tokenResp.setRefreshToken(accessTokenBean.getRefreshToken());
-        if (accessTokenBean.getValidityPeriodInMillis() > 0) {
+        long expireTimeMillis = accessTokenBean.getValidityPeriodInMillis();
+        if (expireTimeMillis > 0) {
             tokenResp.setExpiresIn(accessTokenBean.getValidityPeriod());
-            tokenResp.setExpiresInMillis(accessTokenBean.getValidityPeriodInMillis());
+            tokenResp.setExpiresInMillis(expireTimeMillis);
+            long refreshTokenExpiresInMillis = accessTokenBean.getRefreshTokenValidityPeriodInMillis();
+            if (refreshTokenExpiresInMillis > 0) {
+                tokenResp.setRefreshTokenExpiresInMillis(refreshTokenExpiresInMillis);
+            } else {
+                tokenResp.setRefreshTokenExpiresInMillis(Long.MAX_VALUE);
+            }
         } else {
             tokenResp.setExpiresIn(Long.MAX_VALUE);
             tokenResp.setExpiresInMillis(Long.MAX_VALUE);
+            tokenResp.setRefreshTokenExpiresInMillis(Long.MAX_VALUE);
         }
         tokenResp.setAuthorizedScopes(scope);
         tokenResp.setIsConsentedToken(accessTokenBean.isConsentedToken());

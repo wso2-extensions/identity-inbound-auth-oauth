@@ -448,8 +448,9 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
-        authorizationGrantCacheEntry
-                .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
+        // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
+        authorizationGrantCacheEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getRefreshTokenValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                 authorizationGrantCacheEntry);
     }

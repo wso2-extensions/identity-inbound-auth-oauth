@@ -933,8 +933,9 @@ public class AccessTokenIssuer {
                         log.debug("Adding AuthorizationGrantCache entry for the access token");
                     }
                 }
+                // Setting the validity period of the cache entry to be same as the validity period of the refresh token
                 authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
                 AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
             }
         }

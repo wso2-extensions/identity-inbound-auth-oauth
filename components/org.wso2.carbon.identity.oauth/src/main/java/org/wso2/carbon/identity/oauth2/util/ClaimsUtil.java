@@ -650,7 +650,8 @@ public class ClaimsUtil {
             authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
         }
 
-        long validityPeriod = TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis());
+        // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
+        long validityPeriod = TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis());
         authorizationGrantCacheEntry.setValidityPeriod(validityPeriod);
         AuthorizationGrantCache.getInstance()
                 .addToCacheByToken(authorizationGrantCacheKey, authorizationGrantCacheEntry);
