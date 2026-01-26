@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
+import org.wso2.carbon.identity.oauth.listener.UserApplicationCreationListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -90,6 +91,10 @@ public class OAuthServiceComponent {
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
+
+            UserApplicationCreationListener  userApplicationCreationListener = new UserApplicationCreationListener();
+            serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
+                    userApplicationCreationListener, null);
 
             context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
                     new IdentityOauthEventHandler(), null);
