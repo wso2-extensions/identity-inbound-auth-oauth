@@ -46,6 +46,17 @@ public class CibaConstants {
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
 
+    // CIBA User Authentication Endpoint constants.
+    public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
+    public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_authorize";
+    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
+
+    // Long Polling configuration constants
+    public static final String LONG_POLLING_ENABLED_CONFIG = "OAuth.CIBA.LongPollingEnabled";
+    public static final String LONG_POLLING_WAIT_TIME_CONFIG = "OAuth.CIBA.LongPollingWaitTimeMs";
+    public static final long DEFAULT_LONG_POLLING_WAIT_TIME_MS = 30000; // 30 seconds
+    public static final long LONG_POLLING_CHECK_INTERVAL_MS = 1000; // Check every 1 second
+
     private CibaConstants() {
 
     }
