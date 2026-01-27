@@ -45,7 +45,14 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserNotificationHandler;
+import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +76,6 @@ public class OAuth2CibaEndpoint {
     private static final Log log = LogFactory.getLog(OAuth2CibaEndpoint.class);
 
     private CibaAuthRequestValidator cibaAuthRequestValidator = new CibaAuthRequestValidator();
-    private CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
     private CibaAuthResponseHandler cibaAuthResponseHandler = new CibaAuthResponseHandler();
     private CibaAuthCodeRequest cibaAuthCodeRequest;
     private CibaAuthCodeResponse cibaAuthCodeResponse;
@@ -100,23 +106,32 @@ public class OAuth2CibaEndpoint {
         }
 
         try {
-            // Check whether request has the 'request' parameter.
-            checkForRequestParam(request);
-
-            // Capturing authentication request.
+            // Check if request has the 'request' JWT parameter or individual parameters
             String authRequest = request.getParameter(CibaConstants.REQUEST);
+            
+            if (authRequest != null) {
+                // JWT-based request flow
+                // Validate authentication request.
+                validateAuthenticationRequest(authRequest, oAuthClientAuthnContext.getClientId());
 
-            // Validate authentication request.
-            validateAuthenticationRequest(authRequest, oAuthClientAuthnContext.getClientId());
-
-            // Prepare RequestDTO with validated parameters.
-            cibaAuthCodeRequest = getCibaAuthCodeRequest(authRequest);
+                // Prepare RequestDTO with validated parameters from JWT.
+                cibaAuthCodeRequest = getCibaAuthCodeRequest(authRequest);
+            } else {
+                // Parameter-based request flow (for simpler testing)
+                // Check for required parameters
+                Map<String, String> params = transformParams(paramMap);
+                if (!containsRequiredParameters(params)) {
+                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Missing required parameters. Either 'request' JWT or (scope, login_hint, client_id) are required.");
+                }
+                
+                // Build CibaAuthCodeRequest from individual parameters
+                cibaAuthCodeRequest = getCibaAuthCodeRequestFromParams(params, oAuthClientAuthnContext.getClientId());
+            }
 
             // Obtain Response from service layer of CIBA.
+            // The service handles: auth code generation, user resolution, and notification
             cibaAuthCodeResponse = getCibaAuthCodeResponse(cibaAuthCodeRequest);
-
-            // Create an internal authorize call to the authorize endpoint.
-            generateAuthorizeCall(request, response, cibaAuthCodeResponse);
 
             // Create and return Ciba Authentication Response.
             return getAuthResponse(response, cibaAuthCodeResponse);
@@ -182,42 +197,72 @@ public class OAuth2CibaEndpoint {
     }
 
     /**
-     * Extracts validated parameters from request and prepare a DTO.
+     * Check if required parameters are present for parameter-based request.
      *
-     * @param request CIBA Authentication Request.
-     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
+     * @param params Request parameters map
+     * @return true if required parameters are present
      */
-    private void checkForRequestParam(HttpServletRequest request) throws CibaAuthFailureException {
-
-        if (request.getParameter(CibaConstants.REQUEST) == null) {
-            // Mandatory 'request' parameter does not exist.
-
-            if (log.isDebugEnabled()) {
-                log.debug("CIBA Authentication Request that hits Client Initiated Authentication Endpoint has " +
-                        "no 'request' parameter.");
-            }
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "missing the mandated parameter : (request)");
-        }
+    private boolean containsRequiredParameters(Map<String, String> params) {
+        return params.containsKey(Constants.SCOPE) && params.containsKey(Constants.LOGIN_HINT);
     }
 
     /**
-     * Trigger authorize request after building the url.
+     * Transform MultivaluedMap to simple Map.
      *
-     * @param cibaAuthCodeResponse AuthorizeRequest Data Transfer Object..
-     * @throws CibaAuthFailureException CibaAuthentication related exception.
+     * @param params MultivaluedMap of request parameters
+     * @return Map of parameters
      */
-    private void generateAuthorizeCall(@Context HttpServletRequest request,
-                                       @Context HttpServletResponse response,
-                                       CibaAuthCodeResponse cibaAuthCodeResponse) throws CibaAuthFailureException {
-
-        //  Internal authorize java call to /authorize end point.
-        cibaAuthzHandler.initiateAuthzRequest(cibaAuthCodeResponse, request, response);
-        if (log.isDebugEnabled()) {
-            log.info("Firing a Authorization request in regard to the request made by client with clientID: "
-                    + cibaAuthCodeResponse.getClientId() + " .");
+    private Map<String, String> transformParams(MultivaluedMap<String, String> params) {
+        Map<String, String> parameters = new HashMap<>();
+        for (Map.Entry<String, List<String>> entry : params.entrySet()) {
+            String key = entry.getKey();
+            List<String> values = entry.getValue();
+            if (values != null && !values.isEmpty()) {
+                parameters.put(key, values.get(0));
+            }
         }
+        return parameters;
     }
+
+    /**
+     * Build CibaAuthCodeRequest from individual request parameters.
+     *
+     * @param params   Request parameters
+     * @param clientId Authenticated client ID
+     * @return CibaAuthCodeRequest
+     * @throws CibaAuthFailureException If parameter validation fails
+     */
+    private CibaAuthCodeRequest getCibaAuthCodeRequestFromParams(Map<String, String> params, String clientId)
+            throws CibaAuthFailureException {
+
+        CibaAuthCodeRequest cibaAuthCodeRequest = new CibaAuthCodeRequest();
+        cibaAuthCodeRequest.setIssuer(clientId);
+        cibaAuthCodeRequest.setUserHint(params.get(Constants.LOGIN_HINT));
+        cibaAuthCodeRequest.setScopes(OAuth2Util.buildScopeArray(params.get(Constants.SCOPE)));
+        
+        if (params.get(CibaConstants.BINDING_MESSAGE) != null) {
+            cibaAuthCodeRequest.setBindingMessage(params.get(CibaConstants.BINDING_MESSAGE));
+        }
+        
+        if (params.get(CibaConstants.REQUESTED_EXPIRY) != null) {
+            try {
+                cibaAuthCodeRequest.setRequestedExpiry(Long.parseLong(params.get(CibaConstants.REQUESTED_EXPIRY)));
+            } catch (NumberFormatException e) {
+                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, 
+                        "Invalid value for requested_expiry");
+            }
+        } else {
+            cibaAuthCodeRequest.setRequestedExpiry(0);
+        }
+        
+        if (log.isDebugEnabled()) {
+            log.debug("Built CibaAuthCodeRequest from parameters for client: " + clientId + 
+                    ", login_hint: " + params.get(Constants.LOGIN_HINT));
+        }
+        
+        return cibaAuthCodeRequest;
+    }
+
 
     /**
      * Validate whether Request JWT is in proper formatting.
