@@ -26,6 +26,9 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserNotificationHandler;
+import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
@@ -50,9 +53,75 @@ public class CibaAuthServiceImpl implements CibaAuthService {
     public CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest)
             throws CibaCoreException, CibaClientException {
 
+        // Generate and persist the auth code
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest);
+        
+        // Resolve user and send notification.
+        CibaUserResolver.ResolvedUser resolvedUser = resolveUser(cibaAuthCodeRequest);
+        if (resolvedUser == null) {
+            throw new CibaCoreException("Failed to resolve user for CIBA request from client: " +
+                    cibaAuthCodeRequest.getIssuer());
+        }
+        cibaAuthCodeDO.setResolvedUserId(resolvedUser.getUserId());
+        // Persist the auth code after resolving the user.
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
+        sendUserNotification(resolvedUser, cibaAuthCodeDO, cibaAuthCodeRequest.getBindingMessage());
+        
         return buildAuthCodeResponse(cibaAuthCodeRequest, cibaAuthCodeDO);
+    }
+
+    /**
+     * Resolves user from login_hint using the pluggable CibaUserResolver.
+     *
+     * @param cibaAuthCodeRequest The CIBA auth code request containing user hint
+     * @return ResolvedUser if resolution is successful, null otherwise
+     */
+    private CibaUserResolver.ResolvedUser resolveUser(CibaAuthCodeRequest cibaAuthCodeRequest)
+            throws CibaClientException, CibaCoreException {
+        
+        try {
+            String clientId = cibaAuthCodeRequest.getIssuer();
+            String userHint = cibaAuthCodeRequest.getUserHint();
+            String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            CibaUserResolver userResolver = CibaServiceComponentHolder.getInstance().getCibaUserResolver();
+            if (userResolver == null) {
+                throw new CibaCoreException("No CIBA User Resolver is configured to resolve user for CIBA request from " +
+                        "client: " + clientId);
+            }
+            CibaUserResolver.ResolvedUser resolvedUser = userResolver.resolveUser(userHint, tenantDomain);
+            if (log.isDebugEnabled()) {
+                log.debug("Successfully resolved user for CIBA request from client: " + clientId);
+            }
+            return resolvedUser;
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new CibaCoreException("Error resolving user for CIBA request: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sends notification to the resolved user with authentication link.
+     * This is a best-effort operation - failures are logged but don't fail the request.
+     *
+     * @param resolvedUser   The resolved user to send notification to
+     * @param cibaAuthCodeDO The persisted auth code DO
+     * @param bindingMessage Optional binding message to include in the notification
+     */
+    private void sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser,
+                                       CibaAuthCodeDO cibaAuthCodeDO,
+                                       String bindingMessage) {
+        
+        try {
+            CibaUserNotificationHandler notificationHandler = new CibaUserNotificationHandler();
+            notificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, bindingMessage);
+            
+            if (log.isDebugEnabled()) {
+                log.debug("User notification sent for CIBA auth_req_id: " + cibaAuthCodeDO.getAuthReqId());
+            }
+        } catch (CibaCoreException e) {
+            log.error("Failed to send CIBA user notification: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error sending CIBA user notification: " + e.getMessage(), e);
+        }
     }
 
     /**
