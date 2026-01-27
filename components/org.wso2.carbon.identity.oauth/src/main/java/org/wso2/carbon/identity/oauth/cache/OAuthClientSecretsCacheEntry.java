@@ -17,14 +17,15 @@
  */
 package org.wso2.carbon.identity.oauth.cache;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Cache entry holding all secrets of a given OAuth client.
- * <p>
- * This entry is immutable to ensure thread safety.
- * </p>
+ *
+ * Cache entries are immutable snapshots and replaced on update.
+ * This ensures thread-safety and prevents partially visible or inconsistent state
+ * when multiple threads access the cache concurrently.
  */
 public final class OAuthClientSecretsCacheEntry extends CacheEntry {
 
@@ -33,9 +34,9 @@ public final class OAuthClientSecretsCacheEntry extends CacheEntry {
     /**
      * Creates an empty cache entry with no secrets.
      */
-    public OAuthClientSecretsCacheEntry() {
+    public OAuthClientSecretsCacheEntry(List<OAuthClientSecretMetadata> secrets) {
 
-        this.secrets = new ArrayList<>();
+        this.secrets = Collections.unmodifiableList(secrets);
     }
 
     /**
@@ -52,20 +53,6 @@ public final class OAuthClientSecretsCacheEntry extends CacheEntry {
     public boolean isEmpty() {
 
         return secrets.isEmpty();
-    }
-
-    /**
-     * Adds a secret metadata entry to this cache entry.
-     *
-     * <p>If the secret already exists (same hash), this operation is idempotent.</p>
-     *
-     * @param metadata metadata of the secret to add
-     */
-    public void addSecret(OAuthClientSecretMetadata metadata) {
-
-        if (metadata != null) {
-            secrets.add(metadata);
-        }
     }
 }
 

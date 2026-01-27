@@ -2327,24 +2327,37 @@ public class OAuth2Util {
         if (secretFromDB == null) {
             return null;
         }
-        // Update the cache with the secret retrieved from the database.
+        // Create a new list to build the next immutable cache snapshot.
+        // This list is intentionally not shared with the existing cache entry.
+        List<OAuthClientSecretMetadata> updatedSecrets = new ArrayList<>();
+
+        // If a cache entry already exists, copy its secrets into the new list.
+        // We copy instead of mutating to preserve immutability and thread safety.
         if (cacheEntry != null) {
-            cacheEntry.addSecret(
-                    new OAuthClientSecretMetadata(
-                            secretFromDB.getSecretHash(),
-                            secretFromDB.getExpiresAt()));
-            cache.addToCache(consumerKey, cacheEntry);
-        } else {
-            // First time population. Hence, first create the cache entry.
-            OAuthClientSecretsCacheEntry newEntry = new OAuthClientSecretsCacheEntry();
-            newEntry.addSecret(
-                    new OAuthClientSecretMetadata(
-                            secretFromDB.getSecretHash(),
-                            secretFromDB.getExpiresAt()
-                    )
-            );
-            cache.addToCache(consumerKey, newEntry);
+            updatedSecrets.addAll(cacheEntry.getSecrets());
         }
+
+        // Check whether the secret retrieved from the DB is already present in the cache.
+        // This prevents duplicate entries and makes cache updates idempotent.
+        boolean exists = updatedSecrets.stream()
+                .anyMatch(m -> StringUtils.equals(m.getSecretHash(),
+                        secretFromDB.getSecretHash()));
+
+        // Add the secret metadata only if it is not already cached.
+        // Only non-sensitive metadata is cached (hashed secret and expiry time).
+        if (!exists) {
+            updatedSecrets.add(new OAuthClientSecretMetadata(
+                    secretFromDB.getSecretHash(),
+                    secretFromDB.getExpiresAt()));
+        }
+
+        // Replace the cache entry with a new immutable snapshot.
+        // Cached entries are never mutated in place.
+        cache.addToCache(
+                consumerKey,
+                new OAuthClientSecretsCacheEntry(updatedSecrets)
+        );
+
         return secretFromDB;
     }
 

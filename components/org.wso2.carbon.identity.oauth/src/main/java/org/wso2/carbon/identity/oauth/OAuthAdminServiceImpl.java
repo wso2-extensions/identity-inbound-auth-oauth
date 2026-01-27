@@ -426,7 +426,10 @@ public class OAuthAdminServiceImpl {
         // this column. Therefore, to avoid having a stale value in the cache, we need to clear the cache entry
         // here.
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
-        // add secret cache
+        // A new secret was added, so clear the cache for this consumer key.
+        // This ensures that the next authentication request will rebuild the cache
+        // including the new secret, keeping the cache consistent with DB state.
+        OAuthClientSecretsCache.getInstance().clearCacheEntry(consumerKey);
         return OAuthUtil.buildConsumerSecretDTO(consumerSecret);
     }
 
@@ -464,8 +467,8 @@ public class OAuthAdminServiceImpl {
                     "Cannot remove the most recently added consumer secret for client ID: "
                             + consumerKey);
         }
-        // Clear the client secrets cache for the consumer key of the removed secret. This is to ensure that
-        // removed secret is removed from the cache as well.
+        // Secret is removed from DB, so clear the cache for this consumer key
+        // to prevent deleted secrets from being used in authentication.
         OAuthClientSecretsCache.getInstance().clearCacheEntry(consumerKey);
     }
 
@@ -1132,6 +1135,8 @@ public class OAuthAdminServiceImpl {
         // Remove client credentials from cache.
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        // The OAuth application is deleted, so clear the cache entry to remove all associated secrets.
+        OAuthClientSecretsCache.getInstance().clearCacheEntry(consumerKey);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
