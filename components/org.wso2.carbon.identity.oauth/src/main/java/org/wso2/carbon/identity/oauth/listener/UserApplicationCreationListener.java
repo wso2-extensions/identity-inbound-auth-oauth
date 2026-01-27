@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -33,14 +33,19 @@ import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Map;
+
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.AGENT_LISTENER_ENABLE;
 
 /**
  * User operation event listener that automatically creates a standard-based OAuth2/OIDC application
@@ -54,13 +59,21 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
     private static final Log log = LogFactory.getLog(UserApplicationCreationListener.class);
 
     @Override
+    public boolean isEnable() {
+        if (IdentityUtil.getProperty(AGENT_LISTENER_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE));
+        }
+        return false;
+    }
+
+    @Override
     public int getExecutionOrderId() {
 
         int orderId = getOrderId();
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
         }
-        // Execute after most other listeners
+        // Execute after most other listeners.
         return 99;
     }
 
@@ -69,7 +82,7 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
                                        Map<String, String> claims, String profile,
                                        UserStoreManager userStoreManager) throws UserStoreException {
 
-        // Check if the listener is enabled
+        // Check if the listener is enabled.
         if (!isEnable()) {
             return true;
         }
@@ -81,30 +94,28 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
             int tenantId = userStoreManager.getTenantId();
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
 
-            // Get the agent identity userStore name from configuration
+            // Get the agent identity userStore name from configuration.
             String agentUserStoreName = IdentityUtil.getAgentIdentityUserstoreName();
 
-            // Check if the user being created is an agent
-            // Agents have the AGENT userStore domain prefix
+            // Check if the user being created is an agent.
+            // Agents have the AGENT userStore domain prefix.
             if (StringUtils.isBlank(userStoreDomain) ||
                     !agentUserStoreName.equalsIgnoreCase(userStoreDomain)) {
                 // This is a regular user, not an agent. Skip application creation.
                 if (log.isDebugEnabled()) {
-                    log.debug("User " + username + " is not an agent (domain: " + userStoreDomain +
-                            "). Skipping application creation.");
+                    log.debug("This is not an agent");
                 }
                 return true;
             }
 
-            // Create the OAuth2/OIDC application for the agent
+            // Create the OAuth2/OIDC application for the agent.
             createStandardBasedApplication(username, tenantDomain);
             
             return true;
 
         } catch (IdentityApplicationManagementException e) {
-            log.error("Error occurred while creating standard-based application for agent: " +
-                    user.getUsername(), e);
-            // Return true to not block agent creation, but log the error
+            log.error("Error occurred while creating standard-based application for agent: ", e);
+            // Return true to not block agent creation, but log the error.
             return true;
         }
 
@@ -115,13 +126,14 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         
         String applicationName = UserCoreUtil.removeDomainFromName(username);
 
-        // Create a new ServiceProvider (Application)
+        // Create a new ServiceProvider (Application).
         ServiceProvider serviceProvider = new ServiceProvider();
-        serviceProvider.setApplicationName("Agent-" + applicationName);
+        serviceProvider.setApplicationName(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME
+                + "-" + applicationName);
         serviceProvider.setDescription("Standard-based OAuth2/OIDC application auto-created for agent");
         serviceProvider.setTemplateId("custom-application-oidc");
         AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
-        associatedRolesConfig.setAllowedAudience("APPLICATION");
+        associatedRolesConfig.setAllowedAudience(OAuthConstants.UserType.APPLICATION);
         LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig =
                 new LocalAndOutboundAuthenticationConfig();
         InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
@@ -131,15 +143,15 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         serviceProvider.setApplicationResourceId(username);
 
         OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
-        consumerAppDTO.setOAuthVersion("OAuth-2.0");
-        consumerAppDTO.setGrantTypes("client_credentials");
-        consumerAppDTO.setTokenType("JWT");
-        consumerAppDTO.setTokenBindingType("None");
+        consumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        consumerAppDTO.setGrantTypes(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
+        consumerAppDTO.setTokenType(OAuth2Util.JWT);
+        consumerAppDTO.setTokenBindingType(OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE);
 
         InboundProtocolsDTO inboundProtocolsDTO = new InboundProtocolsDTO();
         inboundProtocolsDTO.addProtocolConfiguration(consumerAppDTO);
 
-        // Build ApplicationDTO using the builder pattern (same as framework does)
+        // Build ApplicationDTO using the builder pattern (same as framework does).
         ApplicationDTO applicationDTO = new ApplicationDTO.Builder()
                 .serviceProvider(serviceProvider)
                 .inboundProtocolConfigurationDto(inboundProtocolsDTO)
@@ -148,10 +160,9 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
 
-        String applicationResourceId = applicationManagementService.createApplication(
+        applicationManagementService.createApplication(
                 applicationDTO, tenantDomain, username);
 
-        log.info("Created application with ID: " + applicationResourceId);
     }
 
 }
