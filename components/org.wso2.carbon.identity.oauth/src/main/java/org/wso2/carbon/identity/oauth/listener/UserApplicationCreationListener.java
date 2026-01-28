@@ -45,8 +45,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Map;
 
-import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.AGENT_LISTENER_ENABLE;
-
 /**
  * User operation event listener that automatically creates a standard-based OAuth2/OIDC application
  * when a new agent is created in the system.
