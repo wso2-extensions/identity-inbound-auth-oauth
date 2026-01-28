@@ -107,5 +107,4 @@ public interface CibaMgtDAO {
      * @throws CibaCoreException Exception thrown from CIBA core Component.
      */
     List<String> getScopes(String authCodeKey) throws CibaCoreException;
-
 }
