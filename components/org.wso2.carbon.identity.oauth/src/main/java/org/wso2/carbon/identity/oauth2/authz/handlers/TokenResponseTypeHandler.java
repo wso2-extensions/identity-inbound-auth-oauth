@@ -572,8 +572,14 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                 authorizationGrantCacheEntry.setSubjectClaim(sub);
             }
             // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
-            authorizationGrantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getRefreshTokenValidityPeriodInMillis()));
+            long refreshTokenValidityPeriodInMillis = accessTokenDO.getRefreshTokenValidityPeriodInMillis();
+            if (refreshTokenValidityPeriodInMillis > 0) {
+                authorizationGrantCacheEntry.setValidityPeriod(
+                        TimeUnit.MILLISECONDS.toNanos(refreshTokenValidityPeriodInMillis));
+            } else {
+                // Token is configured to never expire, use max value for cache validity.
+                authorizationGrantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
+            }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
                     authorizationGrantCacheEntry);
         }

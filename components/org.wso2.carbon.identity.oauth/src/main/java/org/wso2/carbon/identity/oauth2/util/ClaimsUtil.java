@@ -651,8 +651,14 @@ public class ClaimsUtil {
         }
 
         // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
-        long validityPeriod = TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis());
-        authorizationGrantCacheEntry.setValidityPeriod(validityPeriod);
+        long refreshTokenExpiresInMillis = tokenRespDTO.getRefreshTokenExpiresInMillis();
+        if (refreshTokenExpiresInMillis > 0) {
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(refreshTokenExpiresInMillis));
+        } else {
+            // Token is configured to never expire, use max value for cache validity.
+            authorizationGrantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
+        }
         AuthorizationGrantCache.getInstance()
                 .addToCacheByToken(authorizationGrantCacheKey, authorizationGrantCacheEntry);
     }

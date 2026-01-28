@@ -221,8 +221,14 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
 
             // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
-            grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
+            long refreshTokenValidityPeriodInMillis = accessTokenBean.getRefreshTokenValidityPeriodInMillis();
+            if (refreshTokenValidityPeriodInMillis > 0) {
+                grantCacheEntry.setValidityPeriod(
+                        TimeUnit.MILLISECONDS.toNanos(refreshTokenValidityPeriodInMillis));
+            } else {
+                // Token is configured to never expire, use max value for cache validity.
+                grantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
+            }
 
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
