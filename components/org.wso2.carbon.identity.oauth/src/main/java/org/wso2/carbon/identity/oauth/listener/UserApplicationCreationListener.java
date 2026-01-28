@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.ApplicationDTO;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolsDTO;
@@ -147,6 +148,24 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
         serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
         serviceProvider.setApplicationResourceId(username);
+
+        // Set service provider property to mark this as an agent application
+        ServiceProviderProperty[] spProperties = serviceProvider.getSpProperties();
+        ServiceProviderProperty[] newSpProperties;
+
+        if (spProperties != null && spProperties.length > 0) {
+            newSpProperties = new ServiceProviderProperty[spProperties.length + 1];
+            System.arraycopy(spProperties, 0, newSpProperties, 0, spProperties.length);
+        } else {
+            newSpProperties = new ServiceProviderProperty[1];
+        }
+
+        ServiceProviderProperty applicationNameProperty = new ServiceProviderProperty();
+        applicationNameProperty.setName(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME + " " +
+                OAuthConstants.UserType.APPLICATION);
+        newSpProperties[newSpProperties.length - 1] = applicationNameProperty;
+
+        serviceProvider.setSpProperties(newSpProperties);
 
         OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
         consumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
