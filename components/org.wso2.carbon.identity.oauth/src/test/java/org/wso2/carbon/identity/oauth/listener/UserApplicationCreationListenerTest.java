@@ -48,7 +48,6 @@ import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.AGENT_LISTENER_ENABLE;
 
 /**
  * Test class for UserApplicationCreationListener.
@@ -60,6 +59,7 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
     private static final String PRIMARY_USERSTORE_DOMAIN = "PRIMARY";
     private static final String TENANT_DOMAIN = "carbon.super";
     private static final int TENANT_ID = -1234;
+    public static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
 
     @Mock
     private UserStoreManager userStoreManager;
@@ -83,15 +83,20 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
     public void setUp() {
 
         openMocks(this);
-        listener = new UserApplicationCreationListener();
 
+        // Set up static mocks BEFORE creating the listener
         identityUtilMockedStatic = mockStatic(IdentityUtil.class);
         identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
         oAuthComponentServiceHolderMockedStatic = mockStatic(OAuthComponentServiceHolder.class);
 
+        when(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE)).thenReturn("true");
+
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
         when(oAuthComponentServiceHolder.getApplicationManagementService())
                 .thenReturn(applicationManagementService);
+
+        // Create the listener AFTER setting up the static mocks and property
+        listener = new UserApplicationCreationListener();
     }
 
     @AfterMethod
@@ -132,7 +137,6 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
             IdentityApplicationManagementException {
 
         setupCommonMocks();
-        when(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE)).thenReturn("true");
         when(user.getUserStoreDomain()).thenReturn(PRIMARY_USERSTORE_DOMAIN);
         when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
 
@@ -192,7 +196,5 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         when(user.getUserStoreDomain()).thenReturn(AGENT_USERSTORE_DOMAIN);
         when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        // Enable the listener by mocking the property
-        when(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE)).thenReturn("true");
     }
 }
