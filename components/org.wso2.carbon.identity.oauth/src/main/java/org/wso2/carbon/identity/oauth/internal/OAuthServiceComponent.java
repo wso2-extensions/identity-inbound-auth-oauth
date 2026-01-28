@@ -95,6 +95,9 @@ public class OAuthServiceComponent {
             UserApplicationCreationListener  userApplicationCreationListener = new UserApplicationCreationListener();
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     userApplicationCreationListener, null);
+            if (log.isDebugEnabled()) {
+                log.debug("User Application Creation Listener registered successfully");
+            }
 
             context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
                     new IdentityOauthEventHandler(), null);

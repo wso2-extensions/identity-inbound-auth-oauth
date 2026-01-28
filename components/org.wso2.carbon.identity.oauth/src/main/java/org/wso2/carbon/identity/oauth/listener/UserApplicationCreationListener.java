@@ -57,13 +57,18 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.AGENT_LIS
 public class UserApplicationCreationListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(UserApplicationCreationListener.class);
+    public static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
+    boolean isEnabled = false;
+
+    public UserApplicationCreationListener() {
+        if (IdentityUtil.getProperty(AGENT_LISTENER_ENABLE) != null) {
+            this.isEnabled = Boolean.parseBoolean(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE));
+        }
+    }
 
     @Override
     public boolean isEnable() {
-        if (IdentityUtil.getProperty(AGENT_LISTENER_ENABLE) != null) {
-            return Boolean.parseBoolean(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE));
-        }
-        return false;
+        return isEnabled;
     }
 
     @Override
@@ -88,6 +93,8 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         }
 
         try {
+
+            log.info("Creating standard based application for new agent: ");
 
             String username = user.getUsername();
             String userStoreDomain = user.getUserStoreDomain();
