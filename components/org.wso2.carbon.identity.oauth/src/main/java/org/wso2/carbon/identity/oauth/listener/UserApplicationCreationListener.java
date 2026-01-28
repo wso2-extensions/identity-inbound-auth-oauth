@@ -55,7 +55,8 @@ import java.util.Map;
 public class UserApplicationCreationListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(UserApplicationCreationListener.class);
-    public static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
+    private static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
+    private static final String AGENT_LISTENER_ORDER_ID = "AgentIdentity.ApplicationCreatorListener.Order";
     boolean isEnabled = false;
 
     public UserApplicationCreationListener() {
@@ -72,7 +73,7 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
     @Override
     public int getExecutionOrderId() {
 
-        int orderId = getOrderId();
+        int orderId = Integer.parseInt(IdentityUtil.getProperty(AGENT_LISTENER_ORDER_ID));
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
         }
