@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.common.model.InboundAuthenticationCo
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.ApplicationDTO;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolsDTO;
@@ -161,8 +162,8 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         }
 
         ServiceProviderProperty applicationNameProperty = new ServiceProviderProperty();
-        applicationNameProperty.setName(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME + " " +
-                OAuthConstants.UserType.APPLICATION);
+        applicationNameProperty.setName(ApplicationConstants.IS_AGENT_APP);
+        applicationNameProperty.setValue("true");
         newSpProperties[newSpProperties.length - 1] = applicationNameProperty;
 
         serviceProvider.setSpProperties(newSpProperties);
