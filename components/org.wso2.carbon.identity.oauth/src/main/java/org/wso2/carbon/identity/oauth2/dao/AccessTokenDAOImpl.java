@@ -1865,9 +1865,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         try {
             String sqlQuery;
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME;
+                sqlQuery = SQLQueries
+                    .GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             } else {
-                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY;
+                sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             }
             sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, userStoreDomain);
 
@@ -1889,9 +1890,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     int tenentId = rs.getInt(3);
                     String userDomain = rs.getString(4);
                     String tokenSope = rs.getString(5);
+                    Timestamp timeCreated = rs.getTimestamp(6);
+                    long validityPeriod = rs.getLong(7);
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = rs.getString(6);
+                        authenticatedIDP = rs.getString(8);
                     }
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
@@ -1901,6 +1904,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setConsumerKey(consumerKey);
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
+                    aTokenDetail.setIssuedTime(timeCreated);
+                    aTokenDetail.setValidityPeriod(validityPeriod);
                     tokenMap.put(token, aTokenDetail);
                 }
             }
