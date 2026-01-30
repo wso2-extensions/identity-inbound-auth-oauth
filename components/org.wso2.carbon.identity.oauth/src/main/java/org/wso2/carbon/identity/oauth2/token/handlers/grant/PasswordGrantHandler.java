@@ -373,7 +373,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             String username = tokenReq.getResourceOwnerUsername();
             if (!IdentityUtil.isEmailUsernameValidationDisabled()) {
                 FrameworkUtils.validateUsername(username);
-                username = FrameworkUtils.preprocessUsername(username, serviceProvider);
+                username = FrameworkUtils.preprocessUsername(username, tokenReq.getTenantDomain(),
+                        serviceProvider.isSaasApp());
             }
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
