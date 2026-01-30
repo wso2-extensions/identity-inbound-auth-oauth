@@ -112,10 +112,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
-    private static final String ACT = "act";
-    private static final String ACTOR_SUBJECT = "actor_subject";
-    private static final String IS_DOWNSCOPING_REQUEST = "is_downscoping_request";
-    private static final String ACTOR_AUDIENCE = "actor_audience";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -293,110 +289,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     /**
-     * Extracts and logs all nested act claims from a token request context.
-     * This method traverses the entire chain of actor tokens to log all levels of impersonation.
-     *
-     * @param tokenReqMessageContext Token request message context
-     */
-    private void logNestedActClaims(OAuthTokenReqMessageContext tokenReqMessageContext) {
-
-        if (tokenReqMessageContext == null) {
-            return;
-        }
-
-        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
-        if (!OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
-            return;
-        }
-
-        try {
-            String actorTokenString = null;
-
-            // Get actor_token from request parameters
-            if (tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters() != null) {
-                for (int i = 0; i < tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters().length; i++) {
-                    if ("actor_token".equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters()[i].getKey())) {
-                        String[] values = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters()[i].getValue();
-                        if (values != null && values.length > 0) {
-                            actorTokenString = values[0];
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if (StringUtils.isBlank(actorTokenString)) {
-                return;
-            }
-
-            // Parse the actor token and traverse nested act claims
-            JWT parsedToken = JWTParser.parse(actorTokenString);
-            JWTClaimsSet actorClaimsSet = parsedToken.getJWTClaimsSet();
-
-            if (actorClaimsSet == null) {
-                return;
-            }
-
-            if (log.isDebugEnabled()) {
-                log.debug("Logging nested act claim chain for token exchange:");
-            }
-
-            // Recursively log all nested act claims
-            logActClaimChain(actorClaimsSet, 1);
-
-        } catch (ParseException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error parsing actor token while logging nested act claims", e);
-            }
-        } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while logging nested act claims", e);
-            }
-        }
-    }
-
-    /**
-     * Recursively logs the act claim chain.
-     *
-     * @param claimsSet Current JWT claims set
-     * @param level Current nesting level
-     */
-    private void logActClaimChain(JWTClaimsSet claimsSet, int level) {
-
-        if (claimsSet == null) {
-            return;
-        }
-
-        try {
-            Object actClaim = claimsSet.getClaim(ACT);
-
-            if (actClaim instanceof Map) {
-                Map<String, Object> actMap = (Map<String, Object>) actClaim;
-                Object subClaim = actMap.get(SUB);
-
-                if (subClaim != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Level " + level + " act claim - sub: " + subClaim);
-                    }
-
-                    // Check if there's a nested act claim
-                    Object nestedActClaim = actMap.get(ACT);
-                    if (nestedActClaim instanceof Map) {
-                        // Convert the nested act claim to JWTClaimsSet for recursive processing
-                        JWTClaimsSet.Builder nestedClaimsBuilder = new JWTClaimsSet.Builder();
-                        nestedClaimsBuilder.claim(ACT, nestedActClaim);
-                        logActClaimChain(nestedClaimsBuilder.build(), level + 1);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while traversing act claim at level " + level, e);
-            }
-        }
-    }
-
-    /**
      * Build a signed jwt token from OauthToken request message context.
      *
      * @param request Token request message context.
@@ -410,13 +302,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 .getClientId());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
-        if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
-            jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
+        // Set explicitly requested audiences first (if present)
+        if (request.getAudiences() != null && !request.getAudiences().isEmpty()) {
+            jwtClaimsSetBuilder.audience(request.getAudiences());
         }
 
-        String grantType = request.getOauth2AccessTokenReqDTO().getGrantType();
-        if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
-            logNestedActClaims(request);
+        if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
+            jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
         }
 
         List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
@@ -450,6 +342,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO()
                 .getConsumerKey());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+
+        // Set explicitly requested audiences first (if present)
+        if (request.getAudiences() != null && !request.getAudiences().isEmpty()) {
+            jwtClaimsSetBuilder.audience(request.getAudiences());
+        }
 
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
@@ -814,7 +711,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (OAuthServerConfiguration.getInstance().isAddTenantDomainToAccessTokenEnabled()) {
             if (log.isDebugEnabled()) {
                 log.debug("Adding tenant domains to JWT claims - App tenant: " +
-                    spTenantDomain + ", User tenant: " + authenticatedUser.getTenantDomain());
+                        spTenantDomain + ", User tenant: " + authenticatedUser.getTenantDomain());
             }
             jwtClaimsSetBuilder.claim(APP_TENANT_DOMAIN, spTenantDomain);
             jwtClaimsSetBuilder.claim(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
@@ -836,45 +733,69 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // But we are keeping this in JWT as well.
         jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
                 tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
-
+        // Handle act claim for both delegation and self-delegation with existing act
         if (tokenReqMessageContext != null) {
-            Object isDownscopingRequest = tokenReqMessageContext.getProperty(IS_DOWNSCOPING_REQUEST);
-            if (isDownscopingRequest != null && Boolean.TRUE.equals(isDownscopingRequest)) {
-                Object actorSubject = tokenReqMessageContext.getProperty(ACTOR_SUBJECT);
-                Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+            Object isDelegationRequest = tokenReqMessageContext.getProperty("IS_DELEGATION_REQUEST");
+            Object isSelfDelegationWithAct = tokenReqMessageContext.getProperty("IS_SELF_DELEGATION_WITH_ACT");
+
+            // Case 1: Regular delegation - create new act claim with nesting
+            if (isDelegationRequest != null && Boolean.TRUE.equals(isDelegationRequest)) {
+                Object actorSubject = tokenReqMessageContext.getProperty("ACTOR_SUBJECT");
 
                 if (actorSubject != null) {
-                    if (existingActClaim != null) {
-                        String existingActorSubject = extractMostRecentActorSubject(existingActClaim);
+                    Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
 
-                        if (actorSubject.toString().equals(existingActorSubject)) {
-                            jwtClaimsSetBuilder.claim(ACT, existingActClaim);
+                    // Build the act claim structure
+                    Map<String, Object> actClaim = new HashMap<>();
+                    actClaim.put("sub", actorSubject.toString());
+
+                    // Support nested act claims for chained delegation
+                    if (existingActClaim != null) {
+                        if (existingActClaim instanceof Map) {
+                            actClaim.put("act", existingActClaim);
                             if (log.isDebugEnabled()) {
-                                log.debug("Self-delegation detected. Preserving existing act claim without nesting. " +
-                                        "Actor subject: " + actorSubject);
+                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject);
                             }
                         } else {
-                            Map<String, Object> actClaim = new HashMap<>();
-                            actClaim.put(SUB, actorSubject.toString());
-                            actClaim.put(ACT, existingActClaim);
-                            jwtClaimsSetBuilder.claim(ACT, actClaim);
                             if (log.isDebugEnabled()) {
-                                log.debug("Chained delegation detected. Creating new act claim with nested existing claim. " +
-                                        "New actor: " + actorSubject + ", Existing actor: " + existingActorSubject);
+                                log.debug("Delegation: Existing act claim is not in expected Map format. " +
+                                        "Type: " + existingActClaim.getClass().getName());
                             }
                         }
-                    } else {
-                        Map<String, Object> actClaim = new HashMap<>();
-                        actClaim.put(SUB, actorSubject.toString());
-                        jwtClaimsSetBuilder.claim(ACT, actClaim);
+                    }
+
+                    jwtClaimsSetBuilder.claim("act", actClaim);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Added act claim for delegation. Actor: " + actorSubject +
+                                ", Has nested act: " + (existingActClaim != null));
+                    }
+                }
+            }
+            // Case 2: Self-delegation with existing act claim - preserve it
+            else if (isSelfDelegationWithAct != null && Boolean.TRUE.equals(isSelfDelegationWithAct)) {
+                Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+
+                if (existingActClaim != null) {
+                    if (existingActClaim instanceof Map) {
+                        // Preserve the entire act claim chain as-is
+                        jwtClaimsSetBuilder.claim("act", existingActClaim);
+
                         if (log.isDebugEnabled()) {
-                            log.debug("First delegation. Creating new act claim. Actor subject: " + actorSubject);
+                            log.debug("Self-delegation: Preserved existing act claim chain");
+                        }
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Self-delegation: Existing act claim is not in expected format. " +
+                                    "Type: " + existingActClaim.getClass().getName());
                         }
                     }
                 }
             }
-        }
 
+            // Note: Regular self-delegation (without existing act claim) does NOT add any act claim
+            // Note: Impersonation uses "may_act" claim in subject token, not "act" in issued token
+        }
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
@@ -909,39 +830,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
-    }
-
-    /**
-     * Extracts the subject of the most recent actor from an existing act claim.
-     *
-     * In OAuth 2.0 Token Exchange, the act (actor) claim represents a chain of delegation.
-     * The top-level act claim contains the subject of the most recent actor in the delegation chain.
-     * This method extracts that subject identifier from the act claim structure.
-     *
-     * The act claim structure is expected to be:
-     * <pre>
-     * {
-     *   "sub": "actor_subject_identifier",
-     *   "act": { ... nested act claim (if any) ... }
-     * }
-     * </pre>
-     *
-     * @param existingActClaim The act claim object from a token, expected to be a Map containing
-     *                         the actor information. Can be null.
-     * @return The subject identifier of the most recent actor if present, or null if the act claim
-     *         is null, not a Map, or doesn't contain a subject.
-     */
-
-    private String extractMostRecentActorSubject(Object existingActClaim) {
-
-        if (existingActClaim instanceof Map) {
-            Map<String, Object> actMap = (Map<String, Object>) existingActClaim;
-            Object subClaim = actMap.get(SUB);
-            if (subClaim != null) {
-                return subClaim.toString();
-            }
-        }
-        return null;
     }
 
     /**
@@ -985,7 +873,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                                     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
@@ -1171,7 +1059,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                              OAuthTokenReqMessageContext tokenReqMessageContext, OAuthAppDO oAuthAppDO)
+                                            OAuthTokenReqMessageContext tokenReqMessageContext, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
