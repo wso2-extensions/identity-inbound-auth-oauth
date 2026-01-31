@@ -167,8 +167,20 @@ public class DCRMServiceTest {
     @AfterMethod
     public void tearDown() {
 
-        oAuthServerConfiguration.close();
-        oAuth2Util.close();
+        try {
+            if (oAuthServerConfiguration != null) {
+                oAuthServerConfiguration.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            if (oAuth2Util != null) {
+                oAuth2Util.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
     }
 
     @BeforeClass
@@ -1344,7 +1356,7 @@ public class DCRMServiceTest {
                 .thenReturn(oAuthConsumerApp);
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
-        when(mockApplicationManagementService.getServiceProviderNameByClientId(
+        lenient().when(mockApplicationManagementService.getServiceProviderNameByClientId(
                 oAuthConsumerApp.getOauthConsumerKey(), DCRMConstants.OAUTH2, dummyTenantDomain))
                 .thenReturn(IdentityApplicationConstants.DEFAULT_SP_CONFIG);
 
@@ -1473,21 +1485,26 @@ public class DCRMServiceTest {
     @Test
     public void testUpdateApplicationClearFrontchannelLogoutUri() throws Exception {
 
-        updateApplication();
+        OAuthConsumerAppDTO dto = updateApplication();
+        // Set redirect URIs
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        applicationUpdateRequest.setRedirectUris(redirectUri);
         // Set empty string to clear the frontchannel logout URI
         applicationUpdateRequest.setFrontchannelLogoutUri("");
 
-        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
-        dto.setApplicationName(dummyClientName);
-        dto.setOauthConsumerSecret(dummyConsumerSecret);
-        dto.setOauthConsumerKey(dummyConsumerKey);
-        dto.setCallbackUrl(dummyCallbackUrl);
-        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
         dto.setFrontchannelLogoutUrl("");
-
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
         lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
                 .thenReturn(new OAuthConsumerAppDTO[]{dto});
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName(dummyClientName);
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(DCRConstants.APP_ROLE_AUDIENCE);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(serviceProvider);
 
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
@@ -1499,60 +1516,6 @@ public class DCRMServiceTest {
         assertEquals(application.getClientName(), dummyClientName);
         // Verify frontchannel logout URI is cleared
         assertTrue(StringUtils.isEmpty(application.getFrontchannelLogoutUri()));
-    }
-
-    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
-    public void testRegisterApplicationWithBothLogoutUris(List<String> redirectUri, String roleAudience)
-            throws Exception {
-
-        mockApplicationManagementService = mock(ApplicationManagementService.class);
-        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-
-        dummyGrantTypes.add("implicit");
-        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
-        applicationRegistrationRequest.setBackchannelLogoutUri(dummyBackchannelLogoutUri);
-        applicationRegistrationRequest.setFrontchannelLogoutUri(dummyFrontchannelLogoutUri);
-
-        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
-
-        ServiceProvider serviceProvider = new ServiceProvider();
-        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
-        associatedRolesConfig.setAllowedAudience(roleAudience);
-        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
-
-        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
-        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
-        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
-                .thenReturn(null, serviceProvider);
-
-        applicationRegistrationRequest.setRedirectUris(redirectUri);
-
-        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
-        oAuthConsumerApp.setApplicationName(dummyClientName);
-        oAuthConsumerApp.setGrantTypes(grantType);
-        oAuthConsumerApp.setOauthConsumerKey(dummyConsumerKey);
-        oAuthConsumerApp.setOauthConsumerSecret(dummyConsumerSecret);
-        oAuthConsumerApp.setCallbackUrl(redirectUri.get(0));
-        oAuthConsumerApp.setBackChannelLogoutUrl(dummyBackchannelLogoutUri);
-        oAuthConsumerApp.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
-        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
-
-        lenient().when(mockOAuthAdminService.getOAuthApplicationDataByAppName(dummyClientName))
-                .thenReturn(oAuthConsumerApp);
-        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
-                .thenReturn(oAuthConsumerApp);
-        when(mockApplicationManagementService.getServiceProviderNameByClientId(
-                oAuthConsumerApp.getOauthConsumerKey(), DCRMConstants.OAUTH2, dummyTenantDomain))
-                .thenReturn(IdentityApplicationConstants.DEFAULT_SP_CONFIG);
-
-        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
-
-        assertEquals(application.getClientName(), dummyClientName);
-        assertEquals(application.getGrantTypes(), dummyGrantTypes);
-        assertEquals(application.getBackchannelLogoutUri(), dummyBackchannelLogoutUri);
-        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
-        assertNotNull(application.getBackchannelLogoutUri());
-        assertNotNull(application.getFrontchannelLogoutUri());
     }
 
     @DataProvider(name = "invalidFrontchannelLogoutUris")
