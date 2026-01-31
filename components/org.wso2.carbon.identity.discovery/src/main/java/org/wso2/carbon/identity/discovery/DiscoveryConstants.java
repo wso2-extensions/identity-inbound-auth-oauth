@@ -344,15 +344,14 @@ public class DiscoveryConstants {
 
     /**
      * frontchannel_logout_session_supported
-     * OPTIONAL. Boolean value specifying whether the OP can pass a sid (session ID) Claim in the Logout Token to
-     * identify the RP session with the OP. If supported, the sid Claim is also included in ID Tokens issued by the OP.
-     * If omitted, the default value is false.
+     * OPTIONAL. Boolean value specifying whether the OP can pass a sid and issuer claims in the logout response to
+     * identify the RP session with the OP.
      */
     public static final String FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED = "frontchannel_logout_session_supported";
+    
     /**
      * frontchannel_logout_supported
-     * OPTIONAL. Boolean value specifying whether the OP supports back-channel logout, with true indicating support.
-     * If omitted, the default value is false.
+     * OPTIONAL. Boolean value specifying whether the OP supports front-channel logout, with true indicating support.
      */
     public static final String FRONTCHANNEL_LOGOUT_SUPPORTED = "frontchannel_logout_supported";
 
