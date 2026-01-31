@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -261,7 +262,9 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
-        applicationDTO.setFrontchannelLogoutUri(application.getFrontchannelLogoutUri());
+        if (StringUtils.isNotBlank(application.getFrontchannelLogoutUri())) {
+            applicationDTO.setFrontchannelLogoutUri(application.getFrontchannelLogoutUri());
+        }
         applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
         applicationDTO.setExtAllowedAudience(application.getExtAllowedAudience());
         return applicationDTO;
