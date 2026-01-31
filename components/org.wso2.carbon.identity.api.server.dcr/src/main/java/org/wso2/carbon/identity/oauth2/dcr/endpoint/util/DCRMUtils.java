@@ -261,6 +261,7 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
+        applicationDTO.setFrontchannelLogoutUri(application.getFrontchannelLogoutUri());
         applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
         applicationDTO.setExtAllowedAudience(application.getExtAllowedAudience());
         return applicationDTO;
