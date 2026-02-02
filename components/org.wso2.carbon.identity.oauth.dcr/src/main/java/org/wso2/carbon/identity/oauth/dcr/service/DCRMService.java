@@ -338,6 +338,10 @@ public class DCRMService {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
             }
+            if (StringUtils.isNotEmpty(updateRequest.getFrontchannelLogoutUri())) {
+                String frontChannelLogoutUri = validateFrontchannelLogoutURI(updateRequest.getFrontchannelLogoutUri());
+                appDTO.setFrontchannelLogoutUrl(frontChannelLogoutUri);
+            }
             if (updateRequest.getExtApplicationTokenLifetime() != null) {
                 appDTO.setApplicationAccessTokenExpiryTime(updateRequest.getExtApplicationTokenLifetime());
             }
@@ -692,6 +696,7 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
+        application.setFrontchannelLogoutUri(createdApp.getFrontchannelLogoutUrl());
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
         }
@@ -744,6 +749,8 @@ public class DCRMService {
         }
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
+        oAuthConsumerApp.setFrontchannelLogoutUrl(
+                validateFrontchannelLogoutURI(registrationRequest.getFrontchannelLogoutUri()));
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
@@ -1083,6 +1090,16 @@ public class DCRMService {
         } else {
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI, backchannelLogoutUri);
+        }
+    }
+
+    private String validateFrontchannelLogoutURI(String frontchannelLogoutUri) throws DCRMException {
+
+        if (DCRMUtils.isFrontchannelLogoutUriValid(frontchannelLogoutUri)) {
+            return frontchannelLogoutUri;
+        } else {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI, frontchannelLogoutUri);
         }
     }
 

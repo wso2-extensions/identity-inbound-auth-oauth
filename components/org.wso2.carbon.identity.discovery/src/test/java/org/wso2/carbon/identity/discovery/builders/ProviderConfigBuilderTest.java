@@ -298,4 +298,102 @@ public class ProviderConfigBuilderTest {
             providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
         }
     }
+
+    @Test
+    public void testFrontchannelLogoutSupportedIsSetToTrue() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
+                     mockStatic(AuthorizationDetailsProcessorFactory.class)) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance)
+                    .thenReturn(mockOidcDiscoveryDataHolder);
+
+            List<ExternalClaim> claims = new ArrayList<>();
+            ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+            claims.add(externalClaim);
+
+            when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(
+                    idTokenSignatureAlgorithm);
+
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                    .thenReturn(JWSAlgorithm.RS256);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                    .thenReturn(JWSAlgorithm.RS256);
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+            AuthorizationDetailsProcessorFactory factoryMock = spy(AuthorizationDetailsProcessorFactory.class);
+            doReturn(Collections.emptySet()).when(factoryMock).getSupportedAuthorizationDetailTypes();
+            factoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(factoryMock);
+
+            OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            assertNotNull(response);
+
+            // Verify frontchannel logout properties are set correctly
+            assertEquals(response.getConfigMap().get("frontchannel_logout_supported"), Boolean.TRUE);
+            assertEquals(response.getConfigMap().get("frontchannel_logout_session_supported"), Boolean.TRUE);
+        }
+    }
+
+    @Test
+    public void testFrontchannelLogoutSessionSupportedIsSetToTrue() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
+                     mockStatic(AuthorizationDetailsProcessorFactory.class)) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance)
+                    .thenReturn(mockOidcDiscoveryDataHolder);
+
+            List<ExternalClaim> claims = new ArrayList<>();
+            ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+            claims.add(externalClaim);
+
+            when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(
+                    idTokenSignatureAlgorithm);
+
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                    .thenReturn(JWSAlgorithm.RS256);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                    .thenReturn(JWSAlgorithm.RS256);
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+            AuthorizationDetailsProcessorFactory factoryMock = spy(AuthorizationDetailsProcessorFactory.class);
+            doReturn(Collections.emptySet()).when(factoryMock).getSupportedAuthorizationDetailTypes();
+            factoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(factoryMock);
+
+            OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            assertNotNull(response);
+
+            // Verify that backchannel and frontchannel logout are both supported
+            assertEquals(response.getConfigMap().get("backchannel_logout_supported"), Boolean.TRUE);
+            assertEquals(response.getConfigMap().get("backchannel_logout_session_supported"), Boolean.TRUE);
+            assertEquals(response.getConfigMap().get("frontchannel_logout_supported"), Boolean.TRUE);
+            assertEquals(response.getConfigMap().get("frontchannel_logout_session_supported"), Boolean.TRUE);
+        }
+    }
 }

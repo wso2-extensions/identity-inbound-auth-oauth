@@ -300,6 +300,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      frontchannel_logout_uri:
+        type: string
       ext_application_display_name:
         type: string
       token_type_extension:
@@ -382,6 +384,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      frontchannel_logout_uri:
+        type: string
       ext_application_display_name:
         type: string
       token_type_extension:
@@ -494,6 +498,8 @@ definitions:
       token_type_extension:
         type: string
       jwks_uri:
+        type: string
+      frontchannel_logout_uri:
         type: string
       token_endpoint_auth_method:
         type: string
