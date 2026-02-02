@@ -300,18 +300,17 @@ public class ApplicationDTO  {
         this.jwksUri = jwksUri;
     }
 
-    @ApiModelProperty
-    @JsonProperty("frontchannel_logout_uri")
-    public String getFrontchannelLogoutUri() {
-        return frontchannelLogoutUri;
-    }
+  @ApiModelProperty
+  @JsonProperty("frontchannel_logout_uri")
+  public String getFrontchannelLogoutUri() {
+      return frontchannelLogoutUri;
+  }
 
-    public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
-        this.frontchannelLogoutUri = frontchannelLogoutUri;
-    }
+  public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+      this.frontchannelLogoutUri = frontchannelLogoutUri;
+  }
 
-
-    @ApiModelProperty(value = "")
+  @ApiModelProperty(value = "")
   @JsonProperty("token_endpoint_auth_method")
   public String getTokenEndpointAuthMethod() {
     return tokenEndpointAuthMethod;
