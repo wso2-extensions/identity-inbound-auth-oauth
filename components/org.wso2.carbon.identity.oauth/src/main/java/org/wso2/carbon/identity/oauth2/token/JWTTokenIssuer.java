@@ -741,6 +741,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             // Case 1: Regular delegation - create new act claim with nesting
             if (isDelegationRequest != null && Boolean.TRUE.equals(isDelegationRequest)) {
                 Object actorSubject = tokenReqMessageContext.getProperty("ACTOR_SUBJECT");
+                Object actorAzp = tokenReqMessageContext.getProperty("ACTOR_AZP");
 
                 if (actorSubject != null) {
                     Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
@@ -749,12 +750,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     Map<String, Object> actClaim = new HashMap<>();
                     actClaim.put("sub", actorSubject.toString());
 
+                    //Include azp in act claim
+                    if (actorAzp != null) {
+                        actClaim.put("azp", actorAzp.toString());
+                    }
+
                     // Support nested act claims for chained delegation
                     if (existingActClaim != null) {
                         if (existingActClaim instanceof Map) {
                             actClaim.put("act", existingActClaim);
                             if (log.isDebugEnabled()) {
-                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject);
+                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject +
+                                        ", AZP: " + actorAzp);
                             }
                         } else {
                             if (log.isDebugEnabled()) {
@@ -768,7 +775,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
                     if (log.isDebugEnabled()) {
                         log.debug("Added act claim for delegation. Actor: " + actorSubject +
-                                ", Has nested act: " + (existingActClaim != null));
+                                ", AZP: " + actorAzp + ", Has nested act: " + (existingActClaim != null));
                     }
                 }
             }
@@ -782,7 +789,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                         jwtClaimsSetBuilder.claim("act", existingActClaim);
 
                         if (log.isDebugEnabled()) {
-                            log.debug("Self-delegation: Preserved existing act claim chain");
+                            log.debug("Self-delegation: Preserved existing act claim chain with azp");
                         }
                     } else {
                         if (log.isDebugEnabled()) {
