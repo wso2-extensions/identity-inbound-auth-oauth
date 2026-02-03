@@ -724,6 +724,77 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
                 tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
 
+        // Handle act claim for both delegation and self-delegation with existing act
+        if (tokenReqMessageContext != null) {
+            Object isDelegationRequest = tokenReqMessageContext.getProperty("IS_DELEGATION_REQUEST");
+            Object isSelfDelegationWithAct = tokenReqMessageContext.getProperty("IS_SELF_DELEGATION_WITH_ACT");
+
+            // Case 1: Regular delegation - create new act claim with nesting
+            if (isDelegationRequest != null && Boolean.TRUE.equals(isDelegationRequest)) {
+                Object actorSubject = tokenReqMessageContext.getProperty("ACTOR_SUBJECT");
+                Object actorAzp = tokenReqMessageContext.getProperty("ACTOR_AZP");
+
+                if (actorSubject != null) {
+                    Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+
+                    // Build the act claim structure
+                    Map<String, Object> actClaim = new HashMap<>();
+                    actClaim.put("sub", actorSubject.toString());
+
+                    //Include azp in act claim
+                    if (actorAzp != null) {
+                        actClaim.put("azp", actorAzp.toString());
+                    }
+
+                    // Support nested act claims for chained delegation
+                    if (existingActClaim != null) {
+                        if (existingActClaim instanceof Map) {
+                            actClaim.put("act", existingActClaim);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject +
+                                        ", AZP: " + actorAzp);
+                            }
+                        } else {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Delegation: Existing act claim is not in expected Map format. " +
+                                        "Type: " + existingActClaim.getClass().getName());
+                            }
+                        }
+                    }
+
+                    jwtClaimsSetBuilder.claim("act", actClaim);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Added act claim for delegation. Actor: " + actorSubject +
+                                ", AZP: " + actorAzp + ", Has nested act: " + (existingActClaim != null));
+                    }
+                }
+            }
+            // Case 2: Self-delegation with existing act claim - preserve it
+            else if (isSelfDelegationWithAct != null && Boolean.TRUE.equals(isSelfDelegationWithAct)) {
+                Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+
+                if (existingActClaim != null) {
+                    if (existingActClaim instanceof Map) {
+                        // Preserve the entire act claim chain as-is
+                        jwtClaimsSetBuilder.claim("act", existingActClaim);
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("Self-delegation: Preserved existing act claim chain with azp");
+                        }
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Self-delegation: Existing act claim is not in expected format. " +
+                                    "Type: " + existingActClaim.getClass().getName());
+                        }
+                    }
+                }
+            }
+
+            // Note: Regular self-delegation (without existing act claim) does NOT add any act claim
+            // Note: Impersonation uses "may_act" claim in subject token, not "act" in issued token
+        }
+
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims

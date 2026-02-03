@@ -20,6 +20,7 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
     private static final String SUB = "sub";
     private static final String AGENT = "AGENT";
     private static final String AUT = "aut";
+    private static final String AZP = "azp";
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception {
@@ -38,8 +39,23 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
             return agentMap;
         } else if (GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
             && context.getRequestedActor() != null) {
+
+            Map<String, Object> actClaimMap = new HashMap<>();
+            actClaimMap.put(SUB, context.getRequestedActor());
+            // Include azp in act claim from context property
+            Object actorAzp = context.getProperty("ACTOR_AZP");
+            if (actorAzp != null) {
+                actClaimMap.put(AZP, actorAzp.toString());
+            } else {
+                // Fallback: use the client_id of the requesting application
+                String clientId = context.getOauth2AccessTokenReqDTO().getClientId();
+                if (StringUtils.isNotEmpty(clientId)) {
+                    actClaimMap.put(AZP, clientId);
+                }
+            }
+
             Map<String, Object> agentMap = new HashMap<>();
-            agentMap.put(ACT, Collections.singletonMap(SUB, context.getRequestedActor()));
+            agentMap.put(ACT, actClaimMap);
             return agentMap;
         }
         return null;
