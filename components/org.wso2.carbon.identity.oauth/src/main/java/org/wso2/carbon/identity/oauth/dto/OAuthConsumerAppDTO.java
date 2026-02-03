@@ -53,6 +53,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String[] audiences;
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
+    private boolean extendRenewedRefreshTokenExpiryTime;
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
@@ -333,6 +334,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public String getRenewRefreshTokenEnabled() {
 
         return renewRefreshTokenEnabled;
+    }
+
+    public boolean getExtendRenewedRefreshTokenExpiryTime() {
+
+        return extendRenewedRefreshTokenExpiryTime;
+    }
+
+    public void setExtendRenewedRefreshTokenExpiryTime(boolean extendRenewedRefreshTokenExpiryTime) {
+
+        this.extendRenewedRefreshTokenExpiryTime = extendRenewedRefreshTokenExpiryTime;
     }
 
     public String getTokenBindingType() {

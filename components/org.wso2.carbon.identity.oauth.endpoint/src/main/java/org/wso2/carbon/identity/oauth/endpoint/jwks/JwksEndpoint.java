@@ -68,6 +68,8 @@ public class JwksEndpoint {
     private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     public static final String JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
             ".IsThumbprintHexifyRequired";
+    public static final String JWKS_IS_X5T_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
+            ".IsX5tRequired";
 
     @GET
     @Path(value = "/jwks")
@@ -156,10 +158,25 @@ public class JwksEndpoint {
             jwk.x509CertChain(encodedCertList);
         }
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
+            // x5t#S256
             JWK parsedJWK = JWK.parse(certificate);
             jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                log.debug("Adding SHA-1 thumbprint (x5t) to JWK.");  
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
         } else {
+            // x5t#S256
             jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
         }
         return jwk;
     }

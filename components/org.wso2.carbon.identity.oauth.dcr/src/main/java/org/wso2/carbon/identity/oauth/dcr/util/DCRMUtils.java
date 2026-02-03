@@ -73,17 +73,27 @@ public class DCRMUtils {
 
     public static boolean isBackchannelLogoutUriValid(String backchannelLogoutUri) {
 
-        if (StringUtils.isBlank(backchannelLogoutUri)) {
+        return isLogoutUriValid(backchannelLogoutUri, "back-channel");
+    }
+
+    public static boolean isFrontchannelLogoutUriValid(String frontchannelLogoutUri) {
+
+        return isLogoutUriValid(frontchannelLogoutUri, "front-channel");
+    }
+
+    private static boolean isLogoutUriValid(String logoutUri, String channelType) {
+
+        if (StringUtils.isBlank(logoutUri)) {
             return true;
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Validating back-channel logout uri: " + backchannelLogoutUri);
+            log.debug("Validating " + channelType + " logout uri: " + logoutUri);
         }
 
-        if (backchannelLogoutUri.contains("#")) {
+        if (logoutUri.contains("#")) {
             if (log.isDebugEnabled()) {
-                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
+                String errorMessage = "The " + channelType + " logout URI: " + logoutUri
                         + ", contains a fragment component.";
                 log.debug(errorMessage);
             }
@@ -92,10 +102,10 @@ public class DCRMUtils {
 
         URI uri;
         try {
-            uri = new URI(backchannelLogoutUri);
+            uri = new URI(logoutUri);
         } catch (URISyntaxException e) {
             if (log.isDebugEnabled()) {
-                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri + ", is not a valid URI.";
+                String errorMessage = "The " + channelType + " logout URI: " + logoutUri + ", is not a valid URI.";
                 log.debug(errorMessage, e);
             }
             return false;
@@ -103,7 +113,7 @@ public class DCRMUtils {
 
         if (!uri.isAbsolute()) {
             if (log.isDebugEnabled()) {
-                String errorMessage = "The back-channel logout URI: " + backchannelLogoutUri
+                String errorMessage = "The " + channelType + " logout URI: " + logoutUri
                         + ", is not an absolute URI.";
                 log.debug(errorMessage);
             }

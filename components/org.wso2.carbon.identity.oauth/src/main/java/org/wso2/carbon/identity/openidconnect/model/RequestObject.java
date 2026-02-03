@@ -18,12 +18,12 @@ package org.wso2.carbon.identity.openidconnect.model;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -87,7 +87,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = OIDCRequestObjectUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -121,7 +121,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = OIDCRequestObjectUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -201,10 +201,10 @@ public class RequestObject implements Serializable {
                     } else if (VALUE.equals(claimAttributes.getKey())) {
                         claim.setValue((String) value);
                     } else if (VALUES.equals(claimAttributes.getKey())) {
-                        JSONArray jsonArray = (JSONArray) value;
-                        if (jsonArray != null && jsonArray.size() > 0) {
+                        List<Object> attributeList = (List) value;
+                        if (attributeList != null && !attributeList.isEmpty()) {
                             List<String> values = new ArrayList<>();
-                            for (Object aJsonArray : jsonArray) {
+                            for (Object aJsonArray : attributeList) {
                                 values.add(aJsonArray.toString());
                             }
                             claim.setValues(values);

@@ -74,6 +74,7 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
 /**
@@ -497,8 +498,40 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
+            String certThumbPrint;
+
             Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
-            String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+            if (OAuth2Util.isJWTX5tHexifyingRequired()) {
+                // Handle x5t.
+                if (IdentityUtil.getProperty(JWT_X5T_ENABLED) == null) {
+                    /* When x5t enable is not set, default to incorrect behaviour of setting hexified SHA-256
+                       thumbprint for x5t header parameter. */
+                    certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                } else if (Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED))) {
+                    /* When x5t enable is set, set the hexified SHA-1 for x5t header parameter. */
+                    certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                }
+
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrint(certificate, true);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            } else {
+                // Handle x5t.
+                if (OAuth2Util.isX5tEnabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                }
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrint(certificate, false);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            }
+
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
@@ -508,7 +541,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
                 headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
             }
-            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();

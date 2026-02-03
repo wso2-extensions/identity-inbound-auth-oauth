@@ -67,6 +67,7 @@ public class ApplicationDTO  {
 
 
     private String jwksUri = null;
+    private String frontchannelLogoutUri = null;
     private String tokenEndpointAuthMethod = null;
     private Boolean tokenEndpointAllowReusePvtKeyJwt = null;
     private String tokenEndpointAuthSigningAlg = null;
@@ -298,6 +299,16 @@ public class ApplicationDTO  {
     public void setJwksUri(String jwksUri) {
         this.jwksUri = jwksUri;
     }
+
+  @ApiModelProperty
+  @JsonProperty("frontchannel_logout_uri")
+  public String getFrontchannelLogoutUri() {
+      return frontchannelLogoutUri;
+  }
+
+  public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+      this.frontchannelLogoutUri = frontchannelLogoutUri;
+  }
 
   @ApiModelProperty(value = "")
   @JsonProperty("token_endpoint_auth_method")

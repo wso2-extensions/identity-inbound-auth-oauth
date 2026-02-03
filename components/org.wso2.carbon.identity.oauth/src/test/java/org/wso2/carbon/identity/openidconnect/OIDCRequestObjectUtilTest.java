@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -53,8 +55,10 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -246,5 +250,123 @@ public class OIDCRequestObjectUtilTest {
         identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
         identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
                 .thenReturn(identityKeyStoreResolver);
+    }
+
+    @Test
+    public void testConvertToJSONObject() {
+        // Test simple map with primitives
+        Map<String, Object> simpleMap = new HashMap<>();
+        simpleMap.put("string", "test");
+        simpleMap.put("number", 42);
+        simpleMap.put("boolean", true);
+
+        JSONObject result1 = OIDCRequestObjectUtil.convertToJSONObject(simpleMap);
+        Assert.assertNotNull(result1);
+        Assert.assertEquals(result1.get("string"), "test");
+        Assert.assertEquals(result1.get("number"), 42);
+        Assert.assertEquals(result1.get("boolean"), true);
+
+        // Test deep nested structure (depth 4) - Array of objects with nested arrays
+        Map<String, Object> deepNestedMap = new HashMap<>();
+        deepNestedMap.put("level1", "value1");
+
+        // Level 2: Array of objects
+        List<Object> arrayOfObjects = new ArrayList<>();
+
+        // First object in array (Level 3)
+        Map<String, Object> obj1 = new HashMap<>();
+        obj1.put("id", 1);
+        obj1.put("name", "object1");
+
+        // Level 4: Array within object
+        List<Object> nestedArray = new ArrayList<>();
+        nestedArray.add("item1");
+        nestedArray.add(100);
+
+        // Level 4: Object within array within object
+        Map<String, Object> deepObj = new HashMap<>();
+        deepObj.put("deepKey", "deepValue");
+        deepObj.put("deepNumber", 999);
+        nestedArray.add(deepObj);
+
+        obj1.put("items", nestedArray);
+        arrayOfObjects.add(obj1);
+
+        // Second object in array (Level 3)
+        Map<String, Object> obj2 = new HashMap<>();
+        obj2.put("id", 2);
+        obj2.put("type", "complex");
+
+        // Level 4: Nested array of arrays
+        List<Object> arrayOfArrays = new ArrayList<>();
+        arrayOfArrays.add(Arrays.asList("a", "b", "c"));
+        arrayOfArrays.add(Arrays.asList(1, 2, 3));
+        obj2.put("matrix", arrayOfArrays);
+
+        arrayOfObjects.add(obj2);
+
+        deepNestedMap.put("objects", arrayOfObjects);
+
+        // Level 2: Object with nested structure
+        Map<String, Object> nestedObj = new HashMap<>();
+        nestedObj.put("config", "enabled");
+
+        // Level 3: Array of mixed types
+        List<Object> mixedArray = new ArrayList<>();
+        mixedArray.add("text");
+        mixedArray.add(true);
+
+        // Level 4: Object in mixed array
+        Map<String, Object> objInMixed = new HashMap<>();
+        objInMixed.put("nested", "value");
+        objInMixed.put("array", Arrays.asList("x", "y", "z"));
+        mixedArray.add(objInMixed);
+
+        nestedObj.put("mixed", mixedArray);
+        deepNestedMap.put("configuration", nestedObj);
+
+        deepNestedMap.put("nullValue", null);
+
+        JSONObject result2 = OIDCRequestObjectUtil.convertToJSONObject(deepNestedMap);
+        Assert.assertNotNull(result2);
+
+        // Verify array of objects conversion
+        Assert.assertTrue(result2.get("objects") instanceof JSONArray);
+        JSONArray objectsArray = (JSONArray) result2.get("objects");
+        Assert.assertEquals(objectsArray.size(), 2);
+
+        // Verify first object in array
+        Assert.assertTrue(objectsArray.get(0) instanceof JSONObject);
+        JSONObject firstObj = (JSONObject) objectsArray.get(0);
+        Assert.assertEquals(firstObj.get("id"), 1);
+        Assert.assertTrue(firstObj.get("items") instanceof JSONArray);
+
+        JSONArray itemsArray = (JSONArray) firstObj.get("items");
+        Assert.assertEquals(itemsArray.size(), 3);
+        Assert.assertTrue(itemsArray.get(2) instanceof JSONObject); // Deep object
+
+        // Verify second object with array of arrays
+        Assert.assertTrue(objectsArray.get(1) instanceof JSONObject);
+        JSONObject secondObj = (JSONObject) objectsArray.get(1);
+        Assert.assertTrue(secondObj.get("matrix") instanceof JSONArray);
+
+        JSONArray matrix = (JSONArray) secondObj.get("matrix");
+        Assert.assertEquals(matrix.size(), 2);
+        Assert.assertTrue(matrix.get(0) instanceof JSONArray);
+        Assert.assertTrue(matrix.get(1) instanceof JSONArray);
+
+        // Verify nested object with mixed array
+        Assert.assertTrue(result2.get("configuration") instanceof JSONObject);
+        JSONObject config = (JSONObject) result2.get("configuration");
+        Assert.assertTrue(config.get("mixed") instanceof JSONArray);
+
+        JSONArray mixedArr = (JSONArray) config.get("mixed");
+        Assert.assertEquals(mixedArr.size(), 3);
+        Assert.assertTrue(mixedArr.get(2) instanceof JSONObject);
+
+        JSONObject objInMixedArr = (JSONObject) mixedArr.get(2);
+        Assert.assertTrue(objInMixedArr.get("array") instanceof JSONArray);
+
+        Assert.assertNull(result2.get("nullValue"));
     }
 }
