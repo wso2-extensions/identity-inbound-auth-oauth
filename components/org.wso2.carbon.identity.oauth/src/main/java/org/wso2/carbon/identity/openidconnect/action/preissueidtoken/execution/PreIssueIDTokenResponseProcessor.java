@@ -352,7 +352,9 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
             }
 
             Object claimValue = claim.getValue();
-            if (isValidPrimitiveValue(claimValue) || isValidListValue(claimValue)) {
+            if (isValidPrimitiveValue(claimValue)
+                    || isValidListValue(claimValue)
+                    || isValidMapValue(claimValue)) {
                 responseIDTokenDTO.getCustomOIDCClaims().put(claim.getName(), claim.getValue());
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Claim added.");
             } else {
@@ -401,6 +403,15 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         }
         List<?> list = (List<?>) value;
         return list.stream().allMatch(item -> item instanceof String);
+    }
+
+    private boolean isValidMapValue(Object value) {
+
+        if (!(value instanceof Map<?, ?>)) {
+            return false;
+        }
+        Map<?, ?> map = (Map<?, ?>) value;
+        return true;
     }
 
     private OperationExecutionResult handleRemoveOperation(PerformableOperation operation, IDToken requestedIDToken,
