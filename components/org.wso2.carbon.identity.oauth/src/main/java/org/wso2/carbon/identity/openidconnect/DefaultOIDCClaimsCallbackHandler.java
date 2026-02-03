@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -74,6 +75,7 @@ import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ID_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
@@ -219,8 +221,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         Map<String, Object> filteredUserClaimsByOIDCScopes =
                 filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
 
-        // TODO: Get claims filtered by essential claims and add to returning claims
-        // https://github.com/wso2/product-is/issues/2680
+        /*
+         * Add the essential claims from the authorization grant cache if any.
+         * This will be used for the request object flow where essential claims are requested.
+         */
+        Map<String, Object> essentialClaims = getEssentialClaims(accessToken, userClaimsInOIDCDialect);
+        filteredUserClaimsByOIDCScopes.putAll(essentialClaims);
 
         if (accessToken != null) {
             if (StringUtils.isNotBlank(authorizationCode)) {
@@ -255,6 +261,37 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
                 spTenantDomain, isConsentedToken);
+    }
+
+    private Map<String, Object> getEssentialClaims(String accessToken, Map<String, Object> claims) {
+
+        Map<String, Object> essentialClaimMap = new HashMap<>();
+        List<String> essentialClaims = getEssentialClaimUris(accessToken);
+        if (CollectionUtils.isNotEmpty(essentialClaims)) {
+            for (String key : essentialClaims) {
+                if (claims.get(key) != null) {
+                    essentialClaimMap.put(key, claims.get(key));
+                }
+            }
+        }
+        return essentialClaimMap;
+    }
+
+    private List<String> getEssentialClaimUris(String accessToken) {
+
+        if (accessToken != null) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
+                    .getValueFromCacheByToken(cacheKey);
+
+            if (cacheEntry != null) {
+                if (StringUtils.isNotEmpty(cacheEntry.getEssentialClaims())) {
+                    return OAuth2Util.getEssentialClaims(cacheEntry.getEssentialClaims(), ID_TOKEN);
+                }
+            }
+        }
+
+        return new ArrayList<>();
     }
 
     private boolean isPreserverClaimUrisInAssertion(OAuthTokenReqMessageContext requestMsgCtx) {
