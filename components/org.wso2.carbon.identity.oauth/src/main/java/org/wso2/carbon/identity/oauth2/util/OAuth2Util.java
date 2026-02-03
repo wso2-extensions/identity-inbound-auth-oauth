@@ -549,43 +549,9 @@ public class OAuth2Util {
 
         if (StringUtils.isNotBlank(scopeStr)) {
             scopeStr = scopeStr.trim();
-            return scopeStr.split("\\s");
+            return scopeStr.split("\\s+");
         }
         return new String[0];
-    }
-
-    /**
-     * Extracts the scope claim from a JWT token as a space-delimited string, supporting both string and array formats.
-     * This method handles compatibility for JWT tokens that may have scope as either:
-     * - A string with space-delimited scopes (e.g., "openid profile email")
-     * - An array of scope strings (e.g., ["openid", "profile", "email"]) - will be converted to space-delimited string
-     *
-     * @param claimsSet The JWT claims set containing the scope claim
-     * @return Space-delimited scope string, or null if scope claim is not present or invalid
-     */
-    public static String getScopeStringFromJWTClaims(JWTClaimsSet claimsSet) throws ParseException {
-
-        if (claimsSet == null) {
-            return null;
-        }
-
-        Object scopeClaim = claimsSet.getClaim(SCOPE);
-        if (scopeClaim == null) {
-            return null;
-        }
-
-        // Case 1: Standard String format.
-        if (scopeClaim instanceof String) {
-            return (String) scopeClaim;
-        }
-
-        // Case 2: Array/List format.
-        List<String> scopeList = claimsSet.getStringListClaim(SCOPE);
-        if (scopeList != null) {
-            return StringUtils.join(scopeList, " ");
-        }
-
-        return null;
     }
 
     /**

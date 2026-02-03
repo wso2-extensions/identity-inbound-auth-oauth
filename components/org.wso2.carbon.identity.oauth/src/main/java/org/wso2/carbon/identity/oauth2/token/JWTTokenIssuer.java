@@ -713,7 +713,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (StringUtils.isNotEmpty(scope)) {
             if (OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO)) {
                 // Convert space-delimited string to array.
-                jwtClaimsSetBuilder.claim(SCOPE, Arrays.asList(scope.split("\\s+")));
+                jwtClaimsSetBuilder.claim(SCOPE, Arrays.asList(OAuth2Util.buildScopeArray(scope)));
             } else {
                 // Use as space-delimited string (default).
                 jwtClaimsSetBuilder.claim(SCOPE, scope);

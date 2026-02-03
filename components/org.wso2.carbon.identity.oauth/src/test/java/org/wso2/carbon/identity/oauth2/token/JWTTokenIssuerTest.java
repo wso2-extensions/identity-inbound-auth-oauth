@@ -1012,6 +1012,8 @@ public class JWTTokenIssuerTest {
             
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class)))
                     .thenReturn("openid profile email");
+            oAuth2Util.when(() -> OAuth2Util.buildScopeArray(any(String.class)))
+                    .thenReturn(new String[]{"openid", "profile", "email"});
             oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))

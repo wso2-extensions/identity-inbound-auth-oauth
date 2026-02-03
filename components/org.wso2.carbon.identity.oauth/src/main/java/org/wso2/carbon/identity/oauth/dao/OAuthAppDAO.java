@@ -1116,14 +1116,9 @@ public class OAuthAppDAO {
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
-        if (oauthAppDO.isJwtScopeAsArrayEnabled() == null) {
-            deleteOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    ENABLE_JWT_SCOPE_AS_ARRAY, prepStatementForPropertyDelete);
-        } else {
-            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(oauthAppDO.isJwtScopeAsArrayEnabled()),
-                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-        }
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(oauthAppDO.isJwtScopeAsArrayEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
@@ -1156,23 +1151,6 @@ public class OAuthAppDAO {
                     propertyKey, propertyValue);
         }
 
-    }
-
-    private void deleteOIDCSpProperty(String preprocessedClientId,
-                                      int spTenantId,
-                                      Map<String, List<String>> spOIDCProperties,
-                                      String propertyKey,
-                                      PreparedStatement prepStatementForPropertyDelete) throws SQLException {
-
-        if (propertyAlreadyExists(spOIDCProperties, propertyKey)) {
-            List<String> existingValues = spOIDCProperties.get(propertyKey);
-            if (existingValues != null) {
-                for (String existingValue : existingValues) {
-                    addToBatchForOIDCPropertyDelete(preprocessedClientId, spTenantId,
-                            prepStatementForPropertyDelete, propertyKey, existingValue);
-                }
-            }
-        }
     }
 
     private void addToBatchForOIDCPropertyAdd(String consumerKey,
@@ -2059,7 +2037,7 @@ public class OAuthAppDAO {
         }
 
         String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);
-        if (isJwtScopeAsArray != null) {
+        if (isJwtScopeAsArray != null && !isJwtScopeAsArray.equals("null")) {
             oauthApp.setJwtScopeAsArrayEnabled(Boolean.parseBoolean(isJwtScopeAsArray));
         }
 
