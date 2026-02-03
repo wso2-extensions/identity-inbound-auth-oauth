@@ -426,7 +426,8 @@ public class AccessTokenIssuer {
         return null;
     }
 
-    private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry, OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
@@ -1441,7 +1442,7 @@ public class AccessTokenIssuer {
      *
      * @param authorizationGrantCacheEntry
      * @param tokenRespDTO
-     * @param isFederatedUser              indicates whether the user is a federated user.
+     * @param isFederatedUser indicates whether the user is a federated user.
      */
     private void cacheUserAttributesAgainstAccessToken(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                                        OAuth2AccessTokenRespDTO tokenRespDTO, boolean isFederatedUser) {
