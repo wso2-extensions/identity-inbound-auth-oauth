@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDToken
 
 import java.io.Serializable;
 import java.util.Properties;
+import java.util.List;
 
 /**
  * OAuth authorization request message context.
@@ -67,6 +68,8 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private boolean isPreIssueIDTokenActionExecuted;
 
     private IDTokenDTO preIssueIDTokenActionDTO;
+
+    private List<String> audiences;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -319,5 +322,13 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
 
         this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
+    }
+
+    public List<String> getAudiences() {
+        return audiences;
+    }
+
+    public void setAudiences(List<String> audiences) {
+        this.audiences = audiences;
     }
 }
