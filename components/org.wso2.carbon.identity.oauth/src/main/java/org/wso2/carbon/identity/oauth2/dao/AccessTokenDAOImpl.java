@@ -1902,7 +1902,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
 
         try {
-            String sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME;
+            String sqlQuery = SQLQueries.
+                    GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, userStoreDomain);
 
             ps = connection.prepareStatement(sqlQuery);
@@ -1929,6 +1930,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String authenticatedIDP = null;
                     authenticatedIDP = rs.getString(6);
                     authorizedOrganizationId = rs.getString(8);
+                    Timestamp timeCreated = rs.getTimestamp(9, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    long validityPeriod = rs.getLong(10);
 
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
@@ -1941,6 +1944,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
                     aTokenDetail.setAuthorizedOrganizationId(authorizedOrganizationId);
+                    aTokenDetail.setIssuedTime(timeCreated);
+                    aTokenDetail.setValidityPeriod(validityPeriod);
                     tokenMap.put(token, aTokenDetail);
                 }
             }
