@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.extension.utils;
 
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.graaljs.JsGraalGraphBuilderFactory;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
@@ -46,7 +45,8 @@ public class EngineUtils {
         String scriptEngineName = IdentityUtil.getProperty(FrameworkConstants.SCRIPT_ENGINE_CONFIG);
         if (scriptEngineName != null) {
             if (StringUtils.equalsIgnoreCase(FrameworkConstants.GRAAL_JS, scriptEngineName)) {
-                return OpenJdkJSEngineImpl.getInstance();
+                // Ensure GraalVM JS is used when specified in config, instead of OpenJDK Nashorn.
+                return GraalVMJSEngineImpl.getInstance();
             } else if (StringUtils.equalsIgnoreCase(FrameworkConstants.OPENJDK_NASHORN, scriptEngineName)) {
                 return OpenJdkJSEngineImpl.getInstance();
             }
@@ -59,7 +59,7 @@ public class EngineUtils {
         try {
             Class.forName(GRAALJS_SCRIPTER_CLASS_NAME);
             return new GraalVMJSEngineImpl();
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException graalEx) {
             try {
                 Class.forName(OPENJDK_SCRIPT_CLASS_NAME);
                 return OpenJdkJSEngineImpl.getInstance();
