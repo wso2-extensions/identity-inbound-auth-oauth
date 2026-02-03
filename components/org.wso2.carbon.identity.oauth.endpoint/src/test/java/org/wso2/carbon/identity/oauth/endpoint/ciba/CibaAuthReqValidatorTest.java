@@ -104,4 +104,94 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
             throw (Exception) e.getTargetException();
         }
     }
+
+    @Test
+    public void testValidateScopesWithArrayFormat() throws Exception {
+
+        // Test: validateScopes() should handle JWT with scope as array without throwing exception.
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .claim("scope", java.util.Arrays.asList("openid", "profile", "email"))
+                .issuer("testClientId")
+                .build();
+
+        CibaAuthRequestValidator validator = new CibaAuthRequestValidator();
+        // This should not throw an exception - validateScopes uses getScopeStringFromJWTClaims internally.
+        invokePrivateMethod(validator, "validateScopes", claimsSet);
+    }
+
+    @Test
+    public void testValidateScopesWithStringFormat() throws Exception {
+
+        // Test: validateScopes() should handle JWT with scope as string.
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .claim("scope", "openid profile email")
+                .issuer("testClientId")
+                .build();
+
+        CibaAuthRequestValidator validator = new CibaAuthRequestValidator();
+        // This should not throw an exception - traditional string format still works
+        invokePrivateMethod(validator, "validateScopes", claimsSet);
+    }
+
+    @Test
+    public void testPrepareAuthCodeRequestSetsCorrectScopesWithArray() throws Exception {
+
+        // Test: prepareAuthCodeRequest() should correctly set scopes when JWT has scope as array
+        String requestJWT = buildSignedJWT(java.util.Arrays.asList("openid", "profile"));
+        
+        CibaAuthRequestValidator validator = new CibaAuthRequestValidator();
+        CibaAuthCodeRequest authCodeRequest = validator.prepareAuthCodeRequest(requestJWT);
+        
+        // Verify cibaAuthCodeRequest.setScopes was called with correctly converted scope array
+        org.testng.Assert.assertNotNull(authCodeRequest.getScopes());
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes().length, 2);
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes()[0], "openid");
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes()[1], "profile");
+    }
+
+    @Test
+    public void testPrepareAuthCodeRequestSetsCorrectScopesWithString() throws Exception {
+
+        // Test: prepareAuthCodeRequest() should correctly set scopes when JWT has scope as string
+        String requestJWT = buildSignedJWT("openid profile");
+        
+        CibaAuthRequestValidator validator = new CibaAuthRequestValidator();
+        CibaAuthCodeRequest authCodeRequest = validator.prepareAuthCodeRequest(requestJWT);
+        
+        // Verify cibaAuthCodeRequest.setScopes works with traditional string format
+        org.testng.Assert.assertNotNull(authCodeRequest.getScopes());
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes().length, 2);
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes()[0], "openid");
+        org.testng.Assert.assertEquals(authCodeRequest.getScopes()[1], "profile");
+    }
+
+    /**
+     * Helper method to build a signed JWT for testing.
+     */
+    private String buildSignedJWT(Object scopeValue) throws Exception {
+
+        com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(
+                com.nimbusds.jose.JWSAlgorithm.HS256).build();
+        
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .issuer("testClientId")
+                .audience("https://localhost:9443/oauth2/ciba")
+                .claim("scope", scopeValue)
+                .claim("login_hint", "testUser")
+                .claim("binding_message", "test1234")
+                .issueTime(new java.util.Date())
+                .expirationTime(new java.util.Date(System.currentTimeMillis() + 60000))
+                .notBeforeTime(new java.util.Date())
+                .jwtID(java.util.UUID.randomUUID().toString())
+                .build();
+
+        SignedJWT signedJWT = new SignedJWT(header, claimsSet);
+        
+        // Sign with HMAC
+        com.nimbusds.jose.crypto.MACSigner signer = new com.nimbusds.jose.crypto.MACSigner(
+                "secret1234567890secret1234567890".getBytes());
+        signedJWT.sign(signer);
+        
+        return signedJWT.serialize();
+    }
 }

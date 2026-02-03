@@ -165,6 +165,7 @@ public class OAuth2CibaEndpointTest {
 
         oAuth2Util = mockStatic(OAuth2Util.class);
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getScopeStringFromJWTClaims(any())).thenCallRealMethod();
 
         endpointUtil = mockStatic(EndpointUtil.class);
         endpointUtil.when(() -> EndpointUtil.getIssuerIdentifierFromClientId(any()))

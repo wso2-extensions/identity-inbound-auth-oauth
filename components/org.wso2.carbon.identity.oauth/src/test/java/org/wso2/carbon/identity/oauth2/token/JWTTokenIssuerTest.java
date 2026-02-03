@@ -927,6 +927,7 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience("dummyConsumerKey", appDO))
                     .thenReturn(Collections.singletonList("dummyConsumerKey"));
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenReturn("scope1 scope2");
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class))).thenReturn(false);
 
             oAuth2Util.when(() -> OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
@@ -965,6 +966,80 @@ public class JWTTokenIssuerTest {
             assertNotNull(map);
             assertNotNull(map.get("sub"));
             assertEquals(map.get("sub"), "dummyUserId");
+        }
+    }
+
+    @DataProvider(name = "scopeFormatProvider")
+    public Object[][] provideScopeFormatConfig() {
+        return new Object[][]{
+                {false, String.class, "openid profile email"},
+                {true, List.class, Arrays.asList("openid", "profile", "email")}
+        };
+    }
+
+    @Test(dataProvider = "scopeFormatProvider")
+    public void testBuildJWTTokenWithScopeFormat(boolean jwtScopeAsArrayEnabled, 
+                                                  Class<?> expectedScopeType,
+                                                  Object expectedScopeValue) throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            
+            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+            accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
+            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+            
+            OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+            reqMessageContext.setScope(new String[]{"openid", "profile", "email"});
+            reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("DUMMY_USERNAME");
+            authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
+            authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+            authenticatedUser.setUserId(DUMMY_USER_ID);
+            reqMessageContext.setAuthorizedUser(authenticatedUser);
+
+            prepareForBuildJWTToken(oAuth2Util);
+            mockGrantHandlers();
+            mockCustomClaimsCallbackHandler();
+            
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class)))
+                    .thenReturn("openid profile email");
+            oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
+                    .thenReturn(Collections.singletonList(DUMMY_CLIENT_ID));
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class)))
+                    .thenReturn(jwtScopeAsArrayEnabled);
+            
+            when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
+            when(mockOAuthServerConfiguration.getApplicationAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
+            
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
+            String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
+
+            PlainJWT plainJWT = PlainJWT.parse(jwtToken);
+            assertNotNull(plainJWT);
+            assertNotNull(plainJWT.getJWTClaimsSet());
+            
+            // Verify scope format based on configuration
+            Object scopeClaim = plainJWT.getJWTClaimsSet().getClaim("scope");
+            assertNotNull(scopeClaim, "Scope claim should be present in JWT");
+            assertTrue(expectedScopeType.isInstance(scopeClaim), 
+                    "Scope should be " + expectedScopeType.getSimpleName() + 
+                    " when jwtScopeAsArrayEnabled=" + jwtScopeAsArrayEnabled);
+            assertEquals(scopeClaim, expectedScopeValue, 
+                    "Scope value should match expected format");
         }
     }
 }

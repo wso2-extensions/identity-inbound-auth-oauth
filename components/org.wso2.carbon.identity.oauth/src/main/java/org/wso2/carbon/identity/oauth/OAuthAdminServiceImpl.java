@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2019-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -567,6 +567,7 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        app.setJwtScopeAsArrayEnabled(application.isJwtScopeAsArrayEnabled());
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
@@ -1034,6 +1035,7 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            oAuthAppDO.setJwtScopeAsArrayEnabled(consumerAppDTO.isJwtScopeAsArrayEnabled());
 
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                 // We check if the AT claims separation enabled at server level and

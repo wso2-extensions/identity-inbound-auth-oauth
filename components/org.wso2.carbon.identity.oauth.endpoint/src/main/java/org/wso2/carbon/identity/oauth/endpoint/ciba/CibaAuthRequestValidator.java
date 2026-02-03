@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -230,7 +230,10 @@ public class CibaAuthRequestValidator {
                 }
                 throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "missing parameter (scope).");
             }
-            if (StringUtils.isBlank(claimsSet.getStringClaim(Constants.SCOPE))) {
+            
+            // Retrieve scope supporting both string and array formats
+            String scope = OAuth2Util.getScopeStringFromJWTClaims(claimsSet);
+            if (StringUtils.isBlank(scope)) {
                 // Scope is with blank value.
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
@@ -761,7 +764,8 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setNotBeforeTime(claimsSet.getNotBeforeTime().getTime());
 
             // Setting the scope of the AuthenticationRequest.
-            cibaAuthCodeRequest.setScopes(OAuth2Util.buildScopeArray(claimsSet.getStringClaim(Constants.SCOPE)));
+            cibaAuthCodeRequest.setScopes(OAuth2Util.buildScopeArray(
+                    OAuth2Util.getScopeStringFromJWTClaims(claimsSet)));
 
             // Setting scope to CIBA AuthenticationRequest after validation.
             cibaAuthCodeRequest.setAcrValues(buildACRArray(claimsSet.getStringClaim(Constants.ACR_VALUES)));
