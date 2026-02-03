@@ -81,12 +81,12 @@ public class GraalVMJSEngineImpl implements JSEngine {
 
     @Override
     public JSEngine createEngine() throws ScriptException {
+
         try {
             // Close existing context if any
             if (context != null) {
                 context.close();
             }
-
             // Create a new isolated context
             this.context = Context.newBuilder(JS_LANGUAGE)
                     .allowHostAccess(HostAccess.ALL)
@@ -98,10 +98,8 @@ public class GraalVMJSEngineImpl implements JSEngine {
                     .allowEnvironmentAccess(EnvironmentAccess.NONE)
                     .allowExperimentalOptions(false)
                     .build();
-
             // Remove restricted functions
             context.eval(JS_LANGUAGE, REMOVE_FUNCTIONS);
-
             return GRAAL_VM_JS_ENGINE_INSTANCE;
         } catch (Exception e) {
             throw new ScriptException("Error creating GraalVM JavaScript engine: " + e.getMessage());
