@@ -302,6 +302,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 .getClientId());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
 
+        // Set explicitly requested audiences first (if present)
+        if (request.getAudiences() != null && !request.getAudiences().isEmpty()) {
+            jwtClaimsSetBuilder.audience(request.getAudiences());
+        }
+
         if (request.getScope() != null && Arrays.asList((request.getScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getScope()));
         }
@@ -337,6 +342,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         JWTClaimsSet jwtClaimsSet = createJWTClaimSet(request, null, request.getAuthorizationReqDTO()
                 .getConsumerKey());
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+
+        // Set explicitly requested audiences first (if present)
+        if (request.getAudiences() != null && !request.getAudiences().isEmpty()) {
+            jwtClaimsSetBuilder.audience(request.getAudiences());
+        }
 
         if (request.getApprovedScope() != null && Arrays.asList((request.getApprovedScope())).contains(AUDIENCE)) {
             jwtClaimsSetBuilder.audience(Arrays.asList(request.getApprovedScope()));
