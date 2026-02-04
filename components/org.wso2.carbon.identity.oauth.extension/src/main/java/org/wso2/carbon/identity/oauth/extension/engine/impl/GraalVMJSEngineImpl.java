@@ -24,6 +24,12 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.EnvironmentAccess;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Value;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsAuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsAuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsParameters;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsServletRequest;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsServletResponse;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.graaljs.JsGraalAuthenticatedUser;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 
 import java.util.HashMap;
@@ -55,10 +61,8 @@ public class GraalVMJSEngineImpl implements JSEngine {
 
     public GraalVMJSEngineImpl() {
 
-        // Changed HostAccess from NONE -> ALL so JS scripts can call public methods on bound Java objects (e.g., Log.info).
-        // This is safe because scripts are written by trusted parties;
         this.context = Context.newBuilder(JS_LANGUAGE)
-                .allowHostAccess(HostAccess.ALL)
+                .allowHostAccess(getHostAccess())
                 .allowHostClassLookup(className -> false)
                 .allowIO(false)
                 .allowCreateThread(false)
@@ -89,7 +93,7 @@ public class GraalVMJSEngineImpl implements JSEngine {
             }
             // Create a new isolated context
             this.context = Context.newBuilder(JS_LANGUAGE)
-                    .allowHostAccess(HostAccess.ALL)
+                    .allowHostAccess(getHostAccess())
                     .allowHostClassLookup(className -> false)
                     .allowIO(false)
                     .allowCreateThread(false)
@@ -105,6 +109,34 @@ public class GraalVMJSEngineImpl implements JSEngine {
             throw new ScriptException("Error creating GraalVM JavaScript engine: " + e.getMessage());
         }
     }
+
+    /*
+     * Configures and restricts Java host access for the GraalJS runtime to safely
+     * expose only the required framework objects to JavaScript.
+     */
+    public HostAccess getHostAccess() {
+
+        return HostAccess.newBuilder(HostAccess.EXPLICIT)
+                .allowMapAccess(true)
+                .allowListAccess(true)
+                .targetTypeMapping(Value.class, JsAuthenticationContext.class,
+                        (v) -> v.asProxyObject() instanceof JsAuthenticationContext,
+                        (v) -> (JsAuthenticationContext) v.asProxyObject())
+                .targetTypeMapping(Value.class, JsAuthenticatedUser.class,
+                        (v) -> v.asProxyObject() instanceof JsGraalAuthenticatedUser,
+                        (v) -> (JsAuthenticatedUser) v.asProxyObject())
+                .targetTypeMapping(Value.class, JsServletRequest.class,
+                        (v) -> v.asProxyObject() instanceof JsServletRequest,
+                        (v) -> (JsServletRequest) v.asProxyObject())
+                .targetTypeMapping(Value.class, JsServletResponse.class,
+                        (v) -> v.asProxyObject() instanceof JsServletResponse,
+                        (v) -> (JsServletResponse) v.asProxyObject())
+                .targetTypeMapping(Value.class, JsParameters.class,
+                        (v) -> v.asProxyObject() instanceof JsParameters,
+                        (v) -> (JsParameters) v.asProxyObject())
+                .build();
+    }
+
 
     @Override
     public JSEngine addBindings(Map<String, Object> bindings) {
