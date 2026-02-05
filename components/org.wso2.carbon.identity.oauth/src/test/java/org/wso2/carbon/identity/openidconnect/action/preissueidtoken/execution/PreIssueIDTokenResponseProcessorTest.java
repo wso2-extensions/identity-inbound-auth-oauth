@@ -641,6 +641,27 @@ public class PreIssueIDTokenResponseProcessorTest {
     }
 
     @Test
+    public void testProcessSuccessResponse_AddClaim_WithValidArrayValue()
+            throws ActionExecutionResponseProcessorException {
+
+        List<String> arrayValue = Arrays.asList("value1", "value2", "value3");
+        IDToken.Claim newClaim = new IDToken.Claim("user_permissions", arrayValue);
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                CLAIMS_PATH_PREFIX + TAIL_CHARACTER, newClaim));
+
+        IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, new HashMap<>());
+        assertNotNull(idTokenDTO.getCustomOIDCClaims());
+        assertTrue(idTokenDTO.getCustomOIDCClaims().containsKey("user_permissions"));
+        Object addedValue = idTokenDTO.getCustomOIDCClaims().get("user_permissions");
+        assertTrue(addedValue instanceof List, "The added claim value should be processed as a List.");
+
+        List<?> resultedList = (List<?>) addedValue;
+        assertEquals(resultedList.size(), 3);
+        assertEquals(resultedList, arrayValue, "The added list elements should match the values.");
+    }
+
+    @Test
     public void testProcessSuccessResponse_AddClaim_InvalidConversion()
             throws ActionExecutionResponseProcessorException {
 

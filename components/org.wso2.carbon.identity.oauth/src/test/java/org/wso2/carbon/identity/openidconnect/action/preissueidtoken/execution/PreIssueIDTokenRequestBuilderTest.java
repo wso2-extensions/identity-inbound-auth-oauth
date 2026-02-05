@@ -1662,4 +1662,29 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .getPaths();
         assertComplexPaths(replacePaths);
     }
+
+    @Test
+    public void testGetRemoveAndReplacePathsWithArrays() throws ActionExecutionRequestBuilderException {
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("array_claim", new String[]{"val1", "val2"});
+
+        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
+        idTokenDTO.setCustomOIDCClaims(customClaims);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest request = preIssueIDTokenRequestBuilder.buildActionExecutionRequest(
+                flowContext, null);
+        List<String> removePaths = request.getAllowedOperations().get(1).getPaths();
+        List<String> replacePaths = request.getAllowedOperations().get(2).getPaths();
+
+        Assert.assertTrue(removePaths.contains("/idToken/claims/array_claim"));
+        Assert.assertTrue(removePaths.contains("/idToken/claims/array_claim/"));
+
+        Assert.assertTrue(replacePaths.contains("/idToken/claims/array_claim"));
+        Assert.assertTrue(replacePaths.contains("/idToken/claims/array_claim/"));
+    }
 }
