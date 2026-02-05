@@ -49,8 +49,6 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -180,22 +178,17 @@ public class JwksEndpointTest {
                 threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, tenantDomain);
 
                 Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
-                Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-                getDeclaredFields0.setAccessible(true);
-                Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-                Field modifiers = null;
-                for (Field each : fields) {
-                    if ("modifiers".equals(each.getName())) {
-                        modifiers = each;
-                        break;
-                    }
-                }
-                modifiers.setAccessible(true);
-                modifiers.setInt(threadLocalPropertiesField,
-                        threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
 
                 threadLocalPropertiesField.setAccessible(true);
-                threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+
+                // Use Unsafe to modify static final fields in Java 12+
+                Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                unsafeField.setAccessible(true);
+                sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+                Object fieldBase = unsafe.staticFieldBase(threadLocalPropertiesField);
+                long fieldOffset = unsafe.staticFieldOffset(threadLocalPropertiesField);
+                unsafe.putObject(fieldBase, fieldOffset, threadLocalProperties);
 
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
 

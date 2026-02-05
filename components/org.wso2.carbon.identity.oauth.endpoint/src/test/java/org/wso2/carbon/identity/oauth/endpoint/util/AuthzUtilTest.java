@@ -147,7 +147,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -970,21 +969,17 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
             assertEquals((value != null), fileExists, "FormPostRedirectPage value is incorrect");
 
             Field formPostRedirectPage = authzUtilObject.getClass().getDeclaredField("formPostRedirectPage");
-            Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-            getDeclaredFields0.setAccessible(true);
-            Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-            Field modifiers = null;
-            for (Field each : fields) {
-                if ("modifiers".equals(each.getName())) {
-                    modifiers = each;
-                    break;
-                }
-            }
-            modifiers.setAccessible(true);
-            modifiers.setInt(formPostRedirectPage, formPostRedirectPage.getModifiers() & ~Modifier.FINAL);
 
             formPostRedirectPage.setAccessible(true);
-            formPostRedirectPage.set(authzUtilObject, value);
+
+            // Use Unsafe to modify static final fields in Java 12+
+            Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+            Object fieldBase = unsafe.staticFieldBase(formPostRedirectPage);
+            long fieldOffset = unsafe.staticFieldOffset(formPostRedirectPage);
+            unsafe.putObject(fieldBase, fieldOffset, value);
 
             Method createFormPage = authzUtilObject.getClass().getDeclaredMethod("createFormPage", String.class,
                     String.class, String.class, String.class);

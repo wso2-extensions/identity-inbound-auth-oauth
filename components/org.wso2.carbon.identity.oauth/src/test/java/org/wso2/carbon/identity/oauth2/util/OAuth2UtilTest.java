@@ -124,7 +124,6 @@ import org.wso2.carbon.utils.NetworkUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -3088,11 +3087,14 @@ public class OAuth2UtilTest {
         Field field = clazz.getDeclaredField(fieldName);
         field.setAccessible(true);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
 
-        field.set(null, value);
+        Object fieldBase = unsafe.staticFieldBase(field);
+        long fieldOffset = unsafe.staticFieldOffset(field);
+        unsafe.putObject(fieldBase, fieldOffset, value);
     }
 
     @DataProvider(name = "appResidentOrganizationIdProvider")

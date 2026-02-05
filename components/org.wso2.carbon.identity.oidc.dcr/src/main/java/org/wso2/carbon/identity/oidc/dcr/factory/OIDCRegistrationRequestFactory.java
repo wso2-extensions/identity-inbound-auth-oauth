@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oidc.dcr.factory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
@@ -47,6 +48,7 @@ public class OIDCRegistrationRequestFactory extends RegistrationRequestFactory {
     private static final Log log = LogFactory.getLog(OIDCRegistrationRequestFactory.class);
 
     @Override
+    @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public boolean canHandle(HttpServletRequest request, HttpServletResponse response) throws
             FrameworkRuntimeException {
 

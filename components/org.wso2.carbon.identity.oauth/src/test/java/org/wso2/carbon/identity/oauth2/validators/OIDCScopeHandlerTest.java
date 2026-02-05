@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -132,9 +131,6 @@ public class OIDCScopeHandlerTest {
     private void setFinalField(Object object, String fieldName, Object value) throws Exception {
         Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
         field.set(object, value);
     }
 

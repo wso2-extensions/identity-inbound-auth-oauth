@@ -77,9 +77,6 @@ import org.wso2.carbon.user.core.UserStoreManager;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -739,23 +736,11 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private void setStaticField(Class classname,
                                 String fieldName,
                                 Object value)
-            throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+            throws NoSuchFieldException, IllegalAccessException {
 
         Field declaredField = classname.getDeclaredField(fieldName);
         declaredField.setAccessible(true);
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(declaredField, declaredField.getModifiers() & ~Modifier.FINAL);
 
         declaredField.set(null, value);
     }
