@@ -21,21 +21,19 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementServiceImpl;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.api.UserStoreClientException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.HashMap;
@@ -43,7 +41,7 @@ import java.util.Map;
 
 /**
  * Default implementation of CibaUserResolver.
- * 
+ * <p>
  * Resolves user identity from CIBA login_hint using the underlying user store.
  */
 public class DefaultCibaUserResolver implements CibaUserResolver {
@@ -53,10 +51,9 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
     private static volatile DefaultCibaUserResolver instance;
     private static final String EMAIL_CLAIM = "http://wso2.org/claims/emailaddress";
     private static final String MOBILE_CLAIM = "http://wso2.org/claims/mobile";
-    private static final String FIRST_NAME_CLAIM = "http://wso2.org/claims/givenname";
     private static final String USER_ID_CLAIM = "http://wso2.org/claims/userid";
-    
-    private static final String[] REQUIRED_CLAIMS = {EMAIL_CLAIM, MOBILE_CLAIM, FIRST_NAME_CLAIM, USER_ID_CLAIM};
+
+    private static final String[] REQUIRED_CLAIMS = { EMAIL_CLAIM, MOBILE_CLAIM, USER_ID_CLAIM };
 
     public static DefaultCibaUserResolver getInstance() {
 
@@ -71,7 +68,8 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
     }
 
     @Override
-    public ResolvedUser resolveUser(String loginHint, String tenantDomain) throws CibaCoreException {
+    public ResolvedUser resolveUser(String loginHint, String tenantDomain)
+            throws CibaClientException, CibaCoreException {
 
         if (StringUtils.isBlank(loginHint)) {
             throw new CibaCoreException("login_hint cannot be blank");
@@ -80,7 +78,7 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
         if (StringUtils.isBlank(tenantDomain)) {
             tenantDomain = MultitenantUtils.getTenantDomain(loginHint);
             if (StringUtils.isBlank(tenantDomain)) {
-                tenantDomain = "carbon.super";
+                tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
             }
         }
         String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(loginHint);
@@ -88,63 +86,87 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
         if (StringUtils.isBlank(userStoreDomain)) {
             userStoreDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
         }
+
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            UserStoreManager userStoreManager = getUserStoreManager(tenantDomain, tenantId, tenantAwareUsername);
+            UserStoreManager userStoreManager = getUserStoreManager(tenantDomain, tenantId);
 
-            // Get user claims.
-            Map<String, String> claimValues = userStoreManager.getUserClaimValues(
-                    tenantAwareUsername, REQUIRED_CLAIMS, null);
-            
+            boolean isUserFound = false;
+            String resolvedUserId = null;
+            String resolvedUsername = null;
+            Map<String, String> claimValues = null;
+
+            // 1. Try to resolve as a Username.
+            if (userStoreManager.isExistingUser(tenantAwareUsername)) {
+                isUserFound = true;
+                resolvedUsername = tenantAwareUsername;
+                claimValues = userStoreManager.getUserClaimValues(resolvedUsername, REQUIRED_CLAIMS, null);
+            }
+
+            // 2. If not found, try to resolve as a User ID.
+            if (!isUserFound && userStoreManager instanceof AbstractUserStoreManager) {
+                AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
+                // Identifying the login hint as a possible user ID.
+                try {
+                    if (abstractUserStoreManager.isExistingUserWithID(tenantAwareUsername)) {
+                        isUserFound = true;
+                        resolvedUserId = tenantAwareUsername;
+                        resolvedUsername = abstractUserStoreManager.getUserNameFromUserID(resolvedUserId);
+                        claimValues = abstractUserStoreManager.getUserClaimValuesWithID(resolvedUserId, REQUIRED_CLAIMS,
+                                null);
+                    }
+                } catch (Exception e) {
+                    // Ignore exception and fallback to not found.
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error occurred while checking if the user exists with ID: " + tenantAwareUsername,
+                                e);
+                    }
+                }
+            }
+
+            if (!isUserFound) {
+                // Returning a generic error to avoid user enumeration.
+                throw new CibaClientException("Invalid login_hint provided.");
+            }
+
             if (claimValues == null) {
                 claimValues = new HashMap<>();
             }
-            
+
             // Build resolved user.
             ResolvedUser resolvedUser = new ResolvedUser();
-            resolvedUser.setUsername(tenantAwareUsername);
+            resolvedUser.setUsername(resolvedUsername);
             resolvedUser.setUserStoreDomain(userStoreDomain);
             resolvedUser.setTenantDomain(tenantDomain);
             resolvedUser.setEmail(claimValues.get(EMAIL_CLAIM));
             resolvedUser.setMobile(claimValues.get(MOBILE_CLAIM));
-            resolvedUser.setFirstName(claimValues.get(FIRST_NAME_CLAIM));
-            resolvedUser.setUserId(claimValues.get(USER_ID_CLAIM));
-            resolvedUser.setClaims(claimValues);
-            
-            if (log.isDebugEnabled()) {
-                log.debug("Resolved user from login_hint: " + loginHint + 
-                        ", username: " + tenantAwareUsername + 
-                        ", email: " + (StringUtils.isNotBlank(resolvedUser.getEmail()) ? "present" : "not set") +
-                        ", mobile: " + (StringUtils.isNotBlank(resolvedUser.getMobile()) ? "present" : "not set"));
+
+            // If resolvedUserId is null (resolved by username), get it from claims.
+            if (resolvedUserId == null) {
+                resolvedUserId = claimValues.get(USER_ID_CLAIM);
             }
-            
+            resolvedUser.setUserId(resolvedUserId);
+            resolvedUser.setClaims(claimValues);
             return resolvedUser;
-            
+
+        } catch (UserStoreClientException e) {
+            throw new CibaClientException("Client error resolving user from login_hint: " + loginHint, e);
         } catch (UserStoreException e) {
             throw new CibaCoreException("Error resolving user from login_hint: " + loginHint, e);
         }
     }
 
-    private static UserStoreManager getUserStoreManager(String tenantDomain, int tenantId, String tenantAwareUsername)
+    private static UserStoreManager getUserStoreManager(String tenantDomain, int tenantId)
             throws CibaCoreException, UserStoreException {
 
         RealmService realmService = CibaServiceComponentHolder.getInstance().getRealmService();
         if (realmService == null) {
             throw new CibaCoreException("RealmService is not available");
         }
-
         UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
-
         if (userRealm == null) {
             throw new CibaCoreException("User realm not found for tenant: " + tenantDomain);
         }
-
-        UserStoreManager userStoreManager = userRealm.getUserStoreManager();
-
-        // Check if user exists
-        if (!userStoreManager.isExistingUser(tenantAwareUsername)) {
-            throw new CibaCoreException("User not found for the provided login_hint");
-        }
-        return userStoreManager;
+        return userRealm.getUserStoreManager();
     }
 }

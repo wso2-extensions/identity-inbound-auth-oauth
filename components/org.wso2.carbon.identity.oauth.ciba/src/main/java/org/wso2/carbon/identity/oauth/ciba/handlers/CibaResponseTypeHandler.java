@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -61,12 +60,12 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         String authRequestId = authorizationReqDTO.getNonce();
+        boolean isAuthRequestProcessedSuccessfully = false;
+        String authCodeKey = null;
         try {
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
-
-            String authCodeKey =
-                    CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authRequestId);
+            authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authRequestId);
             String authenticatedUserId = cibaAuthenticatedUser.getUserId();
 
             // Get the resolved user and check if the resolved user is the same as the authenticated user.
@@ -85,6 +84,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             String redirectionURI = getCibaFlowCompletionPageURI(oAuthAppDO.getApplicationName(),
                     oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
             respDTO.setCallbackURI(redirectionURI);
+            isAuthRequestProcessedSuccessfully = true;
             return respDTO;
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting authenticated user and authentication " +
@@ -92,6 +92,10 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("Unable to find the authenticated user id for auth_code_key: " +
                     authRequestId, e);
+        } finally {
+            if  (!isAuthRequestProcessedSuccessfully && StringUtils.isNotBlank(authCodeKey)) {
+                CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(authCodeKey, AuthReqStatus.FAILED);
+            }
         }
     }
 

@@ -668,6 +668,11 @@ public final class OAuthConstants {
         public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
+
+        // CIBA Configuration Properties
+        public static final String CIBA_SEND_NOTIFICATION_TO_ALL_CHANNELS = "cibaSendNotificationToAllChannels";
+        public static final String CIBA_AUTH_REQ_EXPIRY_TIME = "cibaAuthReqExpiryTime";
+
         private OIDCConfigProperties() {
 
         }

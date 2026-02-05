@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
@@ -33,25 +35,29 @@ import org.wso2.carbon.user.core.common.User;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty.NOTIFICATION_CHANNEL;
+
 /**
  * SMS notification channel implementation for CIBA.
  * 
  * This channel sends authentication notifications via SMS using the
  * Identity Event framework's TRIGGER_SMS_NOTIFICATION event.
  */
-public class SmsCibaNotificationChannel implements CibaNotificationChannel {
+public class CibaSmsNotificationChannel implements CibaNotificationChannel {
 
-    private static final Log log = LogFactory.getLog(SmsCibaNotificationChannel.class);
+    private static final Log log = LogFactory.getLog(CibaSmsNotificationChannel.class);
 
     private static final String CHANNEL_NAME = "sms";
     private static final int PRIORITY = 20;
     
     // SMS template constants
     private static final String TEMPLATE_TYPE = "TEMPLATE_TYPE";
-    private static final String CIBA_AUTH_SMS_TEMPLATE = "CIBAAuthenticationSMSNotification";
-    private static final String AUTH_URL = "authentication-url";
+    private static final String CIBA_AUTH_SMS_TEMPLATE = "CIBASMSAuthenticationNotification2";
+    private static final String AUTH_URL = "ciba-auth-url";
     private static final String BINDING_MESSAGE_PARAM = "binding-message";
     private static final String MOBILE_NUMBER = "http://wso2.org/claims/mobile";
+    private static final String SEND_TO = "send-to";
+    private static final String EXPIRY_TIME = "expiry-time";
     private static final String TRIGGER_SMS_NOTIFICATION = "TRIGGER_SMS_NOTIFICATION_LOCAL";
 
     @Override
@@ -88,8 +94,8 @@ public class SmsCibaNotificationChannel implements CibaNotificationChannel {
     }
 
     @Override
-    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO, String authUrl,
-                                  String bindingMessage, String tenantDomain) throws CibaCoreException {
+    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
+                                 String authUrl, String bindingMessage, String tenantDomain) throws CibaCoreException {
 
         if (log.isDebugEnabled()) {
             log.debug("Sending CIBA authentication SMS to user: " + resolvedUser.getUsername() +
@@ -102,12 +108,16 @@ public class SmsCibaNotificationChannel implements CibaNotificationChannel {
                 throw new CibaCoreException("User does not have a mobile number configured.");
             }
 
-            // Build event properties for the SMS notification
+            // Build event properties for the SMS notification.
             Map<String, Object> properties = new HashMap<>();
             properties.put(IdentityEventConstants.EventProperty.USER_NAME, resolvedUser.getUsername());
+            properties.put(NOTIFICATION_CHANNEL, NotificationChannels.SMS_CHANNEL.getChannelType());
             properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
             properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, resolvedUser.getUserStoreDomain());
             properties.put(TEMPLATE_TYPE, CIBA_AUTH_SMS_TEMPLATE);
+            String expiryTimeInString = CibaUtils.getExpiryTimeAsString(cibaAuthCodeDO.getExpiresIn());
+            properties.put(EXPIRY_TIME, expiryTimeInString);
+            properties.put(SEND_TO, mobile);
             properties.put(AUTH_URL, authUrl);
             
             if (StringUtils.isNotBlank(bindingMessage)) {

@@ -178,9 +178,10 @@ public class OAuth2CibaEndpoint {
         try {
             cibaAuthCodeResponse = CibaAuthServiceFactory.getCibaAuthService()
                     .generateAuthCodeResponse(cibaAuthCodeRequest);
-        } catch (CibaCoreException | CibaClientException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
-                    "authentication response.", e);
+        } catch (CibaClientException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage(), e);
+        } catch (CibaCoreException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Internal server error occurred.", e);
         }
         return cibaAuthCodeResponse;
     }

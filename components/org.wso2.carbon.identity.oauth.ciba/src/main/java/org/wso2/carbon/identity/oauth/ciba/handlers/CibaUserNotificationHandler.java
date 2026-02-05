@@ -27,7 +27,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
-import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
 import java.util.List;
 
@@ -47,11 +47,13 @@ public class CibaUserNotificationHandler {
      * @param resolvedUser    The resolved user from login_hint
      * @param cibaAuthCodeDO  The CIBA auth code data object
      * @param bindingMessage  Optional binding message
+     * @param oAuthAppDO      The OAuth application data object containing app-level configuration
      * @throws CibaCoreException If notification sending fails
      */
     public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, 
                                   CibaAuthCodeDO cibaAuthCodeDO,
-                                  String bindingMessage) throws CibaCoreException {
+                                  String bindingMessage,
+                                  OAuthAppDO oAuthAppDO) throws CibaCoreException {
 
         if (resolvedUser == null) {
             throw new CibaCoreException("Resolved user cannot be null");
@@ -81,6 +83,13 @@ public class CibaUserNotificationHandler {
         }
 
         boolean notificationSent = false;
+        // Read configuration from app-level settings.
+        // Default to true (send to all channels) if OAuthAppDO is null or property not explicitly disabled.
+        boolean sendToAllChannels = oAuthAppDO == null || oAuthAppDO.isCibaSendNotificationToAllChannels();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Send notification to all channels config enabled: " + sendToAllChannels);
+        }
 
         // Try each channel in priority order
         for (CibaNotificationChannel channel : channels) {
@@ -97,14 +106,16 @@ public class CibaUserNotificationHandler {
                         log.debug("Successfully sent CIBA notification via: " + channel.getName());
                     }
                     
-                    // Successfully sent via one channel, can break
-                    // If you want to send via ALL applicable channels, remove this break
-                    break;
+                    // If sendToAllChannels is disabled (default), break after first successful send.
+                    // If enabled, continue to send via all applicable channels.
+                    if (!sendToAllChannels) {
+                        break;
+                    }
                 }
             } catch (CibaCoreException e) {
                 log.warn("Failed to send notification via channel: " + channel.getName() + 
                         ", error: " + e.getMessage());
-                // Continue to try other channels
+                // Continue to try other channels.
             }
         }
 
