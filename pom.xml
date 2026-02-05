@@ -324,6 +324,11 @@
                 <version>${nimbusds.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.orbit.graalvm.sdk</groupId>
+                <artifactId>graal-sdk</artifactId>
+                <version>${graalvm.wso2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>net.minidev</groupId>
                 <artifactId>json-smart</artifactId>
                 <version>${json-smart.version}</version>
@@ -1034,6 +1039,8 @@
 
         <nimbusds.version>10.3.0.wso2v1</nimbusds.version>
         <nimbusds.osgi.version.range>[10.0.0,11.0.0)</nimbusds.osgi.version.range>
+
+        <graalvm.wso2.version>22.3.4.wso2v1</graalvm.wso2.version>
 
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>
