@@ -405,9 +405,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         
         while (System.currentTimeMillis() - startTime < waitTimeMs) {
             try {
-                // Re-fetch status from DB
+                // Re-fetch status from DB.
                 String authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authReqId);
-                CibaAuthCodeDO refreshed = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCode(authCodeKey);
+                CibaAuthCodeDO refreshed = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCode(
+                        authCodeKey);
                 
                 if (refreshed.getAuthReqStatus() == AuthReqStatus.AUTHENTICATED) {
                     if (log.isDebugEnabled()) {

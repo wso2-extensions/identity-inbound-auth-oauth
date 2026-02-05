@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+
 import java.util.Map;
 
 /**
@@ -34,7 +36,7 @@ public interface CibaUserResolver {
      * @return ResolvedUser containing user details and claims
      * @throws CibaCoreException If user resolution fails
      */
-    ResolvedUser resolveUser(String loginHint, String tenantDomain) throws CibaCoreException;
+    ResolvedUser resolveUser(String loginHint, String tenantDomain) throws CibaClientException, CibaCoreException;
 
     /**
      * Represents a resolved user with claims.
@@ -47,7 +49,6 @@ public interface CibaUserResolver {
         private String tenantDomain;
         private String email;
         private String mobile;
-        private String firstName;
         private Map<String, String> claims;
 
         public void setUserId(String userId) {
@@ -97,14 +98,6 @@ public interface CibaUserResolver {
 
         public void setMobile(String mobile) {
             this.mobile = mobile;
-        }
-
-        public String getFirstName() {
-            return firstName;
-        }
-
-        public void setFirstName(String firstName) {
-            this.firstName = firstName;
         }
 
         public Map<String, String> getClaims() {

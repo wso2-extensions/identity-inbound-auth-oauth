@@ -30,11 +30,12 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
-import org.wso2.carbon.identity.oauth.ciba.handlers.*;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.DefaultCibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaEmailNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
-import org.wso2.carbon.identity.oauth.ciba.notifications.ConsoleCibaNotificationChannel;
-import org.wso2.carbon.identity.oauth.ciba.notifications.EmailCibaNotificationChannel;
-import org.wso2.carbon.identity.oauth.ciba.notifications.SmsCibaNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaSmsNotificationChannel;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -58,17 +59,13 @@ public class CibaServiceComponent {
                     new CibaAuthServiceImpl(), null);
             
             // Register default notification channels
-            EmailCibaNotificationChannel emailChannel = new EmailCibaNotificationChannel();
-            SmsCibaNotificationChannel smsChannel = new SmsCibaNotificationChannel();
-            ConsoleCibaNotificationChannel consoleChannel = new ConsoleCibaNotificationChannel();
+            CibaEmailNotificationChannel emailChannel = new CibaEmailNotificationChannel();
+            CibaSmsNotificationChannel smsChannel = new CibaSmsNotificationChannel();
             
             context.getBundleContext().registerService(CibaNotificationChannel.class.getName(),
                     emailChannel, null);
             context.getBundleContext().registerService(CibaNotificationChannel.class.getName(),
                     smsChannel, null);
-            // TODO: Debug only - remove before production
-            context.getBundleContext().registerService(CibaNotificationChannel.class.getName(),
-                    consoleChannel, null);
 
             context.getBundleContext().registerService(ResponseTypeRequestValidator.class.getName(),
                     new CibaResponseTypeRequestValidator(), null);

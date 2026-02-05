@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.ciba.notifications;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
-import org.wso2.carbon.user.core.common.User;
 
 /**
  * SPI interface for CIBA notification channels.
