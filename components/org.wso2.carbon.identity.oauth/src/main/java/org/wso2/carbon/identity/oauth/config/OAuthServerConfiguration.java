@@ -350,6 +350,10 @@ public class OAuthServerConfiguration {
     // Property to check whether to drop unregistered scopes.
     private boolean dropUnregisteredScopes = false;
 
+    // CIBA configurations
+    private String defaultCibaUserResolverClassName =
+            "org.wso2.carbon.identity.oauth.ciba.validators.impl.DefaultCibaUserResolverImpl";
+
     // Properties for OAuth2 Device Code Grant type.
     private int deviceCodeKeyLength = 6;
     private long deviceCodeExpiryTime = 600000L;
@@ -2083,6 +2087,11 @@ public class OAuthServerConfiguration {
     public String getDeviceCodeKeySet() {
 
         return deviceCodeKeySet;
+    }
+
+    public String getDefaultCibaUserResolverClassName() {
+
+        return defaultCibaUserResolverClassName;
     }
 
     private void parseOAuthCallbackHandlers(OMElement callbackHandlersElem) {
