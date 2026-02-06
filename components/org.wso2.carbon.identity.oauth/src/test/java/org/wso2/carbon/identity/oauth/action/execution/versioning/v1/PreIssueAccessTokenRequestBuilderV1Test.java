@@ -16,9 +16,8 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.action.execution;
+package org.wso2.carbon.identity.oauth.action.execution.versioning.v1;
 
-import org.apache.commons.codec.binary.Base64;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
@@ -28,19 +27,21 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
 import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
-import org.wso2.carbon.identity.action.execution.api.model.Header;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
 import org.wso2.carbon.identity.action.execution.api.model.Organization;
-import org.wso2.carbon.identity.action.execution.api.model.Param;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
+import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
+import org.wso2.carbon.identity.oauth.action.execution.versioning.PreIssueAccessTokenRequestBuilderBaseTestCase;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
@@ -48,8 +49,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
-import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -75,13 +74,11 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertNotNull;
 
 /**
- * Unit test class for PreIssueAccessTokenRequestBuilder class.
+ * Unit test class for PreIssueAccessTokenRequestBuilderV1.
  */
-public class PreIssueAccessTokenRequestBuilderTest {
+public class PreIssueAccessTokenRequestBuilderV1Test extends PreIssueAccessTokenRequestBuilderBaseTestCase {
 
     @Mock
     OrganizationManager mockOrganizationManager;
@@ -112,6 +109,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     private static final String USER_STORE_TEST = "PRIMARY";
     private static final String TEST_URL = "https://test.com/oauth2/token";
     private static final String AUDIENCE_TEST = "audience1";
+    private static final String ACTION_VERSION_V1 = "v1";
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -186,6 +184,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
                 new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
                         .depth(ORG_DEPTH).build();
 
+        ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
+        Action mockAction = mock(Action.class);
+        when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V1);
+        when(mockContext.getAction()).thenReturn(mockAction);
+
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class)) {
 
@@ -198,108 +201,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
                     buildActionExecutionRequest(
-                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
+                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), mockContext);
             Assert.assertNotNull(actionExecutionRequest);
             Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
             assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
             assertAllowedOperations(actionExecutionRequest.getAllowedOperations(), getExpectedAllowedOperations());
-        }
-    }
-
-    /**
-     * Assert that the actual event matches the expected event.
-     *
-     * @param actualEvent   The actual PreIssueAccessTokenEvent.
-     * @param expectedEvent The expected PreIssueAccessTokenEvent.
-     */
-
-    private void assertEvent(PreIssueAccessTokenEvent actualEvent, PreIssueAccessTokenEvent expectedEvent) {
-
-        assertEquals(expectedEvent.getTenant().getId(), actualEvent.getTenant().getId());
-        assertOrganization(expectedEvent.getOrganization(), actualEvent.getOrganization());
-        assertOrganization(expectedEvent.getUser().getOrganization(), actualEvent.getUser().getOrganization());
-        assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
-        assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
-    }
-
-    private void assertOrganization(Organization expectedOrg, Organization actualOrg) {
-
-        assertNotNull(actualOrg);
-        assertEquals(actualOrg.getId(), expectedOrg.getId());
-        assertEquals(actualOrg.getName(), expectedOrg.getName());
-    }
-
-    /**
-     * Assert that the actual access token matches the expected access token.
-     *
-     * @param actualAccessToken   The actual AccessToken.
-     * @param expectedAccessToken The expected AccessToken.
-     */
-
-    private static void assertAccessToken(AccessToken actualAccessToken, AccessToken expectedAccessToken) {
-
-        Assert.assertEquals(actualAccessToken.getClaims().size(), expectedAccessToken.getClaims().size());
-        for (int i = 0; i < expectedAccessToken.getClaims().size(); i++) {
-            AccessToken.Claim actualClaim = actualAccessToken.getClaims().get(i);
-            AccessToken.Claim expectedClaim = expectedAccessToken.getClaims().get(i);
-            Assert.assertEquals(actualClaim.getName(), expectedClaim.getName());
-            Assert.assertEquals(actualClaim.getValue(), expectedClaim.getValue());
-        }
-        Assert.assertEquals(actualAccessToken.getScopes().size(), expectedAccessToken.getScopes().size());
-        for (int i = 0; i < expectedAccessToken.getScopes().size(); i++) {
-            String actualScope = expectedAccessToken.getScopes().get(i);
-            String expectedScope = expectedAccessToken.getScopes().get(i);
-            Assert.assertEquals(actualScope, expectedScope);
-        }
-    }
-
-    /**
-     * Assert that the actual token request matches the expected token request.
-     *
-     * @param actualRequest   The actual TokenRequest.
-     * @param expectedRequest The expected TokenRequest.
-     */
-    private static void assertRequest(TokenRequest actualRequest, TokenRequest expectedRequest) {
-
-        Assert.assertEquals(actualRequest.getClientId(), expectedRequest.getClientId());
-        Assert.assertEquals(actualRequest.getGrantType(), expectedRequest.getGrantType());
-        Assert.assertEquals(actualRequest.getScopes().size(), expectedRequest.getScopes().size());
-        for (int i = 0; i < expectedRequest.getScopes().size(); i++) {
-            Assert.assertEquals(actualRequest.getScopes().get(i), expectedRequest.getScopes().get(i));
-        }
-        Assert.assertEquals(actualRequest.getAdditionalHeaders().size(), expectedRequest.getAdditionalHeaders().size());
-        for (int i = 0; i < expectedRequest.getAdditionalHeaders().size(); i++) {
-            Header actualAdditionalHeader = actualRequest.getAdditionalHeaders().get(i);
-            Header expectedAdditionalHeader = expectedRequest.getAdditionalHeaders().get(i);
-            Assert.assertEquals(actualAdditionalHeader.getName(), expectedAdditionalHeader.getName());
-            Assert.assertEquals(actualAdditionalHeader.getValue(), expectedAdditionalHeader.getValue());
-        }
-        Assert.assertEquals(actualRequest.getAdditionalParams().size(), expectedRequest.getAdditionalParams().size());
-        for (int i = 0; i < expectedRequest.getAdditionalParams().size(); i++) {
-            Param actualAdditionalParam = actualRequest.getAdditionalParams().get(i);
-            Param expectedAdditionalParam = expectedRequest.getAdditionalParams().get(i);
-            Assert.assertEquals(actualAdditionalParam.getName(), expectedAdditionalParam.getName());
-            Assert.assertEquals(actualAdditionalParam.getValue(), expectedAdditionalParam.getValue());
-        }
-    }
-
-    /**
-     * Assert that the actual allowed operations match the expected allowed operations.
-     *
-     * @param actual   List of actual AllowedOperation.
-     * @param expected List of expected AllowedOperation.
-     */
-    private void assertAllowedOperations(List<AllowedOperation> actual, List<AllowedOperation> expected) {
-
-        Assert.assertEquals(actual.size(), expected.size());
-        for (int i = 0; i < expected.size(); i++) {
-            AllowedOperation expectedOperation = expected.get(i);
-            AllowedOperation actualOperation = actual.get(i);
-            Assert.assertEquals(expectedOperation.getOp(), actualOperation.getOp());
-            Assert.assertEquals(expectedOperation.getPaths().size(), actualOperation.getPaths().size());
-            for (int j = 0; j < expectedOperation.getPaths().size(); j++) {
-                Assert.assertEquals(expectedOperation.getPaths().get(j), actualOperation.getPaths().get(j));
-            }
         }
     }
 
@@ -308,37 +214,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
         OAuth2AccessTokenReqDTO tokenReqDTO = mockTokenRequestDTO();
         AuthenticatedUser authenticatedUser = mockAuthenticatedUser();
         return mockMessageContext(tokenReqDTO, authenticatedUser);
-    }
-
-    /**
-     * Mock the OAuth2 access token request DTO.
-     *
-     * @return OAuth2AccessTokenReqDTO containing mock token request data.
-     */
-    private OAuth2AccessTokenReqDTO mockTokenRequestDTO() {
-
-        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setClientId(CLIENT_ID_TEST);
-        tokenReqDTO.setClientSecret(CLIENT_SECRET_TEST);
-        tokenReqDTO.setGrantType(GRANT_TYPE_TEST);
-        tokenReqDTO.setTenantDomain(TENANT_DOMAIN_TEST);
-        tokenReqDTO.setResourceOwnerUsername(USERNAME_TEST);
-        tokenReqDTO.setResourceOwnerPassword(PASSWORD_TEST);
-        tokenReqDTO.setScope(new String[]{"scope1", "scope2"});
-        HttpRequestHeader[] requestHeaders = new HttpRequestHeader[]{
-                new HttpRequestHeader("authorization",
-                        getBase64EncodedString(CLIENT_ID_TEST, CLIENT_SECRET_TEST)),
-                new HttpRequestHeader("accept", "application/json")
-        };
-        tokenReqDTO.setHttpRequestHeaders(requestHeaders);
-        RequestParameter[] requestParameters = new RequestParameter[]{
-                new RequestParameter("grant_type", GRANT_TYPE_TEST),
-                new RequestParameter("username", USERNAME_TEST),
-                new RequestParameter("password", PASSWORD_TEST),
-                new RequestParameter("scope", "scope1", "scope2")
-        };
-        tokenReqDTO.setRequestParameters(requestParameters);
-        return tokenReqDTO;
     }
 
     /**
@@ -358,25 +233,35 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     /**
-     * Mock the OAuthTokenReqMessageContext for testing.
+     * Get the expected allowed operations for the action execution request.
      *
-     * @param tokenReqDTO       The OAuth2AccessTokenReqDTO used in the message context.
-     * @param authenticatedUser The authenticated user for the request.
-     * @return OAuthTokenReqMessageContext with mock data.
+     * @return List of AllowedOperation representing the expected operations.
      */
-    private static OAuthTokenReqMessageContext mockMessageContext(OAuth2AccessTokenReqDTO tokenReqDTO,
-                                                                  AuthenticatedUser authenticatedUser) {
+    private List<AllowedOperation> getExpectedAllowedOperations() {
 
-        OAuthTokenReqMessageContext tokenMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-        tokenMessageContext.setAuthorizedUser(authenticatedUser);
-        tokenMessageContext.setScope(new String[]{"scope1", "scope2"});
+        List<AllowedOperation> allowedOperations = new ArrayList<>();
+        AllowedOperation addOperation = new AllowedOperation();
+        addOperation.setOp(Operation.ADD);
+        addOperation.setPaths(Arrays.asList(
+                "/accessToken/claims/",
+                "/accessToken/scopes/",
+                "/accessToken/claims/aud/"));
+        AllowedOperation removeOperation = new AllowedOperation();
+        removeOperation.setOp(Operation.REMOVE);
+        removeOperation.setPaths(Arrays.asList(
+                "/accessToken/scopes/",
+                "/accessToken/claims/aud/"));
+        AllowedOperation replaceOperation = new AllowedOperation();
+        replaceOperation.setOp(Operation.REPLACE);
+        replaceOperation.setPaths(Arrays.asList(
+                "/accessToken/scopes/",
+                "/accessToken/claims/aud/",
+                "/accessToken/claims/expires_in"));
+        allowedOperations.add(addOperation);
+        allowedOperations.add(removeOperation);
+        allowedOperations.add(replaceOperation);
 
-        tokenMessageContext.setPreIssueAccessTokenActionsExecuted(false);
-        tokenMessageContext.setAudiences(Collections.singletonList(AUDIENCE_TEST));
-
-        tokenMessageContext.addProperty("USER_TYPE", "APPLICATION_USER");
-        tokenMessageContext.setValidityPeriod(3600000L);
-        return tokenMessageContext;
+        return allowedOperations;
     }
 
     /**
@@ -418,49 +303,4 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
         return eventBuilder.build();
     }
-
-    /**
-     * Get the expected allowed operations for the action execution request.
-     *
-     * @return List of AllowedOperation representing the expected operations.
-     */
-    private List<AllowedOperation> getExpectedAllowedOperations() {
-
-        List<AllowedOperation> allowedOperations = new ArrayList<>();
-        AllowedOperation addOperation = new AllowedOperation();
-        addOperation.setOp(Operation.ADD);
-        addOperation.setPaths(Arrays.asList(
-                "/accessToken/claims/",
-                "/accessToken/scopes/",
-                "/accessToken/claims/aud/"));
-        AllowedOperation removeOperation = new AllowedOperation();
-        removeOperation.setOp(Operation.REMOVE);
-        removeOperation.setPaths(Arrays.asList(
-                "/accessToken/scopes/",
-                "/accessToken/claims/aud/"));
-        AllowedOperation replaceOperation = new AllowedOperation();
-        replaceOperation.setOp(Operation.REPLACE);
-        replaceOperation.setPaths(Arrays.asList(
-                "/accessToken/scopes/",
-                "/accessToken/claims/aud/",
-                "/accessToken/claims/expires_in"));
-        allowedOperations.add(addOperation);
-        allowedOperations.add(removeOperation);
-        allowedOperations.add(replaceOperation);
-
-        return allowedOperations;
-    }
-
-    /**
-     * Encode the client ID and client secret as a Base64 encoded string.
-     *
-     * @param clientId     The client ID.
-     * @param clientSecret The client secret.
-     * @return Base64 encoded string representing client ID and secret.
-     */
-    private String getBase64EncodedString(String clientId, String clientSecret) {
-
-        return new String(Base64.encodeBase64((clientId + ":" + clientSecret).getBytes()));
-    }
-
 }
