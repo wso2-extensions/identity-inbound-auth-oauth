@@ -115,6 +115,11 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    // CIBA related properties.
+    // Default to true: send notifications to all channels unless explicitly disabled.
+    private boolean cibaSendNotificationToAllChannels = true;
+    // CIBA auth request expiry time in seconds. 0 means use default (3600 seconds).
+    private long cibaAuthReqExpiryTime;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -565,6 +570,26 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public boolean isCibaSendNotificationToAllChannels() {
+
+        return cibaSendNotificationToAllChannels;
+    }
+
+    public void setCibaSendNotificationToAllChannels(boolean cibaSendNotificationToAllChannels) {
+
+        this.cibaSendNotificationToAllChannels = cibaSendNotificationToAllChannels;
+    }
+
+    public long getCibaAuthReqExpiryTime() {
+
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
     }
 
     /**

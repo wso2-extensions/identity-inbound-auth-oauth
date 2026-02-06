@@ -46,6 +46,11 @@ public class CibaConstants {
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
 
+    // CIBA User Authentication Endpoint constants.
+    public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
+    public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_authorize";
+    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
+
     private CibaConstants() {
 
     }

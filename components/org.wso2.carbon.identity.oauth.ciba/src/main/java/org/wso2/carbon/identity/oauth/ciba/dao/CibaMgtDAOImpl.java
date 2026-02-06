@@ -225,11 +225,39 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
+    public String getResolvedUserId(String authCodeKey) throws CibaCoreException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_RESOLVED_USER)) {
+
+                prepStmt.setString(1, authCodeKey);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Successfully obtained resolvedUserId of TokenRequest  with " +
+                                    "authCodeKey : " + authCodeKey);
+                        }
+                        return resultSet.getString(1);
+                    } else {
+                        throw new CibaCoreException(
+                                "No record found for resolvedUserId of TokenRequest identified by " +
+                                        "authCodeKey: " + authCodeKey);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new CibaCoreException("Error occurred in obtaining resolvedUserId of TokenRequest identified by " +
+                    "authCodeKey: " + authCodeKey, e);
+        }
+    }
+
+    @Override
     public void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
-                    CibaSQLQueries.STORE_CIBA_AUTH_CODE)) {
+                    CibaSQLQueries.STORE_CIBA_AUTH_CODE_WITH_RESOLVED_USER)) {
 
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
                 prepStmt.setString(2, cibaAuthCodeDO.getAuthReqId());
@@ -241,6 +269,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.setLong(6, cibaAuthCodeDO.getInterval());
                 prepStmt.setLong(7, cibaAuthCodeDO.getExpiresIn());
                 prepStmt.setString(8, cibaAuthCodeDO.getAuthReqStatus().toString());
+                prepStmt.setString(9, cibaAuthCodeDO.getResolvedUserId());
                 prepStmt.execute();
 
                 if (log.isDebugEnabled()) {

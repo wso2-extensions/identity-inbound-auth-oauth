@@ -99,7 +99,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Check whether provided authReqId is a valid and retrieve AuthCode if exists.
             CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
-            //Validate if auth_req_id belongs to the same client
+            // Validate if auth_req_id belongs to the same client.
             validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(),
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
 
@@ -124,7 +124,6 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 updateLastPolledTime(cibaAuthCodeDO);
                 throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
             }
-
             setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
             return true;
         } catch (CibaCoreException e) {
@@ -262,7 +261,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.info("User still not authenticated for the request made by client for request uniquely identified" +
+            log.debug("User still not authenticated for the request made by client for request uniquely identified" +
                     " by cibaAuthCodeKey : " + cibaAuthCodeKey);
         }
         return false;
@@ -284,7 +283,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.info("Token is not delivered for the request made for cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
+            log.debug("Token is not delivered for the request made for cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
         }
         return false;
     }
