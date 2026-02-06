@@ -116,10 +116,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      * @param oAuthAppDO     The OAuth application data object containing app-level
      *                       configuration
      */
-    private void sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser,
-            CibaAuthCodeDO cibaAuthCodeDO,
-            String bindingMessage,
-            OAuthAppDO oAuthAppDO) {
+    private void sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
+                                      String bindingMessage, OAuthAppDO oAuthAppDO) {
 
         try {
             CibaUserNotificationHandler notificationHandler = new CibaUserNotificationHandler();

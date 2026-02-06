@@ -95,6 +95,11 @@
             <artifactId>mockito-testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

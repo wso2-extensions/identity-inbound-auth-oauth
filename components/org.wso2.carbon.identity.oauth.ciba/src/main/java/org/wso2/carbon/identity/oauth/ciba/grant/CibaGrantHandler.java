@@ -40,10 +40,6 @@ import java.util.List;
 import java.util.TimeZone;
 
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.AUTH_REQ_ID;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_LONG_POLLING_WAIT_TIME_MS;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LONG_POLLING_CHECK_INTERVAL_MS;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LONG_POLLING_ENABLED_CONFIG;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LONG_POLLING_WAIT_TIME_CONFIG;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.SEC_TO_MILLISEC_FACTOR;
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.AUTHORIZATION_PENDING;
 import static org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes.EXPIRED_AUTH_REQ_ID;
@@ -125,21 +121,8 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
             // Validate whether user is authenticated.
             if (isAuthorizationPending(cibaAuthCodeDO)) {
-                // If long polling is enabled, wait for authentication before returning pending
-                if (isLongPollingEnabled()) {
-                    boolean authenticated = waitForAuthentication(authReqId, getLongPollingWaitTime());
-                    if (authenticated) {
-                        // Refresh the cibaAuthCodeDO from DB with updated status.
-                        cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
-                        // Continue to token issuance.
-                    } else {
-                        updateLastPolledTime(cibaAuthCodeDO);
-                        throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
-                    }
-                } else {
-                    updateLastPolledTime(cibaAuthCodeDO);
-                    throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
-                }
+                updateLastPolledTime(cibaAuthCodeDO);
+                throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
             }
             setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
             return true;
@@ -357,91 +340,5 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID, e);
         }
-    }
-
-    /**
-     * Check if long polling is enabled via configuration.
-     *
-     * @return true if long polling is enabled, false otherwise
-     */
-    private boolean isLongPollingEnabled() {
-        // Read from server configuration. Default is false (opt-in).
-        String enabled = System.getProperty(LONG_POLLING_ENABLED_CONFIG, "false");
-        return Boolean.parseBoolean(enabled);
-    }
-
-    /**
-     * Get the long polling wait time from configuration.
-     *
-     * @return Wait time in milliseconds
-     */
-    private long getLongPollingWaitTime() {
-        String waitTime = System.getProperty(LONG_POLLING_WAIT_TIME_CONFIG);
-        if (waitTime != null) {
-            try {
-                return Long.parseLong(waitTime);
-            } catch (NumberFormatException e) {
-                log.warn("Invalid long polling wait time configuration. Using default.");
-            }
-        }
-        return DEFAULT_LONG_POLLING_WAIT_TIME_MS;
-    }
-
-    /**
-     * Wait for the authentication status to change from REQUESTED to AUTHENTICATED.
-     * This method polls the database periodically until the status changes or timeout is reached.
-     *
-     * @param authReqId  The authentication request identifier
-     * @param waitTimeMs Maximum time to wait in milliseconds
-     * @return true if authenticated within the wait time, false otherwise
-     */
-    private boolean waitForAuthentication(String authReqId, long waitTimeMs) {
-        long startTime = System.currentTimeMillis();
-        
-        if (log.isDebugEnabled()) {
-            log.debug("Starting long polling for auth_req_id: " + authReqId + 
-                    " with wait time: " + waitTimeMs + "ms");
-        }
-        
-        while (System.currentTimeMillis() - startTime < waitTimeMs) {
-            try {
-                // Re-fetch status from DB.
-                String authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authReqId);
-                CibaAuthCodeDO refreshed = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCode(
-                        authCodeKey);
-                
-                if (refreshed.getAuthReqStatus() == AuthReqStatus.AUTHENTICATED) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Authentication completed for auth_req_id: " + authReqId);
-                    }
-                    return true;
-                }
-                
-                // Exit early on terminal states
-                if (refreshed.getAuthReqStatus() == AuthReqStatus.FAILED ||
-                    refreshed.getAuthReqStatus() == AuthReqStatus.CONSENT_DENIED ||
-                    refreshed.getAuthReqStatus() == AuthReqStatus.EXPIRED) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Terminal state reached for auth_req_id: " + authReqId + 
-                                ", status: " + refreshed.getAuthReqStatus());
-                    }
-                    return false;
-                }
-                
-                Thread.sleep(LONG_POLLING_CHECK_INTERVAL_MS);
-            } catch (CibaCoreException e) {
-                log.warn("Error checking authentication status during long polling: " + e.getMessage());
-                return false;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.debug("Long polling interrupted for auth_req_id: " + authReqId);
-                return false;
-            }
-        }
-        
-        if (log.isDebugEnabled()) {
-            log.debug("Long polling timeout reached for auth_req_id: " + authReqId);
-        }
-        return false;
     }
 }

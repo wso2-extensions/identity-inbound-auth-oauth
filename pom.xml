@@ -302,6 +302,13 @@
                 <version>${account.lock.service.version}</version>
             </dependency>
 
+            <!-- Carbon Identity Governance dependencies -->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.governance</artifactId>
+                <version>${carbon.identity.governance.version}</version>
+            </dependency>
+
             <!-- Orbit dependencies -->
             <dependency>
                 <groupId>com.google.gdata.wso2</groupId>
@@ -1014,6 +1021,10 @@
         <!-- Account lock service versions -->
         <account.lock.service.version>1.9.11</account.lock.service.version>
         <account.lock.service.imp.pkg.version.range>[1.9.11, 2.0.0)</account.lock.service.imp.pkg.version.range>
+
+        <!-- Identity Governance versions -->
+        <carbon.identity.governance.version>1.11.158</carbon.identity.governance.version>
+        <carbon.identity.governance.imp.pkg.version.range>[1.11.158, 2.0.0)</carbon.identity.governance.imp.pkg.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
