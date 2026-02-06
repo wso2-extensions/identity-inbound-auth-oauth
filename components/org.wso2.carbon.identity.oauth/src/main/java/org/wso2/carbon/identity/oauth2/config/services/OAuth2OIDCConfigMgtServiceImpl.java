@@ -166,14 +166,15 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
                                     for (ApplicationBasicInfo appBasicInfo : orgAppBasicInfoList) {
                                         ServiceProvider applicationBasicInfo = OAuth2ServiceComponentHolder.
                                                 getApplicationMgtService().getApplicationByResourceId(
-                                                        appBasicInfo.getUuid(), subOrgTenantDomain);
+                                                        appBasicInfo.getApplicationResourceId(), subOrgTenantDomain);
                                         if (applicationBasicInfo.getInboundAuthenticationConfig() != null) {
                                             for (int i = 0; i < applicationBasicInfo.getInboundAuthenticationConfig().
                                                     getInboundAuthenticationRequestConfigs().length; i++) {
                                                 InboundAuthenticationRequestConfig inboundAuthConfig =
                                                         applicationBasicInfo.getInboundAuthenticationConfig().
                                                         getInboundAuthenticationRequestConfigs()[i];
-                                                if (!"oauth2".equals(inboundAuthConfig.getInboundAuthType())) {
+                                                if (!OAuth2OIDCConfigConstants.INBOUND_PROTOCOL_TYPE_OAUTH2.
+                                                        equals(inboundAuthConfig.getInboundAuthType())) {
                                                     continue;
                                                 }
                                                 OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(
