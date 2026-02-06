@@ -25,8 +25,8 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtClientException;
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtClientException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerUsageScopeConfig;
 import org.wso2.carbon.identity.oauth2.config.models.UsageScope;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -38,23 +38,24 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.TENANT_NA
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
 
 /**
- * Contains OAuth2 / OIDC configuration management related utility methods.
+ * Contains OAuth2 / OIDC configuration organization usage scope management related utility methods.
  */
-public class OAuth2OIDCConfigUtils {
+public class OAuth2OIDCConfigOrgUsageScopeUtils {
 
-    private static final Log LOG = LogFactory.getLog(OAuth2OIDCConfigUtils.class);
+    private static final Log LOG = LogFactory.getLog(OAuth2OIDCConfigOrgUsageScopeUtils.class);
 
-    private OAuth2OIDCConfigUtils() {}
+    private OAuth2OIDCConfigOrgUsageScopeUtils() {}
 
     /**
      * Returns the default issuer usage scope config for the given tenant domain.
      *
      * @param tenantDomain Tenant domain.
      * @return Default IssuerUsageScopeConfig.
-     * @throws OAuth2OIDCConfigMgtServerException If an error occurs while building the issuer location.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtServerException If an error occurs while building the default issuer
+     * usage scope config.
      */
     public static IssuerUsageScopeConfig getDefaultIssuerUsageScopeConfig(String tenantDomain)
-            throws OAuth2OIDCConfigMgtServerException {
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Extracting default issuer usage scope config for tenant: " + tenantDomain);
@@ -71,9 +72,10 @@ public class OAuth2OIDCConfigUtils {
      *
      * @param tenantDomain Tenant domain whose issuer location is to be retrieved.
      * @return Issuer location.
-     * @throws OAuth2OIDCConfigMgtServerException If an error occurs while building the issuer location.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtServerException If an error occurs while building the issuer location.
      */
-    public static String getIssuerLocation(String tenantDomain) throws OAuth2OIDCConfigMgtServerException {
+    public static String getIssuerLocation(String tenantDomain)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         String prevThreadLocalTenant = null;
         String prevRootTenant = null;
@@ -101,21 +103,22 @@ public class OAuth2OIDCConfigUtils {
                 issuerLocation = OAuth2Util.getIssuerLocation(tenantDomain);
             } else {
                 PrivilegedCarbonContext.startTenantFlow();
+                tenantFlowStarted = true;
                 String primaryOrganizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
                         getPrimaryOrganizationId(orgId);
                 String primaryTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
                         resolveTenantDomain(primaryOrganizationId);
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(primaryTenantDomain);
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(orgId);
-                tenantFlowStarted = true;
                 IdentityUtil.threadLocalProperties.get().put(TENANT_NAME_FROM_CONTEXT, primaryTenantDomain);
                 IdentityUtil.threadLocalProperties.get().put(OrganizationManagementConstants.ROOT_TENANT_DOMAIN, null);
                 issuerLocation = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             }
             return issuerLocation;
         } catch (IdentityOAuth2Exception | OrganizationManagementException | URLBuilderException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_BUILD,
-                    e, tenantDomain);
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_USAGE_SCOPE_ISSUER_BUILD, e,
+                    tenantDomain);
         } finally {
             IdentityUtil.threadLocalProperties.get().put(TENANT_NAME_FROM_CONTEXT, prevThreadLocalTenant);
             IdentityUtil.threadLocalProperties.get().put(OrganizationManagementConstants.ROOT_TENANT_DOMAIN,
@@ -132,12 +135,13 @@ public class OAuth2OIDCConfigUtils {
      * @param error The error message and code associated with the server exception.
      * @param e     The underlying cause of the server exception.
      * @param data  Additional data to be included in the error message.
-     * @return An instance of OAuth2OIDCConfigMgtServerException.
+     * @return An instance of OAuth2OIDCConfigOrgUsageScopeMgtServerException.
      */
-    public static OAuth2OIDCConfigMgtServerException handleServerException(OAuth2OIDCConfigMgtErrorMessages error,
-                                                                           Throwable e, String... data) {
+    public static OAuth2OIDCConfigOrgUsageScopeMgtServerException handleServerException(
+            OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages error, Throwable e, String... data) {
 
-        return new OAuth2OIDCConfigMgtServerException(String.format(error.getDescription(), data), error.getCode(), e);
+        return new OAuth2OIDCConfigOrgUsageScopeMgtServerException(String.format(error.getDescription(), data),
+                error.getCode(), e);
     }
 
     /**
@@ -146,12 +150,12 @@ public class OAuth2OIDCConfigUtils {
      * @param error The error message and code associated with the client exception.
      * @param e     The underlying cause of the client exception.
      * @param data  Additional data to be included in the error message.
-     * @return An instance of OAuth2OIDCConfigMgtClientException.
+     * @return An instance of OAuth2OIDCConfigOrgUsageScopeMgtClientException.
      */
-    public static OAuth2OIDCConfigMgtClientException handleClientException(OAuth2OIDCConfigMgtErrorMessages error,
-                                                                           Throwable e, String... data) {
+    public static OAuth2OIDCConfigOrgUsageScopeMgtClientException handleClientException(
+            OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages error, Throwable e, String... data) {
 
-        return new OAuth2OIDCConfigMgtClientException(String.format(error.getDescription(), data),
+        return new OAuth2OIDCConfigOrgUsageScopeMgtClientException(String.format(error.getDescription(), data),
                 error.getCode(), e);
     }
 }

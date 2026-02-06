@@ -37,18 +37,18 @@ import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtException;
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerUsageScopeConfig;
-import org.wso2.carbon.identity.oauth2.config.models.OAuth2OIDCConfig;
 import org.wso2.carbon.identity.oauth2.config.models.UsageScope;
-import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigConstants;
-import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigMgtErrorMessages;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeMgtConstants;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.MergeAllAggregationStrategy;
 
 import java.util.Collections;
@@ -57,36 +57,38 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils.getDefaultIssuerUsageScopeConfig;
-import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils.getIssuerLocation;
-import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils.handleClientException;
-import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils.handleServerException;
+import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.
+        getDefaultIssuerUsageScopeConfig;
+import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation;
+import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.handleClientException;
+import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.handleServerException;
 
 /**
  * Implementation of OAuth2OIDCConfigMgtService interface for OAuth2 / OIDC configuration management.
  */
-public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtService {
+public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCConfigOrgUsageScopeMgtService {
 
-    private static final Log LOG = LogFactory.getLog(OAuth2OIDCConfigMgtServiceImpl.class);
+    private static final Log LOG = LogFactory.getLog(OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl.class);
 
     /**
-     * Returns the OAuth2 / OIDC configurations of the tenant.
+     * Returns the issuer usage scope of the tenant. If there is no specific configuration found for the tenant,
+     * it returns the default issuer usage scope which is ALL_EXISTING_AND_FUTURE_ORGS.
      *
-     * @param tenantDomain Tenant domain to which the configurations belong to.
-     * @return OAuth2OIDCConfig object containing the OAuth2 / OIDC configurations of the tenant.
-     * @throws OAuth2OIDCConfigMgtException Error while retrieving the OAuth2 / OIDC configurations of the tenant.
+     * @param tenantDomain Tenant domain to which the issuer usage scope belongs to.
+     * @return IssuerUsageScopeConfig object containing the usage scope of the issuer configuration.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException Error while retrieving the issuer usage scope config of
+     * the tenant.
      */
     @Override
-    public OAuth2OIDCConfig getOAuth2OIDCConfigs(String tenantDomain) throws OAuth2OIDCConfigMgtException {
-
-        OAuth2OIDCConfig oAuth2OIDCConfig = new OAuth2OIDCConfig();
+    public IssuerUsageScopeConfig getIssuerUsageScopeConfig(String tenantDomain)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtException {
 
         // Getting issuer usage Scope configuration.
         IssuerUsageScopeConfig issuerUsageScopeConfig;
         Resource resource;
         try {
-            resource = getResource(OAuth2OIDCConfigConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
-                    OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
+            resource = getResource(OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
 
             if (resource == null) {
                 // Getting the default configurations.
@@ -100,122 +102,124 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
                 issuerUsageScopeConfig.setIssuer(getIssuerLocation(tenantDomain));
             }
         } catch (ConfigurationManagementException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_RETRIEVE, e,
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_USAGE_SCOPE_CONFIG_RETRIEVE, e,
                     tenantDomain);
         }
-        oAuth2OIDCConfig.setIssuerUsageScopeConfig(issuerUsageScopeConfig);
-
-        return oAuth2OIDCConfig;
+        return issuerUsageScopeConfig;
     }
 
     /**
-     * Updates the OAuth2 / OIDC configurations of the tenant with the provided configurations.
+     * Updates the issuer usage scope configurations of the tenant with the provided configurations.
      *
      * @param tenantDomain Tenant domain to which the configurations belong to.
-     * @param oAuth2OIDCConfig OAuth2OIDCConfig object containing the updated OAuth2 / OIDC configurations.
-     * @return OAuth2OIDCConfig object containing the updated OAuth2 / OIDC configurations of the tenant.
-     * @throws OAuth2OIDCConfigMgtException Error while updating the OAuth2 / OIDC configurations of the tenant.
+     * @param issuerUsageScopeConfig OAuth2OIDCConfig object containing the updated issuer usage scope configurations.
+     * @return IssuerUsageScopeConfig object containing the updated issuer usage scope configurations of the tenant.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException Error while updating the issuer usage scope configurations
+     * of the tenant.
      */
     @Override
-    public OAuth2OIDCConfig updateOAuth2OIDCConfigs(String tenantDomain, OAuth2OIDCConfig oAuth2OIDCConfig)
-            throws OAuth2OIDCConfigMgtException {
+    public IssuerUsageScopeConfig updateIssuerUsageScopeConfig(String tenantDomain,
+                                                               IssuerUsageScopeConfig issuerUsageScopeConfig)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtException {
 
-        if (oAuth2OIDCConfig == null) {
-            throw handleClientException(OAuth2OIDCConfigMgtErrorMessages.
-                    ERROR_CODE_OAUTH2_OIDC_CONFIG_EMPTY_PATCH_OBJECT, null, tenantDomain);
+        if (issuerUsageScopeConfig == null || issuerUsageScopeConfig.getUsageScope() == null) {
+            throw handleClientException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_USAGE_SCOPE_CONFIG_EMPTY_PATCH_OBJECT, null, tenantDomain);
         }
 
-        if (oAuth2OIDCConfig.getIssuerUsageScopeConfig() != null) {
-            Resource existingResource;
-            try {
-                existingResource = getResource(OAuth2OIDCConfigConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
-                        OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
-            } catch (ConfigurationManagementException e) {
-                throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_RETRIEVE, e,
-                        tenantDomain);
-            }
-            IssuerUsageScopeConfig issuerUsageScopeConfig = oAuth2OIDCConfig.getIssuerUsageScopeConfig();
-            List<Attribute> attributes = Collections.singletonList(
-                    new Attribute(OAuth2OIDCConfigConstants.ISSUER_USAGE_SCOPE_USAGE_SCOPE_ATTRIBUTE,
-                            issuerUsageScopeConfig.getUsageScope().getValue())
-            );
-            if (UsageScope.NONE.equals(issuerUsageScopeConfig.getUsageScope())) {
-                boolean isIssuerUsedInSubOrgs = false;
-                String subOrgTenantDomain = null;
-                try {
-                    String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                            resolveOrganizationId(tenantDomain);
-                    List<String> orgIdList = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                            .getChildOrganizationsIds(orgId, true);
-                    String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-                    if (!orgIdList.isEmpty()) {
-                        outerLoop:
-                        for (String subOrgId : orgIdList) {
-                            subOrgTenantDomain = OAuth2ServiceComponentHolder.getInstance()
-                                    .getOrganizationManager().resolveTenantDomain(subOrgId);
-                            int appCount = OAuth2ServiceComponentHolder.getApplicationMgtService().
-                                    getCountOfApplications(subOrgTenantDomain, username, null, true);
-                            int limit = 100;
-                            int offset = 0;
+        Resource existingResource;
+        try {
+            existingResource = getResource(
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_USAGE_SCOPE_CONFIG_RETRIEVE, e,
+                    tenantDomain);
+        }
 
-                            while (offset < appCount) {
-                                ApplicationBasicInfo[] orgAppBasicInfoList = OAuth2ServiceComponentHolder.
-                                        getApplicationMgtService().getApplicationBasicInfo(subOrgTenantDomain,
-                                                username, null, offset, limit, Boolean.TRUE);
-                                if (orgAppBasicInfoList != null) {
-                                    for (ApplicationBasicInfo appBasicInfo : orgAppBasicInfoList) {
-                                        ServiceProvider applicationBasicInfo = OAuth2ServiceComponentHolder.
-                                                getApplicationMgtService().getApplicationByResourceId(
-                                                        appBasicInfo.getUuid(), subOrgTenantDomain);
-                                        if (applicationBasicInfo.getInboundAuthenticationConfig() != null) {
-                                            for (int i = 0; i < applicationBasicInfo.getInboundAuthenticationConfig().
-                                                    getInboundAuthenticationRequestConfigs().length; i++) {
-                                                InboundAuthenticationRequestConfig inboundAuthConfig =
-                                                        applicationBasicInfo.getInboundAuthenticationConfig().
-                                                        getInboundAuthenticationRequestConfigs()[i];
-                                                if (!"oauth2".equals(inboundAuthConfig.getInboundAuthType())) {
-                                                    continue;
-                                                }
-                                                OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(
-                                                        inboundAuthConfig.getInboundAuthKey(),
-                                                        subOrgTenantDomain);
-                                                if (oauthAppDO != null) {
-                                                    String appIssuerOrg = oauthAppDO.getIssuerOrg();
-                                                    if (appIssuerOrg == null ||
-                                                            StringUtils.equals(appIssuerOrg, orgId)) {
-                                                        isIssuerUsedInSubOrgs = true;
-                                                        break outerLoop;
-                                                    }
+        List<Attribute> attributes = Collections.singletonList(
+                new Attribute(OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_USAGE_SCOPE_ATTRIBUTE,
+                        issuerUsageScopeConfig.getUsageScope().getValue())
+        );
+
+        /*
+         If the usage scope is NONE, we need to check whether there are applications in the sub-organizations of
+         the tenant that are using the issuer of the tenant. If there are such applications, we cannot update the
+         usage scope to NONE as it will break those applications.
+        */
+        if (UsageScope.NONE.equals(issuerUsageScopeConfig.getUsageScope())) {
+            boolean isIssuerUsedInSubOrgs = false;
+            String subOrgTenantDomain = null;
+            try {
+                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveOrganizationId(tenantDomain);
+                List<String> orgIdList = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .getChildOrganizationsIds(orgId, true);
+                String username = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+                if (!orgIdList.isEmpty()) {
+                    outerLoop:
+                    for (String subOrgId : orgIdList) {
+                        subOrgTenantDomain = OAuth2ServiceComponentHolder.getInstance()
+                                .getOrganizationManager().resolveTenantDomain(subOrgId);
+                        int appCount = OAuth2ServiceComponentHolder.getApplicationMgtService().
+                                getCountOfApplications(subOrgTenantDomain, username, null, true);
+                        int limit = 100;
+                        int offset = 0;
+
+                        while (offset < appCount) {
+                            ApplicationBasicInfo[] orgAppBasicInfoList = OAuth2ServiceComponentHolder.
+                                    getApplicationMgtService().getApplicationBasicInfo(subOrgTenantDomain,
+                                            username, null, offset, limit, Boolean.TRUE);
+                            if (orgAppBasicInfoList != null) {
+                                for (ApplicationBasicInfo appBasicInfo : orgAppBasicInfoList) {
+                                    ServiceProvider applicationBasicInfo = OAuth2ServiceComponentHolder.
+                                            getApplicationMgtService().getApplicationByResourceId(
+                                                    appBasicInfo.getApplicationResourceId(), subOrgTenantDomain);
+                                    if (applicationBasicInfo.getInboundAuthenticationConfig() != null) {
+                                        for (int i = 0; i < applicationBasicInfo.getInboundAuthenticationConfig().
+                                                getInboundAuthenticationRequestConfigs().length; i++) {
+                                            InboundAuthenticationRequestConfig inboundAuthConfig =
+                                                    applicationBasicInfo.getInboundAuthenticationConfig().
+                                                    getInboundAuthenticationRequestConfigs()[i];
+                                            if (!OAuth2OIDCConfigOrgUsageScopeMgtConstants.INBOUND_PROTOCOL_TYPE_OAUTH2.
+                                                    equals(inboundAuthConfig.getInboundAuthType())) {
+                                                continue;
+                                            }
+                                            OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(
+                                                    inboundAuthConfig.getInboundAuthKey(),
+                                                    subOrgTenantDomain);
+                                            if (oauthAppDO != null) {
+                                                String appIssuerOrg = oauthAppDO.getIssuerOrg();
+                                                if (appIssuerOrg == null ||
+                                                        StringUtils.equals(appIssuerOrg, orgId)) {
+                                                    isIssuerUsedInSubOrgs = true;
+                                                    break outerLoop;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                offset += limit;
                             }
+                            offset += limit;
                         }
                     }
-                } catch (OrganizationManagementException e) {
-                    throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                            ERROR_CODE_OAUTH2_OIDC_CONFIG_ORG_RESOLVE, e, tenantDomain);
-                } catch (IdentityApplicationManagementException e) {
-                    throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                                    ERROR_CODE_OAUTH2_OIDC_CONFIG_APP_RETRIEVE, e, subOrgTenantDomain);
-                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                    throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                            ERROR_CODE_OAUTH2_OIDC_CONFIG_APP_INFO_RETRIEVE, e, StringUtils.EMPTY);
                 }
+            } catch (OrganizationManagementException e) {
+                throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                        ERROR_CODE_USAGE_SCOPE_ORG_RESOLVE, e, tenantDomain);
+            } catch (IdentityApplicationManagementException e) {
+                throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                        ERROR_CODE_USAGE_SCOPE_APP_RETRIEVE, e, subOrgTenantDomain);
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                        ERROR_CODE_USAGE_SCOPE_APP_INFO_RETRIEVE, e, StringUtils.EMPTY);
+            }
 
-                if (isIssuerUsedInSubOrgs) {
-                    throw handleClientException(OAuth2OIDCConfigMgtErrorMessages.
-                            ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_SCOPE_CHANGE_REJECT, null, tenantDomain);
-                } else {
-                    if (existingResource == null) {
-                        addConfigurationResource(tenantDomain, attributes);
-                    } else {
-                        replaceConfigurationResource(tenantDomain, attributes);
-                    }
-                }
+            if (isIssuerUsedInSubOrgs) {
+                throw handleClientException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                        ERROR_CODE_ISSUER_USAGE_SCOPE_CHANGE_REJECT, null, tenantDomain);
             } else {
                 if (existingResource == null) {
                     addConfigurationResource(tenantDomain, attributes);
@@ -223,41 +227,48 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
                     replaceConfigurationResource(tenantDomain, attributes);
                 }
             }
+        } else {
+            if (existingResource == null) {
+                addConfigurationResource(tenantDomain, attributes);
+            } else {
+                replaceConfigurationResource(tenantDomain, attributes);
+            }
         }
 
-        return getOAuth2OIDCConfigs(tenantDomain);
+        return getIssuerUsageScopeConfig(tenantDomain);
     }
 
     private void addConfigurationResource(String tenantDomain, List<Attribute> attributes)
-            throws OAuth2OIDCConfigMgtServerException {
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("No existing issuer usage scope configuration found for tenant: "
                     + tenantDomain + ". Patching the null resource with a new resource.");
         }
         ResourceAdd resourceAdd = new ResourceAdd();
-        resourceAdd.setName(OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME);
+        resourceAdd.setName(OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME);
         resourceAdd.setAttributes(attributes);
         try {
-            getConfigurationManager().addResource(OAuth2OIDCConfigConstants.
+            getConfigurationManager().addResource(OAuth2OIDCConfigOrgUsageScopeMgtConstants.
                     ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                    ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_SCOPE_ADD, e, tenantDomain);
+            throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_ISSUER_USAGE_SCOPE_ADD, e, tenantDomain);
         }
     }
 
     private void replaceConfigurationResource(String tenantDomain, List<Attribute> attributes)
-            throws OAuth2OIDCConfigMgtServerException {
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         ResourceAdd resourceAdd = new ResourceAdd();
-        resourceAdd.setName(OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME);
+        resourceAdd.setName(OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME);
         resourceAdd.setAttributes(attributes);
         try {
-            getConfigurationManager().replaceResource(OAuth2OIDCConfigConstants.
+            getConfigurationManager().replaceResource(OAuth2OIDCConfigOrgUsageScopeMgtConstants.
                     ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                    ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_SCOPE_UPDATE, e, tenantDomain);
+            throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_ISSUER_USAGE_SCOPE_UPDATE, e, tenantDomain);
         }
     }
 
@@ -267,10 +278,11 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
      * current carbon context.
      *
      * @return List of allowed issuer locations for the tenant.
-     * @throws OAuth2OIDCConfigMgtException Error while retrieving the allowed issuer locations for the tenant.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException Error while retrieving the allowed issuer locations for
+     * the tenant.
      */
     @Override
-    public List<String> getAllowedIssuers() throws OAuth2OIDCConfigMgtException {
+    public List<String> getAllowedIssuers() throws OAuth2OIDCConfigOrgUsageScopeMgtException {
 
         OrgResourceResolverService orgResourceResolverService = OAuth2ServiceComponentHolder.getInstance()
                 .getOrgResourceResolverService();
@@ -284,8 +296,9 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
             return orgResourceResolverService.getResourcesFromOrgHierarchy(orgId,
                     LambdaExceptionUtils.rethrowFunction(this::getAllowedIssuerForOrg),
                     new MergeAllAggregationStrategy<>(this::mergeIssuersInHierarchy));
-        } catch (Exception e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_RETRIEVE, e,
+        } catch (OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_USAGE_SCOPE_CONFIG_RETRIEVE, e,
                     tenantDomain);
         }
     }
@@ -296,10 +309,11 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
      * current carbon context.
      *
      * @return List of allowed issuer details for the tenant.
-     * @throws OAuth2OIDCConfigMgtException Error while retrieving the allowed issuer details for the tenant.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException Error while retrieving the allowed issuer details
+     * for the tenant.
      */
     @Override
-    public List<IssuerDetails> getAllowedIssuerDetails() throws OAuth2OIDCConfigMgtException {
+    public List<IssuerDetails> getAllowedIssuerDetails() throws OAuth2OIDCConfigOrgUsageScopeMgtException {
 
         OrgResourceResolverService orgResourceResolverService = OAuth2ServiceComponentHolder.getInstance()
                 .getOrgResourceResolverService();
@@ -320,13 +334,15 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
             return orgResourceResolverService.getResourcesFromOrgHierarchy(orgId,
                     LambdaExceptionUtils.rethrowFunction(this::getAllowedIssuerDetailsForOrg),
                     new MergeAllAggregationStrategy<>(this::mergeIssuersDetailsInHierarchy));
-        } catch (Exception e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_RETRIEVE, e,
+        } catch (OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_USAGE_SCOPE_CONFIG_RETRIEVE, e,
                     tenantDomain);
         }
     }
 
-    private Optional<List<String>> getAllowedIssuerForOrg(String orgId) throws OAuth2OIDCConfigMgtServerException {
+    private Optional<List<String>> getAllowedIssuerForOrg(String orgId)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         try {
             String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
@@ -337,8 +353,9 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
 
             IssuerUsageScopeConfig issuerUsageScopeConfig;
-            Resource resource = getResource(OAuth2OIDCConfigConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
-                    OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
+            Resource resource = getResource(
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
 
             if (resource == null) {
                 // Getting the default configurations.
@@ -355,17 +372,16 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
                 return Optional.of(Collections.singletonList(issuerUsageScopeConfig.getIssuer()));
             }
             return Optional.empty();
-        } catch (OrganizationManagementException | IdentityOAuth2Exception | ConfigurationManagementException |
-                 OAuth2OIDCConfigMgtServerException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                    ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_SCOPE_GET, e, orgId);
+        } catch (OrganizationManagementException | IdentityOAuth2Exception | ConfigurationManagementException e) {
+            throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_ISSUER_USAGE_SCOPE_GET, e, orgId);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
     private Optional<List<IssuerDetails>> getAllowedIssuerDetailsForOrg(String orgId) throws
-            OAuth2OIDCConfigMgtServerException {
+            OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         try {
             String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
@@ -376,8 +392,9 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
 
             IssuerUsageScopeConfig issuerUsageScopeConfig;
-            Resource resource = getResource(OAuth2OIDCConfigConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
-                    OAuth2OIDCConfigConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
+            Resource resource = getResource(
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME, false);
 
             if (resource == null) {
                 // Getting the default configurations.
@@ -398,10 +415,9 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
                 return Optional.of(Collections.singletonList(issuerDetails));
             }
             return Optional.empty();
-        } catch (OrganizationManagementException | IdentityOAuth2Exception | ConfigurationManagementException |
-                 OAuth2OIDCConfigMgtServerException e) {
-            throw handleServerException(OAuth2OIDCConfigMgtErrorMessages.
-                    ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_SCOPE_GET, e, orgId);
+        } catch (OrganizationManagementException | IdentityOAuth2Exception | ConfigurationManagementException e) {
+            throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_ISSUER_USAGE_SCOPE_GET, e, orgId);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -455,17 +471,22 @@ public class OAuth2OIDCConfigMgtServiceImpl implements OAuth2OIDCConfigMgtServic
         }
     }
 
-    private IssuerUsageScopeConfig parseResource(Resource resource) throws OAuth2OIDCConfigMgtServerException {
+    private IssuerUsageScopeConfig parseResource(Resource resource)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         IssuerUsageScopeConfig issuerUsageScopeConfig = new IssuerUsageScopeConfig();
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
             Map<String, String> attributeMap = getAttributeMap(attributes);
-            String usageScopeValue = attributeMap.get(OAuth2OIDCConfigConstants.
+            String usageScopeValue = attributeMap.get(OAuth2OIDCConfigOrgUsageScopeMgtConstants.
                     ISSUER_USAGE_SCOPE_USAGE_SCOPE_ATTRIBUTE);
             if (usageScopeValue != null) {
                 issuerUsageScopeConfig.setUsageScope(UsageScope.fromValue(usageScopeValue));
             }
+        } else {
+            throw handleServerException(
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_ISSUER_USAGE_SCOPE_NO_ATTRIBUTES, null,
+                    StringUtils.EMPTY);
         }
         return issuerUsageScopeConfig;
     }

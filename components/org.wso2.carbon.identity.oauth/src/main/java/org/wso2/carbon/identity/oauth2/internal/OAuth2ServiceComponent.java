@@ -73,8 +73,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuth
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
-import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigMgtService;
-import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
@@ -431,7 +431,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,
                     new JWTAccessTokenRARClaimProvider(), null);
             bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
-            bundleContext.registerService(OAuth2OIDCConfigMgtService.class, new OAuth2OIDCConfigMgtServiceImpl(), null);
+            bundleContext.registerService(OAuth2OIDCConfigOrgUsageScopeMgtService.class,
+                    new OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl(), null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur

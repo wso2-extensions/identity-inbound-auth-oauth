@@ -141,6 +141,8 @@
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenRequestBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.rule.PreIssueIDTokenRuleEvaluationDataProviderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenResponseProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtilsTest"/>
         </classes>
     </test>
 

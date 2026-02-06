@@ -18,17 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.config.utils;
 
-import org.wso2.carbon.identity.oauth2.config.models.UsageScope;
-
 /**
  * Contains OAuth2 / OIDC configuration management related constants.
  */
-public class OAuth2OIDCConfigConstants {
+public class OAuth2OIDCConfigOrgUsageScopeMgtConstants {
 
     public static final String ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME = "ISSUER_USAGE_SCOPE";
     public static final String TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME = "TENANT_ISSUER_USAGE_SCOPE";
     public static final String ISSUER_USAGE_SCOPE_USAGE_SCOPE_ATTRIBUTE = "usageScope";
-    public static final String ISSUER_USAGE_SCOPE_ALL_EXISTING_FUTURE =
-            UsageScope.ALL_EXISTING_AND_FUTURE_ORGS.getValue();
-    public static final String ISSUER_USAGE_SCOPE_NONE = UsageScope.NONE.getValue();
+    public static final String INBOUND_PROTOCOL_TYPE_OAUTH2 = "oauth2";
 }

@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.config.models;
 
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
-import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigMgtErrorMessages;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages;
 
-import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils.handleServerException;
+import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.handleServerException;
 
 /**
  * Enum representing the usage scope of an issuer.
@@ -55,13 +55,13 @@ public enum UsageScope {
      *
      * @param value String value of the usage scope.
      * @return UsageScope enum.
-     * @throws OAuth2OIDCConfigMgtServerException if the value is invalid.
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtServerException if the value is invalid.
      */
-    public static UsageScope fromValue(String value) throws OAuth2OIDCConfigMgtServerException {
+    public static UsageScope fromValue(String value) throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
 
         if (value == null) {
             throw handleServerException(
-                    OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_INVALID_SCOPE,
+                    OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_ISSUER_USAGE_INVALID_SCOPE,
                     null, "null");
         }
 
@@ -71,7 +71,7 @@ public enum UsageScope {
             }
         }
         throw handleServerException(
-                OAuth2OIDCConfigMgtErrorMessages.ERROR_CODE_OAUTH2_OIDC_CONFIG_ISSUER_USAGE_INVALID_SCOPE, null,
+                OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.ERROR_CODE_ISSUER_USAGE_INVALID_SCOPE, null,
                 value);
     }
 

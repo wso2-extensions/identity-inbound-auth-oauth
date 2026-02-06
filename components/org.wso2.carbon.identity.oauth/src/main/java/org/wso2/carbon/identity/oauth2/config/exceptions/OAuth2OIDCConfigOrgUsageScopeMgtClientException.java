@@ -22,12 +22,12 @@ package org.wso2.carbon.identity.oauth2.config.exceptions;
 /**
  * Exception class for handling OAuth2 / OIDC configuration management client errors.
  */
-public class OAuth2OIDCConfigMgtClientException extends OAuth2OIDCConfigMgtException {
+public class OAuth2OIDCConfigOrgUsageScopeMgtClientException extends OAuth2OIDCConfigOrgUsageScopeMgtException {
 
     /**
      * The default constructor.
      */
-    public OAuth2OIDCConfigMgtClientException() {
+    public OAuth2OIDCConfigOrgUsageScopeMgtClientException() {
 
         super();
     }
@@ -39,7 +39,7 @@ public class OAuth2OIDCConfigMgtClientException extends OAuth2OIDCConfigMgtExcep
      * @param errorCode Error code of the exception.
      * @param cause     Exception to be wrapped.
      */
-    public OAuth2OIDCConfigMgtClientException(String message, String errorCode, Throwable cause) {
+    public OAuth2OIDCConfigOrgUsageScopeMgtClientException(String message, String errorCode, Throwable cause) {
 
         super(message, errorCode, cause);
     }
