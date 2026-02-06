@@ -70,7 +70,7 @@ public class CibaUserAuthenticationEndpoint {
     public static final String ERROR = "error";
     public static final String INVALID_AUTH_CODE_KEY = "invalid.authCodeKey";
     
-    private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
     /**
      * Handles CIBA user authentication requests.

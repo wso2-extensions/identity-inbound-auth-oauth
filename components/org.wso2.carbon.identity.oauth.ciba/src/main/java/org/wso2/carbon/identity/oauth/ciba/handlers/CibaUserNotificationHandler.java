@@ -44,16 +44,14 @@ public class CibaUserNotificationHandler {
     /**
      * Send notification to user with the authentication link.
      *
-     * @param resolvedUser    The resolved user from login_hint
-     * @param cibaAuthCodeDO  The CIBA auth code data object
-     * @param bindingMessage  Optional binding message
-     * @param oAuthAppDO      The OAuth application data object containing app-level configuration
-     * @throws CibaCoreException If notification sending fails
+     * @param resolvedUser    The resolved user from login_hint.
+     * @param cibaAuthCodeDO  The CIBA auth code data object.
+     * @param bindingMessage  Optional binding message.
+     * @param oAuthAppDO      The OAuth application data object containing app-level configuration.
+     * @throws CibaCoreException If notification sending fails.
      */
-    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, 
-                                  CibaAuthCodeDO cibaAuthCodeDO,
-                                  String bindingMessage,
-                                  OAuthAppDO oAuthAppDO) throws CibaCoreException {
+    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
+                                  String bindingMessage, OAuthAppDO oAuthAppDO) throws CibaCoreException {
 
         if (resolvedUser == null) {
             throw new CibaCoreException("Resolved user cannot be null");
@@ -63,20 +61,17 @@ public class CibaUserNotificationHandler {
             throw new CibaCoreException("CibaAuthCodeDO cannot be null");
         }
 
-        // Build the authentication URL
+        // Build the authentication URL.
         String authUrl = buildAuthenticationUrl(cibaAuthCodeDO.getCibaAuthCodeKey());
-        
         if (log.isDebugEnabled()) {
-            log.debug("Built CIBA authentication URL for user: " + resolvedUser.getUsername() + 
+            log.debug("Built CIBA authentication URL for user: " + resolvedUser.getUserId() +
                     ", URL: " + authUrl);
         }
 
         String tenantDomain = resolvedUser.getTenantDomain();
-
-        // Get registered notification channels
+        // Get registered notification channels.
         List<CibaNotificationChannel> channels = CibaServiceComponentHolder.getInstance()
                 .getNotificationChannels();
-
         if (channels.isEmpty()) {
             log.warn("No notification channels registered. User will not receive CIBA notification.");
             return;
@@ -91,7 +86,7 @@ public class CibaUserNotificationHandler {
             log.debug("Send notification to all channels config enabled: " + sendToAllChannels);
         }
 
-        // Try each channel in priority order
+        // Try each channel in priority order.
         for (CibaNotificationChannel channel : channels) {
             try {
                 if (channel.canHandle(resolvedUser, cibaAuthCodeDO, tenantDomain)) {

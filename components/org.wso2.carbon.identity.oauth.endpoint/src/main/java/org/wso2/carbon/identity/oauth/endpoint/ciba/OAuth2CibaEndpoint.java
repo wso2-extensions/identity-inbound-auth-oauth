@@ -44,13 +44,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
-import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
-import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserNotificationHandler;
-import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.HashMap;
 import java.util.List;
@@ -122,7 +117,8 @@ public class OAuth2CibaEndpoint {
                 Map<String, String> params = transformParams(paramMap);
                 if (!containsRequiredParameters(params)) {
                     throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "Missing required parameters. Either 'request' JWT or (scope, login_hint, client_id) are required.");
+                            "Missing required parameters. Either 'request' JWT or (scope, login_hint, client_id) " +
+                                    "are required.");
                 }
                 
                 // Build CibaAuthCodeRequest from individual parameters

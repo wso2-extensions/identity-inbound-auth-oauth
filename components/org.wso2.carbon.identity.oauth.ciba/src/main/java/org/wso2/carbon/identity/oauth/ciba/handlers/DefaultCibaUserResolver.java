@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
@@ -117,15 +118,12 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
                     }
                 } catch (Exception e) {
                     // Ignore exception and fallback to not found.
-                    if (log.isDebugEnabled()) {
-                        log.debug("Error occurred while checking if the user exists with ID: " + tenantAwareUsername,
-                                e);
-                    }
+                    log.warn("Error while resolving user with user ID: " + LoggerUtils.getMaskedContent(
+                            tenantAwareUsername), e);
                 }
             }
 
             if (!isUserFound) {
-                // Returning a generic error to avoid user enumeration.
                 throw new CibaClientException("Invalid login_hint provided.");
             }
 

@@ -116,7 +116,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred in updating the authentication_status for the auth_req_id : " + authReqID +
-                        "with responseType as (ciba). ");
+                        "with responseType as (ciba).");
             }
         }
         return null;
@@ -168,7 +168,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             return false;
         }
 
-        // TODO: Uncomment and register the device code grant type properly.
         if (!oAuthAppDO.getGrantTypes().contains(grantType)) {
             if (log.isDebugEnabled()) {
                 // Do not change this log format as these logs use by external applications.
