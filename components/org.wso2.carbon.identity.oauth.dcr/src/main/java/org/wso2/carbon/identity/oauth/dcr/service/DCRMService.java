@@ -1213,6 +1213,7 @@ public class DCRMService {
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {
+                IdentityUtil.validateX5CLength(softwareStatement);
                 SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
                 if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
@@ -1237,6 +1238,7 @@ public class DCRMService {
     private Map<String, Object> getSSAClaims(String softwareStatement) throws DCRMClientException {
 
         try {
+            IdentityUtil.validateX5CLength(softwareStatement);
             SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
             IdentityUtil.validateJWTDepth(softwareStatement);
             return signedJWT.getJWTClaimsSet().getClaims();
