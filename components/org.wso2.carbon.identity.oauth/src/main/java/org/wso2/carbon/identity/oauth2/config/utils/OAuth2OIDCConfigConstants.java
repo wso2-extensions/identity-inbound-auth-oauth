@@ -31,4 +31,5 @@ public class OAuth2OIDCConfigConstants {
     public static final String ISSUER_USAGE_SCOPE_ALL_EXISTING_FUTURE =
             UsageScope.ALL_EXISTING_AND_FUTURE_ORGS.getValue();
     public static final String ISSUER_USAGE_SCOPE_NONE = UsageScope.NONE.getValue();
+    public static final String INBOUND_PROTOCOL_TYPE_OAUTH2 = "oauth2";
 }
