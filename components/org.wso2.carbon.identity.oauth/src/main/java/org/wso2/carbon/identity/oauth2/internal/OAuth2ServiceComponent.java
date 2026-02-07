@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -73,6 +73,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuth
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigMgtService;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
@@ -429,6 +431,7 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,
                     new JWTAccessTokenRARClaimProvider(), null);
             bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
+            bundleContext.registerService(OAuth2OIDCConfigMgtService.class, new OAuth2OIDCConfigMgtServiceImpl(), null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
