@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -89,6 +89,8 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -547,7 +549,7 @@ public class OAuth2Util {
 
         if (StringUtils.isNotBlank(scopeStr)) {
             scopeStr = scopeStr.trim();
-            return scopeStr.split("\\s");
+            return scopeStr.split("\\s+");
         }
         return new String[0];
     }
@@ -6507,5 +6509,64 @@ public class OAuth2Util {
         return Arrays.stream(serviceProviderProperties).
                 anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
                         Boolean.parseBoolean(property.getValue()));
+    }
+
+    /**
+     * Checks if JWT scope should be represented as an array in JWT access tokens.
+     * Resolves configuration hierarchy: app-level → tenant-level → default (false).
+     *
+     * @param oAuthAppDO OAuth application data object.
+     * @return true if JWT scope should be an array, false for space-delimited string (default).
+     * @throws IdentityOAuth2ServerException if unable to read tenant configuration.
+     */
+    public static boolean isJwtScopeAsArrayEnabled(OAuthAppDO oAuthAppDO)
+            throws IdentityOAuth2ServerException {
+
+        // 1. App-Level Check (Highest Priority).
+        if (oAuthAppDO != null && oAuthAppDO.isJwtScopeAsArrayEnabled() != null) {
+            return oAuthAppDO.isJwtScopeAsArrayEnabled();
+        }
+
+        // 2. Tenant-Level Check.
+        try {
+            Optional<Boolean> tenantConfig = getTenantLevelJwtScopeAsArrayConfig();
+            if (tenantConfig.isPresent()) {
+                return tenantConfig.get();
+            }
+        } catch (ConfigurationManagementException e) {
+            throw new IdentityOAuth2ServerException(
+                    "Error while retrieving tenant-level JWT scope as array configuration.", e);
+        }
+
+        // 3. Global Default.
+        return false;
+    }
+
+    /**
+     * Retrieves JWT scope as array configuration from tenant Configuration Management API.
+     *
+     * @return Optional containing the configuration value if present, empty otherwise.
+     * @throws ConfigurationManagementException if unable to read configuration.
+     */
+    private static Optional<Boolean> getTenantLevelJwtScopeAsArrayConfig() throws ConfigurationManagementException {
+
+        org.wso2.carbon.identity.configuration.mgt.core.model.Resource resource =
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getConfigurationManager()
+                        .getResource(
+                                OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_RESOURCE_TYPE,
+                                OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME
+                        );
+
+        if (resource == null || resource.getAttributes() == null) {
+            return Optional.empty();
+        }
+
+        return resource.getAttributes().stream()
+                .filter(attr -> OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY.equals(attr.getKey()))
+                .map(Attribute::getValue)
+                .filter(StringUtils::isNotBlank)
+                .findFirst()
+                .map(Boolean::parseBoolean);
     }
 }

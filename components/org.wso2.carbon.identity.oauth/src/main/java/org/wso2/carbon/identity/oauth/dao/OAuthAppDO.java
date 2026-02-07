@@ -1,7 +1,7 @@
 /*
-*  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+*  Copyright (c) 2005-2026, WSO2 LLC. (http://www.wso2.com).
 *
-*  WSO2 Inc. licenses this file to you under the Apache License,
+*  WSO2 LLC. licenses this file to you under the Apache License,
 *  Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License.
 *  You may obtain a copy of the License at
@@ -112,6 +112,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
+    private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
@@ -536,6 +537,15 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         fapiConformanceEnabled = fapiConformant;
     }
 
+    public Boolean isJwtScopeAsArrayEnabled() {
+
+        return jwtScopeAsArrayEnabled;
+    }
+
+    public void setJwtScopeAsArrayEnabled(Boolean jwtScopeAsArrayEnabled) {
+
+        this.jwtScopeAsArrayEnabled = jwtScopeAsArrayEnabled;
+    }
 
     public boolean isSubjectTokenEnabled() {
 
