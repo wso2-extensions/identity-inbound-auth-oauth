@@ -206,7 +206,8 @@ public class PreIssueAccessTokenResponseProcessorTest {
         complexObject.put("key2", "value2");
 
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER, new AccessToken.Claim("complexClaim", complexObject)));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("complexClaim", complexObject)));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("complexClaim");
@@ -222,7 +223,8 @@ public class PreIssueAccessTokenResponseProcessorTest {
         List<String> arrayValue = Arrays.asList("perm1", "perm2", "perm3");
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER, new AccessToken.Claim("user_permissions", arrayValue)));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("user_permissions", arrayValue)));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("user_permissions");
