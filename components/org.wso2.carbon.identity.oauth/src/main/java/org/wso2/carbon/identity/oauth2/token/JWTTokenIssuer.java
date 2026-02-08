@@ -711,7 +711,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
-            if (OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO)) {
+            if (OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain)) {
                 // Convert space-delimited string to array.
                 jwtClaimsSetBuilder.claim(SCOPE, Arrays.asList(OAuth2Util.buildScopeArray(scope)));
             } else {

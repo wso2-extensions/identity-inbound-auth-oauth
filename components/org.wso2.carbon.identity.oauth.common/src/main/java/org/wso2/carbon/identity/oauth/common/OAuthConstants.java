@@ -668,10 +668,6 @@ public final class OAuthConstants {
         public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
-        // Resource type name for organization-level OAuth configuration in the Configuration Management API.
-        public static final String ORGANIZATION_CONFIGURATION_RESOURCE_TYPE = "ORGANIZATION_CONFIGURATION";
-        // Resource name for organization-level OAuth configuration in the Configuration Management API.
-        public static final String ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME = "oauth";
         private OIDCConfigProperties() {
 
         }

@@ -65,7 +65,6 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
@@ -94,7 +93,6 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -114,6 +112,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -188,6 +187,7 @@ public class OAuth2UtilTest {
     private String scopeString = "scope1 scope2 scope3";
     private final String clientId = "dummyClientId";
     private final String clientSecret = "dummyClientSecret";
+    private final String tenantDomain = "tenant.com";
     private final String base64EncodedClientIdSecret = "ZHVtbXlDbGllbnRJZDpkdW1teUNsaWVudFNlY3JldA==";
     private final String base64EncodedClientIdInvalid = "ZHVtbXlDbGllbnRJZA==";
     private String authorizationCode = "testAuthorizationCode";
@@ -3702,38 +3702,45 @@ public class OAuth2UtilTest {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setJwtScopeAsArrayEnabled(appLevelConfig);
 
-        try (MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = 
-                mockStatic(OAuth2ServiceComponentHolder.class)) {
-            OAuth2ServiceComponentHolder mockServiceComponentHolder = 
-                    mock(OAuth2ServiceComponentHolder.class);
-            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                    .thenReturn(mockServiceComponentHolder);
-            
-            org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager mockConfigManager = 
-                    mock(org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager.class);
-            lenient().when(mockServiceComponentHolder.getConfigurationManager()).thenReturn(mockConfigManager);
-            
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
             if (appLevelConfig == null) {
-                // Mock tenant-level configuration
-                org.wso2.carbon.identity.configuration.mgt.core.model.Resource mockResource = 
-                        mock(org.wso2.carbon.identity.configuration.mgt.core.model.Resource.class);
-                when(mockConfigManager.getResource(
-                        OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_RESOURCE_TYPE,
-                        OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME))
-                        .thenReturn(mockResource);
+                // Mock tenant-level configuration from resident IDP
+                IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+                lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                        .thenReturn(mockResidentIdp);
+                
+                FederatedAuthenticatorConfig mockOidcConfig = mock(FederatedAuthenticatorConfig.class);
+                FederatedAuthenticatorConfig[] configs = new FederatedAuthenticatorConfig[]{mockOidcConfig};
+                when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(configs);
+                
+                mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                        any(FederatedAuthenticatorConfig[].class), 
+                        eq("openidconnect")))
+                        .thenReturn(mockOidcConfig);
                 
                 if (tenantConfig != null) {
-                    org.wso2.carbon.identity.configuration.mgt.core.model.Attribute attribute = 
-                            new org.wso2.carbon.identity.configuration.mgt.core.model.Attribute();
-                    attribute.setKey(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
-                    attribute.setValue(tenantConfig.toString());
-                    when(mockResource.getAttributes()).thenReturn(Collections.singletonList(attribute));
+                    Property enableJwtScopeProperty = new Property();
+                    enableJwtScopeProperty.setName(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+                    enableJwtScopeProperty.setValue(tenantConfig.toString());
+                    Property[] properties = new Property[]{enableJwtScopeProperty};
+                    when(mockOidcConfig.getProperties()).thenReturn(properties);
+                    
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(enableJwtScopeProperty);
                 } else {
-                    when(mockResource.getAttributes()).thenReturn(Collections.emptyList());
+                    when(mockOidcConfig.getProperties()).thenReturn(new Property[]{});
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(null);
                 }
             }
 
-            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO);
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
             assertEquals(result, expectedResult, description);
         }
     }
@@ -3756,53 +3763,48 @@ public class OAuth2UtilTest {
     @Test
     public void testIsJwtScopeAsArrayEnabled_withNullOAuthAppDO() throws Exception {
 
-        try (MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = 
-                mockStatic(OAuth2ServiceComponentHolder.class)) {
-            
-            OAuth2ServiceComponentHolder mockServiceComponentHolder = 
-                    mock(OAuth2ServiceComponentHolder.class);
-            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                    .thenReturn(mockServiceComponentHolder);
-            
-            org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager mockConfigManager = 
-                    mock(org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager.class);
-            when(mockServiceComponentHolder.getConfigurationManager()).thenReturn(mockConfigManager);
-            
-            // Mock empty tenant config
-            when(mockConfigManager.getResource(
-                    OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_RESOURCE_TYPE,
-                    OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME))
-                    .thenReturn(null);
+        // Return null resident IDP
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(null);
 
-            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(null);
-            assertEquals(result, false, "Null OAuthAppDO with null tenant config should return default false");
-        }
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(null, tenantDomain);
+        assertEquals(result, false, "Null OAuthAppDO with null resident IDP should return default false");
     }
 
-    @Test(expectedExceptions = IdentityOAuth2ServerException.class)
-    public void testIsJwtScopeAsArrayEnabled_whenConfigurationManagementExceptionThrown() throws Exception {
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenResidentIdpHasNoOidcConfig() throws Exception {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
 
-        try (MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = 
-                mockStatic(OAuth2ServiceComponentHolder.class)) {
-            
-            OAuth2ServiceComponentHolder mockServiceComponentHolder = 
-                    mock(OAuth2ServiceComponentHolder.class);
-            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                    .thenReturn(mockServiceComponentHolder);
-            
-            org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager mockConfigManager = 
-                    mock(org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager.class);
-            when(mockServiceComponentHolder.getConfigurationManager()).thenReturn(mockConfigManager);
-            
-            when(mockConfigManager.getResource(
-                    OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_RESOURCE_TYPE,
-                    OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME))
-                    .thenThrow(new ConfigurationManagementException(
-                            new Exception("Error reading tenant configuration")));
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
 
-            OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO);
+            IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+            lenient().when(mockIdentityProviderManager.getResidentIdP(tenantDomain))
+                    .thenReturn(mockResidentIdp);
+            when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(new FederatedAuthenticatorConfig[]{});
+            
+            // OIDC config not found
+            mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                    any(FederatedAuthenticatorConfig[].class), 
+                    eq("openidconnect")))
+                    .thenReturn(null);
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, false, "OAuthAppDO with no OIDC config should return default false");
         }
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenIdentityProviderManagementExceptionThrown() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                .thenThrow(new IdentityProviderManagementException(
+                        "Error reading resident IDP configuration"));
+
+        // Should return false on exception (fallback behavior)
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+        assertEquals(result, false, "Exception during tenant config retrieval should return default false");
     }
 }

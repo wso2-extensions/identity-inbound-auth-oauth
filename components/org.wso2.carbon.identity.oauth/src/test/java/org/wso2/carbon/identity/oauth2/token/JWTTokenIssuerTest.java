@@ -927,7 +927,8 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience("dummyConsumerKey", appDO))
                     .thenReturn(Collections.singletonList("dummyConsumerKey"));
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenReturn("scope1 scope2");
-            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class))).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class), anyString()))
+                    .thenReturn(false);
 
             oAuth2Util.when(() -> OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
@@ -1018,7 +1019,7 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
                     .thenReturn(Collections.singletonList(DUMMY_CLIENT_ID));
-            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class)))
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class), anyString()))
                     .thenReturn(jwtScopeAsArrayEnabled);
             
             when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())

@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -89,8 +90,6 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
-import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
-import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -6502,14 +6501,16 @@ public class OAuth2Util {
 
     /**
      * Checks if JWT scope should be represented as an array in JWT access tokens.
-     * Resolves configuration hierarchy: app-level → tenant-level → default (false).
+     * Configuration priority:
+     * 1. Application-level configuration (highest priority)
+     * 2. Tenant-level configuration from resident IDP OIDC properties
+     * 3. Default value (false) - maintains RFC 9068 compliance with space-delimited string
      *
-     * @param oAuthAppDO OAuth application data object.
-     * @return true if JWT scope should be an array, false for space-delimited string (default).
-     * @throws IdentityOAuth2ServerException if unable to read tenant configuration.
+     * @param oAuthAppDO   OAuth application data object.
+     * @param tenantDomain Tenant domain to retrieve the tenant-level configuration from.
+     * @return true if JWT scope should be an array, false for space-delimited string.
      */
-    public static boolean isJwtScopeAsArrayEnabled(OAuthAppDO oAuthAppDO)
-            throws IdentityOAuth2ServerException {
+    public static boolean isJwtScopeAsArrayEnabled(OAuthAppDO oAuthAppDO, String tenantDomain) {
 
         // 1. App-Level Check (Highest Priority).
         if (oAuthAppDO != null && oAuthAppDO.isJwtScopeAsArrayEnabled() != null) {
@@ -6518,44 +6519,50 @@ public class OAuth2Util {
 
         // 2. Tenant-Level Check.
         try {
-            Optional<Boolean> tenantConfig = getTenantLevelJwtScopeAsArrayConfig();
-            if (tenantConfig.isPresent()) {
-                return tenantConfig.get();
-            }
-        } catch (ConfigurationManagementException e) {
-            throw new IdentityOAuth2ServerException(
-                    "Error while retrieving tenant-level JWT scope as array configuration.", e);
+            return getTenantLevelJwtScopeAsArrayConfig(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            log.warn("Error while retrieving tenant-level JWT scope as array configuration.", e);
+            return false;
         }
-
-        // 3. Global Default.
-        return false;
     }
 
     /**
-     * Retrieves JWT scope as array configuration from tenant Configuration Management API.
+     * Retrieves JWT scope as array configuration from resident Identity Provider OIDC configuration.
+     * If no configuration is found, the default value is false.
      *
-     * @return Optional containing the configuration value if present, empty otherwise.
-     * @throws ConfigurationManagementException if unable to read configuration.
+     * @param tenantDomain Tenant domain to retrieve the resident IDP configuration from.
+     * @return true if JWT scope as array is enabled in resident IDP configuration, false otherwise.
+     * @throws IdentityProviderManagementException if unable to read resident IDP configuration.
      */
-    private static Optional<Boolean> getTenantLevelJwtScopeAsArrayConfig() throws ConfigurationManagementException {
+    private static boolean getTenantLevelJwtScopeAsArrayConfig(String tenantDomain)
+            throws IdentityProviderManagementException {
 
-        org.wso2.carbon.identity.configuration.mgt.core.model.Resource resource =
-                OAuth2ServiceComponentHolder.getInstance()
-                        .getConfigurationManager()
-                        .getResource(
-                                OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_RESOURCE_TYPE,
-                                OAuthConstants.OIDCConfigProperties.ORGANIZATION_CONFIGURATION_OAUTH_RESOURCE_NAME
-                        );
+        IdentityProvider residentIdp = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
 
-        if (resource == null || resource.getAttributes() == null) {
-            return Optional.empty();
+        if (residentIdp == null) {
+            return false;
         }
 
-        return resource.getAttributes().stream()
-                .filter(attr -> OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY.equals(attr.getKey()))
-                .map(Attribute::getValue)
-                .filter(StringUtils::isNotBlank)
-                .findFirst()
-                .map(Boolean::parseBoolean);
+        FederatedAuthenticatorConfig oidcFederatedAuthConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                        residentIdp.getFederatedAuthenticatorConfigs(),
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+
+        if (oidcFederatedAuthConfig == null) {
+            return false;
+        }
+
+        Property enableJwtScopeAsArrayProperty = IdentityApplicationManagementUtil.getProperty(
+                oidcFederatedAuthConfig.getProperties(),
+                OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+
+        if (enableJwtScopeAsArrayProperty != null &&
+                StringUtils.isNotBlank(enableJwtScopeAsArrayProperty.getValue())) {
+            log.debug("Using tenant level config for JWT scope as array: " + 
+                    enableJwtScopeAsArrayProperty.getValue());
+            return Boolean.parseBoolean(enableJwtScopeAsArrayProperty.getValue());
+        }
+
+        return false;
     }
 }
