@@ -1629,6 +1629,7 @@ public class PreIssueIDTokenRequestBuilderTest {
 
     @Test
     public void testGetRemoveOrReplacePathsWithDeeplyNestedClaims() throws ActionExecutionRequestBuilderException {
+
         Map<String, Object> customClaims = new HashMap<>();
         customClaims.put("simple", "value");
         Map<String, Object> level1 = new HashMap<>();
@@ -1665,6 +1666,7 @@ public class PreIssueIDTokenRequestBuilderTest {
 
     @Test
     public void testGetRemoveAndReplacePathsWithArrays() throws ActionExecutionRequestBuilderException {
+
         Map<String, Object> customClaims = new HashMap<>();
         customClaims.put("array_claim", new String[]{"val1", "val2"});
 
