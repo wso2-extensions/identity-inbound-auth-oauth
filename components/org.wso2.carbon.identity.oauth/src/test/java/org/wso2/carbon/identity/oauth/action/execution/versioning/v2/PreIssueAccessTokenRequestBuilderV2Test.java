@@ -331,6 +331,76 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         Assert.assertTrue(hasRefreshTokenPath);
     }
 
+    @Test
+    public void testGetRemoveOrReplacePathsWithDeeplyNestedClaims() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("simple", "value");
+        Map<String, Object> level1 = new HashMap<>();
+        Map<String, Object> level2 = new HashMap<>();
+        level2.put("leaf", "value");
+        level1.put("intermediate", level2);
+        customClaims.put("nested", level1);
+        customClaims.put("list_claim", Arrays.asList("a", "b"));
+
+        OAuthTokenReqMessageContext tokenContext = getMockTokenMessageContext();
+        tokenContext.setPreIssueAccessTokenActionsExecuted(true);
+        tokenContext.setAdditionalAccessTokenClaims(customClaims);
+
+        ActionExecutionRequest request = preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
+                FlowContext.create().add("tokenMessageContext", tokenContext), null);
+
+        List<String> removePaths = request.getAllowedOperations().stream()
+                .filter(op -> op.getOp() == Operation.REMOVE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("REMOVE operation not found"))
+                .getPaths();
+        assertComplexPaths(removePaths);
+
+        List<String> replacePaths = request.getAllowedOperations().stream()
+                .filter(op -> op.getOp() == Operation.REPLACE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("REPLACE operation not found"))
+                .getPaths();
+        assertComplexPaths(replacePaths);
+    }
+
+    @Test
+    public void testGetRemoveAndReplacePathsWithArrays() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("array_claim", new String[]{"val1", "val2"});
+
+        OAuthTokenReqMessageContext tokenContext = getMockTokenMessageContext();
+        tokenContext.setPreIssueAccessTokenActionsExecuted(true);
+        tokenContext.setAdditionalAccessTokenClaims(customClaims);
+
+        ActionExecutionRequest request = preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
+                FlowContext.create().add("tokenMessageContext", tokenContext), null);
+        List<String> removePaths = request.getAllowedOperations().get(1).getPaths();
+        List<String> replacePaths = request.getAllowedOperations().get(2).getPaths();
+
+        Assert.assertTrue(removePaths.contains("/accessToken/claims/array_claim"));
+        Assert.assertTrue(removePaths.contains("/accessToken/claims/array_claim/"));
+
+        Assert.assertTrue(replacePaths.contains("/accessToken/claims/array_claim"));
+        Assert.assertTrue(replacePaths.contains("/accessToken/claims/array_claim/"));
+    }
+
+    private void assertComplexPaths(List<String> paths) {
+
+        Assert.assertTrue(paths.contains("/accessToken/claims/simple"));
+        Assert.assertTrue(paths.contains("/accessToken/claims/nested"));
+        Assert.assertTrue(paths.contains("/accessToken/claims/nested/intermediate"));
+        Assert.assertTrue(paths.contains("/accessToken/claims/nested/intermediate/leaf"));
+
+        Assert.assertTrue(paths.contains("/accessToken/claims/list_claim"));
+        Assert.assertTrue(paths.contains("/accessToken/claims/list_claim/"));
+
+        Assert.assertTrue(paths.contains("/accessToken/scopes/"));
+        Assert.assertTrue(paths.contains("/accessToken/claims/aud/"));
+    }
+
     private OAuthTokenReqMessageContext getMockTokenMessageContext() {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = mockTokenRequestDTO();

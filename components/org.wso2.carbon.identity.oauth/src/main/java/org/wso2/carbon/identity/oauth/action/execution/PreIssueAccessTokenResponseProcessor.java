@@ -407,10 +407,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             }
 
             Object claimValue = claim.getValue();
-            if (isValidPrimitiveValue(claimValue) || isValidListValue(claimValue)) {
+            if (isValidPrimitiveValue(claimValue)
+                    || isValidListValue(claimValue)
+                    || isValidMapValue(claimValue)) {
                 responseAccessToken.addClaim(claim.getName(), claimValue);
-                return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Claim added.");
-
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                        "Claim added.");
             } else {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "Invalid claim value.");
@@ -510,51 +512,72 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                                                        AccessToken requestAccessToken,
                                                        AccessToken.Builder responseAccessToken) {
 
+        List<String> pathSegments = extractNestedClaimPath(operation.getPath());
+
+        // nested remove
+        if (pathSegments.size() > 1) {
+            return removeNestedClaim(pathSegments, requestAccessToken, responseAccessToken, operation);
+        }
         ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
         AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
+
         if (claim == null) {
-            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE, "Claim not found.");
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim not found.");
         }
 
-        if (claimPathInfo.getIndex() != -1) {
-            return removeClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim,
-                    responseAccessToken);
-        } else {
-            return removePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
-        }
+        return removePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
     }
 
-    private OperationExecutionResult removeClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
-                                                                               ClaimPathInfo claimPathInfo,
-                                                                               AccessToken.Claim claim,
-                                                                               AccessToken.Builder
-                                                                                       responseAccessToken) {
+    private OperationExecutionResult removeNestedClaim(List<String> pathSegments, AccessToken requestAccessToken,
+                                                       AccessToken.Builder responseAccessToken,
+                                                       PerformableOperation operation) {
 
-        if (!(claim.getValue() instanceof List)) {
+        String rootClaimName = pathSegments.get(0);
+        List<String> nestedPath = pathSegments.subList(1, pathSegments.size());
+
+        AccessToken.Claim rootClaim = requestAccessToken.getClaim(rootClaimName);
+        if (rootClaim == null || !(rootClaim.getValue() instanceof Map)) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                    "Claim to remove the value from is not an array.");
+                    "Root claim is not a complex object.");
         }
 
-        List<String> claimValueList = (List<String>) claim.getValue();
-        if (claimPathInfo.getIndex() < 0 || claimPathInfo.getIndex() >= claimValueList.size()) {
+        Map<String, Object> rootValue = new HashMap<>((Map<String, Object>) rootClaim.getValue());
+        boolean removed = removeFromNestedMap(rootValue, nestedPath, 0);
+        if (!removed) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                    "Invalid index.");
+                    "Nested claim not found.");
         }
 
-        String claimValueToRemove = claimValueList.get(claimPathInfo.getIndex());
-
-        AccessToken.Claim claimInResponse =
-                responseAccessToken.getClaim(claimPathInfo.getClaimName());
-        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
-        boolean removed = claimValueListInResponse.remove(claimValueToRemove);
-
-        if (removed) {
-            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
-                    "Claim value removed.");
-        } else {
-            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                    "Failed to remove claim value.");
+        // replace claim in response token
+        responseAccessToken.getClaims().removeIf(c -> c.getName().equals(rootClaimName));
+        if (!rootValue.isEmpty()) {
+            responseAccessToken.addClaim(rootClaimName, rootValue);
         }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Nested claim removed.");
+    }
+
+    private boolean removeFromNestedMap(Map<String, Object> current, List<String> path, int index) {
+
+        String key = path.get(index);
+        if (index == path.size() - 1) {
+            return current.remove(key) != null;
+        }
+
+        Object next = current.get(key);
+        if (!(next instanceof Map)) {
+            return false;
+        }
+
+        return removeFromNestedMap((Map<String, Object>) next, path, index + 1);
+    }
+
+    private List<String> extractNestedClaimPath(String operationPath) {
+
+        String relativePath = operationPath.substring(ACCESS_TOKEN_CLAIMS_PATH_PREFIX.length());
+        return List.of(relativePath.split("/"));
     }
 
     private OperationExecutionResult removePrimitiveTypeClaim(PerformableOperation operation,
@@ -671,19 +694,78 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private OperationExecutionResult replaceOtherClaims(PerformableOperation operation, AbstractToken token,
                                                         AbstractToken.AbstractBuilder<?> tokenBuilder) {
 
+        List<String> pathSegments = extractNestedClaimPath(operation.getPath());
+        // nested replace
+        if (pathSegments.size() > 1) {
+            return replaceNestedClaim(pathSegments, token, tokenBuilder, operation);
+        }
+
         ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
         AccessToken.Claim claim = token.getClaim(claimPathInfo.getClaimName());
-
         if (claim == null) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "Claim not found.");
         }
-
         if (claimPathInfo.getIndex() != -1) {
             return replaceClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim, tokenBuilder);
-        } else {
-            return replacePrimitiveTypeClaim(operation, claimPathInfo, tokenBuilder);
         }
+
+        return replacePrimitiveTypeClaim(operation, claimPathInfo, tokenBuilder);
+    }
+
+    private OperationExecutionResult replaceNestedClaim(List<String> pathSegments, AbstractToken token,
+                                                        AbstractToken.AbstractBuilder<?> tokenBuilder,
+                                                        PerformableOperation operation) {
+
+        String rootClaimName = pathSegments.get(0);
+        List<String> nestedPath = pathSegments.subList(1, pathSegments.size());
+
+        AccessToken.Claim rootClaim = token.getClaim(rootClaimName);
+        if (rootClaim == null || !(rootClaim.getValue() instanceof Map)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Root claim is not a complex object.");
+        }
+
+        Map<String, Object> rootValue =
+                new HashMap<>((Map<String, Object>) rootClaim.getValue());
+        boolean replaced = replaceInNestedMap(rootValue, nestedPath, 0, operation.getValue());
+        if (!replaced) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Nested claim not found.");
+        }
+
+        tokenBuilder.getClaims().removeIf(c -> c.getName().equals(rootClaimName));
+        if (!rootValue.isEmpty()) {
+            tokenBuilder.addClaim(rootClaimName, rootValue);
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Nested claim replaced.");
+    }
+
+    private boolean replaceInNestedMap(Map<String, Object> current, List<String> path, int index, Object newValue) {
+
+        String key = path.get(index);
+
+        if (index == path.size() - 1) {
+            if (newValue == null) {
+                return current.remove(key) != null;
+            }
+            current.put(key, newValue);
+            return true;
+        }
+
+        Object next = current.get(key);
+        if (!(next instanceof Map)) {
+            return false;
+        }
+        boolean updated = replaceInNestedMap((Map<String, Object>) next, path, index + 1, newValue);
+        Map<String, Object> nextMap = (Map<String, Object>) next;
+        if (updated && nextMap.isEmpty()) {
+            current.remove(key);
+        }
+
+        return updated;
     }
 
     private OperationExecutionResult replaceClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
@@ -811,6 +893,15 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
         List<?> list = (List<?>) value;
         return list.stream().allMatch(item -> item instanceof String);
+    }
+
+    private boolean isValidMapValue(Object value) {
+
+        if (!(value instanceof Map<?, ?>)) {
+            return false;
+        }
+        Map<?, ?> map = (Map<?, ?>) value;
+        return true;
     }
 
     private int validateIndex(String operationPath, int listSize) {
