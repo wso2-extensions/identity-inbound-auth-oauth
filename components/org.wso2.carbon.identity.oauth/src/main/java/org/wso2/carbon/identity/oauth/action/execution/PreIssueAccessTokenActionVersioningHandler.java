@@ -47,7 +47,7 @@ public class PreIssueAccessTokenActionVersioningHandler extends DefaultActionVer
         Action action = actionExecutionRequestContext.getAction();
         ActionTriggerEvaluatorForVersion versionTriggerEvaluator = factory.getVersionTriggerEvaluator(action);
 
-        if (!versionTriggerEvaluator.isTriggerableForTokenExchangeGrant(
+        if (!versionTriggerEvaluator.isTriggerableForActionV2SupportedGrants(
                 actionExecutionRequestContext.getActionType(), action, flowContext)) {
             return false;
         }

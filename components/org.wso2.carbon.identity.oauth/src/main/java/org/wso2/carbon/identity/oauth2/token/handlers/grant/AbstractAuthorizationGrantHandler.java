@@ -561,7 +561,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
                         OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
                         OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
-                        OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) &&
+                        OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType) ||
+                        OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType) ||
+                        OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 

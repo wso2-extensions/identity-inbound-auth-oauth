@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.oauth.action.versioning.ActionTriggerEvaluatorForVersion;
 
 /**
- * Implementation of the ActionTriggerEvaluatorForVersion for version v2.
+ * Implementation of the ActionVersioningHandler for Action V2 behavior.
  */
 public class ActionTriggerEvaluatorForVersionV2 extends ActionTriggerEvaluatorForVersion {
 
@@ -36,8 +36,8 @@ public class ActionTriggerEvaluatorForVersionV2 extends ActionTriggerEvaluatorFo
         return instance;
     }
 
-    public boolean isTriggerableForTokenExchangeGrant(ActionType actionType, Action action, FlowContext flowContext)
-            throws ActionExecutionException {
+    public boolean isTriggerableForActionV2SupportedGrants(ActionType actionType, Action action,
+                                                           FlowContext flowContext) throws ActionExecutionException {
 
         return true;
     }
