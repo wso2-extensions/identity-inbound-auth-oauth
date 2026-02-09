@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -34,15 +34,22 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -54,7 +61,9 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -83,9 +92,41 @@ public class JwksEndpoint {
     @Produces(MediaType.APPLICATION_JSON)
     public String jwks() {
 
-        String tenantDomain = getTenantDomain();
-
+        String tenantDomain = StringUtils.EMPTY;
+        String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
         try {
+            if (StringUtils.isNotEmpty(appResidentOrgId)) {
+                try {
+                    OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService =
+                            OAuth2ServiceComponentHolder.getInstance().getOAuth2OIDCConfigOrgUsageScopeMgtService();
+                    List<IssuerDetails> issuerDetailsList =
+                            oAuth2OIDCConfigOrgUsageScopeMgtService.getAllowedIssuerDetails();
+                    if (issuerDetailsList != null && !issuerDetailsList.isEmpty()) {
+                        Map<String, List<CertificateInfo>> issuerCertificateInfoMap = new HashMap<>();
+                        if (log.isDebugEnabled()) {
+                            log.debug("Retrieved issuer details for organization id: " + appResidentOrgId);
+                        }
+                        for (IssuerDetails issuerDetails : issuerDetailsList) {
+                            tenantDomain = issuerDetails.getIssuerTenantDomain();
+                            if (log.isDebugEnabled()) {
+                                log.debug("Retrieving certificate information for tenant domain: " + tenantDomain);
+                            }
+                            List<CertificateInfo> certificateInfos = getCertificateInfoList(tenantDomain);
+                            issuerCertificateInfoMap.put(tenantDomain, certificateInfos);
+                        }
+                        return buildResponseForMultipleCertificates(issuerCertificateInfoMap);
+                    }
+                    String errorMessage = "No allowed issuer details found for organization id: " + appResidentOrgId;
+                    return logAndReturnError(errorMessage, null);
+                } catch (OAuth2OIDCConfigOrgUsageScopeMgtException e) {
+                    log.error("Error while retrieving allowed issuer details for organization id: " +
+                            appResidentOrgId, e);
+                    return logAndReturnError("Error while retrieving allowed issuer details.", e);
+                }
+            }
+
+            tenantDomain = getTenantDomain();
             final KeyStore keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
                     IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
             List<CertificateInfo> certificateInfoList = new ArrayList<>();
@@ -100,9 +141,66 @@ public class JwksEndpoint {
             }
             return buildResponse(certificateInfoList);
         } catch (Exception e) {
-            String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
+            String errorMessage;
+            if (StringUtils.isNotEmpty(appResidentOrgId)) {
+                errorMessage = "Error while generating the keyset for organization: " + appResidentOrgId;
+            } else {
+                errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
+            }
             return logAndReturnError(errorMessage, e);
         }
+    }
+
+    private static List<CertificateInfo> getCertificateInfoList(String tenantDomain) throws
+            IdentityKeyStoreResolverException, KeyStoreException {
+
+        final KeyStore keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        List<CertificateInfo> certificateInfoList = new ArrayList<>();
+        Enumeration enumeration = keystore.aliases();
+        while (enumeration.hasMoreElements()) {
+            String alias = (String) enumeration.nextElement();
+            if (keystore.isKeyEntry(alias)) {
+                CertificateInfo certificateInfo = new CertificateInfo(keystore.getCertificate(alias), alias);
+                certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
+                certificateInfoList.add(certificateInfo);
+            }
+        }
+        return certificateInfoList;
+    }
+
+    private String buildResponseForMultipleCertificates(Map<String, List<CertificateInfo>> issuerCertificateInfoMap)
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
+
+        JSONObject jwksJson = new JSONObject();
+        JSONArray jwksArray = new JSONArray();
+        OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
+        JWSAlgorithm accessTokenSignAlgorithm =
+                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
+        // If we read different algorithms from identity.xml then put them in a list.
+        List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+
+        for (Map.Entry<String, List<CertificateInfo>> entry : issuerCertificateInfoMap.entrySet()) {
+            List<CertificateInfo> certInfoList = entry.getValue();
+            // Create JWKS for different algorithms using new KeyID creation method.
+            populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                    OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM, entry.getKey());
+
+            // Add SHA-1 KeyID to the KeySet if the config is enabled.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_VERSION_KID))) {
+                populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                        OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM, entry.getKey());
+
+                /*
+                 This method add KeySets which have thumbprint of certificate as KeyIDs without appending the algo.
+                 This KeyID format is deprecated. However, we are enabling old KeyID based on config to support
+                 migration.
+                */
+                createKeySetUsingOldKeyID(jwksArray, certInfoList, accessTokenSignAlgorithm);
+            }
+        }
+        jwksJson.put(KEYS, jwksArray);
+        return jwksJson.toString();
     }
 
     private String buildResponse(List<CertificateInfo> certInfoList)
@@ -120,6 +218,21 @@ public class JwksEndpoint {
             OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
             JWSAlgorithm accessTokenSignAlgorithm =
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
+        }
+        OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
+        JWSAlgorithm accessTokenSignAlgorithm =
+                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
+        // If we read different algorithms from identity.xml then put them in a list.
+        List<JWSAlgorithm> diffAlgorithms = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+        // Create JWKS for different algorithms using new KeyID creation method.
+        populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM, null);
+
+        // Add SHA-1 KeyID to the KeySet if the config is enabled.
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ADD_PREVIOUS_VERSION_KID))) {
+            populateJWKSArray(certInfoList, diffAlgorithms, jwksArray,
+                    OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM, null);
+
             // This method add KeySets which have thumbprint of certificate as KeyIDs without appending the algo.
             // This KeyID format is deprecated. However, we are enabling old KeyID based on config to support migration.
             createKeySetUsingOldKeyID(jwksArray, certInfoList, accessTokenSignAlgorithm);
@@ -139,7 +252,7 @@ public class JwksEndpoint {
             // Handle null or empty certificate chain
             List<Base64> encodedCertList = new ArrayList<>();
             if (certChain != null && certChain.length > 0) {
-                encodedCertList = generateEncodedCertList(certChain, alias);
+                encodedCertList = generateEncodedCertList(certChain, alias, null);
             }
             
             PublicKey publicKey = cert.getPublicKey();
@@ -148,6 +261,22 @@ public class JwksEndpoint {
             for (JWSAlgorithm algorithm : algorithms) {
                 JWK jwk = getJWK(algorithm, encodedCertList, cert, hashingAlgorithm, alias);
                 jwksArray.add(jwk.toJSONObject());
+            }
+        }
+    }
+
+    private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
+                                   JSONArray jwksArray, String hashingAlgorithm, String tenantDomain)
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
+
+        for (CertificateInfo certInfo : certInfoList) {
+            for (JWSAlgorithm algorithm : diffAlgorithms) {
+                String alias = certInfo.getCertificateAlias();
+                X509Certificate cert = (X509Certificate) certInfo.getCertificate();
+                Certificate[] certChain = certInfo.getCertificateChain();
+                List<Base64> encodedCertList = generateEncodedCertList(certChain, alias, tenantDomain);
+                RSAKey.Builder jwk = getJWK(algorithm, encodedCertList, cert, hashingAlgorithm, alias, tenantDomain);
+                jwksArray.add(jwk.build().toJSONObject());
             }
         }
     }
@@ -259,6 +388,48 @@ public class JwksEndpoint {
         return OAuth2Util.getPreviousKID(certificate, algorithm, getTenantDomain());
     }
 
+    private RSAKey.Builder getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
+                                  String kidAlgorithm, String alias, String tenantDomain)
+            throws ParseException, IdentityOAuth2Exception, JOSEException {
+
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = getTenantDomain();
+        }
+        RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey());
+        if (kidAlgorithm.equals(OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM)) {
+            jwk.keyID(OAuth2Util.getKID(certificate, algorithm, tenantDomain));
+        } else {
+            jwk.keyID(OAuth2Util.getPreviousKID(certificate, algorithm, tenantDomain));
+        }
+        jwk.algorithm(algorithm);
+        jwk.keyUse(KeyUse.parse(KEY_USE));
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE))) {
+            jwk.x509CertChain(encodedCertList);
+        }
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
+            // x5t#S256
+            JWK parsedJWK = JWK.parse(certificate);
+            jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                log.debug("Adding SHA-1 thumbprint (x5t) to JWK.");
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
+        } else {
+            // x5t#S256
+            jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+
+            // x5t
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
+                String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
+                jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
+            }
+        }
+        return jwk;
+    }
+
     /**
      * This method generates the kid value without the algo appended to the end of kid.
      * This method is marked as @Deprecated because we issue kids with algo appended at present,
@@ -339,16 +510,19 @@ public class JwksEndpoint {
      *
      * @return base64 encoded certificate list.
      */
-    private List<Base64> generateEncodedCertList(Certificate[] certificates, String alias)
+    private List<Base64> generateEncodedCertList(Certificate[] certificates, String alias, String tenantDomain)
             throws CertificateEncodingException {
 
         List<Base64> certList = new ArrayList<>();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = getTenantDomain();
+        }
         for (Certificate certificate : certificates) {
             try {
                 certList.add(Base64.encode(certificate.getEncoded()));
             } catch (CertificateEncodingException exception) {
                 String errorMessage = "Unable to encode the public certificate with alias: " + alias +
-                        " in the tenant domain: " + getTenantDomain();
+                        " in the tenant domain: " + tenantDomain;
                 throw new CertificateEncodingException(errorMessage, exception);
             }
         }
