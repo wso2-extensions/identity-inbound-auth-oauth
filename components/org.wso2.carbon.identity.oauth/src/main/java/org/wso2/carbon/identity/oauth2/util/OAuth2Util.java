@@ -548,7 +548,7 @@ public class OAuth2Util {
 
         if (StringUtils.isNotBlank(scopeStr)) {
             scopeStr = scopeStr.trim();
-            return scopeStr.split("\\s+");
+            return scopeStr.split("\\s");
         }
         return new String[0];
     }
