@@ -35,6 +35,7 @@ public class ApplicationUpdateRequest implements Serializable {
     private List<String> grantTypes = new ArrayList<>();
     private String tokenType = null;
     private String backchannelLogoutUri = null;
+    private String frontchannelLogoutUri = null;
     private String extApplicationDisplayName = null;
     private String extApplicationVersion = null;
     private String extApplicationOwner = null;
@@ -136,6 +137,16 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public String getFrontchannelLogoutUri() {
+
+        return frontchannelLogoutUri;
+    }
+
+    public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+
+        this.frontchannelLogoutUri = frontchannelLogoutUri;
     }
 
     /**

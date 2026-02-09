@@ -60,6 +60,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -137,7 +138,8 @@ public class OIDCRequestObjectUtilTest {
 
             try (MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
                          mockStatic(CentralLogMgtServiceComponentHolder.class);
-                 MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class);
+                 MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class,
+                         CALLS_REAL_METHODS);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
 

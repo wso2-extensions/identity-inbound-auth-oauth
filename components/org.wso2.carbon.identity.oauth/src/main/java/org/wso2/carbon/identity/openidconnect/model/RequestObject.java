@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.openidconnect.model;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -85,7 +86,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -119,7 +120,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -138,32 +139,35 @@ public class RequestObject implements Serializable {
      * @param jsonObjectRequestedClaims requested claims of the request object
      * @throws ParseException
      */
-    private void processClaimObject(Map<String, Object> jsonObjectRequestedClaims) throws RequestObjectException {
+    private void processClaimObject(JSONObject jsonObjectRequestedClaims) throws RequestObjectException {
 
         try {
             Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
             if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-                Map<String, Object> jsonObjectClaim = (Map) jsonObjectRequestedClaims.get(CLAIMS);
+                JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
 
                 //To iterate the claims json object to fetch the claim requester and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
                     List<RequestedClaim> requestedClaimsList = new ArrayList();
-                    // Get requested claim object
-                    Object requestedClaimObject = jsonObjectClaim.get(requesterClaimsMap.getKey());
-                    if (requestedClaimObject != null) {
+                    if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
 
-                        // Extract all requested claims if attribute is a Map
-                        if (requestedClaimObject instanceof Map) {
-                            Map<String, Object> jsonObjectAllRequestedClaims  = (Map) requestedClaimObject;
-                            for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims
-                                    .entrySet()) {
-                                Map<String, Object> jsonObjectClaimAttributes = null;
-                                if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
-                                    jsonObjectClaimAttributes =
-                                            (Map) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                        // Get requested claim object
+                        Object requestedClaimObject = jsonObjectClaim.get(requesterClaimsMap.getKey());
+                        // Extract all requested claims if attribute is an JSONObject
+                        if (requestedClaimObject instanceof JSONObject) {
+                            JSONObject jsonObjectAllRequestedClaims  = (JSONObject)
+                                    jsonObjectClaim.get(requesterClaimsMap.getKey());
+                            if (jsonObjectAllRequestedClaims != null) {
+                                for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims
+                                        .entrySet()) {
+                                    JSONObject jsonObjectClaimAttributes = null;
+                                    if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
+                                        jsonObjectClaimAttributes =
+                                                (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                    }
+                                    populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
+                                            requestedClaims.getKey(), requesterClaimsMap.getKey());
                                 }
-                                populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
-                                        requestedClaims.getKey(), requesterClaimsMap.getKey());
                             }
                         }
                     }
@@ -178,7 +182,7 @@ public class RequestObject implements Serializable {
     }
 
     private void populateRequestedClaimValues(List<RequestedClaim> requestedClaims,
-                                              Map<String, Object> jsonObjectClaimAttributes, String claimName,
+                                              JSONObject jsonObjectClaimAttributes, String claimName,
                                               String claimType) {
 
         RequestedClaim claim = new RequestedClaim();

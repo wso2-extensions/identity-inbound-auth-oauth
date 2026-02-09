@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.417-SNAPSHOT</version>
+    <version>7.0.425-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -322,6 +322,11 @@
                 <groupId>org.wso2.orbit.com.nimbusds</groupId>
                 <artifactId>nimbus-jose-jwt</artifactId>
                 <version>${nimbusds.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.graalvm.sdk</groupId>
+                <artifactId>graal-sdk</artifactId>
+                <version>${graalvm.wso2.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.minidev</groupId>
@@ -970,7 +975,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.8.657</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.8.675</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
         <identity.oauth.xacml.version.range>[2.0.0, 3.0.0)</identity.oauth.xacml.version.range>
@@ -1034,6 +1039,8 @@
 
         <nimbusds.version>10.3.0.wso2v1</nimbusds.version>
         <nimbusds.osgi.version.range>[10.0.0,11.0.0)</nimbusds.osgi.version.range>
+
+        <graalvm.wso2.version>22.3.4.wso2v1</graalvm.wso2.version>
 
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>

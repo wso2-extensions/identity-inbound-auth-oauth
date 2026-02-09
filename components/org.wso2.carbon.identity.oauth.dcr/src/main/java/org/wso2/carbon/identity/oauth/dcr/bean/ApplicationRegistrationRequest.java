@@ -38,6 +38,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerSecret = null;
     private String spTemplateName = null;
     private String backchannelLogoutUri = null;
+    private String frontchannelLogoutUri = null;
     private boolean isManagementApp;
     private String extApplicationDisplayName = null;
     private String extApplicationOwner = null;
@@ -167,6 +168,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setBackchannelLogoutUri(String backchannelLogoutUri) {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
+    }
+
+    public String getFrontchannelLogoutUri() {
+
+        return frontchannelLogoutUri;
+    }
+
+    public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+
+        this.frontchannelLogoutUri = frontchannelLogoutUri;
     }
 
     /**
