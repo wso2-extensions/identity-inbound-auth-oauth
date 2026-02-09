@@ -48,6 +48,9 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -87,6 +90,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ISSUER_ORGANIZATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -1130,6 +1134,12 @@ public class OAuthAppDAO {
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
+        if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1735,7 +1745,7 @@ public class OAuthAppDAO {
     private void addServiceProviderOIDCProperties(Connection connection,
                                                   OAuthAppDO consumerAppDO,
                                                   String processedClientId,
-                                                  int spTenantId) throws SQLException {
+                                                  int spTenantId) throws SQLException, IdentityOAuth2Exception {
 
         try (PreparedStatement prepStmtAddOIDCProperty =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY)) {
@@ -1863,6 +1873,11 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
                     String.valueOf(consumerAppDO.getHybridFlowResponseType()));
+
+            if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
+            }
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -2084,6 +2099,21 @@ public class OAuthAppDAO {
 
             // Configure the hybrid flow response type (null if not explicitly set)
             oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
+        String issuerOrg = getFirstPropertyValue(spOIDCProperties, ISSUER_ORGANIZATION);
+        if (StringUtils.isNotEmpty(issuerOrg)) {
+            try {
+                IssuerDetails issuerDetails = new IssuerDetails();
+                issuerDetails.setIssuerOrgId(issuerOrg);
+                issuerDetails.setIssuerTenantDomain(OAuth2ServiceComponentHolder.getInstance().
+                        getOrganizationManager().resolveTenantDomain(issuerOrg));
+                issuerDetails.setIssuer(OAuth2OIDCConfigUtils.getIssuerLocation(OAuth2ServiceComponentHolder.
+                        getInstance().getOrganizationManager().resolveTenantDomain(issuerOrg)));
+                oauthApp.setIssuerDetails(issuerDetails);
+            } catch (OAuth2OIDCConfigMgtServerException | OrganizationManagementException e) {
+                throw new RuntimeException(e);
+            }
+            oauthApp.setIssuerOrg(issuerOrg);
         }
     }
 

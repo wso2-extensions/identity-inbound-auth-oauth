@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -97,7 +97,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
             IdentityProvider identityProvider = JWTUtils.getResidentIDPForIssuer(claimsSet.get(), tenantDomain);
 
-            if (!validateSignature(signedJWT, identityProvider)) {
+            if (!validateSignature(signedJWT, identityProvider, tenantDomain)) {
                 // diagnosticLogBuilder will be null if diagnostic logs are disabled.
                 if (diagnosticLogBuilder != null) {
                     diagnosticLogBuilder.resultMessage("Signature validation failed.");
@@ -181,12 +181,13 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
      *
      * @param signedJWT Signed JWT
      * @param idp       Identity Provider
+     * @param tenantDomain Tenant domain that needs to be considered to resolve the certificate
      * @return if signature is valid or not
      * @throws IdentityOAuth2Exception If an error occurs while validating
      * @throws ParseException          If  an error occurs while retrieving claim set
      * @throws JOSEException           If an error occurs while verifying signature
      */
-    private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
+    private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp, String tenantDomain)
             throws IdentityOAuth2Exception, ParseException, JOSEException {
 
         X509Certificate x509Certificate;
@@ -198,7 +199,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         if (certificate.isPresent()) {
             x509Certificate = certificate.get();
         } else {
-            x509Certificate = resolveSignerCertificate(header, idp);
+            x509Certificate = resolveSignerCertificateByTenant(idp, tenantDomain);
         }
         if (x509Certificate == null) {
             throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: "
@@ -215,5 +216,11 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         validationReqDTO.addProperty(OAuth2Util.ISS, claimsSet.getIssuer());
         validationReqDTO.addProperty(OAuth2Util.AUD, String.join(",", claimsSet.getAudience()));
         validationReqDTO.addProperty(OAuth2Util.JTI, claimsSet.getJWTID());
+    }
+
+    private X509Certificate resolveSignerCertificateByTenant(IdentityProvider idp, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return OAuth2Util.resolverSignerCertificate(idp, tenantDomain);
     }
 }

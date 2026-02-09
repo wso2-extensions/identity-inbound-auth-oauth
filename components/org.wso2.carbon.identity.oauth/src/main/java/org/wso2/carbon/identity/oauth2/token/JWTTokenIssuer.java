@@ -48,6 +48,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
@@ -437,12 +439,27 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-         directly in the organization of the applicationResidentOrgId. In this scenario, the signing tenant domain
-         should be the root tenant domain of the applicationResidentOrgId.
+         If applicationResidentOrgId is not empty, then the request comes for an application which is
+         registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
+         that needs to be signing the token should be extracted from the application OIDC configurations. If that
+         is not available then the root organization will be selected as the signing tenant domain.
         */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            try {
+                String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(applicationResidentOrgId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID, appTenant);
+                String issuerOrg = oAuthAppDO.getIssuerOrg();
+                if (StringUtils.isNotEmpty(issuerOrg)) {
+                    tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                } else {
+                    tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                }
+            } catch (OrganizationManagementException | InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while getting the signing tenant domain for " +
+                        "client id: " + clientID, e);
+            }
         } else if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
             if (log.isDebugEnabled()) {
                 log.debug("Using the tenant domain of the SP to sign the token");
@@ -657,15 +674,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-         directly in the organization of the applicationResidentOrgId. spTenantDomain is used to get the idTokenIssuer
-         for the token. In this scenario, the tenant domain that needs to be used as the issuer is the root tenant.
-        */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            spTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();;
-        }
-
         boolean isMTLSrequest;
         if (authAuthzReqMessageContext != null) {
             /* If the auth request is originated from a request object reference(ex: PAR), then that endpoint should be
@@ -677,7 +685,34 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             isMTLSrequest = OAuth2Util.isMtlsRequest(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                     .getHttpServletRequestWrapper().getRequestURL().toString());
         }
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
+
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. spTenantDomain is used to get the idTokenIssuer
+         for the token. In this scenario, the tenant domain that needs to be used as the issuer should be extracted
+         from the application OIDC configurations. If that is not available, then the root tenant domain will be used
+         to get the idTokenIssuer.
+        */
+
+        String issuer;
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            String issuerOrg = oAuthAppDO.getIssuerOrg();
+            if (StringUtils.isNotEmpty(issuerOrg)) {
+                try {
+                    String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                    issuer = OAuth2OIDCConfigUtils.getIssuerLocation(issuerTenantDomain);
+                } catch (OrganizationManagementException | OAuth2OIDCConfigMgtServerException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while getting the issuer tenant domain for " +
+                            "client id: " + consumerKey, e);
+                }
+            } else {
+                spTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
+            }
+        } else {
+            issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
+        }
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);

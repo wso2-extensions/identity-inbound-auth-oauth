@@ -134,6 +134,8 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -4849,18 +4851,31 @@ public class OAuth2Util {
 
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is
-             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
-             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
-             used as the issuer is the root tenant.
-            */
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is
+         registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+         to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+         used as the issuer should be extracted from the application OIDC configurations. If that
+         is not available then the root organization's issuer will be selected as the issuer.
+        */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application resident organization id is found in the carbon context. " +
-                        "Using the root tenant domain to build the id token issuer.");
+            try {
+                String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+                String issuerOrg = oAuthAppDO.getIssuerOrg();
+                if (StringUtils.isNotEmpty(issuerOrg)) {
+                    String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                    return OAuth2OIDCConfigUtils.getIssuerLocation(issuerTenantDomain);
+                } else {
+                    tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                }
+            } catch (OrganizationManagementException | OAuth2OIDCConfigMgtServerException |
+                     InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving issuer for clientId: " +
+                        clientId, e);
             }
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
@@ -6246,6 +6261,35 @@ public class OAuth2Util {
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
+        try {
+            if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
+                    identityProvider.getIdentityProviderName())) {
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain);
+            } else {
+                x509Certificate =
+                        (X509Certificate) IdentityApplicationManagementUtil.decodeCertificate(
+                                identityProvider.getCertificate());
+            }
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2ServerException(
+                    "Error occurred while decoding public certificate of Identity Provider " +
+                            identityProvider.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
+        }
+        return x509Certificate;
+    }
+
+    /**
+     * Get the X509 certificate of the Identity Provider.
+     *
+     * @param identityProvider Identity Provider.
+     * @param tenantDomain     Tenant domain of the IdP to get the certificate.
+     * @return X509Certificate.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static X509Certificate resolverSignerCertificate(IdentityProvider identityProvider, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        X509Certificate x509Certificate;
         try {
             if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
                     identityProvider.getIdentityProviderName())) {

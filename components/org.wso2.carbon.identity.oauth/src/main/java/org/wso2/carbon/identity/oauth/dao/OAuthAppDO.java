@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -117,6 +118,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
     private String issuerOrg;
+    private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -587,6 +589,17 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
         this.issuerOrg = issuerOrg;
     }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
+    }
+
 
     /**
      * Resolves the back-channel logout URL for the shared oAuth apps in organizations.

@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
@@ -168,6 +169,8 @@ public class OAuthAdminServiceImplTest {
     TokenManagementDAO mockTokenManagementDAO;
     @Mock
     IdentityEventService identityEventService;
+    @Mock
+    OrganizationManager mockOrganizationManager;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     private MockedStatic<LoggerUtils> loggerUtils;
@@ -307,7 +310,9 @@ public class OAuthAdminServiceImplTest {
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
@@ -325,6 +330,13 @@ public class OAuthAdminServiceImplTest {
             oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
             oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
             oAuthConsumerAppDTO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn("org-id");
+            when(mockOrganizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                     (mock, context) -> {
@@ -876,10 +888,31 @@ public class OAuthAdminServiceImplTest {
 
         try (MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
             oAuthUtil.when(OAuthUtil::getRandomNumberSecure).thenReturn(UPDATED_CONSUMER_SECRET);
+            oAuthUtil.when(() -> OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserId(USER_ID);
+
             OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
             doThrow(new IdentityOAuthAdminException("Error while regenerating consumer secret")).when(
                     oAuthAdminServiceImpl).updateAppAndRevokeTokensAndAuthzCodes(anyString(), any(Properties.class));
-            oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
+            oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+            oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("test_user");
+            oAuthAppDO.setAppOwner(authenticatedUser);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(CONSUMER_KEY, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(
+                                oAuthAppDO);
+                    })) {
+                oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
+            }
         }
     }
 

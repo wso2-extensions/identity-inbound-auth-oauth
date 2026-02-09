@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -83,6 +84,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    private IssuerDetails issuerDetails;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -560,6 +562,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
     }
 }
 

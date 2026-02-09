@@ -668,6 +668,7 @@ public final class OAuthConstants {
         public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
+        public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
 
         }

@@ -570,6 +570,7 @@ public final class OAuthUtil {
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
         dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
+        dto.setIssuerDetails(appDO.getIssuerDetails());
         return dto;
     }
 

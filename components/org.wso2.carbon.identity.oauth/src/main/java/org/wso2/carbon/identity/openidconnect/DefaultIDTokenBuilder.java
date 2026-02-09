@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -502,17 +503,32 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return returningClaims;
     }
 
-    private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
          If applicationResidentOrgId is not empty, then the request comes for an application which is
          registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
-         that needs to be signing the token should be the root tenant of the organization in applicationResidentOrgId.
+         that needs to be signing the token should be extracted from the application OIDC configurations. If that
+         is not available then the root organization will be selected as the signing tenant domain.
         */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            try {
+                String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
+                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), appTenant);
+                String issuerOrg = oAuthAppDO.getIssuerOrg();
+                if (StringUtils.isNotEmpty(issuerOrg)) {
+                      return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                } else {
+                    return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                }
+            } catch (OrganizationManagementException | InvalidOAuthClientException | IdentityOAuth2Exception e) {
+                throw new IdentityOAuth2Exception("Error occurred while getting the signing tenant domain. ", e);
+            }
         } else if (isJWTSignedWithSPKey) {
             return (String) tokReqMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         } else {
