@@ -311,14 +311,11 @@ public class AccessTokenEventUtil {
      * Publishes an event when a token is issued.
      *
      * @param tokReqMsgCtx            The token request message context containing information about the token request.
-     * @param tokenReqDTO The OAuth2 access token request DTO containing details about the access token
-     *                                request.
-     * @throws UserIdNotFoundException If the user ID cannot be found in the context.
+     * @param tokenReqDTO The OAuth2 access token request DTO containing details about the access token request.
      */
     public static void publishTokenIssueEvent(OAuthTokenReqMessageContext tokReqMsgCtx,
                                               OAuth2AccessTokenReqDTO tokenReqDTO,
-                                              OAuth2AccessTokenRespDTO tokenRespDTO)
-            throws UserIdNotFoundException {
+                                              OAuth2AccessTokenRespDTO tokenRespDTO) {
 
         HashMap<String, Object> properties = new HashMap<>();
 
@@ -360,8 +357,14 @@ public class AccessTokenEventUtil {
                 accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
             }
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
-                properties.put(IdentityEventConstants.EventProperty.USER_ID,
-                        tokReqMsgCtx.getAuthorizedUser().getUserId());
+                try {
+                    properties.put(IdentityEventConstants.EventProperty.USER_ID,
+                            tokReqMsgCtx.getAuthorizedUser().getUserId());
+                } catch (UserIdNotFoundException e) {
+                    LOG.error("Error retrieving user Id for tenant: " +
+                            tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), e);
+                    return;
+                }
                 properties.put(IdentityEventConstants.EventProperty.USER_NAME,
                         tokReqMsgCtx.getAuthorizedUser().getUserName());
                 properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
