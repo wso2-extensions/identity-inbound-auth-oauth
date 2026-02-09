@@ -414,6 +414,7 @@
                     <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="idTokenSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="jwtScopeAsArrayEnabled" nillable="true" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
