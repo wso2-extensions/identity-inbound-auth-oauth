@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -186,6 +187,7 @@ public class OAuth2UtilTest {
     private String scopeString = "scope1 scope2 scope3";
     private final String clientId = "dummyClientId";
     private final String clientSecret = "dummyClientSecret";
+    private final String tenantDomain = "tenant.com";
     private final String base64EncodedClientIdSecret = "ZHVtbXlDbGllbnRJZDpkdW1teUNsaWVudFNlY3JldA==";
     private final String base64EncodedClientIdInvalid = "ZHVtbXlDbGllbnRJZA==";
     private String authorizationCode = "testAuthorizationCode";
@@ -3691,5 +3693,118 @@ public class OAuth2UtilTest {
         property.setName(name);
         property.setValue(value);
         return property;
+    }
+
+    @Test(dataProvider = "isJwtScopeAsArrayEnabledDataProvider")
+    public void testIsJwtScopeAsArrayEnabled(Boolean appLevelConfig, Boolean tenantConfig,
+                                              boolean expectedResult, String description) throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setJwtScopeAsArrayEnabled(appLevelConfig);
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            if (appLevelConfig == null) {
+                // Mock tenant-level configuration from resident IDP
+                IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+                lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                        .thenReturn(mockResidentIdp);
+                
+                FederatedAuthenticatorConfig mockOidcConfig = mock(FederatedAuthenticatorConfig.class);
+                FederatedAuthenticatorConfig[] configs = new FederatedAuthenticatorConfig[]{mockOidcConfig};
+                when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(configs);
+                
+                mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                        any(FederatedAuthenticatorConfig[].class), 
+                        eq("openidconnect")))
+                        .thenReturn(mockOidcConfig);
+                
+                if (tenantConfig != null) {
+                    Property enableJwtScopeProperty = new Property();
+                    enableJwtScopeProperty.setName(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+                    enableJwtScopeProperty.setValue(tenantConfig.toString());
+                    Property[] properties = new Property[]{enableJwtScopeProperty};
+                    when(mockOidcConfig.getProperties()).thenReturn(properties);
+                    
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(enableJwtScopeProperty);
+                } else {
+                    when(mockOidcConfig.getProperties()).thenReturn(new Property[]{});
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(null);
+                }
+            }
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, expectedResult, description);
+        }
+    }
+
+    @DataProvider(name = "isJwtScopeAsArrayEnabledDataProvider")
+    public Object[][] isJwtScopeAsArrayEnabledDataProvider() {
+
+        return new Object[][]{
+                // {appLevel, tenantLevel, expected, description}
+                {true, null, true, "App-level enabled should return true (priority 1)"},
+                {false, null, false, "App-level disabled should return false (priority 1)"},
+                {null, true, true, "Null app-level, tenant enabled should return true (priority 2)"},
+                {null, false, false, "Null app-level, tenant disabled should return false (priority 2)"},
+                {null, null, false, "All null should return default false"},
+                {true, false, true, "App-level should override tenant-level (priority 1 wins)"},
+                {false, true, false, "App-level false should override tenant-level true (priority 1 wins)"},
+        };
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_withNullOAuthAppDO() throws Exception {
+
+        // Return null resident IDP
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(null);
+
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(null, tenantDomain);
+        assertEquals(result, false, "Null OAuthAppDO with null resident IDP should return default false");
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenResidentIdpHasNoOidcConfig() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+            lenient().when(mockIdentityProviderManager.getResidentIdP(tenantDomain))
+                    .thenReturn(mockResidentIdp);
+            when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(new FederatedAuthenticatorConfig[]{});
+            
+            // OIDC config not found
+            mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                    any(FederatedAuthenticatorConfig[].class), 
+                    eq("openidconnect")))
+                    .thenReturn(null);
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, false, "OAuthAppDO with no OIDC config should return default false");
+        }
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenIdentityProviderManagementExceptionThrown() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                .thenThrow(new IdentityProviderManagementException(
+                        "Error reading resident IDP configuration"));
+
+        // Should return false on exception (fallback behavior)
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+        assertEquals(result, false, "Exception during tenant config retrieval should return default false");
     }
 }
