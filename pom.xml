@@ -587,6 +587,11 @@
                 <scope>provided</scope>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.governance</artifactId>
+                <version>${carbon.identity.governance.version}</version>
+            </dependency>
 
             <!--Swagger Dependencies-->
             <dependency>
@@ -989,6 +994,9 @@
         </carbon.identity.organization.management.core.version>
         <carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </carbon.identity.organization.management.core.version.range>
+
+        <identity.governance.imp.pkg.version.range>[1.3.0, 3.0.0)</identity.governance.imp.pkg.version.range>
+        <carbon.identity.governance.version>1.8.40</carbon.identity.governance.version>
 
         <!--Carbon component version-->
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>

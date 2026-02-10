@@ -26,13 +26,17 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserNotificationHandler;
+import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaUserNotificationContext;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.core.common.User;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -45,6 +49,7 @@ import java.util.UUID;
 public class CibaAuthServiceImpl implements CibaAuthService {
 
     private static Log log = LogFactory.getLog(CibaAuthServiceImpl.class);
+    private static final CibaUserNotificationHandler cibaUserNotificationHandler = new CibaUserNotificationHandler();
 
     @Override
     public CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest)
@@ -53,6 +58,24 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest);
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
         return buildAuthCodeResponse(cibaAuthCodeRequest, cibaAuthCodeDO);
+    }
+
+    @Override
+    public String resolveUser(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException, CibaClientException {
+
+        return CibaServiceComponentHolder.getCibaUserResolver().resolveUser(cibaAuthCodeRequest);
+    }
+
+    @Override
+    public User getUser(String userLoginIdentifier, String tenantDomain) throws CibaCoreException, CibaClientException {
+
+        return CibaServiceComponentHolder.getCibaUserResolver().getUser(userLoginIdentifier, tenantDomain);
+    }
+
+    @Override
+    public void triggerNotification(CibaUserNotificationContext cibaUserNotificationContext) throws CibaCoreException {
+
+        cibaUserNotificationHandler.sendNotification(cibaUserNotificationContext);
     }
 
     /**
@@ -146,6 +169,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             cibaAuthCodeResponse.setClientId(clientID);
             cibaAuthCodeResponse.setScopes(cibaAuthCodeRequest.getScopes());
             cibaAuthCodeResponse.setExpiresIn(cibaAuthCodeDO.getExpiresIn());
+            cibaAuthCodeResponse.setAuthCodeKey(cibaAuthCodeDO.getCibaAuthCodeKey());
 
             if (StringUtils.isNotBlank(cibaAuthCodeRequest.getBindingMessage())) {
                 cibaAuthCodeResponse.setBindingMessage(cibaAuthCodeRequest.getBindingMessage());

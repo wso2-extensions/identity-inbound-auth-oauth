@@ -24,8 +24,17 @@ import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.governance.service.notification.NotificationChannelManager;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * Service component for CIBA.
@@ -44,6 +53,8 @@ public class CibaServiceComponent {
         try {
             context.getBundleContext().registerService(CibaAuthService.class.getName(),
                     new CibaAuthServiceImpl(), null);
+            context.getBundleContext().registerService(ResponseTypeRequestValidator.class.getName(),
+                    new CibaResponseTypeRequestValidator(), null);
             if (log.isDebugEnabled()) {
                 log.debug("CIBA component bundle is activated.");
             }
@@ -58,5 +69,77 @@ public class CibaServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("CIBA component bundle is deactivated.");
         }
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.event.services.IdentityEventService",
+            service = IdentityEventService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService"
+    )
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService set in OAuth2ServiceComponent bundle");
+        }
+        CibaServiceComponentHolder.setIdentityEventService(identityEventService);
+    }
+
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("IdentityEventService unset in OAuth2ServiceComponent bundle");
+        }
+        CibaServiceComponentHolder.setIdentityEventService(null);
+    }
+
+    @Reference(
+            name = "RealmService",
+            service = org.wso2.carbon.user.core.service.RealmService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRealmService")
+    protected void setRealmService(RealmService realmService) {
+
+        CibaServiceComponentHolder.setRealmService(realmService);
+    }
+
+    protected void unsetRealmService(RealmService realmService) {
+
+        CibaServiceComponentHolder.setRealmService(null);
+    }
+
+    @Reference(
+            name = "NotificationChannelManager",
+            service = org.wso2.carbon.identity.governance.service.notification.NotificationChannelManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetNotificationChannelManager")
+    protected void setNotificationChannelManager(NotificationChannelManager notificationChannelManager) {
+
+        CibaServiceComponentHolder.setNotificationChannelManager(notificationChannelManager);
+    }
+
+    protected void unsetNotificationChannelManager(NotificationChannelManager notificationChannelManager) {
+
+        CibaServiceComponentHolder.setNotificationChannelManager(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService",
+            service = MultiAttributeLoginService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetMultiAttributeLoginService"
+    )
+    protected void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
+
+        CibaServiceComponentHolder.setMultiAttributeLoginService(multiAttributeLoginService);
+    }
+
+    protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
+
+        CibaServiceComponentHolder.setMultiAttributeLoginService(null);
     }
 }
