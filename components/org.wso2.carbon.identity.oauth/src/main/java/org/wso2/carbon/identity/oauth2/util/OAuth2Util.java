@@ -6518,12 +6518,7 @@ public class OAuth2Util {
         }
 
         // 2. Tenant-Level Check.
-        try {
-            return getTenantLevelJwtScopeAsArrayConfig(tenantDomain);
-        } catch (IdentityProviderManagementException e) {
-            log.warn("Error while retrieving tenant-level JWT scope as array configuration.", e);
-            return false;
-        }
+        return getTenantLevelJwtScopeAsArrayConfig(tenantDomain);
     }
 
     /**
@@ -6532,37 +6527,41 @@ public class OAuth2Util {
      *
      * @param tenantDomain Tenant domain to retrieve the resident IDP configuration from.
      * @return true if JWT scope as array is enabled in resident IDP configuration, false otherwise.
-     * @throws IdentityProviderManagementException if unable to read resident IDP configuration.
      */
-    private static boolean getTenantLevelJwtScopeAsArrayConfig(String tenantDomain)
-            throws IdentityProviderManagementException {
+    private static boolean getTenantLevelJwtScopeAsArrayConfig(String tenantDomain) {
+    
+        try {
 
-        IdentityProvider residentIdp = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            IdentityProvider residentIdp = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            
+            if (residentIdp == null) {
+                return false;
+            }
 
-        if (residentIdp == null) {
-            return false;
+            FederatedAuthenticatorConfig oidcFederatedAuthConfig =
+                    IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                            residentIdp.getFederatedAuthenticatorConfigs(),
+                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
+
+            if (oidcFederatedAuthConfig == null) {
+                return false;
+            }
+
+            Property enableJwtScopeAsArrayProperty = IdentityApplicationManagementUtil.getProperty(
+                    oidcFederatedAuthConfig.getProperties(),
+                    OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+
+            if (enableJwtScopeAsArrayProperty != null &&
+                    StringUtils.isNotBlank(enableJwtScopeAsArrayProperty.getValue())) {
+                log.debug("Using tenant level config for JWT scope as array: " + 
+                        enableJwtScopeAsArrayProperty.getValue());
+                return Boolean.parseBoolean(enableJwtScopeAsArrayProperty.getValue());
+            }
+
+        } catch (IdentityProviderManagementException e) {
+            log.warn("Error while retrieving tenant-level JWT scope as array configuration.", e);
         }
-
-        FederatedAuthenticatorConfig oidcFederatedAuthConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(
-                        residentIdp.getFederatedAuthenticatorConfigs(),
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-
-        if (oidcFederatedAuthConfig == null) {
-            return false;
-        }
-
-        Property enableJwtScopeAsArrayProperty = IdentityApplicationManagementUtil.getProperty(
-                oidcFederatedAuthConfig.getProperties(),
-                OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
-
-        if (enableJwtScopeAsArrayProperty != null &&
-                StringUtils.isNotBlank(enableJwtScopeAsArrayProperty.getValue())) {
-            log.debug("Using tenant level config for JWT scope as array: " + 
-                    enableJwtScopeAsArrayProperty.getValue());
-            return Boolean.parseBoolean(enableJwtScopeAsArrayProperty.getValue());
-        }
-
+        
         return false;
     }
 }
