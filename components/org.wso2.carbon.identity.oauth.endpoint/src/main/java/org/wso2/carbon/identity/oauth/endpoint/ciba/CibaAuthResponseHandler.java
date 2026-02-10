@@ -129,6 +129,7 @@ public class CibaAuthResponseHandler {
      */
     private Response handleServerError(CibaAuthFailureException cibaAuthFailureException) {
 
+        log.error(cibaAuthFailureException.getMessage(), cibaAuthFailureException);
         // Creating error response for the request.
         JSONObject cibaErrorResponse = new JSONObject();
         cibaErrorResponse.put(ERROR, cibaAuthFailureException.getErrorCode());

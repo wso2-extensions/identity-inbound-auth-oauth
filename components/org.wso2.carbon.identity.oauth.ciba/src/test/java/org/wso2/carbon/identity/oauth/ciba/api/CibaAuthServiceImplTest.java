@@ -27,7 +27,9 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -44,6 +46,8 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.nio.file.Paths;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -51,6 +55,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class CibaAuthServiceImplTest {
 
@@ -67,7 +72,6 @@ public class CibaAuthServiceImplTest {
     CibaNotificationChannel cibaNotificationChannel;
 
     private MockedStatic<OAuth2Util> oAuth2Util;
-    private MockedStatic<CarbonContext> carbonContext;
     private MockedStatic<CibaDAOFactory> cibaDAOFactoryStatic;
     private MockedStatic<ServiceURLBuilder> serviceURLBuilder;
 
@@ -77,6 +81,9 @@ public class CibaAuthServiceImplTest {
 
     @BeforeMethod
     public void setUp() {
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         cibaAuthService = new CibaAuthServiceImpl();
 
         // Mock Static classes - OAuthServerConfiguration first to prevent OAuth2Util
@@ -88,14 +95,12 @@ public class CibaAuthServiceImplTest {
                 .thenReturn(mockOAuthServerConfig);
 
         oAuth2Util = mockStatic(OAuth2Util.class);
-        carbonContext = mockStatic(CarbonContext.class);
         cibaDAOFactoryStatic = mockStatic(CibaDAOFactory.class);
         serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
 
-        // Setup CarbonContext
-        CarbonContext mockCarbonContext = mock(CarbonContext.class);
-        carbonContext.when(CarbonContext::getThreadLocalCarbonContext).thenReturn(mockCarbonContext);
-        when(mockCarbonContext.getTenantDomain()).thenReturn("carbon.super");
+        // Setup CarbonContext via PrivilegedCarbonContext
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
 
         // Setup CibaDAOFactory
         cibaDAOFactoryStatic.when(CibaDAOFactory::getInstance).thenReturn(cibaDAOFactory);
@@ -108,9 +113,10 @@ public class CibaAuthServiceImplTest {
 
     @AfterMethod
     public void tearDown() {
+
+        PrivilegedCarbonContext.endTenantFlow();
         oAuthServerConfiguration.close();
         oAuth2Util.close();
-        carbonContext.close();
         cibaDAOFactoryStatic.close();
         serviceURLBuilder.close();
 
@@ -169,8 +175,23 @@ public class CibaAuthServiceImplTest {
         cibaAuthService.generateAuthCodeResponse(request);
     }
 
+    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp = ".*public client.*")
+    public void testGenerateAuthCodeResponse_PublicClient() throws Exception {
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
+        request.setIssuer("public-client");
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setBypassClientCredentials(true);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("public-client", "carbon.super"))
+                .thenReturn(appDO);
+
+        cibaAuthService.generateAuthCodeResponse(request);
+    }
+
     @Test(expectedExceptions = CibaCoreException.class)
     public void testGenerateAuthCodeResponse_UserResolutionFail() throws Exception {
+
         CibaAuthCodeRequest request = new CibaAuthCodeRequest();
         request.setIssuer("test-client");
         request.setUserHint("unknown-user");
@@ -186,7 +207,8 @@ public class CibaAuthServiceImplTest {
 
     @Test
     public void testGenerateAuthCodeResponse_NotificationException() throws Exception {
-        CibaAuthCodeRequest request = new CibaAuthCodeRequest(); // Setup same as Success
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
         request.setIssuer("test-client");
         request.setUserHint("test-user-hint");
 
@@ -198,7 +220,7 @@ public class CibaAuthServiceImplTest {
         resolvedUser.setTenantDomain("carbon.super");
         when(cibaUserResolver.resolveUser("test-user-hint", "carbon.super")).thenReturn(resolvedUser);
 
-        // Mock URL builder
+        // Mock URL builder.
         ServiceURLBuilder mockBuilder = mock(ServiceURLBuilder.class);
         serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockBuilder);
         when(mockBuilder.addPath(anyString())).thenReturn(mockBuilder);
@@ -207,16 +229,16 @@ public class CibaAuthServiceImplTest {
         when(mockBuilder.build()).thenReturn(mockServiceURL);
         when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
 
-        // Force exception in notification
+        // Force exception in notification.
         when(cibaNotificationChannel.canHandle(any(), any(), anyString())).thenReturn(true);
         Mockito.doThrow(new CibaCoreException("Notification failed")).when(cibaNotificationChannel)
                 .sendNotification(any(), any(), anyString(), anyString(), anyString());
 
-        // Should not throw exception
+        // Should not throw exception.
         CibaAuthCodeResponse response = cibaAuthService.generateAuthCodeResponse(request);
 
         Assert.assertNotNull(response);
-        // Persist should still happen
+        // Persist should still happen.
         verify(cibaAuthMgtDAO).persistCibaAuthCode(any(CibaAuthCodeDO.class));
     }
 }

@@ -49,7 +49,6 @@ import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.CibaAuthServiceFactory;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -59,7 +58,6 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder;
 
-import java.lang.reflect.Field;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
@@ -103,9 +101,6 @@ public class OAuth2CibaEndpointTest {
 
     @Mock
     CibaAuthServiceImpl authService;
-
-    @Mock
-    OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
 
     @Mock
     Response response;
@@ -407,12 +402,7 @@ public class OAuth2CibaEndpointTest {
             cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
             when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
 
-            CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
 
-            setInternalState(oAuth2CibaEndpoint, "cibaAuthzHandler", cibaAuthzHandler);
-            setInternalState(cibaAuthzHandler, "authzEndPoint", oAuth2AuthzEndpoint);
-
-            when(oAuth2AuthzEndpoint.authorize(any(), any())).thenReturn(response);
 
             Response response =
                     oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
@@ -468,13 +458,6 @@ public class OAuth2CibaEndpointTest {
         serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(builder);
     }
 
-    private void setInternalState(Object object, String fieldName, Object value)
-            throws NoSuchFieldException, IllegalAccessException {
 
-        // set internal state of an object using java reflection
-        Field declaredField = object.getClass().getDeclaredField(fieldName);
-        declaredField.setAccessible(true);
-        declaredField.set(object, value);
-    }
 
 }

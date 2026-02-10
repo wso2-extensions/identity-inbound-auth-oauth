@@ -84,14 +84,14 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
+        String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         if (!super.validateGrant(tokReqMsgCtx)) {
             if (log.isDebugEnabled()) {
                 log.debug("Successful in validating grant.Validation failed for the token request made by client: " +
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                        clientId);
             }
             return false;
         }
-
         // Obtain authentication request identifier from request.
         String authReqId = getAuthReqId(tokReqMsgCtx);
 
@@ -100,8 +100,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
             // Validate if auth_req_id belongs to the same client.
-            validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(),
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(), clientId);
 
             // Check whether auth_req_id is not expired.
             validateAuthReqId(cibaAuthCodeDO);
@@ -140,7 +139,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     protected String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String authReqId = null; // Initiating auth_req_id.
+        String authReqId = null;
         RequestParameter[] parameters = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
 
         // Obtaining auth_req_id from request.
