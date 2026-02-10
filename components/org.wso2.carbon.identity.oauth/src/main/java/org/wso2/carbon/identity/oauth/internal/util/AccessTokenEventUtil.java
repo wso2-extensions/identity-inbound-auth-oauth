@@ -386,8 +386,6 @@ public class AccessTokenEventUtil {
                     tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
             properties.put(IdentityEventConstants.EventProperty.CLIENT_ID,
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
-            properties.put(IdentityEventConstants.EventProperty.ISSUED_TIME,
-                    String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime()));
             properties.put(IdentityEventConstants.EventProperty.EXISTING_TOKEN_USED,
                     String.valueOf(existingTokenUsed(tokReqMsgCtx)));
 
