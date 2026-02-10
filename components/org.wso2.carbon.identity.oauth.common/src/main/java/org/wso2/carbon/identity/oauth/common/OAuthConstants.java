@@ -134,6 +134,8 @@ public final class OAuthConstants {
             ".EnableHybridFlowAppLevelValidation";
     public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
 
+    public static final String ACTOR_AZP = "ACTOR_AZP";
+
     /**
      * Enum for OIDC supported subject types.
      */
