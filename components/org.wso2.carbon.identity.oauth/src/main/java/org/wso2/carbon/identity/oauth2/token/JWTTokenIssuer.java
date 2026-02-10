@@ -76,6 +76,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_W
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_SELF_DELEGATION_WITH_ACT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_AZP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 
 /**
  * Self contained access token builder.
@@ -726,16 +731,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // Handle act claim for both delegation and self-delegation with existing act
         if (tokenReqMessageContext != null) {
-            Object isDelegationRequest = tokenReqMessageContext.getProperty("IS_DELEGATION_REQUEST");
-            Object isSelfDelegationWithAct = tokenReqMessageContext.getProperty("IS_SELF_DELEGATION_WITH_ACT");
+            Object isDelegationRequest = tokenReqMessageContext.getProperty(IS_DELEGATION_REQUEST);
+            Object isSelfDelegationWithAct = tokenReqMessageContext.getProperty(IS_SELF_DELEGATION_WITH_ACT);
 
             // Case 1: Regular delegation - create new act claim with nesting
-            if (isDelegationRequest != null && Boolean.TRUE.equals(isDelegationRequest)) {
-                Object actorSubject = tokenReqMessageContext.getProperty("ACTOR_SUBJECT");
-                Object actorAzp = tokenReqMessageContext.getProperty("ACTOR_AZP");
+            if (Boolean.TRUE.equals(isDelegationRequest)) {
+                Object actorSubject = tokenReqMessageContext.getProperty(ACTOR_SUBJECT);
+                Object actorAzp = tokenReqMessageContext.getProperty(ACTOR_AZP);
 
                 if (actorSubject != null) {
-                    Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+                    Object existingActClaim = tokenReqMessageContext.getProperty(EXISTING_ACT_CLAIM);
 
                     // Build the act claim structure
                     Map<String, Object> actClaim = new HashMap<>();
@@ -771,8 +776,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
             // Case 2: Self-delegation with existing act claim - preserve it
-            else if (isSelfDelegationWithAct != null && Boolean.TRUE.equals(isSelfDelegationWithAct)) {
-                Object existingActClaim = tokenReqMessageContext.getProperty("EXISTING_ACT_CLAIM");
+            else if (Boolean.TRUE.equals(isSelfDelegationWithAct)) {
+                Object existingActClaim = tokenReqMessageContext.getProperty(EXISTING_ACT_CLAIM);
 
                 if (existingActClaim != null) {
                     if (existingActClaim instanceof Map) {
