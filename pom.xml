@@ -310,7 +310,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-                <artifactId>oltu</artifactId>
+                <artifactId>oltu-jdk21</artifactId>
                 <version>${oltu.version}</version>
             </dependency>
             <dependency>
@@ -1029,7 +1029,7 @@
         <gdata-core.wso2.version>1.47.0.wso2v1</gdata-core.wso2.version>
         <gdata-core.imp.pkg.version.range>[1.47.0.wso2v1,2.0.0)</gdata-core.imp.pkg.version.range>
 
-        <oltu.version>1.0.0.wso2v4</oltu.version>
+        <oltu.version>1.0.0.wso2v1</oltu.version>
         <org.apache.oltu.oauth2.client.version>1.0.0</org.apache.oltu.oauth2.client.version>
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
