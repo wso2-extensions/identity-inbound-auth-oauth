@@ -46,7 +46,6 @@ import static org.wso2.carbon.identity.oauth.ui.internal.OAuthUIServiceComponent
 /**
  * Servlet class for OAuth.
  */
-//TODO Check if this servlet is working.
 @Component(
         service = Servlet.class,
         immediate = true,
