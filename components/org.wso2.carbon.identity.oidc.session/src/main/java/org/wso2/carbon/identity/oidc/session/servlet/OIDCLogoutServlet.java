@@ -95,7 +95,6 @@ import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUt
 /**
  * Servlet class of OIDC Logout.
  */
-//TODO Check if this servlet is working.
 @Component(
         service = Servlet.class,
         immediate = true,

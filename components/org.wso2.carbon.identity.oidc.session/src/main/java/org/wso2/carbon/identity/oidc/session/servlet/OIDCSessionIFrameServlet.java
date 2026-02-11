@@ -52,7 +52,6 @@ import static org.wso2.carbon.identity.oidc.session.OIDCSessionConstants.OIDCEnd
 /**
  * Servlet class of OIDC session IFrame.
  */
-//TODO Check if this servlet is working.
 @Component(
         service = Servlet.class,
         immediate = true,

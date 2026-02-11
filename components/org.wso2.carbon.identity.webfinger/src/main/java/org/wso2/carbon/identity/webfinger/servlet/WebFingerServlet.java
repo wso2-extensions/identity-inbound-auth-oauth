@@ -39,7 +39,6 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * Webfinger endpoint. Servelet is registered for the path /.well-known/webfinger
  */
-//TODO Check if this servlet is working.
 @Component(
         service = Servlet.class,
         immediate = true,
