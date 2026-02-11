@@ -315,7 +315,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
-                <artifactId>waffle-jna</artifactId>
+                <artifactId>waffle-jna-jdk21</artifactId>
                 <version>${waffle-jna.wso2.version}</version>
             </dependency>
             <dependency>
@@ -1034,7 +1034,7 @@
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
         <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v8</waffle-jna.wso2.version>
+        <waffle-jna.wso2.version>1.6.wso2v1</waffle-jna.wso2.version>
         <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
         <nimbusds.version>10.3.0.wso2v1</nimbusds.version>
