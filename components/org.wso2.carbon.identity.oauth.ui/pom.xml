@@ -84,7 +84,7 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
         </dependency>
         <dependency>
@@ -115,8 +115,6 @@
                             org.apache.axis2.context; version="${axis2.osgi.version.range}",
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
                             org.apache.commons.lang.*; version="${commons-lang.version.range}",
-
-                            org.eclipse.equinox.http.helper,
 
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
                             org.osgi.service.http; version="${osgi.service.http.imp.pkg.version.range}",

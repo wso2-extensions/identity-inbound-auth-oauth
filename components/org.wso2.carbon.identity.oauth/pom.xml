@@ -105,7 +105,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
-            <artifactId>opensaml</artifactId>
+            <artifactId>opensaml-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -149,7 +149,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-            <artifactId>oltu</artifactId>
+            <artifactId>oltu-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -193,7 +193,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
-            <artifactId>waffle-jna</artifactId>
+            <artifactId>waffle-jna-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.nimbusds</groupId>
@@ -256,8 +256,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.javax.xml.bind</groupId>
@@ -576,4 +582,3 @@
     </build>
 
 </project>
-

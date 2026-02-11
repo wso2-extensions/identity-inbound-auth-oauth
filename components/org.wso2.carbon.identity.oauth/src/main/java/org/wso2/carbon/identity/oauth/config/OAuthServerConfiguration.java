@@ -32,6 +32,7 @@ import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -87,6 +88,13 @@ import javax.xml.namespace.QName;
  * Runtime representation of the OAuth Configuration as configured through
  * identity.xml
  */
+@Capability(
+        namespace = "osgi.service",
+        attribute = {
+                "objectClass=org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration",
+                "service.scope=singleton"
+        }
+)
 public class OAuthServerConfiguration {
 
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
