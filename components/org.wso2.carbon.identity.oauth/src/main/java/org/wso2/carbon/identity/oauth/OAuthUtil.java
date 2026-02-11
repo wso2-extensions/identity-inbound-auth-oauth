@@ -908,6 +908,8 @@ public final class OAuthUtil {
                                                   String userStoreDomain, String username) {
 
         boolean isErrorOnRevokingTokens = false;
+        boolean isTokenPreservingAtPasswordUpdateEnabled = IdPManagementUtil.
+                getPreserveCurrentSessionAtPasswordUpdate(authenticatedUser.getTenantDomain());
         for (String clientId : clientIds) {
             try {
                 Set<AccessTokenDO> accessTokenDOs = new HashSet<>();
@@ -930,8 +932,6 @@ public final class OAuthUtil {
                     LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
                             + username);
                 }
-                boolean isTokenPreservingAtPasswordUpdateEnabled = IdPManagementUtil.
-                        getPreserveCurrentSessionAtPasswordUpdate(authenticatedUser.getTenantDomain());
                 String currentTokenBindingReference = "";
                 String currentTokenReference = "";
                 if (isTokenPreservingAtPasswordUpdateEnabled) {

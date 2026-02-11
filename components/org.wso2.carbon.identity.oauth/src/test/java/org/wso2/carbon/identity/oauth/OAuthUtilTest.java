@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdpManager;
+import org.wso2.carbon.idp.mgt.util.IdPManagementUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -145,6 +146,7 @@ public class OAuthUtilTest {
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
     private MockedStatic<AuthorizationGrantCache> authorizationGrantCache;
     private MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory;
+    private MockedStatic<IdPManagementUtil> idpManagementUtil;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -161,6 +163,7 @@ public class OAuthUtilTest {
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         oAuthTokenPersistenceFactory = mockStatic(OAuthTokenPersistenceFactory.class);
         authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
+        idpManagementUtil = mockStatic(IdPManagementUtil.class);
         OpenIDConnectServiceComponentHolder.setIdentityEventService(identityEventService);
     }
 
@@ -172,6 +175,7 @@ public class OAuthUtilTest {
         identityDatabaseUtil.close();
         oAuthTokenPersistenceFactory.close();
         authorizationGrantCache.close();
+        idpManagementUtil.close();
         reset(organizationUserSharingService);
         reset(roleManagementService);
         reset(applicationManagementService);
@@ -364,6 +368,9 @@ public class OAuthUtilTest {
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
 
+        idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
+                .thenReturn(false);
+
         try (MockedStatic<AccessTokenEventUtil> mockedEventUtil = mockStatic(AccessTokenEventUtil.class)) {
 
             mockedEventUtil
@@ -447,6 +454,9 @@ public class OAuthUtilTest {
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
 
+        idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
+                .thenReturn(false);
+
         try (MockedStatic<AccessTokenEventUtil> mockedEventUtil = mockStatic(AccessTokenEventUtil.class)) {
 
             mockedEventUtil
@@ -512,6 +522,10 @@ public class OAuthUtilTest {
                 when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
                 when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
             }
+
+            idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
+                    .thenReturn(false);
+
             if (isSSOLoginUser || !isUserAssociationFound) {
                 boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
                 assertTrue(result);
