@@ -62,7 +62,8 @@ public class ActionTriggerEvaluatorForVersion {
 
         if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)
                 || OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType)
-                || OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType)) {
+                || OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType)
+                || OAuthConstants.GrantTypes.SAML20_BEARER.equals(grantType)) {
             return false;
         }
 
