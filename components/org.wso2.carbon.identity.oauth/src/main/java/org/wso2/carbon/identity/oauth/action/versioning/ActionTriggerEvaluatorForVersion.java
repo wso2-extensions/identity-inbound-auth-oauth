@@ -43,22 +43,31 @@ public class ActionTriggerEvaluatorForVersion {
     }
 
     /**
-     * Evaluate whether action can be triggered based on flow context for the given action version.
+     * Determines whether the action can be triggered based on the flow context for the action version.
+     * For V1, the action should not be triggered for grant flows that are not supported in this version.
      *
-     * @param actionType  Action type.
-     * @param action      Action.
-     * @param flowContext Flow context.
-     * @return True if action can be triggered based on the flow context.
+     * @param actionType The type of the action being evaluated.
+     * @param action The action being evaluated.
+     * @param flowContext The context of the flow in which the action is being evaluated.
+     * @return true if the action can be triggered, false otherwise.
+     * @throws ActionExecutionException if there is an error during evaluation.
      */
-    public boolean isTriggerableForTokenExchangeGrant(ActionType actionType, Action action, FlowContext flowContext)
-            throws ActionExecutionException {
+    public boolean isTriggerableForActionV2SupportedGrants(ActionType actionType, Action action,
+                                                           FlowContext flowContext) throws ActionExecutionException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
-        if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
-                tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType())) {
+
+        String grantType = tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+
+        if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)
+                || OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType)
+                || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)
+                || OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType)
+                || OAuthConstants.GrantTypes.SAML20_BEARER.equals(grantType)) {
             return false;
         }
+
         return true;
     }
 }
