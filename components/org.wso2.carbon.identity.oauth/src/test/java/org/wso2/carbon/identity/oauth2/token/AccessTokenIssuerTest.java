@@ -24,11 +24,17 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +42,11 @@ import java.util.concurrent.TimeUnit;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
+
+import org.apache.commons.logging.Log;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 public class AccessTokenIssuerTest {
 
@@ -117,6 +128,44 @@ public class AccessTokenIssuerTest {
             }
         }
     }
+
+    @Test
+        public void testValidateGrantExceptionLogsSanitizedError() throws Exception {
+
+        // Enable debug at JUL level so that commons-logging Jdk14Logger reports debug enabled.
+        java.util.logging.Logger.getLogger(AccessTokenIssuer.class.getName())
+            .setLevel(java.util.logging.Level.FINE);
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class)))
+            .thenThrow(new IdentityOAuth2Exception("sensitive message"));
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2Util> oauth2UtilMock = Mockito.mockStatic(OAuth2Util.class)) {
+
+            loggerUtilsMock.when(() -> LoggerUtils.getSanitizedErrorMessage("sensitive message", "user"))
+                .thenReturn("sanitized message");
+            oauth2UtilMock.when(() -> OAuth2Util.getUserIdentifierFromRequest(req)).thenReturn("user");
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            Object result = method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            Assert.assertNotNull(result);
+            Assert.assertTrue(result instanceof OAuth2AccessTokenRespDTO);
+            OAuth2AccessTokenRespDTO resp = (OAuth2AccessTokenRespDTO) result;
+            Assert.assertTrue(resp.isError());
+            Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
+        }
+        }
 
 //    @BeforeMethod
 //    public void setUp() throws Exception {

@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2;
 
-import org.apache.commons.logging.Log;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -27,7 +26,6 @@ import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -86,7 +84,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -155,39 +152,9 @@ public class OAuth2ServiceTest {
     @Mock
     private IdentityEventService mockIdentityEventService;
 
-    private Log mockedLog;
-
     private OAuth2Service oAuth2Service;
     private static final String clientId = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
     private MockedStatic<LoggerUtils> loggerUtils;
-
-    @BeforeClass
-    public void init() throws Exception {
-
-        mockedLog = mock(Log.class);
-        Field field = AccessTokenIssuer.class.getDeclaredField("log");
-        field.setAccessible(true);
-        
-        try {
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-            field.set(null, mockedLog);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            // Fallback for newer JDKs: use VarHandle via MethodHandles to set the static final field.
-            try {
-                java.lang.invoke.MethodHandles.Lookup lookup = java.lang.invoke.MethodHandles
-                        .privateLookupIn(AccessTokenIssuer.class, java.lang.invoke.MethodHandles.lookup());
-                java.lang.invoke.VarHandle varHandle = lookup.findStaticVarHandle(AccessTokenIssuer.class,
-                        "log", Log.class);
-                varHandle.set(mockedLog);
-            } catch (Throwable ex) {
-                // As a last resort, attempt to set directly (may still fail under strong encapsulation).
-                field.set(null, mockedLog);
-            }
-        }
-        when(mockedLog.isDebugEnabled()).thenReturn(true);
-    }
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -1191,4 +1158,5 @@ public class OAuth2ServiceTest {
         field.setAccessible(true);
         field.set(object, value);
     }
+
 }
