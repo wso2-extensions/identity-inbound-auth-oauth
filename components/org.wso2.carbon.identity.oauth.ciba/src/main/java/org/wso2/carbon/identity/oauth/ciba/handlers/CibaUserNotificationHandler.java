@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
 import java.util.List;
@@ -69,6 +70,14 @@ public class CibaUserNotificationHandler {
         }
 
         String tenantDomain = resolvedUser.getTenantDomain();
+        CibaNotificationContext cibaNotificationContext = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(cibaAuthCodeDO.getExpiresIn())
+                .setAuthUrl(authUrl)
+                .setBindingMessage(bindingMessage)
+                .setTenantDomain(tenantDomain)
+                .build();
+
         // Get registered notification channels.
         List<CibaNotificationChannel> channels = CibaServiceComponentHolder.getInstance()
                 .getNotificationChannels();
@@ -89,12 +98,12 @@ public class CibaUserNotificationHandler {
         // Try each channel in priority order.
         for (CibaNotificationChannel channel : channels) {
             try {
-                if (channel.canHandle(resolvedUser, cibaAuthCodeDO, tenantDomain)) {
+                if (channel.canHandle(cibaNotificationContext)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Sending CIBA notification via channel: " + channel.getName());
                     }
                     
-                    channel.sendNotification(resolvedUser, cibaAuthCodeDO, authUrl, bindingMessage, tenantDomain);
+                    channel.sendNotification(cibaNotificationContext);
                     notificationSent = true;
                     
                     if (log.isDebugEnabled()) {

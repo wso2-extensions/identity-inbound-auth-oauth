@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.notifications;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
@@ -28,7 +29,6 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,9 +68,9 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
     }
 
     @Override
-    public boolean canHandle(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-            String tenantDomain) {
+    public boolean canHandle(CibaNotificationContext cibaNotificationContext) throws CibaCoreException {
 
+        CibaUserResolver.ResolvedUser resolvedUser = cibaNotificationContext.getResolvedUser();
         if (resolvedUser == null) {
             return false;
         }
@@ -91,12 +91,15 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
     }
 
     @Override
-    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-            String authUrl,
-            String bindingMessage, String tenantDomain) throws CibaCoreException {
+    public void sendNotification(CibaNotificationContext cibaNotificationContext) throws CibaCoreException {
 
+        CibaUserResolver.ResolvedUser resolvedUser = cibaNotificationContext.getResolvedUser();
+        long expiresIn = cibaNotificationContext.getExpiryTime();
+        String authUrl = cibaNotificationContext.getAuthUrl();
+        String bindingMessage = cibaNotificationContext.getBindingMessage();
+        String maskedUsername = LoggerUtils.getMaskedContent(resolvedUser.getUsername());
         if (log.isDebugEnabled()) {
-            log.debug("Sending CIBA authentication email to user: " + resolvedUser.getUsername() +
+            log.debug("Sending CIBA authentication email to user: " + maskedUsername +
                     " with auth URL: " + authUrl);
         }
         String email = resolvedUser.getEmail();
@@ -112,8 +115,9 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             properties.put(TEMPLATE_TYPE, CIBA_AUTH_EMAIL_TEMPLATE);
             properties.put(USER_NAME, resolvedUser.getUsername());
             properties.put(AUTH_URL, authUrl);
-            properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
-            String expiryTimeInString = CibaUtils.getExpiryTimeAsString(cibaAuthCodeDO.getExpiresIn());
+            properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN,
+                    cibaNotificationContext.getTenantDomain());
+            String expiryTimeInString = CibaUtils.getExpiryTimeAsString(expiresIn);
             properties.put(EXPIRY_TIME, expiryTimeInString);
             if (StringUtils.isNotBlank(bindingMessage)) {
                 properties.put(BINDING_MESSAGE_PARAM, bindingMessage);
@@ -123,8 +127,7 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
 
             CibaServiceComponentHolder.getInstance().getIdentityEventService().handleEvent(event);
         } catch (Exception e) {
-            throw new CibaCoreException("Error preparing CIBA email notification for user: " +
-                    resolvedUser.getUsername(), e);
+            throw new CibaCoreException("Error preparing CIBA email notification for user: " + maskedUsername, e);
         }
     }
 }

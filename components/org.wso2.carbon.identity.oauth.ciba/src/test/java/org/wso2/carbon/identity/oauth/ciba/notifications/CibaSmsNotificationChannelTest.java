@@ -74,23 +74,46 @@ public class CibaSmsNotificationChannelTest {
     }
 
     @Test
-    public void testCanHandle() {
+    public void testCanHandle() throws Exception {
         // User with mobile
         resolvedUser.setMobile("1234567890");
-        Assert.assertTrue(smsChannel.canHandle(resolvedUser, cibaAuthCodeDO, "carbon.super"));
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertTrue(smsChannel.canHandle(context));
 
         // User without mobile
         resolvedUser.setMobile(null);
-        Assert.assertFalse(smsChannel.canHandle(resolvedUser, cibaAuthCodeDO, "carbon.super"));
+        context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertFalse(smsChannel.canHandle(context));
 
         // Null user
-        Assert.assertFalse(smsChannel.canHandle(null, cibaAuthCodeDO, "carbon.super"));
+        context = new CibaNotificationContext.Builder()
+                .setResolvedUser(null)
+                .setExpiryTime(3600L)
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertFalse(smsChannel.canHandle(context));
     }
 
     @Test
     public void testSendNotificationSuccess() throws Exception {
         resolvedUser.setMobile("1234567890");
-        smsChannel.sendNotification(resolvedUser, cibaAuthCodeDO, "http://auth.url", "message", "carbon.super");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+        
+        smsChannel.sendNotification(context);
 
         verify(identityEventService).handleEvent(any(Event.class));
     }
@@ -98,6 +121,14 @@ public class CibaSmsNotificationChannelTest {
     @Test(expectedExceptions = CibaCoreException.class)
     public void testSendNotificationNoMobile() throws Exception {
         resolvedUser.setMobile(null);
-        smsChannel.sendNotification(resolvedUser, cibaAuthCodeDO, "http://auth.url", "message", "carbon.super");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+        
+        smsChannel.sendNotification(context);
     }
 }

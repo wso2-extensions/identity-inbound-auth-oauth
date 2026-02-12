@@ -19,8 +19,6 @@
 package org.wso2.carbon.identity.oauth.ciba.notifications;
 
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 
 /**
  * SPI interface for CIBA notification channels.
@@ -55,25 +53,19 @@ public interface CibaNotificationChannel {
      * Check if this channel can handle notifications for the given user and context.
      * For example, an email channel would check if the user has a valid email address.
      *
-     * @param resolvedUser          The user to send notification to
-     * @param cibaAuthCodeDO CIBA auth code data object containing request details
-     * @param tenantDomain  Tenant domain of the request
+     * @param cibaNotificationContext Context containing notification details
      * @return true if this channel can send the notification, false otherwise
+     * @throws CibaCoreException If error occurs while checking handling capability
      */
-    boolean canHandle(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO, String tenantDomain);
+    boolean canHandle(CibaNotificationContext cibaNotificationContext) throws CibaCoreException;
 
     /**
      * Send the authentication notification to the user.
      * The notification should contain a link to the /ciba-authorize endpoint
      * with the authCodeKey parameter.
      *
-     * @param resolvedUser           The user to send notification to
-     * @param cibaAuthCodeDO CIBA auth code data object containing request details
-     * @param authUrl        The authentication URL to include in the notification
-     * @param bindingMessage Optional binding message to display to user
-     * @param tenantDomain   Tenant domain of the request
+     * @param cibaNotificationContext Context containing notification details
      * @throws CibaCoreException If notification sending fails
      */
-    void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO, String authUrl,
-                          String bindingMessage, String tenantDomain) throws CibaCoreException;
+    void sendNotification(CibaNotificationContext cibaNotificationContext) throws CibaCoreException;
 }

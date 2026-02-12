@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.user.core.common.User;
 
 import java.util.HashMap;
@@ -71,14 +70,14 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
     }
 
     @Override
-    public boolean canHandle(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-                             String tenantDomain) {
-        
+    public boolean canHandle(CibaNotificationContext cibaNotificationContext) {
+
+        CibaUserResolver.ResolvedUser resolvedUser = cibaNotificationContext.getResolvedUser();
         if (resolvedUser == null) {
             return false;
         }
         
-        // Check if user has a valid mobile number
+        // Check if user has a valid mobile number.
         try {
             String mobile = resolvedUser.getMobile();
             boolean hasMobile = StringUtils.isNotBlank(mobile);
@@ -94,9 +93,11 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
     }
 
     @Override
-    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-                                 String authUrl, String bindingMessage, String tenantDomain) throws CibaCoreException {
+    public void sendNotification(CibaNotificationContext cibaNotificationContext) throws CibaCoreException {
 
+        CibaUserResolver.ResolvedUser resolvedUser = cibaNotificationContext.getResolvedUser();
+        String authUrl = cibaNotificationContext.getAuthUrl();
+        String bindingMessage = cibaNotificationContext.getBindingMessage();
         if (log.isDebugEnabled()) {
             log.debug("Sending CIBA authentication SMS to user: " + resolvedUser.getUsername() +
                     " with auth URL: " + authUrl);
@@ -112,10 +113,11 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
             Map<String, Object> properties = new HashMap<>();
             properties.put(IdentityEventConstants.EventProperty.USER_NAME, resolvedUser.getUsername());
             properties.put(NOTIFICATION_CHANNEL, NotificationChannels.SMS_CHANNEL.getChannelType());
-            properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+            properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN,
+                    cibaNotificationContext.getTenantDomain());
             properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, resolvedUser.getUserStoreDomain());
             properties.put(TEMPLATE_TYPE, CIBA_AUTH_SMS_TEMPLATE);
-            String expiryTimeInString = CibaUtils.getExpiryTimeAsString(cibaAuthCodeDO.getExpiresIn());
+            String expiryTimeInString = CibaUtils.getExpiryTimeAsString(cibaNotificationContext.getExpiryTime());
             properties.put(EXPIRY_TIME, expiryTimeInString);
             properties.put(SEND_TO, mobile);
             properties.put(AUTH_URL, authUrl);

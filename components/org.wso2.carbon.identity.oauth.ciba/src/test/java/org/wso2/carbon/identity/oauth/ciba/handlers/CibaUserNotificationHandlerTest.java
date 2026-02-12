@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver.ResolvedUse
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
 import java.util.ArrayList;
@@ -130,12 +131,12 @@ public class CibaUserNotificationHandlerTest {
     @Test
     public void testSendNotificationSuccess() throws Exception {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
-        when(channel1.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
 
         cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
 
-        verify(channel1).sendNotification(any(), any(), anyString(), anyString(), anyString());
+        verify(channel1).sendNotification(any(CibaNotificationContext.class));
     }
 
     @Test
@@ -146,18 +147,13 @@ public class CibaUserNotificationHandlerTest {
         when(channel1.getPriority()).thenReturn(10);
         when(channel2.getPriority()).thenReturn(20);
 
-        when(channel1.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
 
         cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
 
-        // Since channel1 has lower priority number (assuming standard WSO2 priority
-        // where lower executes first?
-        // Or higher? The logic says:
-        // notificationChannels.sort(Comparator.comparingInt(CibaNotificationChannel::getPriority));
-        // So small numbers first.
-        verify(channel1).sendNotification(any(), any(), anyString(), anyString(), anyString());
-        verify(channel2, never()).sendNotification(any(), any(), anyString(), anyString(), anyString());
+        verify(channel1).sendNotification(any(CibaNotificationContext.class));
+        verify(channel2, never()).sendNotification(any(CibaNotificationContext.class));
     }
 
     @Test
@@ -165,14 +161,14 @@ public class CibaUserNotificationHandlerTest {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
 
-        when(channel1.canHandle(any(), any(), anyString())).thenReturn(true);
-        when(channel2.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
+        when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(true);
 
         cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
 
-        verify(channel1).sendNotification(any(), any(), anyString(), anyString(), anyString());
-        verify(channel2).sendNotification(any(), any(), anyString(), anyString(), anyString());
+        verify(channel1).sendNotification(any(CibaNotificationContext.class));
+        verify(channel2).sendNotification(any(CibaNotificationContext.class));
     }
 
     @Test
@@ -180,20 +176,20 @@ public class CibaUserNotificationHandlerTest {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
 
-        when(channel1.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel1.getName()).thenReturn("Channel1");
 
         // Channel 1 throws exception
         org.mockito.Mockito.doThrow(new CibaCoreException("Error")).when(channel1)
-                .sendNotification(any(), any(), anyString(), anyString(), anyString());
+                .sendNotification(any(CibaNotificationContext.class));
 
-        when(channel2.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
 
         cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
 
-        verify(channel1).sendNotification(any(), any(), anyString(), anyString(), anyString());
-        verify(channel2).sendNotification(any(), any(), anyString(), anyString(), anyString());
+        verify(channel1).sendNotification(any(CibaNotificationContext.class));
+        verify(channel2).sendNotification(any(CibaNotificationContext.class));
     }
 
     @Test(expectedExceptions = CibaCoreException.class)

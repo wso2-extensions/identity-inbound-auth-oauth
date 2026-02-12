@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -153,7 +154,7 @@ public class CibaAuthServiceImplTest {
         when(mockBuilder.build()).thenReturn(mockServiceURL);
         when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
 
-        when(cibaNotificationChannel.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(cibaNotificationChannel.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
 
         CibaAuthCodeResponse response = cibaAuthService.generateAuthCodeResponse(request);
 
@@ -161,7 +162,7 @@ public class CibaAuthServiceImplTest {
         Assert.assertNotNull(response.getAuthReqId());
         Assert.assertEquals(response.getClientId(), "test-client");
         verify(cibaAuthMgtDAO).persistCibaAuthCode(any(CibaAuthCodeDO.class));
-        verify(cibaNotificationChannel).sendNotification(any(), any(), anyString(), anyString(), anyString());
+        verify(cibaNotificationChannel).sendNotification(any(CibaNotificationContext.class));
     }
 
     @Test(expectedExceptions = CibaClientException.class)
@@ -230,9 +231,9 @@ public class CibaAuthServiceImplTest {
         when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
 
         // Force exception in notification.
-        when(cibaNotificationChannel.canHandle(any(), any(), anyString())).thenReturn(true);
+        when(cibaNotificationChannel.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         Mockito.doThrow(new CibaCoreException("Notification failed")).when(cibaNotificationChannel)
-                .sendNotification(any(), any(), anyString(), anyString(), anyString());
+                .sendNotification(any(CibaNotificationContext.class));
 
         // Should not throw exception.
         CibaAuthCodeResponse response = cibaAuthService.generateAuthCodeResponse(request);

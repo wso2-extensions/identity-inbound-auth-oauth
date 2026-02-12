@@ -74,23 +74,46 @@ public class CibaEmailNotificationChannelTest {
     }
 
     @Test
-    public void testCanHandle() {
+    public void testCanHandle() throws Exception {
         // User with email
         resolvedUser.setEmail("test@example.com");
-        Assert.assertTrue(emailChannel.canHandle(resolvedUser, cibaAuthCodeDO, "carbon.super"));
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L) // Simplified for test
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertTrue(emailChannel.canHandle(context));
 
         // User without email
         resolvedUser.setEmail(null);
-        Assert.assertFalse(emailChannel.canHandle(resolvedUser, cibaAuthCodeDO, "carbon.super"));
+        context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertFalse(emailChannel.canHandle(context));
 
         // Null user
-        Assert.assertFalse(emailChannel.canHandle(null, cibaAuthCodeDO, "carbon.super"));
+        context = new CibaNotificationContext.Builder()
+                .setResolvedUser(null)
+                .setExpiryTime(3600L)
+                .setTenantDomain("carbon.super")
+                .build();
+        Assert.assertFalse(emailChannel.canHandle(context));
     }
 
     @Test
     public void testSendNotificationSuccess() throws Exception {
         resolvedUser.setEmail("test@example.com");
-        emailChannel.sendNotification(resolvedUser, cibaAuthCodeDO, "http://auth.url", "message", "carbon.super");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+        
+        emailChannel.sendNotification(context);
 
         verify(identityEventService).handleEvent(any(Event.class));
     }
@@ -98,6 +121,14 @@ public class CibaEmailNotificationChannelTest {
     @Test(expectedExceptions = CibaCoreException.class)
     public void testSendNotificationNoEmail() throws Exception {
         resolvedUser.setEmail(null);
-        emailChannel.sendNotification(resolvedUser, cibaAuthCodeDO, "http://auth.url", "message", "carbon.super");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+        
+        emailChannel.sendNotification(context);
     }
 }
