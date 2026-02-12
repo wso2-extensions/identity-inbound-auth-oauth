@@ -104,7 +104,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-            <artifactId>oltu</artifactId>
+            <artifactId>oltu-jdk21</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -237,13 +237,6 @@
 
     <build>
         <plugins>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
-            </plugin>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>

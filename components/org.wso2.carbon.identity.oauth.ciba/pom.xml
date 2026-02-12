@@ -47,7 +47,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-            <artifactId>oltu</artifactId>
+            <artifactId>oltu-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.nimbusds</groupId>
@@ -234,13 +234,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>

@@ -23,11 +23,9 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.engine.impl.GraalVMJSEngineImpl;
-import org.wso2.carbon.identity.oauth.extension.engine.impl.JSEngineImpl;
 import org.wso2.carbon.identity.oauth.extension.engine.impl.OpenJdkJSEngineImpl;
 
 import static org.wso2.carbon.identity.oauth.extension.utils.Constants.GRAALJS_SCRIPTER_CLASS_NAME;
-import static org.wso2.carbon.identity.oauth.extension.utils.Constants.JDK_SCRIPT_CLASS_NAME;
 import static org.wso2.carbon.identity.oauth.extension.utils.Constants.OPENJDK_SCRIPT_CLASS_NAME;
 
 /**
@@ -64,12 +62,7 @@ public class EngineUtils {
                 Class.forName(OPENJDK_SCRIPT_CLASS_NAME);
                 return OpenJdkJSEngineImpl.getInstance();
             } catch (ClassNotFoundException e) {
-                try {
-                    Class.forName(JDK_SCRIPT_CLASS_NAME);
-                    return JSEngineImpl.getInstance();
-                } catch (ClassNotFoundException classNotFoundException) {
-                    return null;
-                }
+                return null;
             }
         }
     }

@@ -84,7 +84,7 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.eclipse.osgi</groupId>
+                <groupId>org.eclipse.platform</groupId>
                 <artifactId>org.eclipse.osgi.services</artifactId>
                 <version>${equinox.osgi.services.version}</version>
             </dependency>
@@ -310,12 +310,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-                <artifactId>oltu</artifactId>
+                <artifactId>oltu-jdk21</artifactId>
                 <version>${oltu.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
-                <artifactId>waffle-jna</artifactId>
+                <artifactId>waffle-jna-jdk21</artifactId>
                 <version>${waffle-jna.wso2.version}</version>
             </dependency>
             <dependency>
@@ -375,7 +375,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.orbit.org.opensaml</groupId>
-                <artifactId>opensaml</artifactId>
+                <artifactId>opensaml-jdk21</artifactId>
                 <version>${opensaml3.wso2.version}</version>
             </dependency>
             <dependency>
@@ -906,8 +906,8 @@
                 <inherited>true</inherited>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -965,7 +965,7 @@
         <osgi.framework.imp.pkg.version.range>[1.7.0, 2.0.0)</osgi.framework.imp.pkg.version.range>
         <osgi.service.component.imp.pkg.version.range>[1.2.0, 2.0.0)</osgi.service.component.imp.pkg.version.range>
         <osgi.service.http.imp.pkg.version.range>[1.2.1, 2.0.0)</osgi.service.http.imp.pkg.version.range>
-        <equinox.osgi.services.version>3.5.100.v20160504-1419</equinox.osgi.services.version>
+        <equinox.osgi.services.version>3.12.0</equinox.osgi.services.version>
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
@@ -996,12 +996,12 @@
 
         <!-- Servlet API -->
         <servlet-api.version>2.5</servlet-api.version>
-        <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
+        <imp.pkg.version.javax.servlet>[3.1.0, 4.0.0)</imp.pkg.version.javax.servlet>
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
         <!-- Axis2 Version -->
         <axis2.wso2.version>1.6.1-wso2v38</axis2.wso2.version>
-        <axis2.osgi.version.range>[1.6.1.wso2v38, 2.0.0)</axis2.osgi.version.range>
+        <axis2.osgi.version.range>[1.6.1, 2.0.0)</axis2.osgi.version.range>
 
         <!-- Axiom Version -->
         <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
@@ -1029,12 +1029,12 @@
         <gdata-core.wso2.version>1.47.0.wso2v1</gdata-core.wso2.version>
         <gdata-core.imp.pkg.version.range>[1.47.0.wso2v1,2.0.0)</gdata-core.imp.pkg.version.range>
 
-        <oltu.version>1.0.0.wso2v3</oltu.version>
+        <oltu.version>1.0.0.wso2v1</oltu.version>
         <org.apache.oltu.oauth2.client.version>1.0.0</org.apache.oltu.oauth2.client.version>
         <oltu.package.import.version.range>[1.0.0, 2.0.0)</oltu.package.import.version.range>
 
         <waffle.imp.pkg.version.range>[1.6.0, 2.0)</waffle.imp.pkg.version.range>
-        <waffle-jna.wso2.version>1.6.wso2v6</waffle-jna.wso2.version>
+        <waffle-jna.wso2.version>1.6.wso2v1</waffle-jna.wso2.version>
         <waffle-jna.imp.pkg.version.range>[1.6.0, 2.0)</waffle-jna.imp.pkg.version.range>
 
         <nimbusds.version>10.3.0.wso2v1</nimbusds.version>
@@ -1049,7 +1049,7 @@
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
         <opensaml.version>3.3.1</opensaml.version>
-        <opensaml3.wso2.version>3.3.1.wso2v15</opensaml3.wso2.version>
+        <opensaml3.wso2.version>3.3.1.wso2v117</opensaml3.wso2.version>
         <opensaml3.wso2.osgi.version.range>[3.3.1,3.4.0)</opensaml3.wso2.osgi.version.range>
 
         <joda.version>2.9.4</joda.version>
@@ -1081,8 +1081,8 @@
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
-        <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
-        <maven.bundle.plugin.version>3.2.0</maven.bundle.plugin.version>
+        <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
+        <maven.bundle.plugin.version>5.1.9</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
         <maven-war-plugin.version>3.3.1</maven-war-plugin.version>
 
@@ -1120,7 +1120,7 @@
         <log4j.verison>1.2.17</log4j.verison>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
-        <spotbugs-maven-plugin.version>4.7.2.1</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.9.8.2</spotbugs-maven-plugin.version>
         <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>

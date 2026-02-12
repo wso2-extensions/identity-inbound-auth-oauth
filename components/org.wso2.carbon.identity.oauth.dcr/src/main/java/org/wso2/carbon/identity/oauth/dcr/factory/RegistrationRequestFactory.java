@@ -114,11 +114,13 @@ public class RegistrationRequestFactory extends HttpIdentityRequestFactory {
                 parseJson(jsonData, registerRequestBuilder);
 
             } catch (IOException e) {
-                String errorMessage = "Error occurred while reading servlet request body, " + e.getMessage();
-                FrameworkClientException.error(errorMessage, e);
+                String errorMessage = "Error occurred while reading servlet request body, " 
+                        + (e.getMessage() != null ? e.getMessage() : "");
+                throw FrameworkClientException.error(FrameworkClientException.class, errorMessage, e);
             } catch (ParseException e) {
-                String errorMessage = "Error occurred while parsing the json object, " + e.getMessage();
-                FrameworkClientException.error(errorMessage, e);
+                String errorMessage = "Error occurred while parsing the json object, " 
+                        + (e.getMessage() != null ? e.getMessage() : "");
+                throw FrameworkClientException.error(FrameworkClientException.class, errorMessage, e);
             }
         }
     }
