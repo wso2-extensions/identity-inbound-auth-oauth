@@ -318,8 +318,17 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         userBuilder.organization(resolveUserAuthenticatedOrganization(authenticatedUser));
 
         if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)) {
-            userBuilder.accessingOrganization(buildOrganization(authenticatedUser.getAccessingOrganization(),
-                    authenticatedUser.getTenantDomain()));
+            Organization accessingOrg;
+            if (authenticatedUser.getAccessingOrganization() != null) {
+                accessingOrg = buildOrganization(authenticatedUser.getAccessingOrganization(),
+                        authenticatedUser.getTenantDomain());
+                // In case of org switch, if accessing org is not set, it means user is switching to root org.
+            } else {
+                accessingOrg = buildOrganization(
+                        resolveOrganizationId(authenticatedUser.getTenantDomain()),
+                        authenticatedUser.getTenantDomain());
+            }
+            userBuilder.accessingOrganization(accessingOrg);
         }
         return userBuilder.build();
     }
