@@ -204,9 +204,7 @@ public class OAuthEventPublishingUtilTest {
             assertEquals(1, properties.get(IdentityEventConstants.EventProperty.APP_RESIDENT_TENANT_ID));
             assertEquals("false", properties.get(IdentityEventConstants.EventProperty.EXISTING_TOKEN_USED));
             assertEquals("carbon.super",
-                    properties.get(IdentityEventConstants.EventProperty.ROOT_ISSUER_ORGANIZATION_TENANT_DOMAIN));
-            assertEquals("issuer-org-id",
-                    properties.get(IdentityEventConstants.EventProperty.ROOT_ISSUER_ORGANIZATION_ID));
+                    properties.get(IdentityEventConstants.EventProperty.ROOT_TENANT_DOMAIN));
             assertEquals("TestApp", properties.get(IdentityEventConstants.EventProperty.SERVICE_PROVIDER));
         }
     }

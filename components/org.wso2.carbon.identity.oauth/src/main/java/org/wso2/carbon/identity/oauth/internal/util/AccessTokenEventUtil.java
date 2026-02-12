@@ -339,16 +339,18 @@ public class AccessTokenEventUtil {
             try {
                 organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
+            } catch (OrganizationManagementException e) {
+                LOG.error("Error while retrieving the organization Id for tenant domain : " +
+                        tenantDomain);
+            }
+            try {
                 String rootOrgTenantDomain =
                         OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
                                 tokenReqDTO.getTenantDomain());
-                properties.put(IdentityEventConstants.EventProperty.ROOT_ISSUER_ORGANIZATION_TENANT_DOMAIN,
+                properties.put(IdentityEventConstants.EventProperty.ROOT_TENANT_DOMAIN,
                         rootOrgTenantDomain);
-                properties.put(IdentityEventConstants.EventProperty.ROOT_ISSUER_ORGANIZATION_ID,
-                        OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                                .resolveOrganizationId(rootOrgTenantDomain));
             } catch (OrganizationManagementException e) {
-                LOG.error("Error while retrieving the organization Id for tenant domain : " +
+                LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
                         tenantDomain);
             }
             String accessingOrganizationId = StringUtils.EMPTY;
