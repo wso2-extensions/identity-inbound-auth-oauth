@@ -538,7 +538,7 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         AuthenticatedUser authorizedUser = authorizationReqDTO.getUser();
 
-        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                 .getLatestAccessToken(consumerKey, authorizedUser, getUserStoreDomain(authorizedUser), scope, false);
         if (existingToken != null) {
             if (log.isDebugEnabled()) {
@@ -727,9 +727,9 @@ public class ResponseTypeHandlerUtil {
             IdentityOAuth2Exception {
 
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().insertAccessToken(newTokenBean
-                    .getAccessToken(), authorizationReqDTO.getConsumerKey(), newTokenBean, existingTokenBean,
-                    userStoreDomain);
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(authorizationReqDTO.getConsumerKey())
+                    .insertAccessToken(newTokenBean.getAccessToken(), authorizationReqDTO.getConsumerKey(),
+                            newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
             String errorMsg;
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
