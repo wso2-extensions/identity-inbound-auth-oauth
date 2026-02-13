@@ -222,7 +222,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throws IdentityOAuth2Exception {
         try {
             newTokenBean.setAuthorizationCode(oAuth2AccessTokenReqDTO.getAuthorizationCode());
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(oAuth2AccessTokenReqDTO.getClientId())
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
                             newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
@@ -270,7 +270,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         tokenReqDTO.getAuthorizationCode());
         if (validationResult != null) {
             if (!validationResult.isActiveCode()) {
-                String tokenAlias = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                String tokenAlias = OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAOImpl(tokenReqDTO.getClientId())
                         .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
@@ -297,8 +298,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
         }
-        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .getAccessTokenByTokenId(tokenId);
+        String accessToken = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(authzCodeDO.getConsumerKey()).getAccessTokenByTokenId(tokenId);
         // Fetching AccessTokenDO from DB before revoking the token.
         AccessTokenDO accessTokenDO = null;
         if (StringUtils.isNotBlank(accessToken)) {
@@ -315,7 +316,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 }
             }
         }
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(authzCodeDO.getConsumerKey())
+                .revokeAccessToken(tokenId, userId);
         clearAccessTokenOAuthCache(accessTokenDO);
 
         if (log.isDebugEnabled()) {

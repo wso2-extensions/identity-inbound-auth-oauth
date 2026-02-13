@@ -366,7 +366,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                     AccessTokenDO newTokenBean, String newAccessToken, AccessTokenDO
                                             existingTokenBean) throws IdentityOAuth2Exception {
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(oAuth2AccessTokenReqDTO.getClientId())
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
                     newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
@@ -400,9 +400,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         // Revoke the existing token and generate new access and refresh tokens.
         OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
-                        .TOKEN_STATE_REVOKED, existingTokenBean.getGrantType());
+        OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId())
+                .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates.TOKEN_STATE_REVOKED,
+                        existingTokenBean.getGrantType());
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
         OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
 
@@ -424,8 +425,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 isConsentBasedClaimFilteringApplicable(requestGrantType);
         if (isConsentRequiredGrant && !existingTokenBean.isConsentedToken()) {
             existingTokenBean.setIsConsentedToken(true);
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
-                    existingTokenBean.getTokenId(), true);
+            OAuthTokenPersistenceFactory.getInstance()
+                    .getAccessTokenDAOImpl(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId())
+                    .updateTokenIsConsented(existingTokenBean.getTokenId(), true);
         }
 
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
@@ -929,7 +931,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                                  OAuth2AccessTokenReqDTO tokenReq, String scope, OAuthCacheKey cacheKey)
             throws IdentityOAuth2Exception {
 
-        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(tokenReq.getClientId())
                 .getLatestAccessToken(tokenReq.getClientId(), tokenMsgCtx.getAuthorizedUser(),
                         getUserStoreDomain(tokenMsgCtx.getAuthorizedUser()), scope,
                         getTokenBindingReference(tokenMsgCtx), false);

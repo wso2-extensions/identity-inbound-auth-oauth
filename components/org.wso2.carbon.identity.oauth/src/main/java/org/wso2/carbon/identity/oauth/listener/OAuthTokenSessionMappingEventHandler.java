@@ -248,7 +248,7 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
     private void persistTokenToSessionMapping(String sessionContextId, String tokenId, int tenantId, String clientId)
             throws IdentityOAuth2Exception {
 
-        if (OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        if (OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .getTokenIdBySessionIdentifier(sessionContextId).contains(tokenId)) {
             /**
              *  If there is already a session to token mapping exists, we don't need to persist that mapping again.
@@ -278,7 +278,7 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             }
             return;
         }
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .storeTokenToSessionMapping(sessionContextId, tokenId, tenantId);
     }
 

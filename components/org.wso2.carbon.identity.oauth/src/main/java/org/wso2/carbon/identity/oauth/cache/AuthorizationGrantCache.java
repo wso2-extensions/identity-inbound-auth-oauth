@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.concurrent.TimeUnit;
@@ -237,6 +238,15 @@ public class AuthorizationGrantCache extends
      * @return TOKEN_ID from the database
      */
     private String replaceFromTokenId(String keyValue) {
+        // Check if the access token is a non-persistent access token, and if so, retrieve the token ID
+        // from the non-persistent access token.
+        if (TokenMgtUtil.isNonPersistenceAccessToken(keyValue)) {
+            try {
+                return TokenMgtUtil.getTokenIDFromNonPersistenceAccessToken(keyValue);
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Failed to retrieve token id by token from store.", e);
+            }
+        }
         try {
             AccessTokenDO accessTokenDO = OAuth2Util.findAccessToken(keyValue, true);
             if (accessTokenDO != null) {

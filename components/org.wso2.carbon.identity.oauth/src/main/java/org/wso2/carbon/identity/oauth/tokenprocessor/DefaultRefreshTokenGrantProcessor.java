@@ -77,7 +77,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
         }
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
                         OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, clientId,
                         UUID.randomUUID().toString(), accessTokenBean, userStoreDomain, oldAccessToken.getGrantType());
@@ -175,7 +175,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                                                     RefreshTokenValidationDataDO validationBean, String userStoreDomain)
             throws IdentityOAuth2Exception {
 
-        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(tokenReq.getClientId())
                 .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,
                         OAuth2Util.buildScopeString(validationBean.getScope()),
                         validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);

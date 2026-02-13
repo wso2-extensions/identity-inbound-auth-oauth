@@ -21,6 +21,7 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
@@ -39,6 +40,7 @@ public class OAuthTokenPersistenceFactory {
     private RequestObjectDAO requestObjectDAO;
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
     private TokenBindingMgtDAO tokenBindingMgtDAO;
+    private AccessTokenDAO nonPersistedTokenDAO;
     private OAuthUserConsentedScopesDAO oauthUserConsentedScopesDAO;
 
     public OAuthTokenPersistenceFactory() {
@@ -50,6 +52,7 @@ public class OAuthTokenPersistenceFactory {
         this.requestObjectDAO = new RequestObjectDAOImpl();
         this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
         this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
+        this.nonPersistedTokenDAO = new NonPersistentAccessTokenDAOImpl();
         this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
     }
 
@@ -63,6 +66,9 @@ public class OAuthTokenPersistenceFactory {
         return authorizationCodeDAO;
     }
 
+    /**
+     * @deprecated Use {@link #getAccessTokenDAOImpl(String)} instead.
+     */
     public AccessTokenDAO getAccessTokenDAO() {
 
         AccessTokenDAO accessTokenDAO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenDAOService();
@@ -105,5 +111,13 @@ public class OAuthTokenPersistenceFactory {
     public OAuthUserConsentedScopesDAO getOAuthUserConsentedScopesDAO() {
 
         return oauthUserConsentedScopesDAO;
+    }
+
+    public AccessTokenDAO getAccessTokenDAOImpl(String consumerKey) {
+
+        if (OAuth2Util.isNonPersistentTokenEnabled(consumerKey)) {
+            return nonPersistedTokenDAO;
+        }
+        return tokenDAO;
     }
 }
