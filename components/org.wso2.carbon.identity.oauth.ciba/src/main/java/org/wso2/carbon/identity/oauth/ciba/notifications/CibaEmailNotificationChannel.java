@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
@@ -45,7 +46,6 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
 
     private static final Log log = LogFactory.getLog(CibaEmailNotificationChannel.class);
 
-    private static final String CHANNEL_NAME = "email";
     private static final int PRIORITY = 10;
 
     // Email template constants
@@ -59,12 +59,14 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
 
     @Override
     public int getPriority() {
+
         return PRIORITY;
     }
 
     @Override
     public String getName() {
-        return CHANNEL_NAME;
+
+        return CibaConstants.CibaNotificationChannel.EMAIL;
     }
 
     @Override

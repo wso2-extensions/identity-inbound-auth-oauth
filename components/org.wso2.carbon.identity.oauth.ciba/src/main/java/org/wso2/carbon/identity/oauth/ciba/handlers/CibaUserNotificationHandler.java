@@ -18,23 +18,23 @@
 
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
-import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  * Handles sending notifications to users for CIBA authentication.
- * 
+ * <p>
  * This handler builds the authentication URL and uses the registered
  * notification channels (via SPI) to send the notification to the user.
  */
@@ -45,107 +45,115 @@ public class CibaUserNotificationHandler {
     /**
      * Send notification to user with the authentication link.
      *
-     * @param resolvedUser    The resolved user from login_hint.
-     * @param cibaAuthCodeDO  The CIBA auth code data object.
-     * @param bindingMessage  Optional binding message.
-     * @param oAuthAppDO      The OAuth application data object containing app-level configuration.
+     * @param notificationContext Context containing details for notification.
      * @throws CibaCoreException If notification sending fails.
      */
-    public void sendNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-                                  String bindingMessage, OAuthAppDO oAuthAppDO) throws CibaCoreException {
+    public String sendNotification(CibaNotificationContext notificationContext) throws CibaCoreException,
+            CibaClientException {
 
+        CibaUserResolver.ResolvedUser resolvedUser = notificationContext.getResolvedUser();
         if (resolvedUser == null) {
             throw new CibaCoreException("Resolved user cannot be null");
         }
-        
-        if (cibaAuthCodeDO == null) {
-            throw new CibaCoreException("CibaAuthCodeDO cannot be null");
-        }
 
-        // Build the authentication URL.
-        String authUrl = buildAuthenticationUrl(cibaAuthCodeDO.getCibaAuthCodeKey());
-        if (log.isDebugEnabled()) {
-            log.debug("Built CIBA authentication URL for user: " + resolvedUser.getUserId() +
-                    ", URL: " + authUrl);
-        }
+        OAuthAppDO authAppDO = notificationContext.getAuthAppDO();
 
-        String tenantDomain = resolvedUser.getTenantDomain();
-        CibaNotificationContext cibaNotificationContext = new CibaNotificationContext.Builder()
-                .setResolvedUser(resolvedUser)
-                .setExpiryTime(cibaAuthCodeDO.getExpiresIn())
-                .setAuthUrl(authUrl)
-                .setBindingMessage(bindingMessage)
-                .setTenantDomain(tenantDomain)
-                .build();
-
-        // Get registered notification channels.
-        List<CibaNotificationChannel> channels = CibaServiceComponentHolder.getInstance()
-                .getNotificationChannels();
-        if (channels.isEmpty()) {
-            log.warn("No notification channels registered. User will not receive CIBA notification.");
-            return;
-        }
-
-        boolean notificationSent = false;
-        // Read configuration from app-level settings.
-        // Default to true (send to all channels) if OAuthAppDO is null or property not explicitly disabled.
-        boolean sendToAllChannels = oAuthAppDO == null || oAuthAppDO.isCibaSendNotificationToAllChannels();
-
-        if (log.isDebugEnabled()) {
-            log.debug("Send notification to all channels config enabled: " + sendToAllChannels);
-        }
-
-        // Try each channel in priority order.
-        for (CibaNotificationChannel channel : channels) {
-            try {
-                if (channel.canHandle(cibaNotificationContext)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Sending CIBA notification via channel: " + channel.getName());
-                    }
-                    
-                    channel.sendNotification(cibaNotificationContext);
-                    notificationSent = true;
-                    
-                    if (log.isDebugEnabled()) {
-                        log.debug("Successfully sent CIBA notification via: " + channel.getName());
-                    }
-                    
-                    // If sendToAllChannels is disabled (default), break after first successful send.
-                    // If enabled, continue to send via all applicable channels.
-                    if (!sendToAllChannels) {
-                        break;
-                    }
-                }
-            } catch (CibaCoreException e) {
-                log.warn("Failed to send notification via channel: " + channel.getName() + 
-                        ", error: " + e.getMessage());
-                // Continue to try other channels.
+        List<String> allowedChannels = new ArrayList<>();
+        if (authAppDO != null && StringUtils.isNotBlank(authAppDO.getCibaNotificationChannels())) {
+            String[] channelArr = authAppDO.getCibaNotificationChannels().split(",");
+            for (String ch : channelArr) {
+                allowedChannels.add(ch.trim().toLowerCase());
             }
         }
 
-        if (!notificationSent) {
-            log.warn("Could not send CIBA notification to user: " + resolvedUser.getUsername() + 
-                    ". No suitable channel found or all channels failed.");
+        if (allowedChannels.isEmpty()) {
+            throw new CibaClientException(
+                    "No notification channels configured for the application.");
         }
+
+        // Get registered notification channels.
+        List<CibaNotificationChannel> channels = new ArrayList<>(CibaServiceComponentHolder.getInstance()
+                .getNotificationChannels());
+        if (channels.isEmpty()) {
+            log.warn("No notification channels registered. User will not receive CIBA notification.");
+            return null;
+        }
+
+        String requestedChannel = notificationContext.getRequestedChannel();
+
+        // 1. If a specific channel is requested, validate it against the supported list and send.
+        if (StringUtils.isNotEmpty(requestedChannel)) {
+            if (isChannelDisallowed(allowedChannels, requestedChannel)) {
+                throw new CibaClientException("Requested notification channel is not allowed for this application.");
+            }
+            return sendToTargetChannel(channels, notificationContext, requestedChannel);
+        }
+
+        // 2. Fallback: Send notification via supported channels in priority order.
+        return sendToAllAllowedChannels(channels, notificationContext, allowedChannels, resolvedUser);
     }
 
-    /**
-     * Build the authentication URL that the user will click.
-     *
-     * @param authCodeKey The auth code key for the CIBA session
-     * @return The full authentication URL
-     * @throws CibaCoreException If URL building fails
-     */
-    private String buildAuthenticationUrl(String authCodeKey) throws CibaCoreException {
-        
-        try {
-            return ServiceURLBuilder.create()
-                    .addPath(CibaConstants.CIBA_USER_AUTH_ENDPOINT)
-                    .addParameter(CibaConstants.CIBA_AUTH_CODE_KEY, authCodeKey)
-                    .build()
-                    .getAbsolutePublicURL();
-        } catch (URLBuilderException e) {
-            throw new CibaCoreException("Error building CIBA authentication URL", e);
+    private String sendToTargetChannel(List<CibaNotificationChannel> channels,
+                                       CibaNotificationContext notificationContext,
+                                       String targetChannelName) throws CibaCoreException {
+
+        for (CibaNotificationChannel channel : channels) {
+            if (!channel.getName().equalsIgnoreCase(targetChannelName)) {
+                continue;
+            }
+            if (!channel.canHandle(notificationContext)) {
+                throw new CibaCoreException(
+                        "Target channel '" + targetChannelName + "' cannot handle this notification.");
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Sending CIBA notification via target channel: " + channel.getName());
+            }
+            channel.sendNotification(notificationContext);
+            return channel.getName();
         }
+        throw new CibaCoreException("Target notification channel not found: " + targetChannelName);
+    }
+
+    private String sendToAllAllowedChannels(List<CibaNotificationChannel> channels,
+                                            CibaNotificationContext notificationContext,
+                                            List<String> allowedChannels,
+                                            CibaUserResolver.ResolvedUser resolvedUser)
+            throws CibaCoreException {
+
+        channels.sort(Comparator.comparingInt(CibaNotificationChannel::getPriority));
+
+        String lastSuccessfulChannel = null;
+        for (CibaNotificationChannel channel : channels) {
+            if (isChannelDisallowed(allowedChannels, channel.getName())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Skipping channel '" + channel.getName()
+                            + "' as it is not in the allowed list.");
+                }
+                continue;
+            }
+            try {
+                if (channel.canHandle(notificationContext)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Sending CIBA notification via channel: " + channel.getName());
+                    }
+                    channel.sendNotification(notificationContext);
+                    lastSuccessfulChannel = channel.getName();
+                }
+            } catch (CibaCoreException e) {
+                log.warn("Failed to send notification via channel: " + channel.getName()
+                        + ", error: " + e.getMessage());
+            }
+        }
+
+        if (lastSuccessfulChannel == null) {
+            log.warn("Could not send CIBA notification to user: " + resolvedUser.getUsername()
+                    + ". No suitable channel found or all channels failed.");
+        }
+        return lastSuccessfulChannel;
+    }
+
+    private boolean isChannelDisallowed(List<String> allowedChannels, String channelName) {
+
+        return !allowedChannels.contains(channelName.toLowerCase());
     }
 }

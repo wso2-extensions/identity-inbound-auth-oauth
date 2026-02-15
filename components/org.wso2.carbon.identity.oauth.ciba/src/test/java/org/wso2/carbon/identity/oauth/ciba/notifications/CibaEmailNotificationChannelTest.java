@@ -104,7 +104,11 @@ public class CibaEmailNotificationChannelTest {
 
     @Test
     public void testSendNotificationSuccess() throws Exception {
+        ResolvedUser resolvedUser = new ResolvedUser();
+        resolvedUser.setUsername("testUser");
+        resolvedUser.setTenantDomain("carbon.super");
         resolvedUser.setEmail("test@example.com");
+
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
                 .setExpiryTime(3600L)
@@ -120,7 +124,11 @@ public class CibaEmailNotificationChannelTest {
 
     @Test(expectedExceptions = CibaCoreException.class)
     public void testSendNotificationNoEmail() throws Exception {
+        ResolvedUser resolvedUser = new ResolvedUser();
+        resolvedUser.setUsername("testUser");
+        resolvedUser.setTenantDomain("carbon.super");
         resolvedUser.setEmail(null);
+
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
                 .setExpiryTime(3600L)

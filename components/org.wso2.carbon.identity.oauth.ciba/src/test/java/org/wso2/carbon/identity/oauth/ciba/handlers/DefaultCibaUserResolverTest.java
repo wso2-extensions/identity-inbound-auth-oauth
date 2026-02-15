@@ -27,7 +27,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver.ResolvedUser;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.user.api.UserRealm;
@@ -80,7 +79,7 @@ public class DefaultCibaUserResolverTest {
         identityTenantUtil.close();
     }
 
-    @Test(expectedExceptions = CibaCoreException.class)
+    @Test(expectedExceptions = CibaClientException.class)
     public void testResolveUserWithBlankLoginHint() throws Exception {
         defaultCibaUserResolver.resolveUser("", TENANT_DOMAIN);
     }

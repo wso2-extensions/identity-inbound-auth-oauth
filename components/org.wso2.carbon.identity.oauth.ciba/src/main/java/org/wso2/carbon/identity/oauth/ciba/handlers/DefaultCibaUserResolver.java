@@ -32,6 +32,7 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -73,7 +74,7 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
             throws CibaClientException, CibaCoreException {
 
         if (StringUtils.isBlank(loginHint)) {
-            throw new CibaCoreException("login_hint cannot be blank");
+            throw new CibaClientException("login_hint cannot be blank");
         }
 
         if (StringUtils.isBlank(tenantDomain)) {
@@ -109,22 +110,34 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
                 AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
                 // Identifying the login hint as a possible user ID.
                 try {
-                    if (abstractUserStoreManager.isExistingUserWithID(tenantAwareUsername)) {
+                    if (abstractUserStoreManager.isExistingUserWithID(loginHint)) {
                         isUserFound = true;
-                        resolvedUserId = tenantAwareUsername;
+                        resolvedUserId = loginHint;
                         resolvedUsername = abstractUserStoreManager.getUserNameFromUserID(resolvedUserId);
                         claimValues = abstractUserStoreManager.getUserClaimValuesWithID(resolvedUserId, REQUIRED_CLAIMS,
                                 null);
+                        User user = abstractUserStoreManager.getUser(resolvedUsername, resolvedUserId);
+                        if (user != null) {
+                            userStoreDomain = user.getUserStoreDomain();
+                        } else {
+                            log.warn("User object is null for login_hint: " +
+                                    LoggerUtils.getMaskedContent(loginHint) +
+                                    ". Falling back to default user store domain.");
+                        }
                     }
-                } catch (Exception e) {
-                    // Ignore exception and fallback to not found.
+                } catch (UserStoreException e) {
+                    // Fallback to not found for user store errors during ID-based resolution.
                     log.warn("Error while resolving user with user ID: " + LoggerUtils.getMaskedContent(
-                            tenantAwareUsername), e);
+                            loginHint), e);
                 }
             }
 
             if (!isUserFound) {
-                throw new CibaClientException("Invalid login_hint provided.");
+                if (log.isDebugEnabled()) {
+                    log.debug("No user found for login_hint: " + LoggerUtils.getMaskedContent(loginHint) +
+                            " in tenant: " + tenantDomain);
+                }
+                throw new CibaClientException("Invalid ciba request.");
             }
 
             if (claimValues == null) {

@@ -83,6 +83,27 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    private String cibaNotificationChannels;
+
+    public String getCibaNotificationChannels() {
+
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    private long cibaAuthReqExpiryTime;
+
+    public long getCibaAuthReqExpiryTime() {
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement

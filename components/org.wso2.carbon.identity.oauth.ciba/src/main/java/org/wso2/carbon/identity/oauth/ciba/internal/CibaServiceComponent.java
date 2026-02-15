@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.ciba.handlers.DefaultCibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaEmailNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaSmsNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.ExternalNotificationChannel;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -54,11 +55,11 @@ public class CibaServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
-            // Register CIBA Auth Service
+            // Register CIBA Auth Service.
             context.getBundleContext().registerService(CibaAuthService.class.getName(),
                     new CibaAuthServiceImpl(), null);
             
-            // Register default notification channels
+            // Register default notification channels.
             CibaEmailNotificationChannel emailChannel = new CibaEmailNotificationChannel();
             CibaSmsNotificationChannel smsChannel = new CibaSmsNotificationChannel();
             
@@ -66,6 +67,10 @@ public class CibaServiceComponent {
                     emailChannel, null);
             context.getBundleContext().registerService(CibaNotificationChannel.class.getName(),
                     smsChannel, null);
+            
+            // Register external notification channel.
+            context.getBundleContext().registerService(CibaNotificationChannel.class.getName(),
+                    new ExternalNotificationChannel(), null);
 
             context.getBundleContext().registerService(ResponseTypeRequestValidator.class.getName(),
                     new CibaResponseTypeRequestValidator(), null);
@@ -122,7 +127,7 @@ public class CibaServiceComponent {
 
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel);
         if (log.isDebugEnabled()) {
-            log.debug("CIBA notification channel registered: " + channel.getName() + 
+            log.debug("CIBA notification channel registered: " + channel.getName() +
                     " with priority: " + channel.getPriority());
         }
     }

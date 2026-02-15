@@ -18,15 +18,17 @@
 
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
+
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver.ResolvedUser;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
@@ -109,92 +111,140 @@ public class CibaUserNotificationHandlerTest {
     @Test(expectedExceptions = CibaCoreException.class, expectedExceptionsMessageRegExp = "Resolved user cannot " +
             "be null")
     public void testSendNotificationNullUser() throws Exception {
-
-        cibaUserNotificationHandler.sendNotification(null, cibaAuthCodeDO, "message",
-                oAuthAppDO);
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(null)
+                .build();
+        cibaUserNotificationHandler.sendNotification(context);
     }
 
-    @Test(expectedExceptions = CibaCoreException.class, expectedExceptionsMessageRegExp = "CibaAuthCodeDO cannot " +
-            "be null")
-    public void testSendNotificationNullAuthCodeDO() throws Exception {
-        cibaUserNotificationHandler.sendNotification(resolvedUser, null, "message", oAuthAppDO);
-    }
-
-    @Test
-    public void testSendNotificationNoChannels() throws Exception {
-        // No channels added
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
-        // Should confirm no exception and log warning (verified by coverage or spy logs
-        // if possible, else logic pass)
+    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp =
+            "No notification channels configured for the application.")
+    public void testSendNotificationNoChannelsConfigured() throws Exception {
+        // App has no notification channels configured.
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .build();
+        cibaUserNotificationHandler.sendNotification(context);
     }
 
     @Test
     public void testSendNotificationSuccess() throws Exception {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
-
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
+        when(channel1.getName()).thenReturn("channel1");
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .build();
+        String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
         verify(channel1).sendNotification(any(CibaNotificationContext.class));
+        Assert.assertEquals(usedChannel, "channel1");
     }
 
     @Test
-    public void testSendNotificationMultipleChannelsPriority() throws Exception {
+    public void testSendNotificationSingleSupportedChannel() throws Exception {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
-        CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
-
-        when(channel1.getPriority()).thenReturn(10);
-        when(channel2.getPriority()).thenReturn(20);
-
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
+        when(channel1.getName()).thenReturn("external");
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("external");
 
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .build();
+        String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
         verify(channel1).sendNotification(any(CibaNotificationContext.class));
-        verify(channel2, never()).sendNotification(any(CibaNotificationContext.class));
+        Assert.assertEquals(usedChannel, "external");
     }
 
     @Test
-    public void testSendNotificationToAllChannels() throws Exception {
+    public void testSendNotificationSendsToAllAllowedChannels() throws Exception {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
 
+        when(channel1.getName()).thenReturn("channel1");
+        when(channel2.getName()).thenReturn("channel2");
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(true);
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1,channel2");
 
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .build();
+        cibaUserNotificationHandler.sendNotification(context);
 
+        // Both channels should receive notifications in fallback mode.
         verify(channel1).sendNotification(any(CibaNotificationContext.class));
         verify(channel2).sendNotification(any(CibaNotificationContext.class));
     }
 
+
+
     @Test
-    public void testSendNotificationFallbackOnError() throws Exception {
+    public void testSendNotificationFallbackContinuesOnError() throws Exception {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
 
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(channel1.getName()).thenReturn("Channel1");
+        when(channel1.getName()).thenReturn("channel1");
+        when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
+        when(channel2.getName()).thenReturn("channel2");
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1,channel2");
 
         // Channel 1 throws exception
         org.mockito.Mockito.doThrow(new CibaCoreException("Error")).when(channel1)
                 .sendNotification(any(CibaNotificationContext.class));
 
-        when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.isCibaSendNotificationToAllChannels()).thenReturn(false);
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .build();
+        String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
-
+        // Both attempted, channel2 succeeds.
         verify(channel1).sendNotification(any(CibaNotificationContext.class));
         verify(channel2).sendNotification(any(CibaNotificationContext.class));
+        Assert.assertEquals(usedChannel, "channel2");
     }
 
-    @Test(expectedExceptions = CibaCoreException.class)
-    public void testBuildAuthenticationUrlError() throws Exception {
-        when(mockServiceURLBuilder.build()).thenThrow(new URLBuilderException("Error"));
-        cibaUserNotificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, "message", oAuthAppDO);
+    @Test
+    public void testSendNotificationWithRequestedChannel() throws Exception {
+        CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
+        CibaServiceComponentHolder.getInstance().addNotificationChannel(channel2);
+
+        when(channel1.getName()).thenReturn("channel1");
+        when(channel2.getName()).thenReturn("channel2");
+        when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("Channel1,Channel2");
+
+        // Request Channel2 specifically
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .setRequestedChannel("channel2")
+                .build();
+        cibaUserNotificationHandler.sendNotification(context);
+
+        verify(channel2).sendNotification(any(CibaNotificationContext.class));
+        verify(channel1, never()).sendNotification(any(CibaNotificationContext.class));
+    }
+
+    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp =
+            "Requested notification channel is not allowed for this application.")
+    public void testSendNotificationDisallowedChannel() throws Exception {
+        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1");
+        CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
+        when(channel1.getName()).thenReturn("channel1");
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setAuthAppDO(oAuthAppDO)
+                .setRequestedChannel("channel2")
+                .build();
+        cibaUserNotificationHandler.sendNotification(context);
     }
 }

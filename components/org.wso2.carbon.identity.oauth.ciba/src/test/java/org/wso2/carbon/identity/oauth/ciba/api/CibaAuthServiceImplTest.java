@@ -109,6 +109,7 @@ public class CibaAuthServiceImplTest {
 
         // Setup ServiceComponents
         CibaServiceComponentHolder.getInstance().setCibaUserResolver(cibaUserResolver);
+        when(cibaNotificationChannel.getName()).thenReturn("test-channel");
         CibaServiceComponentHolder.getInstance().addNotificationChannel(cibaNotificationChannel);
     }
 
@@ -136,6 +137,7 @@ public class CibaAuthServiceImplTest {
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setCallbackUrl("http://callback.com");
+        appDO.setCibaNotificationChannels("test-channel");
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("test-client", "carbon.super"))
                 .thenReturn(appDO);
 
@@ -214,6 +216,7 @@ public class CibaAuthServiceImplTest {
         request.setUserHint("test-user-hint");
 
         OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setCibaNotificationChannels("test-channel");
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("test-client", "carbon.super"))
                 .thenReturn(appDO);
 

@@ -22,6 +22,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -33,13 +35,17 @@ import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
+import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -82,9 +88,29 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         cibaAuthCodeDO.setResolvedUserId(resolvedUser.getUserId());
         // Persist the auth code after resolving the user.
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
-        sendUserNotification(resolvedUser, cibaAuthCodeDO, cibaAuthCodeRequest.getBindingMessage(), appDO);
 
-        return buildAuthCodeResponse(cibaAuthCodeRequest, cibaAuthCodeDO, appDO);
+        String authUrl = buildAuthenticationUrl(cibaAuthCodeDO.getCibaAuthCodeKey());
+        String usedChannel = sendUserNotification(resolvedUser, cibaAuthCodeDO, cibaAuthCodeRequest.getBindingMessage(),
+                appDO, cibaAuthCodeRequest.getNotificationChannel(), authUrl);
+
+        CibaAuthCodeResponse response = buildAuthCodeResponse(cibaAuthCodeRequest, cibaAuthCodeDO, appDO);
+        if (CibaConstants.CibaNotificationChannel.EXTERNAL.equals(usedChannel)) {
+            response.setAuthUrl(authUrl);
+        }
+        return response;
+    }
+
+    @Override
+    public List<String> getSupportedNotificationChannels() {
+
+        List<CibaNotificationChannel> channels = CibaServiceComponentHolder.getInstance().getNotificationChannels();
+        List<String> channelNames = new ArrayList<>();
+        if (channels != null) {
+            for (CibaNotificationChannel channel : channels) {
+                channelNames.add(channel.getName());
+            }
+        }
+        return channelNames;
     }
 
     /**
@@ -121,21 +147,26 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      * @param oAuthAppDO     The OAuth application data object containing app-level
      *                       configuration
      */
-    private void sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
-                                      String bindingMessage, OAuthAppDO oAuthAppDO) {
+    private String sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
+                                      String bindingMessage, OAuthAppDO oAuthAppDO, String notificationChannel,
+                                      String authUrl) {
 
         try {
             CibaUserNotificationHandler notificationHandler = new CibaUserNotificationHandler();
-            notificationHandler.sendNotification(resolvedUser, cibaAuthCodeDO, bindingMessage, oAuthAppDO);
+            CibaNotificationContext cibaNotificationContext = buildNotificationContext(
+                    resolvedUser, cibaAuthCodeDO, bindingMessage, authUrl, oAuthAppDO, notificationChannel);
+            String usedChannel = notificationHandler.sendNotification(cibaNotificationContext);
 
             if (log.isDebugEnabled()) {
                 log.debug("User notification sent for CIBA auth_req_id: " + cibaAuthCodeDO.getAuthReqId());
             }
+            return usedChannel;
         } catch (CibaCoreException e) {
             log.error("Failed to send CIBA user notification: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Unexpected error sending CIBA user notification: " + e.getMessage(), e);
         }
+        return null;
     }
 
     /**
@@ -169,13 +200,13 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      */
     private long getExpiresIn(CibaAuthCodeRequest cibaAuthCodeRequest, OAuthAppDO oAuthAppDO) {
 
-        // Get the app-level configured expiry time, 0 means use default.
+        // Get the app-level configured expiry time.
         long appConfiguredExpiry = oAuthAppDO != null ? oAuthAppDO.getCibaAuthReqExpiryTime() : 0;
-        long defaultExpiry = appConfiguredExpiry > 0 ? appConfiguredExpiry : 
+        long defaultExpiry = appConfiguredExpiry > 0 ? appConfiguredExpiry :
                 CibaConstants.EXPIRES_IN_DEFAULT_VALUE_IN_SEC;
-        
+
         // Use app-configured expiry as both default and maximum.
-        long maximumExpiry = appConfiguredExpiry > 0 ? appConfiguredExpiry : 
+        long maximumExpiry = appConfiguredExpiry > 0 ? appConfiguredExpiry :
                 CibaConstants.MAXIMUM_REQUESTED_EXPIRY_IN_SEC;
 
         long requestedExpiry = cibaAuthCodeRequest.getRequestedExpiry();
@@ -186,7 +217,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         }
         if (log.isDebugEnabled()) {
             log.debug("The requested_expiry: " + requestedExpiry + " exceeds maximum value: " +
-                    maximumExpiry + " for the CIBA authentication request made by: " + 
+                    maximumExpiry + " for the CIBA authentication request made by: " +
                     cibaAuthCodeRequest.getIssuer());
         }
         return maximumExpiry;
@@ -254,5 +285,43 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             log.debug("Successful in creating AuthCodeResponse for the client: " + clientID);
         }
         return cibaAuthCodeResponse;
+    }
+
+    /**
+     * Build the authentication URL that the user will click.
+     *
+     * @param authCodeKey The auth code key for the CIBA session
+     * @return The full authentication URL
+     * @throws CibaCoreException If URL building fails
+     */
+    private String buildAuthenticationUrl(String authCodeKey) throws CibaCoreException {
+
+        try {
+            return ServiceURLBuilder.create()
+                    .addPath(CibaConstants.CIBA_USER_AUTH_ENDPOINT)
+                    .addParameter(CibaConstants.CIBA_AUTH_CODE_KEY, authCodeKey)
+                    .build()
+                    .getAbsolutePublicURL();
+        } catch (URLBuilderException e) {
+            throw new CibaCoreException("Error building CIBA authentication URL", e);
+        }
+    }
+
+    private CibaNotificationContext buildNotificationContext(CibaUserResolver.ResolvedUser resolvedUser,
+                                                             CibaAuthCodeDO cibaAuthCodeDO,
+                                                             String bindingMessage,
+                                                             String authUrl,
+                                                             OAuthAppDO oAuthAppDO,
+                                                             String notificationChannel) {
+
+        return new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(cibaAuthCodeDO.getExpiresIn())
+                .setAuthUrl(authUrl)
+                .setBindingMessage(bindingMessage)
+                .setTenantDomain(resolvedUser.getTenantDomain())
+                .setAuthAppDO(oAuthAppDO)
+                .setRequestedChannel(notificationChannel)
+                .build();
     }
 }

@@ -460,4 +460,211 @@ public class OAuth2CibaEndpointTest {
 
 
 
+    @Test
+    public void testCibaRequestWithNotificationChannel() throws Exception {
+        Map<String, String[]> requestParams = new HashMap<>();
+        requestParams.put("scope", new String[]{"openid"});
+        requestParams.put("login_hint", new String[]{"user"});
+        requestParams.put("notification_channel", new String[]{"sms"});
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory = mockStatic(CibaAuthServiceFactory.class)) {
+
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));
+            lenient().when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
+            lenient().when(httpServletRequest.getParameter("scope")).thenReturn("openid");
+            lenient().when(httpServletRequest.getParameter("login_hint")).thenReturn("user");
+            lenient().when(httpServletRequest.getParameter("notification_channel")).thenReturn("sms");
+
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
+            oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+            when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                    oAuthClientAuthnContext);
+
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("openid");
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY, "carbon.super"))
+                    .thenReturn(oAuthAppDO);
+
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+
+            ArgumentCaptor<org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest> captor =
+                    ArgumentCaptor.forClass(
+                            org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest.class);
+
+            MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+            paramMap.put("scope", Collections.singletonList("openid"));
+            paramMap.put("login_hint", Collections.singletonList("user"));
+            paramMap.put("notification_channel", Collections.singletonList("sms"));
+
+            Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse,
+                    paramMap);
+
+
+            Assert.assertEquals(200, response.getStatus());
+            verify(authService).generateAuthCodeResponse(captor.capture());
+            Assert.assertEquals("sms", captor.getValue().getNotificationChannel());
+        }
+    }
+
+    @Test
+    public void testCibaRequestWithInvalidNotificationChannel() throws Exception {
+        Map<String, String[]> requestParams = new HashMap<>();
+        requestParams.put(REQUEST_ATTRIBUTE, new String[]{null}); // Not used for this path if we pass params directly
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
+            oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+            when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                    oAuthClientAuthnContext);
+
+            // Mock allowed channels
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY, "carbon.super"))
+                    .thenReturn(oAuthAppDO);
+            lenient().when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("email, push");
+            lenient().when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
+
+            MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+            paramMap.put("scope", Collections.singletonList("openid"));
+            paramMap.put("login_hint", Collections.singletonList("user"));
+            paramMap.put("notification_channel", Collections.singletonList("sms")); // sms not in email, push
+
+            when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+            Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse,
+                    paramMap);
+            
+            Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+            Assert.assertTrue(response.getEntity().toString().contains("Requested notification channel is " +
+                    "not allowed"));
+        }
+    }
+
+    @Test
+    public void testCibaRequestWithInvalidBindingMessage() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+        paramMap.put("binding_message", Collections.singletonList("<script>alert('xss')</script>")); // HTML injection
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+        
+        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertTrue(response.getEntity().toString().contains("Invalid characters present in (binding_message)"));
+    }
+
+    @Test
+    public void testCibaRequestWithValidBindingMessage() throws Exception {
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory = mockStatic(CibaAuthServiceFactory.class)) {
+
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
+            oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+            when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                    oAuthClientAuthnContext);
+
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("openid");
+
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+
+            MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+            paramMap.put("scope", Collections.singletonList("openid"));
+            paramMap.put("login_hint", Collections.singletonList("user"));
+            paramMap.put("binding_message",
+                    Collections.singletonList("Transfer $100.50 to John's account"));
+
+            when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+            Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            Assert.assertEquals(HttpServletResponse.SC_OK, response.getStatus());
+        }
+    }
+
+    @Test
+    public void testCibaRequestWithXssBindingMessage() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+        paramMap.put("binding_message", Collections.singletonList("<img src=x onerror=alert(1)>"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertTrue(response.getEntity().toString().contains("Invalid characters present in (binding_message)"));
+    }
+
+    @Test
+    public void testCibaRequestWithInvalidExpiry() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+        paramMap.put("requested_expiry", Collections.singletonList("-10")); // Negative expiry
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+        
+        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertTrue(response.getEntity().toString().contains("Invalid value for (requested_expiry)"));
+    }
 }

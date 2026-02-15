@@ -47,6 +47,13 @@ public interface CibaNotificationChannel {
      *
      * @return Channel name (e.g., "email", "sms")
      */
+
+
+    /**
+     * Get the name of this notification channel.
+     *
+     * @return Channel name (e.g., "email", "sms")
+     */
     String getName();
 
     /**

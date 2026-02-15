@@ -18,13 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
@@ -84,6 +87,7 @@ public class OAuth2CibaEndpoint {
                          MultivaluedMap paramMap) {
 
         OAuthClientAuthnContext oAuthClientAuthnContext =  getClientAuthnContext(request);
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             if (oAuthClientAuthnContext.getErrorCode() != null) {
@@ -117,10 +121,26 @@ public class OAuth2CibaEndpoint {
                 Map<String, String> params = transformParams(paramMap);
                 if (!containsRequiredParameters(params)) {
                     throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "Missing required parameters. Either 'request' JWT or (scope, login_hint, client_id) " +
+                            "Missing required parameters. Either 'request' JWT or (scope, login_hint) " +
                                     "are required.");
                 }
                 
+                // Validate binding_message.
+                if (params.containsKey(CibaConstants.BINDING_MESSAGE)) {
+                    validateBindingMessage(params.get(CibaConstants.BINDING_MESSAGE));
+                }
+
+                // Validate requested_expiry.
+                if (params.containsKey(CibaConstants.REQUESTED_EXPIRY)) {
+                    validateRequestedExpiry(params.get(CibaConstants.REQUESTED_EXPIRY));
+                }
+
+                // Validate notification_channel.
+                if (params.containsKey(CibaConstants.NOTIFICATION_CHANNEL)) {
+                    validateNotificationChannel(params.get(CibaConstants.NOTIFICATION_CHANNEL),
+                            oAuthClientAuthnContext.getClientId(), tenantDomain);
+                }
+
                 // Build CibaAuthCodeRequest from individual parameters
                 cibaAuthCodeRequest = getCibaAuthCodeRequestFromParams(params, oAuthClientAuthnContext.getClientId());
             }
@@ -251,12 +271,10 @@ public class OAuth2CibaEndpoint {
         } else {
             cibaAuthCodeRequest.setRequestedExpiry(0);
         }
-        
-        if (log.isDebugEnabled()) {
-            log.debug("Built CibaAuthCodeRequest from parameters for client: " + clientId + 
-                    ", login_hint: " + params.get(Constants.LOGIN_HINT));
+
+        if (params.get(CibaConstants.NOTIFICATION_CHANNEL) != null) {
+            cibaAuthCodeRequest.setNotificationChannel(params.get(CibaConstants.NOTIFICATION_CHANNEL));
         }
-        
         return cibaAuthCodeRequest;
     }
 
@@ -344,5 +362,81 @@ public class OAuth2CibaEndpoint {
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
                     .UNEXPECTED_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Validates the binding message.
+     *
+     * @param bindingMessage Binding message
+     * @throws CibaAuthFailureException If validation fails
+     */
+    private void validateBindingMessage(String bindingMessage) throws CibaAuthFailureException {
+
+        if (StringUtils.isBlank(bindingMessage)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for " +
+                        "(binding_message).");
+            }
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                    "Invalid value for (binding_message).");
+        }
+        // Validate binding message contains only printable characters. Reject control characters and
+        // HTML-dangerous characters (< and >) to prevent XSS.
+        if (!bindingMessage.matches("^[^<>\\x00-\\x1F\\x7F]+$")) {
+            throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                    "Invalid characters present in (binding_message).");
+        }
+    }
+
+    /**
+     * Validates the requested expiry.
+     *
+     * @param requestedExpiry Requested expiry
+     * @throws CibaAuthFailureException If validation fails
+     */
+    private void validateRequestedExpiry(String requestedExpiry) throws CibaAuthFailureException {
+
+        if (StringUtils.isBlank(requestedExpiry)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for" +
+                        " (requested_expiry).");
+            }
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Invalid value for (requested_expiry).");
+        }
+        try {
+            long expiry = Long.parseLong(requestedExpiry);
+            if (expiry <= 0) {
+                 throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid value for (requested_expiry). Must be greater than 0.");
+            }
+        } catch (NumberFormatException e) {
+             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Invalid value for (requested_expiry).");
+        }
+    }
+
+    /**
+     * Validates the notification channel.
+     *
+     * @param notificationChannel Notification channel.
+     * @param clientId Client ID.
+     * @param tenantDomain Tenant domain.
+     * @throws CibaAuthFailureException If validation fails.
+     */
+    private void validateNotificationChannel(String notificationChannel, String clientId, String tenantDomain)
+            throws CibaAuthFailureException {
+
+        if (StringUtils.isBlank(notificationChannel)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for " +
+                        "(notification_channel).");
+            }
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Invalid value for (notification_channel).");
+        }
+
+        CibaNotificationChannelValidator.validateChannelForClient(
+                notificationChannel, clientId, tenantDomain);
     }
 }

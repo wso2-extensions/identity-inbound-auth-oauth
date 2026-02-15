@@ -321,6 +321,7 @@ public final class OAuthConstants {
         public static final String DEVICE_CODE_URN = "urn:ietf:params:oauth:grant-type:device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
         public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+        public static final String CIBA = "urn:openid:params:grant-type:ciba";
 
         private GrantTypes() {
 
@@ -669,9 +670,9 @@ public final class OAuthConstants {
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
 
-        // CIBA Configuration Properties
-        public static final String CIBA_SEND_NOTIFICATION_TO_ALL_CHANNELS = "cibaSendNotificationToAllChannels";
+        // CIBA Configuration Properties.
         public static final String CIBA_AUTH_REQ_EXPIRY_TIME = "cibaAuthReqExpiryTime";
+        public static final String CIBA_NOTIFICATION_CHANNELS = "cibaNotificationChannels";
 
         private OIDCConfigProperties() {
 

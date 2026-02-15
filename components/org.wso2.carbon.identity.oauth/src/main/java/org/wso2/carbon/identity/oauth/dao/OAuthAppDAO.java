@@ -79,7 +79,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_AUTH_REQ_EXPIRY_TIME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_SEND_NOTIFICATION_TO_ALL_CHANNELS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_NOTIFICATION_CHANNELS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
@@ -1132,6 +1132,14 @@ public class OAuthAppDAO {
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_NOTIFICATION_CHANNELS, oauthAppDO.getCibaNotificationChannels(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_AUTH_REQ_EXPIRY_TIME, String.valueOf(oauthAppDO.getCibaAuthReqExpiryTime()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1866,10 +1874,9 @@ public class OAuthAppDAO {
                     OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
                     String.valueOf(consumerAppDO.getHybridFlowResponseType()));
 
-            // CIBA Notification Configuration - default to true for new applications.
+            // CIBA Notification Channels Configuration.
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    CIBA_SEND_NOTIFICATION_TO_ALL_CHANNELS,
-                    String.valueOf(consumerAppDO.isCibaSendNotificationToAllChannels()));
+                    CIBA_NOTIFICATION_CHANNELS, consumerAppDO.getCibaNotificationChannels());
 
             // CIBA Auth Request Expiry Time Configuration - 0 means use default (3600 seconds).
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
@@ -2098,17 +2105,13 @@ public class OAuthAppDAO {
             oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
         }
 
-        // CIBA Notification Configuration
-        // Default to true (send to all channels) unless explicitly set to false.
-        String cibaSendNotificationToAllChannels = getFirstPropertyValue(spOIDCProperties,
-                CIBA_SEND_NOTIFICATION_TO_ALL_CHANNELS);
-        if (cibaSendNotificationToAllChannels != null) {
-            oauthApp.setCibaSendNotificationToAllChannels(Boolean.parseBoolean(cibaSendNotificationToAllChannels));
+        // CIBA Notification Channels Configuration.
+        String cibaNotificationChannels = getFirstPropertyValue(spOIDCProperties, CIBA_NOTIFICATION_CHANNELS);
+        if (cibaNotificationChannels != null) {
+            oauthApp.setCibaNotificationChannels(cibaNotificationChannels);
         }
-        // If property is not set, the default value (true) from OAuthAppDO will be used.
 
-        // CIBA Auth Request Expiry Time Configuration
-        // 0 means use default (3600 seconds).
+        // CIBA Auth Request Expiry Time Configuration.
         String cibaAuthReqExpiryTime = getFirstPropertyValue(spOIDCProperties, CIBA_AUTH_REQ_EXPIRY_TIME);
         if (cibaAuthReqExpiryTime != null) {
             oauthApp.setCibaAuthReqExpiryTime(Long.parseLong(cibaAuthReqExpiryTime));

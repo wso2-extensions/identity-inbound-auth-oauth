@@ -68,6 +68,7 @@ public class CibaMgtDAOImplTest {
     private static final String CALLBACK = "http://localhost:8080/redirect";
     private static final String DB_NAME = "testCibaAuthCode";
     private static final String BACKCHANNELLOGOUT_URL = "http://localhost:8080/backChannelLogout";
+    private static final String RESOLVED_USER_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
@@ -95,7 +96,7 @@ public class CibaMgtDAOImplTest {
         cibaAuthCodeDO.setInterval(2L);
         cibaAuthCodeDO.setExpiresIn(3600L);
         cibaAuthCodeDO.setScopes(scopes);
-        cibaAuthCodeDO.setResolvedUserId("testUser");
+        cibaAuthCodeDO.setResolvedUserId(RESOLVED_USER_ID);
 
         authenticatedUser.setTenantDomain("super.wso2");
         authenticatedUser.setUserName("randomUser");
@@ -260,7 +261,7 @@ public class CibaMgtDAOImplTest {
         try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
             prepareConnection(identityDatabaseUtil);
             String resolvedUserId = cibaMgtDAO.getResolvedUserId(AUTH_CODE_KEY);
-            assertEquals(resolvedUserId, "testUser");
+            assertEquals(resolvedUserId, RESOLVED_USER_ID);
         }
     }
 
