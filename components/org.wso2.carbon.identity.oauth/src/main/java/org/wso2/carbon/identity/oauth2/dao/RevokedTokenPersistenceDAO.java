@@ -48,10 +48,10 @@ public interface RevokedTokenPersistenceDAO {
     void addRevokedToken(String token, String consumerKey, Long expiryTime) throws IdentityOAuth2Exception;
 
     /**
-     * Check if a token has been revoked as a result of any changes in the subject principle/entity associated with
+     * Check if a token has been revoked as a result of any changes in the subject principal/entity associated with
      * the token after the token's issuance timestamp.
      *
-     * @param entityId        The entity/subject principle ID for which the token was issued for.
+     * @param entityId        The entity/subject principal ID for which the token was issued for.
      * @param tokenIssuedTime The timestamp at which token was issued.
      * @return {@code true} if the token has been revoked for the specified entity after the given timestamp,
      * {@code false} otherwise.
@@ -66,9 +66,8 @@ public interface RevokedTokenPersistenceDAO {
      * @param subjectIdType       The type of subject identifier.
      * @param revocationTime      The time of the revocation event.
      * @param tenantId              The tenant associated with the revocation.
-     * @param retryAttemptCounter The retry attempt counter.
      * @throws IdentityOAuth2Exception If an error occurs during access token revocation.
      */
-    void revokeTokensBySubjectEvent(String subjectId, String subjectIdType, long revocationTime, int tenantId,
-                                    int retryAttemptCounter) throws IdentityOAuth2Exception;
+    void revokeTokensBySubjectEvent(String subjectId, String subjectIdType, long revocationTime, int tenantId)
+            throws IdentityOAuth2Exception;
 }

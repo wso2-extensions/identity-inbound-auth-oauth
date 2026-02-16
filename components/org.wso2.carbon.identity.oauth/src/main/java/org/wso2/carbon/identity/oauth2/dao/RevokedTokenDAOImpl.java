@@ -79,7 +79,7 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
                 }
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error while checking existence of token as an revoked token.", e);
+            throw new IdentityOAuth2Exception("Error while checking existence of token as a revoked token.", e);
         }
     }
 
@@ -157,6 +157,12 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
 
     @Override
     public void revokeTokensBySubjectEvent(String subjectId, String subjectIdType,
+                                           long revocationTime, int tenantId) throws IdentityOAuth2Exception {
+
+        revokeTokensBySubjectEvent(subjectId, subjectIdType, revocationTime, tenantId, 0);
+    }
+
+    private void revokeTokensBySubjectEvent(String subjectId, String subjectIdType,
                                            long revocationTime, int tenantId, int retryAttemptCounter)
             throws IdentityOAuth2Exception {
 
@@ -209,7 +215,7 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
                                     revocationTime, tenantId, e);
                         } else {
                             throw new IdentityOAuth2Exception("Error while inserting user event revocation rule to db."
-                                    + e.getMessage(), e);
+                                    , e);
                         }
                     }
                 } else {
@@ -218,12 +224,10 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
                 }
             } catch (SQLException e) {
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                throw new IdentityOAuth2Exception("Error while inserting user event revocation rule to db."
-                        + e.getMessage(), e);
+                throw new IdentityOAuth2Exception("Error while inserting user event revocation rule to db.", e);
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error while inserting user event revocation rule to db."
-                    + e.getMessage(), e);
+            throw new IdentityOAuth2Exception("Error while inserting user event revocation rule to db.", e);
         }
     }
 
@@ -242,10 +246,6 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
                                                      long revocationTime, int tenantId, Exception exception)
             throws IdentityOAuth2Exception {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("User event token revocation rule for subject id : %s, "
-                            + "type : %s and tenant : %s already exists", subjectId, subjectIdType, tenantId));
-        }
         if (retryAttemptCounter >= getTokenPersistRetryCount()) {
             String errorMessage = ENTITY_REVOKED_EVENT_CONSTRAINT
                     + " constraint violation retry count exceeds the maximum count.";
@@ -274,8 +274,14 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
     private int getTokenPersistRetryCount() {
 
         int tokenPersistRetryCount = DEFAULT_TOKEN_PERSIST_RETRY_COUNT;
-        if (getProperty(OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT) != null) {
-            tokenPersistRetryCount = Integer.parseInt(getProperty(OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT));
+        String retryCountValue = getProperty(OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT);
+        if (retryCountValue != null) {
+            try {
+                tokenPersistRetryCount = Integer.parseInt(retryCountValue);
+            } catch (NumberFormatException e) {
+                LOG.warn("Invalid token persistence retry count: " + retryCountValue
+                        + ". Using default: " + DEFAULT_TOKEN_PERSIST_RETRY_COUNT);
+            }
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("OAuth Token Persistence Retry count set to " + tokenPersistRetryCount);

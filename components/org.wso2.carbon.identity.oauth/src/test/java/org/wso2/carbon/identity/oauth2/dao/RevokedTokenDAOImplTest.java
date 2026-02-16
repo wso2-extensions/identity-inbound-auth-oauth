@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
-import org.apache.commons.dbcp.BasicDataSource;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterClass;
@@ -38,8 +37,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -65,7 +62,6 @@ public class RevokedTokenDAOImplTest {
     private static final int TEST_TENANT_ID = -1234;
 
     private RevokedTokenDAOImpl revokedTokenDAO;
-    private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
     private Connection connection = null;
 
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
@@ -124,15 +120,7 @@ public class RevokedTokenDAOImplTest {
     @AfterClass
     public void tearDown() throws Exception {
 
-        closeH2Base(DB_NAME);
-    }
-
-    private static void closeH2Base(String databaseName) throws Exception {
-
-        BasicDataSource dataSource = dataSourceMap.get(databaseName);
-        if (dataSource != null) {
-            dataSource.close();
-        }
+        DAOUtils.closeDataSource(DB_NAME);
     }
 
     // ======================== Tests for isRevokedToken ========================
@@ -278,7 +266,7 @@ public class RevokedTokenDAOImplTest {
 
         // First add a revocation event
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, revocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Get a fresh connection for the read operation
         connection = DAOUtils.getConnection(DB_NAME);
@@ -306,7 +294,7 @@ public class RevokedTokenDAOImplTest {
 
         // First add a revocation event
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, revocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Get a fresh connection for the read operation
         connection = DAOUtils.getConnection(DB_NAME);
@@ -363,7 +351,7 @@ public class RevokedTokenDAOImplTest {
 
         // This should insert a new event
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, revocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Verify the event was inserted
         connection = DAOUtils.getConnection(DB_NAME);
@@ -391,7 +379,7 @@ public class RevokedTokenDAOImplTest {
                 .then(invocation -> null);
 
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, initialRevocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Update the event with a new revocation time
         connection = DAOUtils.getConnection(DB_NAME);
@@ -399,7 +387,7 @@ public class RevokedTokenDAOImplTest {
                 .thenReturn(connection);
 
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, updatedRevocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Verify the updated time is effective
         connection = DAOUtils.getConnection(DB_NAME);
@@ -421,7 +409,7 @@ public class RevokedTokenDAOImplTest {
 
         // This should not throw any exception and should return early
         revokedTokenDAO.revokeTokensBySubjectEvent(TEST_ENTITY_ID, TEST_ENTITY_TYPE,
-                System.currentTimeMillis(), TEST_TENANT_ID, 0);
+                System.currentTimeMillis(), TEST_TENANT_ID);
     }
 
     @Test
@@ -439,7 +427,7 @@ public class RevokedTokenDAOImplTest {
 
         assertThrows(IdentityOAuth2Exception.class, () ->
                 revokedTokenDAO.revokeTokensBySubjectEvent(TEST_ENTITY_ID, TEST_ENTITY_TYPE,
-                        System.currentTimeMillis(), TEST_TENANT_ID, 0));
+                        System.currentTimeMillis(), TEST_TENANT_ID));
     }
 
     @Test
@@ -457,17 +445,23 @@ public class RevokedTokenDAOImplTest {
 
         // Add revocation event with USER_ID type
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, "USER_ID", revocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
         // Add revocation event with same entity ID but CLIENT_ID type
         connection = DAOUtils.getConnection(DB_NAME);
         identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true))
                 .thenReturn(connection);
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, "CLIENT_ID", revocationTime,
-                TEST_TENANT_ID, 0);
+                TEST_TENANT_ID);
 
-        // Both should be persisted as separate entries (different entity types)
-        // This test verifies that the constraint allows same entity_id with different entity_type
+        // Verify both events exist by checking revocation status
+        connection = DAOUtils.getConnection(DB_NAME);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                .thenReturn(connection);
+
+        Date tokenIssuedBefore = new Date(revocationTime - 1000);
+        boolean result = revokedTokenDAO.isTokenRevokedForSubjectEntity(uniqueEntityId, tokenIssuedBefore);
+        assertTrue(result, "Revocation event should exist for the entity.");
     }
 
     @Test
@@ -485,14 +479,14 @@ public class RevokedTokenDAOImplTest {
 
         // Add revocation event for tenant 1
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, revocationTime,
-                1, 0);
+                1);
 
         // Add revocation event for tenant 2
         connection = DAOUtils.getConnection(DB_NAME);
         identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true))
                 .thenReturn(connection);
         revokedTokenDAO.revokeTokensBySubjectEvent(uniqueEntityId, TEST_ENTITY_TYPE, revocationTime,
-                2, 0);
+                2);
 
         // Both should be persisted as separate entries (different tenants)
         // This test verifies that the constraint allows same entity_id with different tenant_id
