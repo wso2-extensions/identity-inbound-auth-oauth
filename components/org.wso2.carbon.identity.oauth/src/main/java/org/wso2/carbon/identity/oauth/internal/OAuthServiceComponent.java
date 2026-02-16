@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
+import org.wso2.carbon.identity.action.execution.api.service.ActionVersioningHandler;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenActionVersioningHandler;
 import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenResponseProcessor;
 import org.wso2.carbon.identity.oauth.action.rule.PreIssueAccessTokenRuleEvaluationDataProvider;
@@ -121,6 +123,7 @@ public class OAuthServiceComponent {
 
             registerActionRequestBuilderAndResponseProcessor(context);
             registerRuleEvaluationDataProvider(context);
+            registerActionVersioningHandler(context);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -148,6 +151,15 @@ public class OAuthServiceComponent {
         context.getBundleContext()
                 .registerService(RuleEvaluationDataProvider.class, new PreIssueAccessTokenRuleEvaluationDataProvider(),
                         null);
+    }
+
+    private void registerActionVersioningHandler(ComponentContext context) {
+
+        context.getBundleContext().registerService(ActionVersioningHandler.class,
+                new PreIssueAccessTokenActionVersioningHandler(), null);
+        if (log.isDebugEnabled()) {
+            log.debug("Pre Issue Access Token Action Versioning Handler is enabled");
+        }
     }
 
     protected void deactivate(ComponentContext context) {

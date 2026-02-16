@@ -560,7 +560,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                         OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
                         OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
+                        OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType) ||
+                        OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType) ||
+                        OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType) ||
+                        OAuthConstants.GrantTypes.SAML20_BEARER.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
@@ -658,7 +662,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long validityPeriodInMillis = getConfiguredExpiryTimeForApplication(tokReqMsgCtx, consumerKey, oAuthAppBean);
         tokReqMsgCtx.setValidityPeriod(validityPeriodInMillis);
         tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
-        tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
+        if (tokReqMsgCtx.getAudiences() == null || tokReqMsgCtx.getAudiences().isEmpty()) {
+            tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
+        }
 
         updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, existingTokenBean, tokReqMsgCtx);
     }

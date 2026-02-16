@@ -196,6 +196,7 @@ public abstract class AbstractToken {
         CLIENT_ID("client_id"),
         AUTHORIZED_USER_TYPE("aut"),
         EXPIRES_IN("expires_in"),
+        ACT("act"),
 
         TOKEN_BINDING_REF("binding_ref"),
         TOKEN_BINDING_TYPE("binding_type"),

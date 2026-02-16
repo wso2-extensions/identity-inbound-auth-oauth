@@ -42,7 +42,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -193,6 +195,45 @@ public class PreIssueAccessTokenResponseProcessorTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
 
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
+    }
+
+    @Test
+    void testProcessSuccessResponse_AddClaim_WithValidObjectValue() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        Map<String, String> complexObject = new HashMap<>();
+        complexObject.put("key1", "value1");
+        complexObject.put("key2", "value2");
+
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("complexClaim", complexObject)));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("complexClaim");
+
+        assertNotNull(addedClaim);
+        assertTrue(addedClaim instanceof Map);
+        assertEquals(((Map<?, ?>) addedClaim).get("key1"), "value1");
+    }
+
+    @Test
+    void testProcessSuccessResponse_AddClaim_WithValidArrayValue() throws ActionExecutionResponseProcessorException {
+
+        List<String> arrayValue = Arrays.asList("perm1", "perm2", "perm3");
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("user_permissions", arrayValue)));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("user_permissions");
+
+        assertNotNull(addedClaim);
+        assertTrue(addedClaim instanceof List, "The added claim value should be processed as a List.");
+        List<?> resultedList = (List<?>) addedClaim;
+        assertEquals(resultedList.size(), 3);
+        assertEquals(resultedList, arrayValue);
     }
 
     @DataProvider(name = "scopeRemovalTestData")
