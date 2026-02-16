@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.425-SNAPSHOT</version>
+        <version>7.2.1-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -102,11 +102,11 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
-            <artifactId>waffle-jna</artifactId>
+            <artifactId>waffle-jna-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
-            <artifactId>opensaml</artifactId>
+            <artifactId>opensaml-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.joda-time</groupId>
@@ -238,8 +238,8 @@
                                 <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>
                                 <bundleDef>org.ow2.asm:asm-all:${org.ow2.asm.asm.version}</bundleDef>
                                 <bundleDef>org.ow2.asm:asm:${org.ow2.asm.version}</bundleDef>
-                                <bundleDef>org.wso2.orbit.com.github.dblock.waffle:waffle-jna</bundleDef>
-                                <bundleDef>org.wso2.orbit.org.opensaml:opensaml</bundleDef>
+                                <bundleDef>org.wso2.orbit.com.github.dblock.waffle:waffle-jna-jdk21</bundleDef>
+                                <bundleDef>org.wso2.orbit.org.opensaml:opensaml-jdk21</bundleDef>
                                 <bundleDef>org.wso2.orbit.joda-time:joda-time</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.webfinger</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.discovery</bundleDef>

@@ -20,7 +20,6 @@
 <suite name="OauthExtension">
     <test name="JSEngineSuite" preserve-order="false" parallel="false">
         <classes>
-            <class name="org.wso2.carbon.identity.oauth.extension.engine.impl.JSEngineImplTest"/>
             <class name="org.wso2.carbon.identity.oauth.extension.engine.impl.OpenJdkJSEngineImplTest"/>
             <class name="org.wso2.carbon.identity.oauth.extension.engine.impl.GraalVMJSEngineImplTest"/>
         </classes>

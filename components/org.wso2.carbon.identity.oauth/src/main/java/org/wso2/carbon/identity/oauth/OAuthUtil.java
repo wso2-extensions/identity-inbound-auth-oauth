@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -73,6 +73,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.util.IdPManagementUtil;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -98,7 +99,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
@@ -568,6 +568,7 @@ public final class OAuthUtil {
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
+        dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
         return dto;
     }
@@ -907,6 +908,8 @@ public final class OAuthUtil {
                                                   String userStoreDomain, String username) {
 
         boolean isErrorOnRevokingTokens = false;
+        boolean isTokenPreservingAtPasswordUpdateEnabled = IdPManagementUtil.
+                getPreserveCurrentSessionAtPasswordUpdate(authenticatedUser.getTenantDomain());
         for (String clientId : clientIds) {
             try {
                 Set<AccessTokenDO> accessTokenDOs = new HashSet<>();
@@ -929,8 +932,6 @@ public final class OAuthUtil {
                     LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
                             + username);
                 }
-                boolean isTokenPreservingAtPasswordUpdateEnabled =
-                        Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
                 String currentTokenBindingReference = "";
                 String currentTokenReference = "";
                 if (isTokenPreservingAtPasswordUpdateEnabled) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -711,7 +711,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
-            jwtClaimsSetBuilder.claim(SCOPE, scope);
+            if (OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain)) {
+                // Convert space-delimited string to array.
+                jwtClaimsSetBuilder.claim(SCOPE, Arrays.asList(OAuth2Util.buildScopeArray(scope)));
+            } else {
+                // Use as space-delimited string (default).
+                jwtClaimsSetBuilder.claim(SCOPE, scope);
+            }
         }
 
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,

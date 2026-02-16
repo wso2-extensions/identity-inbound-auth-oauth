@@ -46,8 +46,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -154,21 +152,17 @@ public class OIDCDiscoveryEndpointTest {
 
         Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
 
         threadLocalPropertiesField.setAccessible(true);
-        threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+        Object fieldBase = unsafe.staticFieldBase(threadLocalPropertiesField);
+        long fieldOffset = unsafe.staticFieldOffset(threadLocalPropertiesField);
+        unsafe.putObject(fieldBase, fieldOffset, threadLocalProperties);
 
         try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
                      mockStatic(OIDCProviderServiceFactory.class);
