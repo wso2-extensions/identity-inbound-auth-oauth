@@ -94,7 +94,6 @@ public class OAuthEventPublishingUtilTest {
         when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
 
         when(tokReqMsgCtx.getAuthorizedUser()).thenReturn(authorizedUser);
-        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
         when(authorizedUser.getUserId()).thenReturn("user-id");
         when(authorizedUser.getUserName()).thenReturn("john");
         when(authorizedUser.getUserStoreDomain()).thenReturn("PRIMARY");

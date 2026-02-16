@@ -334,14 +334,14 @@ public class AccessTokenEventUtil {
         }
 
         if (tokReqMsgCtx != null) {
-            String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+            String tenantDomain = tokenReqDTO.getTenantDomain();
             String organizationId = StringUtils.EMPTY;
             try {
                 organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the organization Id for tenant domain : " +
-                        tenantDomain);
+                        tenantDomain, e);
             }
             try {
                 String rootOrgTenantDomain =
@@ -351,7 +351,7 @@ public class AccessTokenEventUtil {
                         rootOrgTenantDomain);
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
-                        tenantDomain);
+                        tenantDomain, e);
             }
             String accessingOrganizationId = StringUtils.EMPTY;
             if (tokReqMsgCtx.getAuthorizedUser() != null
@@ -387,7 +387,7 @@ public class AccessTokenEventUtil {
             properties.put(IdentityEventConstants.EventProperty.USER_TYPE,
                     tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
             properties.put(IdentityEventConstants.EventProperty.CLIENT_ID,
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                    tokenReqDTO.getClientId());
             properties.put(IdentityEventConstants.EventProperty.EXISTING_TOKEN_USED,
                     String.valueOf(existingTokenUsed(tokReqMsgCtx)));
 
@@ -400,7 +400,7 @@ public class AccessTokenEventUtil {
             }
             try {
                 properties.put(IdentityEventConstants.EventProperty.SERVICE_PROVIDER, OAuth2Util.getServiceProvider(
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), tenantDomain).getApplicationName());
+                        tokenReqDTO.getClientId(), tenantDomain).getApplicationName());
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error while retrieving the Service Provider for client ID: " +
                         tokenReqDTO.getClientId(), e);
