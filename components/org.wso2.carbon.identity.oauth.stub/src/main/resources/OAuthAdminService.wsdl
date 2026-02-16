@@ -221,6 +221,55 @@
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
+            <xs:element name="createClientSecret">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="consumerSecret" nillable="true" type="ax2406:OAuthConsumerSecretDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="createClientSecretResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2406:OAuthConsumerSecretDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="removeClientSecret">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="secretId" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClientSecrets">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="consumerKey" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClientSecretsResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element maxOccurs="unbounded" minOccurs="0" name="return" nillable="true" type="ax2406:OAuthConsumerSecretDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClientSecret">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="secretId" nillable="true" type="xs:string"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="getClientSecretResponse">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element minOccurs="0" name="return" nillable="true" type="ax2406:OAuthConsumerSecretDTO"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
             <xs:element name="revokeAuthzForAppsByResoureOwner">
                 <xs:complexType>
                     <xs:sequence>
@@ -414,6 +463,8 @@
                     <xs:element minOccurs="0" name="renewRefreshTokenEnabled" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="secretDescription" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="secretExpiryTime" nillable="true" type="xs:long"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingValidationEnabled" type="xs:boolean"/>
@@ -436,6 +487,15 @@
                     <xs:element minOccurs="0" name="error" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="errorCode" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="errorMsg" nillable="true" type="xs:string"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="OAuthConsumerSecretDTO">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="clientId" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="clientSecret" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="description" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="expiresAt" nillable="true" type="xs:long"/>
+                    <xs:element minOccurs="0" name="secretId" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuthTokenExpiryTimeDTO">
@@ -499,6 +559,12 @@
         <wsdl:part name="parameters" element="ns1:registerOAuthApplicationData"/>
     </wsdl:message>
     <wsdl:message name="registerOAuthApplicationDataResponse"/>
+    <wsdl:message name="createClientSecretRequest">
+        <wsdl:part name="parameters" element="ns1:createClientSecret"/>
+    </wsdl:message>
+    <wsdl:message name="createClientSecretResponse">
+        <wsdl:part name="parameters" element="ns1:createClientSecretResponse"/>
+    </wsdl:message>
     <wsdl:message name="getClaimsRequest">
         <wsdl:part name="parameters" element="ns1:getClaims"/>
     </wsdl:message>
@@ -514,6 +580,9 @@
     </wsdl:message>
     <wsdl:message name="getOAuthApplicationDataResponse">
         <wsdl:part name="parameters" element="ns1:getOAuthApplicationDataResponse"/>
+    </wsdl:message>
+    <wsdl:message name="removeClientSecretRequest">
+        <wsdl:part name="parameters" element="ns1:removeClientSecret"/>
     </wsdl:message>
     <wsdl:message name="getOauthApplicationStateRequest">
         <wsdl:part name="parameters" element="ns1:getOauthApplicationState"/>
@@ -578,6 +647,12 @@
     <wsdl:message name="deleteScopeRequest">
         <wsdl:part name="parameters" element="ns1:deleteScope"/>
     </wsdl:message>
+    <wsdl:message name="getClientSecretsRequest">
+        <wsdl:part name="parameters" element="ns1:getClientSecrets"/>
+    </wsdl:message>
+    <wsdl:message name="getClientSecretsResponse">
+        <wsdl:part name="parameters" element="ns1:getClientSecretsResponse"/>
+    </wsdl:message>
     <wsdl:message name="getAudiencesRequest"/>
     <wsdl:message name="getAudiencesResponse"/>
     <wsdl:message name="getAllowedScopeValidatorsRequest">
@@ -597,6 +672,12 @@
     </wsdl:message>
     <wsdl:message name="getAppsAuthorizedByUserResponse">
         <wsdl:part name="parameters" element="ns1:getAppsAuthorizedByUserResponse"/>
+    </wsdl:message>
+    <wsdl:message name="getClientSecretRequest">
+        <wsdl:part name="parameters" element="ns1:getClientSecret"/>
+    </wsdl:message>
+    <wsdl:message name="getClientSecretResponse">
+        <wsdl:part name="parameters" element="ns1:getClientSecretResponse"/>
     </wsdl:message>
     <wsdl:message name="updateScopeRequest">
         <wsdl:part name="parameters" element="ns1:updateScope"/>
@@ -667,6 +748,11 @@
             <wsdl:output message="tns:registerOAuthApplicationDataResponse" wsaw:Action="urn:registerOAuthApplicationDataResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:registerOAuthApplicationDataOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
+        <wsdl:operation name="createClientSecret">
+            <wsdl:input message="tns:createClientSecretRequest" wsaw:Action="urn:createClientSecret"/>
+            <wsdl:output message="tns:createClientSecretResponse" wsaw:Action="urn:createClientSecretResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:createClientSecretOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
         <wsdl:operation name="getClaims">
             <wsdl:input message="tns:getClaimsRequest" wsaw:Action="urn:getClaims"/>
             <wsdl:output message="tns:getClaimsResponse" wsaw:Action="urn:getClaimsResponse"/>
@@ -681,6 +767,10 @@
             <wsdl:input message="tns:getOAuthApplicationDataRequest" wsaw:Action="urn:getOAuthApplicationData"/>
             <wsdl:output message="tns:getOAuthApplicationDataResponse" wsaw:Action="urn:getOAuthApplicationDataResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getOAuthApplicationDataOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="removeClientSecret">
+            <wsdl:input message="tns:removeClientSecretRequest" wsaw:Action="urn:removeClientSecret"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:removeClientSecretOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <wsdl:input message="tns:getOauthApplicationStateRequest" wsaw:Action="urn:getOauthApplicationState"/>
@@ -738,6 +828,11 @@
             <wsdl:input message="tns:deleteScopeRequest" wsaw:Action="urn:deleteScope"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:deleteScopeOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
+        <wsdl:operation name="getClientSecrets">
+            <wsdl:input message="tns:getClientSecretsRequest" wsaw:Action="urn:getClientSecrets"/>
+            <wsdl:output message="tns:getClientSecretsResponse" wsaw:Action="urn:getClientSecretsResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getClientSecretsOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <wsdl:input message="tns:getAudiencesRequest" wsaw:Action="urn:getAudiences"/>
             <wsdl:output message="tns:getAudiencesResponse" wsaw:Action="urn:getAudiencesResponse"/>
@@ -755,6 +850,11 @@
             <wsdl:input message="tns:getAppsAuthorizedByUserRequest" wsaw:Action="urn:getAppsAuthorizedByUser"/>
             <wsdl:output message="tns:getAppsAuthorizedByUserResponse" wsaw:Action="urn:getAppsAuthorizedByUserResponse"/>
             <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getAppsAuthorizedByUserOAuthAdminServiceIdentityOAuthAdminException"/>
+        </wsdl:operation>
+        <wsdl:operation name="getClientSecret">
+            <wsdl:input message="tns:getClientSecretRequest" wsaw:Action="urn:getClientSecret"/>
+            <wsdl:output message="tns:getClientSecretResponse" wsaw:Action="urn:getClientSecretResponse"/>
+            <wsdl:fault message="tns:OAuthAdminServiceIdentityOAuthAdminException" name="OAuthAdminServiceIdentityOAuthAdminException" wsaw:Action="urn:getClientSecretOAuthAdminServiceIdentityOAuthAdminException"/>
         </wsdl:operation>
         <wsdl:operation name="updateScope">
             <wsdl:input message="tns:updateScopeRequest" wsaw:Action="urn:updateScope"/>
@@ -857,6 +957,18 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="createClientSecret">
+            <soap:operation soapAction="urn:createClientSecret" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getClaims">
             <soap:operation soapAction="urn:getClaims" style="document"/>
             <wsdl:input>
@@ -889,6 +1001,15 @@
             <wsdl:output>
                 <soap:body use="literal"/>
             </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="removeClientSecret">
+            <soap:operation soapAction="urn:removeClientSecret" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1025,6 +1146,18 @@
                 <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getClientSecrets">
+            <soap:operation soapAction="urn:getClientSecrets" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <soap:operation soapAction="urn:getAudiences" style="document"/>
             <wsdl:input>
@@ -1057,6 +1190,18 @@
         </wsdl:operation>
         <wsdl:operation name="getAppsAuthorizedByUser">
             <soap:operation soapAction="urn:getAppsAuthorizedByUser" style="document"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getClientSecret">
+            <soap:operation soapAction="urn:getClientSecret" style="document"/>
             <wsdl:input>
                 <soap:body use="literal"/>
             </wsdl:input>
@@ -1211,6 +1356,18 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="createClientSecret">
+            <soap12:operation soapAction="urn:createClientSecret" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getClaims">
             <soap12:operation soapAction="urn:getClaims" style="document"/>
             <wsdl:input>
@@ -1243,6 +1400,15 @@
             <wsdl:output>
                 <soap12:body use="literal"/>
             </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="removeClientSecret">
+            <soap12:operation soapAction="urn:removeClientSecret" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
             <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
@@ -1379,6 +1545,18 @@
                 <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
             </wsdl:fault>
         </wsdl:operation>
+        <wsdl:operation name="getClientSecrets">
+            <soap12:operation soapAction="urn:getClientSecrets" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <soap12:operation soapAction="urn:getAudiences" style="document"/>
             <wsdl:input>
@@ -1411,6 +1589,18 @@
         </wsdl:operation>
         <wsdl:operation name="getAppsAuthorizedByUser">
             <soap12:operation soapAction="urn:getAppsAuthorizedByUser" style="document"/>
+            <wsdl:input>
+                <soap12:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap12:body use="literal"/>
+            </wsdl:output>
+            <wsdl:fault name="OAuthAdminServiceIdentityOAuthAdminException">
+                <soap12:fault use="literal" name="OAuthAdminServiceIdentityOAuthAdminException"/>
+            </wsdl:fault>
+        </wsdl:operation>
+        <wsdl:operation name="getClientSecret">
+            <soap12:operation soapAction="urn:getClientSecret" style="document"/>
             <wsdl:input>
                 <soap12:body use="literal"/>
             </wsdl:input>
@@ -1553,6 +1743,15 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
         </wsdl:operation>
+        <wsdl:operation name="createClientSecret">
+            <http:operation location="createClientSecret"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="getClaims">
             <http:operation location="getClaims"/>
             <wsdl:input>
@@ -1579,6 +1778,12 @@
             <wsdl:output>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="removeClientSecret">
+            <http:operation location="removeClientSecret"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
         </wsdl:operation>
         <wsdl:operation name="getOauthApplicationState">
             <http:operation location="getOauthApplicationState"/>
@@ -1685,6 +1890,15 @@
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
         </wsdl:operation>
+        <wsdl:operation name="getClientSecrets">
+            <http:operation location="getClientSecrets"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
         <wsdl:operation name="getAudiences">
             <http:operation location="getAudiences"/>
             <wsdl:input>
@@ -1714,6 +1928,15 @@
         </wsdl:operation>
         <wsdl:operation name="getAppsAuthorizedByUser">
             <http:operation location="getAppsAuthorizedByUser"/>
+            <wsdl:input>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:input>
+            <wsdl:output>
+                <mime:content type="text/xml" part="parameters"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getClientSecret">
+            <http:operation location="getClientSecret"/>
             <wsdl:input>
                 <mime:content type="text/xml" part="parameters"/>
             </wsdl:input>
