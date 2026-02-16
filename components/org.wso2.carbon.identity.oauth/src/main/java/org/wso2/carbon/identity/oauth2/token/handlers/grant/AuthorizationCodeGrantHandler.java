@@ -789,14 +789,5 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // Check the validity of the JWT
         JWTUtils.checkExpirationTime(claimsSet.getExpirationTime());
         JWTUtils.checkNotBeforeTime(claimsSet.getNotBeforeTime());
-
-        // Validate the issuer of the subject token
-        String expectedIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
-        if (!StringUtils.equals(expectedIssuer, jwtIssuer)) {
-            throw new IdentityOAuth2Exception("Invalid issuer in the JWT. Expected: " + expectedIssuer +
-                    ", Received: " + jwtIssuer);
-        }
     }
-
-
 }
