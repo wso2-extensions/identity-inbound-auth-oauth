@@ -399,8 +399,12 @@ public class AccessTokenEventUtil {
                 properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEY, oAuthAppDO.getOauthConsumerKey());
             }
             try {
-                properties.put(IdentityEventConstants.EventProperty.SERVICE_PROVIDER, OAuth2Util.getServiceProvider(
-                        tokenReqDTO.getClientId(), tenantDomain).getApplicationName());
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(
+                        tokenReqDTO.getClientId(), tenantDomain);
+                if (serviceProvider != null) {
+                    properties.put(IdentityEventConstants.EventProperty.SERVICE_PROVIDER,
+                            serviceProvider.getApplicationName());
+                }
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error while retrieving the Service Provider for client ID: " +
                         tokenReqDTO.getClientId(), e);
