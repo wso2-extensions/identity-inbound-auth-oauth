@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
@@ -337,8 +338,11 @@ public class AccessTokenEventUtil {
             String tenantDomain = tokenReqDTO.getTenantDomain();
             String organizationId = StringUtils.EMPTY;
             try {
-                organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveOrganizationId(tenantDomain);
+                OrganizationManager organizationManager =
+                        OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+                if (organizationManager != null) {
+                    organizationId = organizationManager.resolveOrganizationId(tenantDomain);
+                }
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the organization Id for tenant domain : " +
                         tenantDomain, e);
