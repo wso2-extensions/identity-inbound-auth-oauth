@@ -1733,4 +1733,25 @@ public class SQLQueries {
     private SQLQueries() {
 
     }
+
+    /**
+     * Contains SQL query constants used for managing revoked access tokens and revocation events in the
+     * non-persistence scenarios.
+     */
+    public static class RevokedTokenPersistenceSQLQueries {
+
+        public static final String IS_REVOKED_TOKEN = "SELECT 1 FROM IDN_OAUTH2_REVOKED_TOKENS WHERE TOKEN_IDENTIFIER "
+                + "= ? AND CONSUMER_KEY = ? ";
+        public static final String INSERT_REVOKED_TOKEN = "INSERT INTO IDN_OAUTH2_REVOKED_TOKENS (UUID, " +
+                "TOKEN_IDENTIFIER, CONSUMER_KEY, EXPIRY_TIMESTAMP) VALUES (?,?,?,?)";
+        public static final String IS_SUBJECT_ENTITY_REVOKED_EVENT = "SELECT 1 "
+                + "FROM IDN_SUBJECT_ENTITY_REVOKED_EVENT WHERE ENTITY_ID = ? AND TIME_REVOKED >= ?";
+        public static final String INSERT_SUBJECT_ENTITY_REVOKED_EVENT = "INSERT INTO IDN_SUBJECT_ENTITY_REVOKED_EVENT "
+                + "(EVENT_ID, ENTITY_ID, ENTITY_TYPE, TIME_REVOKED, TENANT_ID) VALUES (?, ?, ?, ?, ?)";
+        public static final String UPDATE_SUBJECT_ENTITY_REVOKED_EVENT = "UPDATE IDN_SUBJECT_ENTITY_REVOKED_EVENT "
+                + "SET TIME_REVOKED = ? WHERE ENTITY_ID = ? AND ENTITY_TYPE = ? AND TENANT_ID = ?";
+
+        private RevokedTokenPersistenceSQLQueries() {
+        }
+    }
 }

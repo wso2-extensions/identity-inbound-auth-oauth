@@ -3809,4 +3809,71 @@ public class OAuth2UtilTest {
         boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
         assertEquals(result, false, "Exception during tenant config retrieval should return default false");
     }
+
+    @DataProvider(name = "accessTokenPersistenceEnabledProvider")
+    public Object[][] accessTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {"true", true},   // Config enabled -> true
+                {"false", false}, // Config disabled -> false
+                {null, true}      // Config null -> default true
+        };
+    }
+
+    @Test(dataProvider = "accessTokenPersistenceEnabledProvider")
+    public void testIsAccessTokenPersistenceEnabled(String accessTokenPersistenceConfig,
+                                                    boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn(accessTokenPersistenceConfig);
+
+            assertEquals(OAuth2Util.isAccessTokenPersistenceEnabled(), expected);
+        }
+    }
+
+    @DataProvider(name = "keepRevokedAccessTokenEnabledProvider")
+    public Object[][] keepRevokedAccessTokenEnabledProvider() {
+
+        return new Object[][]{
+                {"true", true},   // Config enabled -> true
+                {"false", false}, // Config disabled -> false
+                {null, true}      // Config null -> default true
+        };
+    }
+
+    @Test(dataProvider = "keepRevokedAccessTokenEnabledProvider")
+    public void testIsKeepRevokedAccessTokenEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_KEEP_REVOKED_ACCESS_TOKEN_LIST))
+                    .thenReturn(configValue);
+
+            assertEquals(OAuth2Util.isKeepRevokedAccessTokenEnabled(), expected);
+        }
+    }
+
+    @DataProvider(name = "refreshTokenPersistenceEnabledProvider")
+    public Object[][] refreshTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {"true", true},   // Config enabled -> true
+                {"false", false}, // Config disabled -> false
+                {null, true}      // Config null -> default true
+        };
+    }
+
+    @Test(dataProvider = "refreshTokenPersistenceEnabledProvider")
+    public void testIsRefreshTokenPersistenceEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_REFRESH_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn(configValue);
+
+            assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
+        }
+    }
 }
