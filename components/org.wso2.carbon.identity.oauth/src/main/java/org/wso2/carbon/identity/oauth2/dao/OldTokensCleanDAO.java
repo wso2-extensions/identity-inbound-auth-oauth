@@ -309,10 +309,8 @@ public class OldTokensCleanDAO {
             // Execute the delete operation
             int rowsAffected = deleteStmt.executeUpdate();
             // Log the success if debug level logging is enabled
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Successfully deleted refresh tokens for user Id: %s, " +
-                        "Rows affected: %d", authorizedUser, rowsAffected));
-            }
+            log.debug("Successfully deleted refresh tokens for user");
+
             // Commit the transaction if the operation was successful
             connection.commit();
 

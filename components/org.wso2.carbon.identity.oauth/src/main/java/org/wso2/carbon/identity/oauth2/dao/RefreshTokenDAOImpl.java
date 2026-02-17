@@ -88,7 +88,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
         try (Connection connection = getConnection()) {
             insertRefreshToken(consumerKey, accessTokenDO, connection, userStoreDomain);
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error while inserting access token.", e);
+            throw new IdentityOAuth2Exception("Error while inserting refresh token.", e);
         }
     }
 
@@ -333,7 +333,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             } catch (SQLException e) {
                 // Rollback transaction in case of an error
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                String errorMsg = String.format("Error occurred while revoking refresh token: %s", refreshToken);
+                String errorMsg = String.format("Error occurred while revoking refresh token");
                 throw new IdentityOAuth2Exception(errorMsg, e);
             }
         } catch (SQLException e) {
@@ -349,6 +349,10 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
         if (!isEnabled()) {
             return null;
         }
+        // Validate the input token
+        if (refreshToken == null) {
+            throw new IdentityOAuth2Exception("Refresh token is null, cannot validate.");
+        }
         // Log token validation details
         if (LOG.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
@@ -357,10 +361,6 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             } else {
                 LOG.debug(String.format("Validating refresh token for client: %s", consumerKey));
             }
-        }
-        // Validate the input token
-        if (refreshToken == null) {
-            throw new IdentityOAuth2Exception("Refresh token is null, cannot validate.");
         }
         String sql = RefreshTokenPersistenceSQLQueries.RETRIEVE_REFRESH_TOKEN_VALIDATION_DATA;
         RefreshTokenValidationDataDO validationDataDO = null;
@@ -577,6 +577,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             insertTokenStmt.executeUpdate();
             // Insert token scopes if available
             insertScopesForToken(addScopeStmt, accessTokenDO);
+            IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLIntegrityConstraintViolationException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
         } catch (DataTruncation e) {
