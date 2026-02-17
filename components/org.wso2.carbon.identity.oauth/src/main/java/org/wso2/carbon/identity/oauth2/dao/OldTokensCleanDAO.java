@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.model.OldAccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -179,6 +180,149 @@ public class OldTokensCleanDAO {
     public void cleanupTokensInBatch(List<String> oldTokens, Connection connection) throws SQLException {
         for (String token : oldTokens) {
             cleanupTokenByTokenValue(token, connection);
+        }
+    }
+
+    /**
+     * Cleans up the refresh token by its token value.
+     *
+     * @param token      The refresh token value to be cleaned up.
+     * @param connection The database connection to use for the operation.
+     * @throws SQLException If an error occurs while cleaning up the refresh token.
+     */
+    public void cleanupRefreshTokenByTokenValue(String token, Connection connection) throws SQLException {
+
+        removeTokenFromMainTableByValue(token, connection);
+    }
+
+    private void removeTokenFromMainTableByValue(String token, Connection connection)
+            throws SQLException {
+
+        // Use try-with-resources to ensure the PreparedStatement is closed automatically
+        try (PreparedStatement deleteStmt = connection.prepareStatement(
+                SQLQueries.RefreshTokenPersistenceSQLQueries.DELETE_OLD_TOKEN_BY_VALUE)) {
+
+            // Set the parameter for the query
+            deleteStmt.setString(1, token);
+            // Execute the delete operation
+            int rowsAffected = deleteStmt.executeUpdate();
+            // Log success if debug level is enabled
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Successfully deleted old access token from access token table. " +
+                        "Token value: %s, Rows affected: %d", token, rowsAffected));
+            }
+            // Commit the transaction if no errors occurred
+            connection.commit();
+
+        } catch (SQLException e) {
+            // Rollback in case of an error
+            connection.rollback();
+            log.error("SQL error occurred while removing token from main table", e);
+        }
+    }
+
+    public void cleanupRefreshTokenByTokenId(String tokenId, Connection connection) throws SQLException {
+
+        removeTokenFromMainTableById(tokenId, connection);
+    }
+
+    private void removeTokenFromMainTableById(String tokenId, Connection connection)
+            throws SQLException {
+
+        // Use try-with-resources to automatically close the PreparedStatement
+        try (PreparedStatement deleteStmt =
+                     connection.prepareStatement(SQLQueries.RefreshTokenPersistenceSQLQueries.DELETE_OLD_TOKEN_BY_ID)) {
+
+            // Set the tokenId parameter
+            deleteStmt.setString(1, tokenId);
+            // Execute the update and check how many rows were affected
+            int rowsAffected = deleteStmt.executeUpdate();
+            // Log the success message if debug logging is enabled
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Successfully deleted old access token from access token table. " +
+                        "Token id: %s, Rows affected: %d", tokenId, rowsAffected));
+            }
+            // Commit the transaction if the operation was successful
+            connection.commit();
+
+        } catch (SQLException e) {
+            // Rollback the transaction in case of an error
+            connection.rollback();
+            log.error("SQL error occurred while removing token from the main table. Token id: " + tokenId, e);
+        }
+    }
+
+    /**
+     * Cleans up the refresh tokens associated with a specific application identified by its consumer key.
+     *
+     * @param consumerKey The consumer key of the application for which to clean up refresh tokens.
+     * @param connection  The database connection to use for the operation.
+     * @throws SQLException If an error occurs while cleaning up the refresh tokens.
+     */
+    public void cleanupRefreshTokenByApp(String consumerKey, Connection connection) throws SQLException {
+
+        // Use try-with-resources to automatically close the PreparedStatement
+        try (PreparedStatement preparedStatement = connection.prepareStatement(
+                SQLQueries.RefreshTokenPersistenceSQLQueries.DELETE_APP_REFRESH_TOKEN)) {
+
+            // Set parameters for the DELETE query
+            preparedStatement.setString(1, consumerKey);
+            preparedStatement.setString(2, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
+
+            // Execute the query
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            // Log success if debug level is enabled
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Successfully deleted refresh tokens from table for Consumer Id: %s, " +
+                        "Rows affected: %d", consumerKey, rowsAffected));
+            }
+            // Commit the transaction if the operation was successful
+            connection.commit();
+
+        } catch (SQLException e) {
+            // Rollback in case of an error
+            connection.rollback();
+
+            log.error("SQL error occurred while removing refresh token for Consumer Id: " + consumerKey, e);
+        }
+    }
+
+    /**
+     * Cleans up the refresh tokens associated with a specific user in a given tenant and user store domain.
+     *
+     * @param authorizedUser The authorized user whose refresh tokens are to be cleaned up.
+     * @param tenantId       The tenant ID of the user.
+     * @param userDomain     The user store domain of the authorized user.
+     * @param connection     The database connection to use for the operation.
+     * @throws SQLException If an error occurs while cleaning up the refresh tokens.
+     */
+    public void cleanupRefreshTokenByUser(String authorizedUser, int tenantId, String userDomain,
+                                          Connection connection)  throws SQLException {
+
+        // Use try-with-resources to automatically close the PreparedStatement
+        try (PreparedStatement deleteStmt = connection.prepareStatement(
+                SQLQueries.RefreshTokenPersistenceSQLQueries.DELETE_USER_REFRESH_TOKEN)) {
+
+            // Set parameters for the delete query
+            deleteStmt.setString(1, authorizedUser);
+            deleteStmt.setInt(2, tenantId);
+            deleteStmt.setString(3, userDomain);
+
+            // Execute the delete operation
+            int rowsAffected = deleteStmt.executeUpdate();
+            // Log the success if debug level logging is enabled
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Successfully deleted refresh tokens for user Id: %s, " +
+                        "Rows affected: %d", authorizedUser, rowsAffected));
+            }
+            // Commit the transaction if the operation was successful
+            connection.commit();
+
+        } catch (SQLException e) {
+            // Rollback the transaction in case of error
+            connection.rollback();
+            log.error("SQL error occurred while removing refresh token for user Id.", e);
         }
     }
 }
