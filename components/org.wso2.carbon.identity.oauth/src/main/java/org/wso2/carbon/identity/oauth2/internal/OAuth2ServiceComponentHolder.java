@@ -121,6 +121,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private List<OAuth2RevocationProcessor> revocationProcessors = new ArrayList<>();
     private TokenProvider tokenProvider;
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
@@ -579,6 +580,37 @@ public class OAuth2ServiceComponentHolder {
 
         this.revocationProcessor = revocationProcessor;
     }
+
+    /**
+     * Retrieves the list of registered {@link OAuth2RevocationProcessor} instances.
+     *
+     * @return A list of revocation processors currently registered in the system.
+     */
+    public List<OAuth2RevocationProcessor> getRevocationProcessors() {
+
+        return Collections.unmodifiableList(revocationProcessors);
+    }
+
+    /**
+     * Registers a new {@link OAuth2RevocationProcessor} to the list of revocation processors.
+     *
+     * @param oAuth2RevocationProcessor The revocation processor to be added.
+     */
+    public void addRevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        this.revocationProcessors.add(oAuth2RevocationProcessor);
+    }
+
+    /**
+     * Unregisters the given {@link OAuth2RevocationProcessor} from the list of revocation processors.
+     *
+     * @param oAuth2RevocationProcessor The revocation processor to be removed.
+     */
+    public void removeRevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        this.revocationProcessors.remove(oAuth2RevocationProcessor);
+    }
+
 
     public static boolean isRestrictUnassignedScopes() {
 

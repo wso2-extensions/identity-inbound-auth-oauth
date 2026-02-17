@@ -126,7 +126,9 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         userAssociation.setOrganizationId(orgIdUserAssociation);
         userAssociationList.add(userAssociation);
 
-        when(oAuth2ServiceComponentHolder.getRevocationProcessor()).thenReturn(oAuth2RevocationProcessor);
+        List<OAuth2RevocationProcessor> revocationProcessorList = new ArrayList<>();
+        revocationProcessorList.add(oAuth2RevocationProcessor);
+        when(oAuth2ServiceComponentHolder.getRevocationProcessors()).thenReturn(revocationProcessorList);
         when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(
                 true);
         when(oAuth2RevocationProcessor.revokeTokens(usernameAssociation, abstractUserStoreManager)).thenReturn(
