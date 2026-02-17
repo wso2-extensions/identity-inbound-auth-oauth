@@ -141,13 +141,13 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_contract>!JavaServlet;from=org.eclipse.equinox.http.service.api,*</_contract>
                         <Bundle-SymbolicName>
                             ${project.artifactId}
                         </Bundle-SymbolicName>
                         <Private-Package>
                             org.wso2.carbon.identity.oauth.par.internal,
                         </Private-Package>
-                        <_contract>!JavaServlet,*</_contract>
                         <Import-Package>
                             org.apache.axiom.om; version="${axiom.osgi.version.range}",
                             com.fasterxml.jackson.core.*; version="${com.fasterxml.jackson.version}",
