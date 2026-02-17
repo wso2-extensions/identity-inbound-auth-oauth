@@ -6618,4 +6618,23 @@ public class OAuth2Util {
         }
         return OAuth2Constants.DEFAULT_REFRESH_TOKEN_PERSIST_ENABLED;
     }
+
+    /**
+     * Extracts the user identifier (username) from the token request parameters.
+     *
+     * @param tokenReq OAuth2AccessTokenReqDTO containing the token request parameters.
+     * @return The user identifier if present, otherwise null.
+     */
+    public static String getUserIdentifierFromRequest(OAuth2AccessTokenReqDTO tokenReq) {
+
+        if (tokenReq == null || tokenReq.getRequestParameters() == null
+                || tokenReq.getRequestParameters().length == 0) {
+            return null;
+        }
+        return Arrays.stream(tokenReq.getRequestParameters())
+                .filter(parameter -> "username".equals(parameter.getKey()))
+                .map(parameter -> parameter.getValue()[0])
+                .findFirst()
+                .orElse(null);
+    }
 }
