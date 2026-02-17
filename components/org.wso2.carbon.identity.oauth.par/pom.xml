@@ -147,7 +147,7 @@
                         <Private-Package>
                             org.wso2.carbon.identity.oauth.par.internal,
                         </Private-Package>
-                        <_contract>!*</_contract>
+                        <_contract>!JavaServlet,*</_contract>
                         <Import-Package>
                             org.apache.axiom.om; version="${axiom.osgi.version.range}",
                             com.fasterxml.jackson.core.*; version="${com.fasterxml.jackson.version}",
