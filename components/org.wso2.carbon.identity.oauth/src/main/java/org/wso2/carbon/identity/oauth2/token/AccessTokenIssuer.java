@@ -455,7 +455,10 @@ public class AccessTokenIssuer {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
+                Exception sanitizedError = new Exception(LoggerUtils.getSanitizedErrorMessage(
+                        e.getMessage(), OAuth2Util.getUserIdentifierFromRequest(tokenReqDTO)));
+                sanitizedError.setStackTrace(e.getStackTrace());
+                log.debug("Error occurred while validating grant", sanitizedError);
             }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
