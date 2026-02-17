@@ -320,7 +320,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
                     RefreshTokenPersistenceSQLQueries.REVOKE_REFRESH_TOKEN)) {
                 // Set parameters for revoking the refresh token
                 String processedToken = getHashingPersistenceProcessor()
-                        .getProcessedAccessTokenIdentifier(refreshToken);
+                        .getProcessedRefreshToken(refreshToken);
                 ps.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                 ps.setString(2, processedToken);
                 ps.executeUpdate();
@@ -671,7 +671,8 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
 
             // Set SQL query parameters
             revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
-            revokeActiveTokensStatement.setString(2, consumerKey);
+            revokeActiveTokensStatement.setString(2,
+                    getPersistenceProcessor().getProcessedClientId(consumerKey));
             revokeActiveTokensStatement.setString(3, TOKEN_STATE_ACTIVE);
             // Execute the update statement
             revokeActiveTokensStatement.executeUpdate();

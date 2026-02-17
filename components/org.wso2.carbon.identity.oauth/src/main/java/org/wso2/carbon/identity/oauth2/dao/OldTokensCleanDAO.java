@@ -207,10 +207,7 @@ public class OldTokensCleanDAO {
             // Execute the delete operation
             int rowsAffected = deleteStmt.executeUpdate();
             // Log success if debug level is enabled
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Successfully deleted old access token from access token table. " +
-                        "Token value: %s, Rows affected: %d", token, rowsAffected));
-            }
+            log.debug("Successfully deleted old access token from access token table.");
             // Commit the transaction if no errors occurred
             connection.commit();
 
@@ -239,7 +236,7 @@ public class OldTokensCleanDAO {
             int rowsAffected = deleteStmt.executeUpdate();
             // Log the success message if debug logging is enabled
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Successfully deleted old access token from access token table. " +
+                log.debug(String.format("Successfully deleted old access token from refresh token table. " +
                         "Token id: %s, Rows affected: %d", tokenId, rowsAffected));
             }
             // Commit the transaction if the operation was successful
