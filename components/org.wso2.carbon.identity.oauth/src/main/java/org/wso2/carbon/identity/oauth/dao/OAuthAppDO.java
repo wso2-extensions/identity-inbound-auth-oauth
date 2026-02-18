@@ -117,6 +117,9 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
     private String issuerOrg;
+    // CIBA related properties.
+    private String cibaNotificationChannels;
+    private long cibaAuthReqExpiryTime;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -586,6 +589,24 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setIssuerOrg(String issuerOrg) {
 
         this.issuerOrg = issuerOrg;
+    }
+
+    public String getCibaNotificationChannels() {
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    public long getCibaAuthReqExpiryTime() {
+
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
     }
 
     /**

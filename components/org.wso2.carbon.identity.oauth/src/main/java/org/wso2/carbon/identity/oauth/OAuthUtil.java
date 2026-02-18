@@ -570,6 +570,8 @@ public final class OAuthUtil {
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
         dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
+        dto.setCibaNotificationChannels(appDO.getCibaNotificationChannels());
+        dto.setCibaAuthReqExpiryTime(appDO.getCibaAuthReqExpiryTime());
         return dto;
     }
 
