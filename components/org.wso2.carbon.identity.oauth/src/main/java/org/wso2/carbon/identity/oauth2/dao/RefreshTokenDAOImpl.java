@@ -333,8 +333,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             } catch (SQLException e) {
                 // Rollback transaction in case of an error
                 IdentityDatabaseUtil.rollbackTransaction(connection);
-                String errorMsg = String.format("Error occurred while revoking refresh token");
-                throw new IdentityOAuth2Exception(errorMsg, e);
+                throw new IdentityOAuth2Exception("Error occurred while revoking refresh token", e);
             }
         } catch (SQLException e) {
             // Handle connection-related errors
