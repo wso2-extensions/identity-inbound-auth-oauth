@@ -18,16 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
@@ -47,10 +44,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
-import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,6 +69,7 @@ public class OAuth2CibaEndpoint {
     private static final Log log = LogFactory.getLog(OAuth2CibaEndpoint.class);
 
     private CibaAuthRequestValidator cibaAuthRequestValidator = new CibaAuthRequestValidator();
+    private CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
     private CibaAuthResponseHandler cibaAuthResponseHandler = new CibaAuthResponseHandler();
     private CibaAuthCodeRequest cibaAuthCodeRequest;
     private CibaAuthCodeResponse cibaAuthCodeResponse;
@@ -87,7 +83,6 @@ public class OAuth2CibaEndpoint {
                          MultivaluedMap paramMap) {
 
         OAuthClientAuthnContext oAuthClientAuthnContext =  getClientAuthnContext(request);
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             if (oAuthClientAuthnContext.getErrorCode() != null) {
@@ -105,49 +100,23 @@ public class OAuth2CibaEndpoint {
         }
 
         try {
-            // Check if request has the 'request' JWT parameter or individual parameters
+            // Check whether request has the 'request' parameter.
+            checkForRequestParam(request);
+
+            // Capturing authentication request.
             String authRequest = request.getParameter(CibaConstants.REQUEST);
-            
-            if (authRequest != null) {
-                // JWT-based request flow
-                // Validate authentication request.
-                validateAuthenticationRequest(authRequest, oAuthClientAuthnContext.getClientId());
 
-                // Prepare RequestDTO with validated parameters from JWT.
-                cibaAuthCodeRequest = getCibaAuthCodeRequest(authRequest);
-            } else {
-                // Parameter-based request flow (for simpler testing)
-                // Check for required parameters
-                Map<String, String> params = transformParams(paramMap);
-                if (!containsRequiredParameters(params)) {
-                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "Missing required parameters. Either 'request' JWT or (scope, login_hint) " +
-                                    "are required.");
-                }
-                
-                // Validate binding_message.
-                if (params.containsKey(CibaConstants.BINDING_MESSAGE)) {
-                    validateBindingMessage(params.get(CibaConstants.BINDING_MESSAGE));
-                }
+            // Validate authentication request.
+            validateAuthenticationRequest(authRequest, oAuthClientAuthnContext.getClientId());
 
-                // Validate requested_expiry.
-                if (params.containsKey(CibaConstants.REQUESTED_EXPIRY)) {
-                    validateRequestedExpiry(params.get(CibaConstants.REQUESTED_EXPIRY));
-                }
-
-                // Validate notification_channel.
-                if (params.containsKey(CibaConstants.NOTIFICATION_CHANNEL)) {
-                    validateNotificationChannel(params.get(CibaConstants.NOTIFICATION_CHANNEL),
-                            oAuthClientAuthnContext.getClientId(), tenantDomain);
-                }
-
-                // Build CibaAuthCodeRequest from individual parameters
-                cibaAuthCodeRequest = getCibaAuthCodeRequestFromParams(params, oAuthClientAuthnContext.getClientId());
-            }
+            // Prepare RequestDTO with validated parameters.
+            cibaAuthCodeRequest = getCibaAuthCodeRequest(authRequest);
 
             // Obtain Response from service layer of CIBA.
-            // The service handles: auth code generation, user resolution, and notification
             cibaAuthCodeResponse = getCibaAuthCodeResponse(cibaAuthCodeRequest);
+
+            // Create an internal authorize call to the authorize endpoint.
+            generateAuthorizeCall(request, response, cibaAuthCodeResponse);
 
             // Create and return Ciba Authentication Response.
             return getAuthResponse(response, cibaAuthCodeResponse);
@@ -194,10 +163,9 @@ public class OAuth2CibaEndpoint {
         try {
             cibaAuthCodeResponse = CibaAuthServiceFactory.getCibaAuthService()
                     .generateAuthCodeResponse(cibaAuthCodeRequest);
-        } catch (CibaClientException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage(), e);
-        } catch (CibaCoreException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Internal server error occurred.", e);
+        } catch (CibaCoreException | CibaClientException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
+                    "authentication response.", e);
         }
         return cibaAuthCodeResponse;
     }
@@ -214,70 +182,42 @@ public class OAuth2CibaEndpoint {
     }
 
     /**
-     * Check if required parameters are present for parameter-based request.
+     * Extracts validated parameters from request and prepare a DTO.
      *
-     * @param params Request parameters map
-     * @return true if required parameters are present
+     * @param request CIBA Authentication Request.
+     * @throws CibaAuthFailureException CIBA Authentication Failed Exception.
      */
-    private boolean containsRequiredParameters(Map<String, String> params) {
-        return params.containsKey(Constants.SCOPE) && params.containsKey(Constants.LOGIN_HINT);
+    private void checkForRequestParam(HttpServletRequest request) throws CibaAuthFailureException {
+
+        if (request.getParameter(CibaConstants.REQUEST) == null) {
+            // Mandatory 'request' parameter does not exist.
+
+            if (log.isDebugEnabled()) {
+                log.debug("CIBA Authentication Request that hits Client Initiated Authentication Endpoint has " +
+                        "no 'request' parameter.");
+            }
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "missing the mandated parameter : (request)");
+        }
     }
 
     /**
-     * Transform MultivaluedMap to simple Map.
+     * Trigger authorize request after building the url.
      *
-     * @param params MultivaluedMap of request parameters
-     * @return Map of parameters
+     * @param cibaAuthCodeResponse AuthorizeRequest Data Transfer Object..
+     * @throws CibaAuthFailureException CibaAuthentication related exception.
      */
-    private Map<String, String> transformParams(MultivaluedMap<String, String> params) {
-        Map<String, String> parameters = new HashMap<>();
-        for (Map.Entry<String, List<String>> entry : params.entrySet()) {
-            String key = entry.getKey();
-            List<String> values = entry.getValue();
-            if (values != null && !values.isEmpty()) {
-                parameters.put(key, values.get(0));
-            }
+    private void generateAuthorizeCall(@Context HttpServletRequest request,
+                                       @Context HttpServletResponse response,
+                                       CibaAuthCodeResponse cibaAuthCodeResponse) throws CibaAuthFailureException {
+
+        //  Internal authorize java call to /authorize end point.
+        cibaAuthzHandler.initiateAuthzRequest(cibaAuthCodeResponse, request, response);
+        if (log.isDebugEnabled()) {
+            log.info("Firing a Authorization request in regard to the request made by client with clientID: "
+                    + cibaAuthCodeResponse.getClientId() + " .");
         }
-        return parameters;
     }
-
-    /**
-     * Build CibaAuthCodeRequest from individual request parameters.
-     *
-     * @param params   Request parameters
-     * @param clientId Authenticated client ID
-     * @return CibaAuthCodeRequest
-     * @throws CibaAuthFailureException If parameter validation fails
-     */
-    private CibaAuthCodeRequest getCibaAuthCodeRequestFromParams(Map<String, String> params, String clientId)
-            throws CibaAuthFailureException {
-
-        CibaAuthCodeRequest cibaAuthCodeRequest = new CibaAuthCodeRequest();
-        cibaAuthCodeRequest.setIssuer(clientId);
-        cibaAuthCodeRequest.setUserHint(params.get(Constants.LOGIN_HINT));
-        cibaAuthCodeRequest.setScopes(OAuth2Util.buildScopeArray(params.get(Constants.SCOPE)));
-        
-        if (params.get(CibaConstants.BINDING_MESSAGE) != null) {
-            cibaAuthCodeRequest.setBindingMessage(params.get(CibaConstants.BINDING_MESSAGE));
-        }
-        
-        if (params.get(CibaConstants.REQUESTED_EXPIRY) != null) {
-            try {
-                cibaAuthCodeRequest.setRequestedExpiry(Long.parseLong(params.get(CibaConstants.REQUESTED_EXPIRY)));
-            } catch (NumberFormatException e) {
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, 
-                        "Invalid value for requested_expiry");
-            }
-        } else {
-            cibaAuthCodeRequest.setRequestedExpiry(0);
-        }
-
-        if (params.get(CibaConstants.NOTIFICATION_CHANNEL) != null) {
-            cibaAuthCodeRequest.setNotificationChannel(params.get(CibaConstants.NOTIFICATION_CHANNEL));
-        }
-        return cibaAuthCodeRequest;
-    }
-
 
     /**
      * Validate whether Request JWT is in proper formatting.
@@ -362,81 +302,5 @@ public class OAuth2CibaEndpoint {
                     + clientId, OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
                     .UNEXPECTED_SERVER_ERROR);
         }
-    }
-
-    /**
-     * Validates the binding message.
-     *
-     * @param bindingMessage Binding message
-     * @throws CibaAuthFailureException If validation fails
-     */
-    private void validateBindingMessage(String bindingMessage) throws CibaAuthFailureException {
-
-        if (StringUtils.isBlank(bindingMessage)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for " +
-                        "(binding_message).");
-            }
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
-                    "Invalid value for (binding_message).");
-        }
-        // Validate binding message contains only printable characters. Reject control characters and
-        // HTML-dangerous characters (< and >) to prevent XSS.
-        if (!bindingMessage.matches("^[^<>\\x00-\\x1F\\x7F]+$")) {
-            throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
-                    "Invalid characters present in (binding_message).");
-        }
-    }
-
-    /**
-     * Validates the requested expiry.
-     *
-     * @param requestedExpiry Requested expiry
-     * @throws CibaAuthFailureException If validation fails
-     */
-    private void validateRequestedExpiry(String requestedExpiry) throws CibaAuthFailureException {
-
-        if (StringUtils.isBlank(requestedExpiry)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for" +
-                        " (requested_expiry).");
-            }
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Invalid value for (requested_expiry).");
-        }
-        try {
-            long expiry = Long.parseLong(requestedExpiry);
-            if (expiry <= 0) {
-                 throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid value for (requested_expiry). Must be greater than 0.");
-            }
-        } catch (NumberFormatException e) {
-             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Invalid value for (requested_expiry).");
-        }
-    }
-
-    /**
-     * Validates the notification channel.
-     *
-     * @param notificationChannel Notification channel.
-     * @param clientId Client ID.
-     * @param tenantDomain Tenant domain.
-     * @throws CibaAuthFailureException If validation fails.
-     */
-    private void validateNotificationChannel(String notificationChannel, String clientId, String tenantDomain)
-            throws CibaAuthFailureException {
-
-        if (StringUtils.isBlank(notificationChannel)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid CIBA Authentication Request. The request is with invalid value for " +
-                        "(notification_channel).");
-            }
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Invalid value for (notification_channel).");
-        }
-
-        CibaNotificationChannelValidator.validateChannelForClient(
-                notificationChannel, clientId, tenantDomain);
     }
 }

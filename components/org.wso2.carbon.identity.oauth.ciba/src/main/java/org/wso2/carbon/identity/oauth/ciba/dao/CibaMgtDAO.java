@@ -85,18 +85,6 @@ public interface CibaMgtDAO {
     AuthenticatedUser getAuthenticatedUser(String authCodeKey) throws CibaCoreException;
 
     /**
-     * Returns the resolved user id of authenticationRequest.
-     *
-     * @param authCodeKey identifier of CibaAuthCode.
-     * @return Returns resolved user id.
-     * @throws CibaCoreException Exception thrown from CIBA core Component.
-     */
-    default String getResolvedUserId(String authCodeKey) throws CibaCoreException {
-
-        throw new UnsupportedOperationException("getResolvedUserId is not implemented");
-    }
-
-    /**
      * Persists the CibaAuthCodeDO.
      *
      * @param cibaAuthCodeDO Data object that accumulates  CibaAuthCode.

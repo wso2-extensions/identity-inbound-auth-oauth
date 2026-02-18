@@ -21,23 +21,17 @@ package org.wso2.carbon.identity.oauth.endpoint.ciba;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
-import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Paths;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mockStatic;
 
 public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
 
@@ -51,17 +45,17 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
     @Mock
     CibaAuthCodeRequest authCodeRequest;
 
+    @Mock
     CibaAuthRequestValidator cibaAuthRequestValidator;
 
-    @BeforeMethod
+    @BeforeTest
     public void setUp() throws Exception {
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
-        org.mockito.MockitoAnnotations.initMocks(this);
-        cibaAuthRequestValidator = new CibaAuthRequestValidator();
+        Class<?> clazz = CibaAuthRequestValidator.class;
     }
 
     @DataProvider(name = "provideRequestParams")
@@ -93,39 +87,6 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
         SignedJWT signedJWT = SignedJWT.parse(request);
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
         invokePrivateMethod(cibaAuthRequestValidator, "validateUserHint", claimsSet, authCodeRequest);
-    }
-
-    @Test(expectedExceptions = CibaAuthFailureException.class)
-    public void testValidateNotificationChannelWithInvalidValue() throws Exception {
-        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                .claim(org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.NOTIFICATION_CHANNEL, "")
-                .build();
-        invokePrivateMethod(cibaAuthRequestValidator, "validateNotificationChannel", claimsSet);
-    }
-
-    @Test
-    public void testValidateNotificationChannelWithValidValue() throws Exception {
-        PrivilegedCarbonContext mockCarbonContext = org.mockito.Mockito.mock(PrivilegedCarbonContext.class);
-        org.mockito.Mockito.when(mockCarbonContext.getTenantDomain()).thenReturn("carbon.super");
-        try (MockedStatic<PrivilegedCarbonContext> carbonContextMock =
-                     mockStatic(PrivilegedCarbonContext.class);
-             MockedStatic<CibaNotificationChannelValidator> validatorMock =
-                     mockStatic(CibaNotificationChannelValidator.class)) {
-            carbonContextMock.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
-                    .thenReturn(mockCarbonContext);
-            validatorMock.when(() -> CibaNotificationChannelValidator.validateChannelForClient(
-                    anyString(), anyString(), anyString())).thenAnswer(invocation -> null);
-            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .claim(org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.NOTIFICATION_CHANNEL, "sms")
-                    .build();
-            invokePrivateMethod(cibaAuthRequestValidator, "validateNotificationChannel", claimsSet);
-        }
-    }
-
-    @Test
-    public void testValidateNotificationChannelWithMissingValue() throws Exception {
-        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder().build();
-        invokePrivateMethod(cibaAuthRequestValidator, "validateNotificationChannel", claimsSet);
     }
 
     private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {

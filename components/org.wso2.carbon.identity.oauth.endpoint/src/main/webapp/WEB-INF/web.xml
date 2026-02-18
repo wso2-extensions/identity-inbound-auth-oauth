@@ -91,7 +91,6 @@
                 org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.device.UserAuthenticationEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint,
-                org.wso2.carbon.identity.oauth.endpoint.ciba.CibaUserAuthenticationEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint
             </param-value>

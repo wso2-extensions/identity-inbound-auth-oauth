@@ -203,33 +203,6 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     @Test
-    public void testAddOAuthApplicationWithCibaChannels() throws Exception {
-
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                OAuthServerConfiguration.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
-             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
-                     mockStatic(OrganizationManagementUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
-            OAuthAppDO appDO = getDefaultOAuthAppDO();
-            appDO.setCibaNotificationChannels("sms,email");
-
-            try (Connection connection = getConnection(DB_NAME)) {
-                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
-                addOAuthApplication(appDO, TENANT_ID);
-
-                OAuthAppDO retrievedApp = new OAuthAppDAO().getAppInformation(appDO.getOauthConsumerKey(), TENANT_ID);
-                assertNotNull(retrievedApp);
-                assertEquals(retrievedApp.getCibaNotificationChannels(), "sms,email");
-            }
-        } finally {
-            resetPrivilegedCarbonContext();
-        }
-    }
-
-    @Test
     public void testAddOAuthApplicationWithAppResidentOrgId() throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
