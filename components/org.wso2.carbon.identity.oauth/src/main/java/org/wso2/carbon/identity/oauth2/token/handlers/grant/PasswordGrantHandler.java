@@ -170,12 +170,18 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
         }
-        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                userTenantDomain, userStoreManager, true);
-        if (log.isDebugEnabled()) {
-            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
-        }
         if (authenticated) {
+            /* The event should be triggered only when the user is authenticated, with the authenticated parameter
+             in the event set to true.
+             */
+            String userStoreQualifiedTenantAwareUserName = authenticationResult.getAuthenticatedUser().isPresent() ?
+                    authenticationResult.getAuthenticatedUser().get().getDomainQualifiedUsername()
+                    : tenantAwareUserName;
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT,
+                    userStoreQualifiedTenantAwareUserName, userTenantDomain, userStoreManager, true);
+            if (log.isDebugEnabled()) {
+                log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+            }
             AuthenticatedUser authenticatedUser =
                     new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
             if (isPublishPasswordGrantLoginEnabled) {
@@ -401,8 +407,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
                         tenantAwareUserName, isPublishPasswordGrantLoginEnabled, userTenantDomain, serviceProvider);
             }
-            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                    userTenantDomain, userStoreManager, false);
+            String userStoreQualifiedTenantAwareUserName = authenticatedUser.isPresent() ?
+                    MultitenantUtils.getTenantAwareUsername(authenticatedUser.get().toFullQualifiedUsername())
+                    : tenantAwareUserName;
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT,
+                    userStoreQualifiedTenantAwareUserName, userTenantDomain, userStoreManager, false);
             if (log.isDebugEnabled()) {
                 log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
             }
