@@ -103,6 +103,7 @@
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImplTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthApplicationMgtListenerTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->

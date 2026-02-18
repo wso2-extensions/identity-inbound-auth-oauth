@@ -132,6 +132,10 @@ public class RevokedTokenDAOImpl implements RevokedTokenPersistenceDAO {
             return false;
         }
 
+        if (entityId == null || tokenIssuedTime == null) {
+            throw new IdentityOAuth2Exception("entityId and tokenIssuedTime must not be null.");
+        }
+
         /*
          * Check whether any internally revoked event is persisted for the given entity which is revoked after
          * the given token issued timestamp.
