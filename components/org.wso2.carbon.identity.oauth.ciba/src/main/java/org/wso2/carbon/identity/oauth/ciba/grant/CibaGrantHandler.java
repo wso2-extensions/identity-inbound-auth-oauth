@@ -84,14 +84,14 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         if (!super.validateGrant(tokReqMsgCtx)) {
             if (log.isDebugEnabled()) {
                 log.debug("Successful in validating grant.Validation failed for the token request made by client: " +
-                        clientId);
+                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
             }
             return false;
         }
+
         // Obtain authentication request identifier from request.
         String authReqId = getAuthReqId(tokReqMsgCtx);
 
@@ -99,8 +99,9 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             // Check whether provided authReqId is a valid and retrieve AuthCode if exists.
             CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
-            // Validate if auth_req_id belongs to the same client.
-            validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(), clientId);
+            //Validate if auth_req_id belongs to the same client
+            validateAuthReqIdOwner(cibaAuthCodeDO.getConsumerKey(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
 
             // Check whether auth_req_id is not expired.
             validateAuthReqId(cibaAuthCodeDO);
@@ -123,6 +124,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 updateLastPolledTime(cibaAuthCodeDO);
                 throw new IdentityOAuth2Exception(AUTHORIZATION_PENDING, "Authorization pending");
             }
+
             setPropertiesForTokenGeneration(tokReqMsgCtx, cibaAuthCodeDO);
             return true;
         } catch (CibaCoreException e) {
@@ -139,7 +141,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
      */
     protected String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        String authReqId = null;
+        String authReqId = null; // Initiating auth_req_id.
         RequestParameter[] parameters = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
 
         // Obtaining auth_req_id from request.
@@ -260,7 +262,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("User still not authenticated for the request made by client for request uniquely identified" +
+            log.info("User still not authenticated for the request made by client for request uniquely identified" +
                     " by cibaAuthCodeKey : " + cibaAuthCodeKey);
         }
         return false;
@@ -282,7 +284,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("Token is not delivered for the request made for cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
+            log.info("Token is not delivered for the request made for cibaAuthCodeDOKey : " + cibaAuthCodeDOKey);
         }
         return false;
     }

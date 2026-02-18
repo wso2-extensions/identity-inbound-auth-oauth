@@ -32,14 +32,9 @@ public class SQLQueries {
      */
     public static class CibaSQLQueries {
 
-        @Deprecated
         public static final String STORE_CIBA_AUTH_CODE = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_CODE " +
                 "(AUTH_CODE_KEY, AUTH_REQ_ID, CONSUMER_KEY, ISSUED_TIME, LAST_POLLED_TIME, POLLING_INTERVAL," +
                 " EXPIRES_IN, AUTH_REQ_STATUS) VALUES (?,?,?,?,?,?,?,?)";
-
-        public static final String STORE_CIBA_AUTH_CODE_WITH_RESOLVED_USER = "INSERT INTO IDN_OAUTH2_CIBA_AUTH_CODE " +
-                "(AUTH_CODE_KEY, AUTH_REQ_ID, CONSUMER_KEY, ISSUED_TIME, LAST_POLLED_TIME, POLLING_INTERVAL," +
-                " EXPIRES_IN, AUTH_REQ_STATUS, RESOLVED_USER_ID) VALUES (?,?,?,?,?,?,?,?,?)";
 
         public static final String UPDATE_AUTHENTICATED_USER =
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTHENTICATED_USER_NAME = ? ,USER_STORE_DOMAIN = ? ," +
@@ -53,9 +48,6 @@ public class SQLQueries {
         public static final String RETRIEVE_AUTHENTICATED_USER =
                 "SELECT AUTHENTICATED_USER_NAME,USER_STORE_DOMAIN,TENANT_ID FROM IDN_OAUTH2_CIBA_AUTH_CODE " +
                         " WHERE AUTH_CODE_KEY = ? ";
-
-        public static final String RETRIEVE_RESOLVED_USER =
-                "SELECT RESOLVED_USER_ID FROM IDN_OAUTH2_CIBA_AUTH_CODE WHERE AUTH_CODE_KEY = ? ";
 
         public static final String UPDATE_AUTHENTICATION_STATUS =
                 "UPDATE IDN_OAUTH2_CIBA_AUTH_CODE SET AUTH_REQ_STATUS = ? WHERE AUTH_CODE_KEY = ? ";

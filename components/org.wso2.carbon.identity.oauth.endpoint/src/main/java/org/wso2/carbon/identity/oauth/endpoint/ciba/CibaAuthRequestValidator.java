@@ -27,7 +27,6 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -111,9 +110,6 @@ public class CibaAuthRequestValidator {
             // Validate the requested_expiry of the Request.
             validateRequestedExpiry(claimsSet);
 
-            // Validate the notification_channel of the Request.
-            validateNotificationChannel(claimsSet);
-
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + "is properly validated.");
@@ -151,39 +147,6 @@ public class CibaAuthRequestValidator {
     }
 
     /**
-     * Checks whether the notification_channel value exists and is valid.
-     *
-     * @param claimsSet JWT claimsets of the authentication request.
-     * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
-     */
-    private void validateNotificationChannel(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
-
-        try {
-            if (claimsSet.getClaim(CibaConstants.NOTIFICATION_CHANNEL) != null) {
-                String notificationChannel = claimsSet.getStringClaim(CibaConstants.NOTIFICATION_CHANNEL);
-                if (StringUtils.isBlank(notificationChannel)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                                claimsSet.getIssuer() + ". The request is with invalid value for " +
-                                "(notification_channel).");
-                    }
-                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                            "Invalid value for (notification_channel).");
-                }
-                // Validate channel against app-level allowed channels.
-                String tenantDomain = CarbonContext
-                        .getThreadLocalCarbonContext().getTenantDomain();
-                CibaNotificationChannelValidator.validateChannelForClient(
-                        notificationChannel, claimsSet.getIssuer(),
-                        tenantDomain);
-            }
-        } catch (ParseException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
-                    "Error in validating request parameters.", e);
-        }
-    }
-
-    /**
      * Checks whether the binding_message values exists and is valid.
      *
      * @param claimsSet JWT claimsets of the authentication request.
@@ -207,14 +170,11 @@ public class CibaAuthRequestValidator {
                     throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
                             "Invalid value for (binding_message).");
                 }
-                // Validate binding message contains only printable characters.
-                // Reject control characters and HTML-dangerous characters
-                // (< and >) to prevent XSS.
-                if (!bindingMessage.matches("^[^<>\\x00-\\x1F\\x7F]+$")) {
-                    throw new CibaAuthFailureException(
-                            ErrorCodes.INVALID_BINDING_MESSAGE,
-                            "Invalid characters present in "
-                                    + "(binding_message).");
+                // Validate binding message contains only plain text
+                boolean isNoSpecialCharactersAvailable = bindingMessage.chars().allMatch(Character::isLetterOrDigit);
+                if (!isNoSpecialCharactersAvailable) {
+                    throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
+                            "Invalid characters present in (binding_message).");
                 }
 
             }
@@ -813,12 +773,6 @@ public class CibaAuthRequestValidator {
             Map<String, Object> transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
             if (transactionContext != null) {
                 cibaAuthCodeRequest.setTransactionContext(JSONObjectUtils.toJSONString(transactionContext));
-            }
-
-            // Setting notification_channel to AuthenticationRequest.
-            if (claimsSet.getClaim(CibaConstants.NOTIFICATION_CHANNEL) != null) {
-                 cibaAuthCodeRequest.setNotificationChannel(claimsSet.getStringClaim(CibaConstants
-                         .NOTIFICATION_CHANNEL));
             }
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.

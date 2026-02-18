@@ -38,7 +38,6 @@ public class CibaAuthCodeDO {
     private Enum authReqStatus;
     private String[] scopes;
     private AuthenticatedUser authenticatedUser;
-    private String resolvedUserId;
 
     public String getCibaAuthCodeKey() {
 
@@ -140,15 +139,5 @@ public class CibaAuthCodeDO {
     public void setAuthenticatedUser(AuthenticatedUser authenticatedUser) {
 
         this.authenticatedUser = authenticatedUser;
-    }
-
-    public String getResolvedUserId() {
-
-        return resolvedUserId;
-    }
-
-    public void setResolvedUserId(String resolvedUserId) {
-
-        this.resolvedUserId = resolvedUserId;
     }
 }
