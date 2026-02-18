@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.testng.MockitoTestNGListener;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
@@ -45,15 +47,21 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -94,6 +102,16 @@ public class AccessTokenDAOImplTest {
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     private MockedStatic<OAuth2ServiceComponentHolder> oauth2ServiceComponentHolder;
     private MockedStatic<OAuth2TokenUtil> oauth2TokenUtil;
+    @Mock
+    private RealmService mockRealmService;
+    @Mock
+    private OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+    @Mock
+    private TenantManager mockTenantManager;
+    @Mock
+    private OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder;
+    @Mock
+    private OrganizationManager mockOrganizationManager;
 
     @BeforeClass
     public void initTest() throws Exception {
@@ -628,5 +646,60 @@ public class AccessTokenDAOImplTest {
         accessTokenDO.setScope(new String[]{"openid", "profile"});
 
         return accessTokenDO;
+    }
+
+    @Test
+    public void testGetActiveAcessTokenDataByConsumerKey() throws Exception {
+
+        String consumerKey = "testConsumerKey";
+        String token = "testToken";
+        String authzUser = "testUser";
+        int tenantId = 1;
+        String userDomain = "PRIMARY";
+        String scope = "testScope";
+        String idpName = "LOCAL";
+        String organizationId = "testOrg";
+        Timestamp issuedTime = new Timestamp(System.currentTimeMillis());
+        long validityPeriod = 3600L;
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                     .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getTenantManager()).thenReturn(mockTenantManager);
+            oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(tenantId);
+            identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn(userDomain);
+
+            Connection mockConnection = mock(Connection.class);
+            PreparedStatement mockPs = mock(PreparedStatement.class);
+            ResultSet mockRs = mock(ResultSet.class);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(mockConnection);
+            when(mockConnection.prepareStatement(anyString())).thenReturn(mockPs);
+            when(mockPs.executeQuery()).thenReturn(mockRs);
+
+            when(mockRs.next()).thenReturn(true, false);
+            when(mockRs.getString(1)).thenReturn(authzUser);
+            when(mockRs.getString(2)).thenReturn(token);
+            when(mockRs.getInt(3)).thenReturn(tenantId);
+            when(mockRs.getString(4)).thenReturn(userDomain);
+            when(mockRs.getString(5)).thenReturn(scope);
+            when(mockRs.getString(6)).thenReturn(idpName);
+            when(mockRs.getString(8)).thenReturn(organizationId);
+            when(mockRs.getTimestamp(anyInt(), any(Calendar.class))).thenReturn(issuedTime);
+            when(mockRs.getLong(10)).thenReturn(validityPeriod);
+
+            Set<AccessTokenDO> result = accessTokenDAO.getActiveAcessTokenDataByConsumerKey(consumerKey);
+
+            assertFalse(result.isEmpty());
+            AccessTokenDO accessTokenDO = result.iterator().next();
+            assertEquals(accessTokenDO.getAccessToken(), token);
+            assertEquals(accessTokenDO.getIssuedTime(), issuedTime);
+            assertEquals(accessTokenDO.getValidityPeriod(), validityPeriod);
+        }
     }
 }
