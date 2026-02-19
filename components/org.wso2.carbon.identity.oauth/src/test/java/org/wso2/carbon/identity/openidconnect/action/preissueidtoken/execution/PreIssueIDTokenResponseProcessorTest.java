@@ -714,6 +714,35 @@ public class PreIssueIDTokenResponseProcessorTest {
     }
 
     @Test
+    public void testProcessSuccessResponse_AddCustomObject() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> orgMetadata = new HashMap<>();
+        orgMetadata.put("tier", "Enterprise");
+        orgMetadata.put("region", "South-East-Asia");
+        orgMetadata.put("isInternal", false);
+
+        IDToken.Claim organizationClaim = new IDToken.Claim("org_metadata", orgMetadata);
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(
+                Operation.ADD,
+                CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                organizationClaim
+        ));
+        IDTokenDTO resultDTO = executeProcessSuccessResponseForToken(operationsToPerform, new HashMap<>());
+
+        assertNotNull(resultDTO.getCustomOIDCClaims(), "The custom OIDC claims map should be initialized.");
+        assertTrue(resultDTO.getCustomOIDCClaims().containsKey("org_metadata"));
+
+        Object processedValue = resultDTO.getCustomOIDCClaims().get("org_metadata");
+        assertTrue(processedValue instanceof Map, "The added claim value should be processed as a Map.");
+        Map<?, ?> resultMap = (Map<?, ?>) processedValue;
+
+        assertEquals(resultMap.get("tier"), "Enterprise");
+        assertEquals(resultMap.get("region"), "South-East-Asia");
+        assertEquals(resultMap.get("isInternal"), false);
+    }
+
+    @Test
     public void testProcessSuccessResponse_RemoveClaim_NotFound() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
@@ -803,6 +832,56 @@ public class PreIssueIDTokenResponseProcessorTest {
         List<String> arrayClaimValue = (List<String>) resultDTO.getCustomOIDCClaims().get("arrayClaim");
         assertEquals(arrayClaimValue.size(), 1);
         assertEquals(arrayClaimValue.get(0), "value2");
+    }
+
+    @Test
+    public void testProcessSuccessResponse_RemoveGroup() throws ActionExecutionResponseProcessorException {
+
+        List<String> initialGroupList = new ArrayList<>(Arrays.asList("value1", "value2", "value3"));
+        int removalIndex = 0;
+
+        IDToken.Builder idTokenEventBuilder = new IDToken.Builder()
+                .addClaim(IDToken.ClaimNames.ISS.getName(), ORIGINAL_ISS)
+                .addClaim(IDToken.ClaimNames.SUB.getName(), ORIGINAL_SUB)
+                .addClaim(IDToken.ClaimNames.AUD.getName(), Arrays.asList(ORIGINAL_AUD))
+                .addClaim("groups", initialGroupList);
+
+        List<PerformableOperation> executionOperations = new ArrayList<>();
+        executionOperations.add(createPerformableOperation(Operation.REMOVE,
+                CLAIMS_PATH_PREFIX + "groups/" + removalIndex, null));
+
+        ActionInvocationSuccessResponse successResponse = new ActionInvocationSuccessResponse.Builder()
+                .actionStatus(ActionInvocationResponse.Status.SUCCESS)
+                .operations(executionOperations)
+                .responseData(mock(ResponseData.class))
+                .build();
+        ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
+                ActionExecutionResponseContext.create(new PreIssueIDTokenEvent.Builder()
+                        .idToken(idTokenEventBuilder.build()).build(), successResponse);
+
+        PreIssueIDTokenResponseProcessor processor = new PreIssueIDTokenResponseProcessor();
+        FlowContext flowContext = FlowContext.create();
+        OAuthTokenReqMessageContext tokenMessageContext =
+                new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
+
+        IDTokenDTO idTokenDTO = new IDTokenDTO();
+        Map<String, Object> currentClaimsMap = new HashMap<>();
+        currentClaimsMap.put("groups", new ArrayList<>(initialGroupList));
+        idTokenDTO.setCustomOIDCClaims(currentClaimsMap);
+        idTokenDTO.setAudience(new ArrayList<>(Arrays.asList(ORIGINAL_AUD)));
+
+        flowContext.add("tokenReqMessageContext", tokenMessageContext);
+        flowContext.add("idTokenDTO", idTokenDTO);
+        flowContext.add("requestType", "token");
+        processor.processSuccessResponse(flowContext, responseContext);
+
+        IDTokenDTO resultDTO = tokenMessageContext.getPreIssueIDTokenActionDTO();
+        List<String> updatedGroups = (List<String>) resultDTO.getCustomOIDCClaims().get("groups");
+
+        assertNotNull(updatedGroups);
+        assertEquals(updatedGroups.size(), 2);
+        assertFalse(updatedGroups.contains("value1"), "Removed group should no longer be present.");
+        assertTrue(updatedGroups.contains("value2"), "Remaining groups should still be present.");
     }
 
     @Test
@@ -995,6 +1074,60 @@ public class PreIssueIDTokenResponseProcessorTest {
 
         IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, customClaims);
         assertNotNull(idTokenDTO.getCustomOIDCClaims());
+    }
+
+    @Test
+    public void testProcessSuccessResponse_ReplaceGroup()
+            throws ActionExecutionResponseProcessorException {
+
+        List<String> initialGroupList = new ArrayList<>(Arrays.asList("value1", "value2", "value3"));
+        String replacementValue = "NewValue";
+        int targetIndex = 1;
+
+        IDToken.Builder idTokenEventBuilder = new IDToken.Builder()
+                .addClaim(IDToken.ClaimNames.ISS.getName(), ORIGINAL_ISS)
+                .addClaim(IDToken.ClaimNames.SUB.getName(), ORIGINAL_SUB)
+                .addClaim(IDToken.ClaimNames.AUD.getName(), Arrays.asList(ORIGINAL_AUD))
+                .addClaim("groups", initialGroupList);
+
+        List<PerformableOperation> executionOperations = new ArrayList<>();
+        executionOperations.add(createPerformableOperation(Operation.REPLACE,
+                CLAIMS_PATH_PREFIX + "groups/" + targetIndex, replacementValue));
+
+        ActionInvocationSuccessResponse successResponse = new ActionInvocationSuccessResponse.Builder()
+                .actionStatus(ActionInvocationResponse.Status.SUCCESS)
+                .operations(executionOperations)
+                .responseData(mock(ResponseData.class))
+                .build();
+
+        ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
+                ActionExecutionResponseContext.create(new PreIssueIDTokenEvent.Builder()
+                        .idToken(idTokenEventBuilder.build()).build(), successResponse);
+        PreIssueIDTokenResponseProcessor processor = new PreIssueIDTokenResponseProcessor();
+        FlowContext flowContext = FlowContext.create();
+        OAuthTokenReqMessageContext tokenMessageContext =
+                new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
+
+        IDTokenDTO idTokenDTO = new IDTokenDTO();
+        Map<String, Object> currentClaimsMap = new HashMap<>();
+        currentClaimsMap.put("groups", new ArrayList<>(initialGroupList));
+        idTokenDTO.setCustomOIDCClaims(currentClaimsMap);
+        idTokenDTO.setAudience(new ArrayList<>(Arrays.asList(ORIGINAL_AUD)));
+
+        flowContext.add("tokenReqMessageContext", tokenMessageContext);
+        flowContext.add("idTokenDTO", idTokenDTO);
+        flowContext.add("requestType", "token");
+
+        processor.processSuccessResponse(flowContext, responseContext);
+        IDTokenDTO resultDTO = tokenMessageContext.getPreIssueIDTokenActionDTO();
+        List<String> updatedGroups = (List<String>) resultDTO.getCustomOIDCClaims().get("groups");
+
+        assertNotNull(updatedGroups);
+        assertEquals(updatedGroups.size(), 3);
+        assertTrue(updatedGroups.contains(replacementValue),
+                "The list should contain the new value: " + replacementValue);
+        assertFalse(updatedGroups.contains("value2"),
+                "The list should not contain the old value.");
     }
 
     @Test
