@@ -1015,8 +1015,8 @@
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
 
         <!--SAML Common Util Version-->
-        <saml.common.util.version>1.4.1</saml.common.util.version>
-        <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
+        <saml.common.util.version>1.6.0</saml.common.util.version>
+        <saml.common.util.version.range>[1.4.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Account lock service versions -->
         <account.lock.service.version>1.9.11</account.lock.service.version>
