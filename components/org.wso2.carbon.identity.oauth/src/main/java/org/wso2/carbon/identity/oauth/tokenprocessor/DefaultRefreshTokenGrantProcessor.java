@@ -227,6 +227,15 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
+            // If refresh token persistence is disabled and the user is not federated, do not store user attributes.
+            // When a user's profile is updated after the token is issued, the cache cannot be cleared because
+            // the Server will not persist either the refresh token or the access token. As a result,
+            // outdated user attribute data would be returned on the next refresh grant.
+            // To mitigate this, user attributes are set to null.
+            if (OAuth2Util.isNonPersistentTokenEnabled(
+                    accessTokenBean.getConsumerKey()) && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+                grantCacheEntry.setUserAttributes(null);
+            }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
         }
     }
