@@ -580,6 +580,12 @@ public class OAuthAdminServiceImpl {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
                         }
+                        app.setCibaNotificationChannels(application.getCibaNotificationChannels());
+                        app.setCibaAuthReqExpiryTime(application.getCibaAuthReqExpiryTime());
+                        if (isCibaGrantTypeEnabled(app) && app.getCibaAuthReqExpiryTime() <= 0) {
+                            throw handleClientError(INVALID_REQUEST,
+                                    "CIBA authentication request expiry time must be greater than 0");
+                        }
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -655,8 +661,9 @@ public class OAuthAdminServiceImpl {
         }
         Gson gson = new Gson();
         String oauthApp = maskSPData(app);
-        return gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
+        Map<String, Object> result = gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
         }.getType());
+        return result != null ? result : new HashMap<>();
     }
 
     private static String maskSPData(OAuthAppDO oAuthAppDO) {
@@ -1072,6 +1079,12 @@ public class OAuthAdminServiceImpl {
                             "the new JWT access token OIDC claims separation model. Application : " +
                             oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                 }
+            }
+            oAuthAppDO.setCibaNotificationChannels(consumerAppDTO.getCibaNotificationChannels());
+            oAuthAppDO.setCibaAuthReqExpiryTime(consumerAppDTO.getCibaAuthReqExpiryTime());
+            if (isCibaGrantTypeEnabled(oAuthAppDO) && oAuthAppDO.getCibaAuthReqExpiryTime() <= 0) {
+                throw handleClientError(INVALID_REQUEST,
+                        "CIBA authentication request expiry time must be greater than 0");
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
@@ -3062,5 +3075,10 @@ public class OAuthAdminServiceImpl {
             }
         }
         return tenantDomain;
+    }
+
+    private boolean isCibaGrantTypeEnabled(OAuthAppDO app) {
+
+        return app.getGrantTypes().contains("urn:openid:params:grant-type:ciba");
     }
 }

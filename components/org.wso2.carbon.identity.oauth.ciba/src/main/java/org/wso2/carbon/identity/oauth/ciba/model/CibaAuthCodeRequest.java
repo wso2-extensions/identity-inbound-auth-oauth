@@ -39,6 +39,7 @@ public class CibaAuthCodeRequest {
     private String clientNotificationToken;
     private String[] acrValues;
     private String transactionContext;
+    private String notificationChannel;
 
     public String getTransactionContext() {
 
@@ -184,5 +185,15 @@ public class CibaAuthCodeRequest {
         if (acrValues != null) {
             this.acrValues = Arrays.copyOf(acrValues, acrValues.length);
         }
+    }
+
+    public String getNotificationChannel() {
+
+        return notificationChannel;
+    }
+
+    public void setNotificationChannel(String notificationChannel) {
+
+        this.notificationChannel = notificationChannel;
     }
 }
