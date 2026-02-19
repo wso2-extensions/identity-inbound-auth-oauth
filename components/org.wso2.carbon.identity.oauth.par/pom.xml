@@ -37,6 +37,7 @@
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
@@ -174,6 +175,7 @@
                             org.wso2.carbon.identity.oauth.par.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
+                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>
