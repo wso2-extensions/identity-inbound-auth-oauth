@@ -739,6 +739,7 @@ public class PreIssueIDTokenRequestBuilderTest {
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
         Assert.assertNotNull(event.getUser());
+        Assert.assertNotNull(event.getUser().getAccessingOrganization());
     }
 
     @Test
