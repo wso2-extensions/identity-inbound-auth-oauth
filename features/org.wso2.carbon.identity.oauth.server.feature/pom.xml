@@ -258,7 +258,7 @@
                                 <importFeatureDef>org.wso2.carbon.claim.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.event.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:${saml.common.util.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:compatible:${saml.common.util.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>
