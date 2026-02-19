@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.4.2-SNAPSHOT</version>
+    <version>7.4.7-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -300,6 +300,13 @@
                 <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
                 <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
                 <version>${account.lock.service.version}</version>
+            </dependency>
+
+            <!-- Carbon Identity Governance dependencies -->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.governance</artifactId>
+                <version>${carbon.identity.governance.version}</version>
             </dependency>
 
             <!-- Orbit dependencies -->
@@ -1015,6 +1022,10 @@
         <account.lock.service.version>1.9.11</account.lock.service.version>
         <account.lock.service.imp.pkg.version.range>[1.9.11, 2.0.0)</account.lock.service.imp.pkg.version.range>
 
+        <!-- Identity Governance versions -->
+        <carbon.identity.governance.version>1.11.158</carbon.identity.governance.version>
+        <carbon.identity.governance.imp.pkg.version.range>[1.11.158, 2.0.0)</carbon.identity.governance.imp.pkg.version.range>
+
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
         <commons-lang.version.range>[2.6.0,3.0.0)</commons-lang.version.range>
@@ -1062,6 +1073,7 @@
         <httpcore.version>4.4.16.wso2v1</httpcore.version>
         <httpcore.version.osgi.import.range>[4.3.0, 5.0.0)</httpcore.version.osgi.import.range>
         <httpcomponents-httpclient.wso2.version>4.5.13.wso2v1</httpcomponents-httpclient.wso2.version>
+        <httpcomponents-httpclient.osgi.import.version.range>[4.5.0,5.0.0)</httpcomponents-httpclient.osgi.import.version.range>
         <org.apache.cxf.version>3.5.11</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>

@@ -54,6 +54,8 @@ public class RefreshTokenValidationDataDO {
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     private boolean isConsented;
+    private boolean isWithNotPersistedAT;
+    private String authorizedOrganizationId;
 
     private Properties properties = new Properties();
 
@@ -191,5 +193,25 @@ public class RefreshTokenValidationDataDO {
     public Object getProperty(Object propName) {
 
         return properties.get(propName);
+    }
+
+    public boolean isWithNotPersistedAT() {
+
+        return isWithNotPersistedAT;
+    }
+
+    public void setWithNotPersistedAT(boolean withNotPersistedAT) {
+
+        isWithNotPersistedAT = withNotPersistedAT;
+    }
+
+    public String getAuthorizedOrganizationId() {
+
+        return authorizedOrganizationId;
+    }
+
+    public void setAuthorizedOrganizationId(String authorizedOrganizationId) {
+
+        this.authorizedOrganizationId = authorizedOrganizationId;
     }
 }

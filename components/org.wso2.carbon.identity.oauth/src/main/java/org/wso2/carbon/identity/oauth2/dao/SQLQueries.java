@@ -577,6 +577,18 @@ public class SQLQueries {
             "CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=? AND TENANT_ID = ?) " +
             "AND TOKEN_STATE=?";
 
+    public static final String GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD = 
+            "SELECT IDN_OAUTH2_ACCESS_TOKEN" +
+            ".AUTHZ_USER, IDN_OAUTH2_ACCESS_TOKEN.ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID, " +
+            "IDN_OAUTH2_ACCESS_TOKEN.USER_DOMAIN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_SCOPE, IDP.NAME, " +
+            "IDN_OAUTH2_ACCESS_TOKEN.SUBJECT_IDENTIFIER, AUTHORIZED_ORGANIZATION, " +
+            "IDN_OAUTH2_ACCESS_TOKEN.TIME_CREATED, IDN_OAUTH2_ACCESS_TOKEN.VALIDITY_PERIOD FROM " +
+            "IDN_OAUTH2_ACCESS_TOKEN LEFT JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE" +
+            " ON IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID=IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
+            " JOIN IDP ON IDN_OAUTH2_ACCESS_TOKEN.IDP_ID=IDP.ID WHERE " +
+            "CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=? AND TENANT_ID = ?) " +
+            "AND TOKEN_STATE=?";
+
     public static final String GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY = "SELECT AUTHORIZATION_CODE FROM " +
             "IDN_OAUTH2_AUTHORIZATION_CODE WHERE CONSUMER_KEY_ID IN (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
             "CONSUMER_KEY = ? AND TENANT_ID = ?) ";
@@ -1752,6 +1764,174 @@ public class SQLQueries {
                 + "SET TIME_REVOKED = ? WHERE ENTITY_ID = ? AND ENTITY_TYPE = ? AND TENANT_ID = ?";
 
         private RevokedTokenPersistenceSQLQueries() {
+        }
+    }
+
+    /**
+     * Contains SQL query constants used for managing OAuth2 refresh tokens in the persistence scenarios.
+     */
+    public static class RefreshTokenPersistenceSQLQueries {
+
+        public static final String INSERT_OAUTH2_REFRESH_TOKEN =
+                "INSERT INTO IDN_OAUTH2_REFRESH_TOKEN ( " +
+                        "   REFRESH_TOKEN_ID, " +
+                        "   REFRESH_TOKEN, " +
+                        "   CONSUMER_KEY_ID, " +
+                        "   AUTHZ_USER, " +
+                        "   TENANT_ID, " +
+                        "   USER_DOMAIN, " +
+                        "   GRANT_TYPE, " +
+                        "   REFRESH_TOKEN_TIME_CREATED, " +
+                        "   REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                        "   TOKEN_SCOPE_HASH, " +
+                        "   TOKEN_STATE, " +
+                        "   SUBJECT_IDENTIFIER, " +
+                        "   REFRESH_TOKEN_HASH, " +
+                        "   IDP_ID, " +
+                        "   CONSENTED_TOKEN, " +
+                        "   AUTHORIZED_ORGANIZATION " +
+                        ") " +
+                        "SELECT ?,?,IDN_OAUTH_CONSUMER_APPS.ID,?,?,?,?,?,?,?,?,?,?,IDP.ID,?,? " +
+                        "FROM IDN_OAUTH_CONSUMER_APPS, IDP WHERE CONSUMER_KEY=? AND IDP.NAME=? AND IDP.TENANT_ID=?";
+
+        public static final String INSERT_OAUTH2_REFRESH_TOKEN_SCOPE = "INSERT INTO IDN_OAUTH2_REFRESH_TOKEN_SCOPE " +
+                "(REFRESH_TOKEN_ID, TOKEN_SCOPE, TENANT_ID) VALUES (?,?,?)";
+
+        public static final String UPDATE_REFRESH_TOKEN_STATE = "UPDATE IDN_OAUTH2_REFRESH_TOKEN SET TOKEN_STATE=? " +
+                "WHERE REFRESH_TOKEN_ID=?";
+
+        public static final String REVOKE_REFRESH_TOKEN = "UPDATE IDN_OAUTH2_REFRESH_TOKEN SET TOKEN_STATE=? " +
+                "WHERE REFRESH_TOKEN_HASH=?";
+
+        public static final String RETRIEVE_REFRESH_TOKEN_VALIDATION_DATA =
+                "SELECT " +
+                        "   REFRESH_TOKEN_SELECTED.REFRESH_TOKEN_ID, " +
+                        "   AUTHZ_USER, " +
+                        "   REFRESH_TOKEN_SELECTED.TENANT_ID, " +
+                        "   USER_DOMAIN, " +
+                        "   TOKEN_SCOPE, " +
+                        "   GRANT_TYPE, " +
+                        "   REFRESH_TOKEN_TIME_CREATED, " +
+                        "   REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                        "   TOKEN_STATE, " +
+                        "   SUBJECT_IDENTIFIER, " +
+                        "   IDP.NAME, " +
+                        "   CONSENTED_TOKEN, " +
+                        "   AUTHORIZED_ORGANIZATION " +
+                        "FROM ( " +
+                        "   SELECT " +
+                        "       REFRESH_TOKEN_ID, " +
+                        "       AUTHZ_USER, " +
+                        "       TENANT_ID, " +
+                        "       USER_DOMAIN, " +
+                        "       GRANT_TYPE, " +
+                        "       REFRESH_TOKEN_TIME_CREATED, " +
+                        "       REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                        "       TOKEN_STATE, " +
+                        "       SUBJECT_IDENTIFIER, " +
+                        "       IDP_ID, " +
+                        "       CONSENTED_TOKEN, " +
+                        "       AUTHORIZED_ORGANIZATION " +
+                        "   FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                        "   WHERE CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS " +
+                        "       WHERE CONSUMER_KEY = ?) " +
+                        "   AND REFRESH_TOKEN_HASH = ? " +
+                        ") REFRESH_TOKEN_SELECTED " +
+                        "LEFT JOIN IDN_OAUTH2_REFRESH_TOKEN_SCOPE " +
+                        "   ON REFRESH_TOKEN_SELECTED.REFRESH_TOKEN_ID = " +
+                        "   IDN_OAUTH2_REFRESH_TOKEN_SCOPE.REFRESH_TOKEN_ID " +
+                        "JOIN IDP ON IDP_ID = IDP.ID";
+
+        public static final String RETRIEVE_REFRESH_TOKEN =
+                "SELECT " +
+                        "    CONSUMER_KEY, " +
+                        "    AUTHZ_USER, " +
+                        "    REFRESH_TOKEN_TABLE.TENANT_ID, " +
+                        "    USER_DOMAIN, " +
+                        "    TOKEN_SCOPE, " +
+                        "    REFRESH_TOKEN_TIME_CREATED, " +
+                        "    REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                        "    REFRESH_TOKEN_TABLE.REFRESH_TOKEN_ID, " +
+                        "    GRANT_TYPE, " +
+                        "    SUBJECT_IDENTIFIER, " +
+                        "    IDP.NAME, " +
+                        "    CONSENTED_TOKEN, " +
+                        "    AUTHORIZED_ORGANIZATION " +
+                        "FROM ( " +
+                        "    SELECT " +
+                        "        REFRESH_TOKEN_ID, " +
+                        "        CONSUMER_KEY, " +
+                        "        AUTHZ_USER, " +
+                        "        IDN_OAUTH2_REFRESH_TOKEN.TENANT_ID AS TENANT_ID, " +
+                        "        IDN_OAUTH2_REFRESH_TOKEN.USER_DOMAIN AS USER_DOMAIN, " +
+                        "        REFRESH_TOKEN_TIME_CREATED, " +
+                        "        REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                        "        REFRESH_TOKEN, " +
+                        "        IDN_OAUTH2_REFRESH_TOKEN.GRANT_TYPE AS GRANT_TYPE, " +
+                        "        SUBJECT_IDENTIFIER, " +
+                        "        IDP_ID, " +
+                        "        CONSENTED_TOKEN, " +
+                        "        AUTHORIZED_ORGANIZATION " +
+                        "    FROM ( " +
+                        "        SELECT * " +
+                        "        FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                        "        WHERE REFRESH_TOKEN_HASH = ? " +
+                        "        AND TOKEN_STATE = 'ACTIVE' " +
+                        "    ) IDN_OAUTH2_REFRESH_TOKEN " +
+                        "    JOIN IDN_OAUTH_CONSUMER_APPS ON CONSUMER_KEY_ID = ID " +
+                        ") REFRESH_TOKEN_TABLE " +
+                        "LEFT JOIN IDN_OAUTH2_REFRESH_TOKEN_SCOPE " +
+                        "    ON REFRESH_TOKEN_TABLE.REFRESH_TOKEN_ID = " +
+                        "    IDN_OAUTH2_REFRESH_TOKEN_SCOPE.REFRESH_TOKEN_ID " +
+                        "JOIN IDP ON IDP.ID = IDP_ID";
+
+
+        public static final String REVOKE_APP_REFRESH_TOKEN = "UPDATE IDN_OAUTH2_REFRESH_TOKEN SET TOKEN_STATE=? " +
+                "WHERE CONSUMER_KEY_ID = (SELECT ID FROM " +
+                "IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ?) AND TOKEN_STATE=?";
+
+        public static final String REVOKE_USER_REFRESH_TOKEN = "UPDATE IDN_OAUTH2_REFRESH_TOKEN SET TOKEN_STATE=? " +
+                "WHERE AUTHZ_USER=? AND TENANT_ID=? AND USER_DOMAIN=? ";
+
+        public static final String DELETE_OLD_TOKEN_BY_ID = "DELETE FROM IDN_OAUTH2_REFRESH_TOKEN WHERE " +
+                "REFRESH_TOKEN_ID = ?";
+
+        public static final String DELETE_OLD_TOKEN_BY_VALUE = "DELETE FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                "WHERE REFRESH_TOKEN_HASH=?";
+
+        public static final String DELETE_APP_REFRESH_TOKEN = "DELETE FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                "WHERE CONSUMER_KEY_ID = (SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ?) " +
+                "AND TOKEN_STATE=?";
+
+        public static final String DELETE_USER_REFRESH_TOKEN = "DELETE FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                "WHERE AUTHZ_USER=? AND TENANT_ID=? AND USER_DOMAIN=? ";
+
+        public static final String RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE = "SELECT " +
+                "REFRESH_TOKEN, REFRESH_TOKEN_TIME_CREATED, " +
+                "REFRESH_TOKEN_VALIDITY_PERIOD, REFRESH_TOKEN_ID, SUBJECT_IDENTIFIER, CONSENTED_TOKEN, " +
+                "AUTHORIZED_ORGANIZATION FROM IDN_OAUTH2_REFRESH_TOKEN WHERE CONSUMER_KEY_ID = (SELECT ID FROM " +
+                "IDN_OAUTH_CONSUMER_APPS WHERE " +
+                "CONSUMER_KEY = ?) AND AUTHZ_USER=? AND TENANT_ID=? AND USER_DOMAIN=? AND " +
+                "TOKEN_SCOPE_HASH=? AND TOKEN_STATE='ACTIVE' AND " +
+                "IDP_ID=(SELECT ID FROM IDP WHERE NAME =? AND " +
+                "TENANT_ID=IDN_OAUTH2_REFRESH_TOKEN.TENANT_ID)";
+
+        public static final String GET_OPEN_ID_REFRESH_TOKEN_DATA_BY_AUTHZUSER = "SELECT DISTINCT " +
+                "REFRESH_TOKEN, REFRESH_TOKEN_TABLE.REFRESH_TOKEN_ID, REFRESH_TOKEN_TIME_CREATED, " +
+                "REFRESH_TOKEN_VALIDITY_PERIOD, CONSUMER_KEY, GRANT_TYPE, CONSENTED_TOKEN, AUTHORIZED_ORGANIZATION " +
+                "FROM (SELECT REFRESH_TOKEN, " +
+                "GRANT_TYPE, CONSUMER_KEY_ID, REFRESH_TOKEN_ID, REFRESH_TOKEN_TIME_CREATED, " +
+                "REFRESH_TOKEN_VALIDITY_PERIOD, CONSENTED_TOKEN, AUTHORIZED_ORGANIZATION " +
+                "FROM IDN_OAUTH2_REFRESH_TOKEN " +
+                "WHERE AUTHZ_USER=? " +
+                "AND TENANT_ID=? AND " +
+                "TOKEN_STATE=? AND USER_DOMAIN=?) REFRESH_TOKEN_TABLE JOIN IDN_OAUTH_CONSUMER_APPS ON " +
+                "ID = CONSUMER_KEY_ID " +
+                "LEFT JOIN IDN_OAUTH2_REFRESH_TOKEN_SCOPE " +
+                "ON REFRESH_TOKEN_TABLE.REFRESH_TOKEN_ID = IDN_OAUTH2_REFRESH_TOKEN_SCOPE.REFRESH_TOKEN_ID " +
+                "WHERE TOKEN_SCOPE=?";
+
+        private RefreshTokenPersistenceSQLQueries() {
         }
     }
 }
