@@ -470,7 +470,7 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         List<String> pathSegments = extractNestedClaimPath(operation.getPath());
 
         // Nested removal
-        if (pathSegments.size() > 1) {
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
             return removeNestedClaim(pathSegments, requestIDToken, responseIDTokenDTO, operation);
         }
 
@@ -642,7 +642,7 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         List<String> pathSegments = extractNestedClaimPath(operation.getPath());
 
         // Nested replace
-        if (pathSegments.size() > 1) {
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
             return replaceNestedClaim(pathSegments, requestIDToken, responseIDTokenDTO, operation);
         }
 
@@ -811,6 +811,25 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
         Matcher matcher = STRING_OR_URI_PATTERN.matcher(input);
         return matcher.matches();
+    }
+
+    private boolean isArrayIndexPath(List<String> pathSegments) {
+
+        if (pathSegments.size() != 2) {
+            return false;
+        }
+
+        String lastSegment = pathSegments.get(1);
+        if (LAST_ELEMENT_CHARACTER.equals(lastSegment)) {
+            return true;
+        }
+
+        try {
+            Integer.parseInt(lastSegment);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private ClaimPathInfo parseOperationPath(String operationPath) {
