@@ -758,17 +758,14 @@ public class PreIssueIDTokenResponseProcessorTest {
     public void testProcessSuccessResponse_RemoveClaim_FromArrayWithValidIndex()
             throws ActionExecutionResponseProcessorException {
 
-        Map<String, Object> nestedValue = new HashMap<>();
-        nestedValue.put("0", "value1");
-        nestedValue.put("1", "value2");
-
+        List<String> arrayValue = new ArrayList<>(Arrays.asList("value1", "value2"));
         IDToken.Builder tokenBuilder = new IDToken.Builder()
                 .addClaim(IDToken.ClaimNames.ISS.getName(), ORIGINAL_ISS)
                 .addClaim(IDToken.ClaimNames.SUB.getName(), ORIGINAL_SUB)
                 .addClaim(IDToken.ClaimNames.AUD.getName(), Arrays.asList(ORIGINAL_AUD))
                 .addClaim(IDToken.ClaimNames.EXP.getName(), ORIGINAL_EXP)
                 .addClaim(IDToken.ClaimNames.IAT.getName(), ORIGINAL_IAT)
-                .addClaim("arrayClaim", nestedValue);
+                .addClaim("arrayClaim", arrayValue);
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
@@ -792,7 +789,7 @@ public class PreIssueIDTokenResponseProcessorTest {
                 new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
         IDTokenDTO idTokenDTO = new IDTokenDTO();
         Map<String, Object> customClaims = new HashMap<>();
-        customClaims.put("arrayClaim", new HashMap<>(nestedValue));
+        customClaims.put("arrayClaim", new ArrayList<>(arrayValue));
         idTokenDTO.setCustomOIDCClaims(customClaims);
         idTokenDTO.setAudience(new ArrayList<>(Arrays.asList(ORIGINAL_AUD)));
 
@@ -803,10 +800,9 @@ public class PreIssueIDTokenResponseProcessorTest {
         processor.processSuccessResponse(flowContext, responseContext);
         IDTokenDTO resultDTO = tokenMessageContext.getPreIssueIDTokenActionDTO();
         assertNotNull(resultDTO.getCustomOIDCClaims());
-        Map<String, Object> resultArray =
-                (Map<String, Object>) resultDTO.getCustomOIDCClaims().get("arrayClaim");
-        assertNull(resultArray.get("0"));
-        assertEquals(resultArray.size(), 1);
+        List<String> arrayClaimValue = (List<String>) resultDTO.getCustomOIDCClaims().get("arrayClaim");
+        assertEquals(arrayClaimValue.size(), 1);
+        assertEquals(arrayClaimValue.get(0), "value2");
     }
 
     @Test
@@ -905,17 +901,14 @@ public class PreIssueIDTokenResponseProcessorTest {
     public void testProcessSuccessResponse_ReplaceClaim_InArrayWithValidIndex()
             throws ActionExecutionResponseProcessorException {
 
-        Map<String, Object> nestedValue = new HashMap<>();
-        nestedValue.put("0", "value1");
-        nestedValue.put("1", "value2");
-
+        List<String> arrayValue = new ArrayList<>(Arrays.asList("value1", "value2"));
         IDToken.Builder tokenBuilder = new IDToken.Builder()
                 .addClaim(IDToken.ClaimNames.ISS.getName(), ORIGINAL_ISS)
                 .addClaim(IDToken.ClaimNames.SUB.getName(), ORIGINAL_SUB)
                 .addClaim(IDToken.ClaimNames.AUD.getName(), Arrays.asList(ORIGINAL_AUD))
                 .addClaim(IDToken.ClaimNames.EXP.getName(), ORIGINAL_EXP)
                 .addClaim(IDToken.ClaimNames.IAT.getName(), ORIGINAL_IAT)
-                .addClaim("arrayClaim", nestedValue);
+                .addClaim("arrayClaim", arrayValue);
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
@@ -939,7 +932,7 @@ public class PreIssueIDTokenResponseProcessorTest {
                 new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
         IDTokenDTO idTokenDTO = new IDTokenDTO();
         Map<String, Object> customClaims = new HashMap<>();
-        customClaims.put("arrayClaim", new HashMap<>(nestedValue));
+        customClaims.put("arrayClaim", new ArrayList<>(arrayValue));
         idTokenDTO.setCustomOIDCClaims(customClaims);
         idTokenDTO.setAudience(new ArrayList<>(Arrays.asList(ORIGINAL_AUD)));
 
@@ -950,9 +943,9 @@ public class PreIssueIDTokenResponseProcessorTest {
         processor.processSuccessResponse(flowContext, responseContext);
         IDTokenDTO resultDTO = tokenMessageContext.getPreIssueIDTokenActionDTO();
         assertNotNull(resultDTO.getCustomOIDCClaims());
-        Map<String, Object> resultArray = (Map<String, Object>) resultDTO.getCustomOIDCClaims().get("arrayClaim");
-        assertEquals(resultArray.get("0"), "replacedValue");
-        assertFalse(resultArray.containsValue("value1"));
+        List<String> arrayClaimValue = (List<String>) resultDTO.getCustomOIDCClaims().get("arrayClaim");
+        assertTrue(arrayClaimValue.contains("replacedValue"));
+        assertFalse(arrayClaimValue.contains("value1"));
     }
 
     @Test
