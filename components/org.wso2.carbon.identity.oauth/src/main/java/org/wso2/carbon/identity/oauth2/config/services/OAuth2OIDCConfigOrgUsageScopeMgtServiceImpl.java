@@ -51,12 +51,14 @@ import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.MergeAllAggregationStrategy;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.
         getDefaultIssuerUsageScopeConfig;
 import static org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation;
@@ -177,7 +179,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
                                     ServiceProvider applicationBasicInfo = OAuth2ServiceComponentHolder.
                                             getApplicationMgtService().getApplicationByResourceId(
                                                     appBasicInfo.getApplicationResourceId(), subOrgTenantDomain);
-                                    if (applicationBasicInfo.getInboundAuthenticationConfig() != null) {
+                                    if (applicationBasicInfo.getInboundAuthenticationConfig() != null
+                                            && !isFragmentApp(applicationBasicInfo)) {
                                         for (int i = 0; i < applicationBasicInfo.getInboundAuthenticationConfig().
                                                 getInboundAuthenticationRequestConfigs().length; i++) {
                                             InboundAuthenticationRequestConfig inboundAuthConfig =
@@ -497,5 +500,13 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
             return attributes.stream().collect(Collectors.toMap(Attribute::getKey, Attribute::getValue));
         }
         return Collections.emptyMap();
+    }
+
+    private boolean isFragmentApp(ServiceProvider serviceProvider) {
+
+        return serviceProvider.getSpProperties() != null &&
+                Arrays.stream(serviceProvider.getSpProperties()).
+                        anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                                Boolean.parseBoolean(property.getValue()));
     }
 }
