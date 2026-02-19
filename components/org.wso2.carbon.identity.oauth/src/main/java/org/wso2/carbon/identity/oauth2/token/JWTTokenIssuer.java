@@ -919,8 +919,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     isConsented = authAuthzReqMessageContext.isConsentedToken();
                 }
                 // when no persistence of tokens, there is no existing token to check the consented value for.
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
+                if (isConsented) {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
+                }
+                if (authenticatedUser.isFederatedUser()) {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
+                }
                 if (tokenReqMessageContext != null) {
                     jwtClaimsSetBuilder.claim(OAuth2Constants.USER_SESSION_ID,
                             tokenReqMessageContext.getProperty(OAuth2Constants.USER_SESSION_ID));
