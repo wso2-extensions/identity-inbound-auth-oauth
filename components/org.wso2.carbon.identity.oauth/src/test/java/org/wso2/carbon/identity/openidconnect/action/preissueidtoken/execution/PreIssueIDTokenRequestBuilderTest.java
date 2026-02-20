@@ -281,6 +281,30 @@ public class PreIssueIDTokenRequestBuilderTest {
     }
 
     @Test
+    public void testCollectNestedClaimPathsWithInvalidKeys() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        Map<Object, Object> invalidKeyMap = new HashMap<>();
+        invalidKeyMap.put(123, "value");
+        invalidKeyMap.put("valid", "value");
+        customClaims.put("parent", invalidKeyMap);
+
+        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
+        idTokenDTO.setCustomOIDCClaims(customClaims);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+        ActionExecutionRequest request = preIssueIDTokenRequestBuilder.
+                buildActionExecutionRequest(flowContext, null);
+        List<String> paths = request.getAllowedOperations().get(1).getPaths();
+
+        Assert.assertTrue(paths.contains("/idToken/claims/parent/valid"));
+        Assert.assertFalse(paths.contains("/idToken/claims/parent/123"));
+    }
+
+    @Test
     public void testBuildActionExecutionRequestWithMultipleScopes() throws ActionExecutionRequestBuilderException {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
