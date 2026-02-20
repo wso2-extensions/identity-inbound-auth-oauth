@@ -4842,6 +4842,14 @@ public class AuthzUtil {
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
 
+    private static void handleApiBasedAuthError(String errorMsg) throws AuthServiceClientException {
+        if (StringUtils.isBlank(errorMsg)) {
+            errorMsg = AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.description();
+        }
+        throw new AuthServiceClientException(
+                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(), errorMsg);
+    }
+
     public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse) {
 
         // API based auth response transformation has already been handled no need for further handling.
@@ -4890,21 +4898,22 @@ public class AuthzUtil {
                                     "Error while extracting query params from provided url.", e);
                         }
                         if (isRedirectToClient(location)) {
-                            SuccessCompleteAuthResponse successCompleteAuthResponse =
-                                    new SuccessCompleteAuthResponse(queryParams);
-                            String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
-                            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                            return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            if (isErrorIncluded(queryParams)) {
+                                String errorMsg = getErrorMessageForApiBasedClientError(queryParams, true);
+                                handleApiBasedAuthError(errorMsg);
+                            } else {
+                                SuccessCompleteAuthResponse successCompleteAuthResponse =
+                                        new SuccessCompleteAuthResponse(queryParams);
+                                String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
+                                oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                                return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            }
                         } else {
                             /* At this point if the location header doesn't indicate a redirection to the client
                              we can assume it is an error scenario which redirects to the error page. Therefore,
                              we need to handle the response as an API based error response.*/
-                            String errorMsg = getErrorMessageForApiBasedClientError(queryParams);
-                            if (StringUtils.isBlank(errorMsg)) {
-                                errorMsg = AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.description();
-                            }
-                            throw new AuthServiceClientException(
-                                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(), errorMsg);
+                            String errorMsg = getErrorMessageForApiBasedClientError(queryParams, false);
+                            handleApiBasedAuthError(errorMsg);
                         }
                     }
                 }
@@ -4982,10 +4991,25 @@ public class AuthzUtil {
         return true;
     }
 
-    private static String getErrorMessageForApiBasedClientError(Map<String, String> params) {
 
-        String oauthErrorCode = params.get(OAuthConstants.OAUTH_ERROR_CODE);
-        String oauthErrorMsg = params.get(OAuthConstants.OAUTH_ERROR_MESSAGE);
+    private static boolean isErrorIncluded(Map<String, String> queryParams) {
+
+        return queryParams.containsKey(OAuthConstants.OAUTH_ERROR) ||
+                queryParams.containsKey(OAuthConstants.OAUTH_ERROR_DESCRIPTION);
+    }
+
+    private static String getErrorMessageForApiBasedClientError(Map<String, String> params,
+                                                                boolean isRedirectedToClient) {
+
+        String oauthErrorCode;
+        String oauthErrorMsg;
+        if (isRedirectedToClient) {
+            oauthErrorCode = params.get(OAuthConstants.OAUTH_ERROR);
+            oauthErrorMsg = params.get(OAuthConstants.OAUTH_ERROR_DESCRIPTION);
+        } else {
+            oauthErrorCode = params.get(OAuthConstants.OAUTH_ERROR_CODE);
+            oauthErrorMsg = params.get(OAuthConstants.OAUTH_ERROR_MESSAGE);
+        }
 
         if (StringUtils.isBlank(oauthErrorCode)) {
             return oauthErrorMsg != null ? oauthErrorMsg : StringUtils.EMPTY;
