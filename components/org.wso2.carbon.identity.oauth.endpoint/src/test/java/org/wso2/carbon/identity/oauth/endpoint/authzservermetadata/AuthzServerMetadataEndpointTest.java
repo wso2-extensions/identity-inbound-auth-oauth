@@ -29,6 +29,7 @@ import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -126,6 +127,14 @@ public class AuthzServerMetadataEndpointTest {
     }
 
     @Test(dataProvider = "provideDataForGetOAuthAuthzServerMetadataEndpoint")
+    @DataProvider(name = "provideDataForGetOAuthAuthzServerMetadataEndpoint")
+    public Object[][] provideDataForGetOAuthAuthzServerMetadataEndpoint() {
+
+        return new Object[][] {
+            { getSampleConfigMap(), Response.Status.OK.getStatusCode() },
+            { new HashMap<>(), Response.Status.OK.getStatusCode() }
+        };
+    }
     public void testGetOAuthAuthzServerMetadataEndpoint(Map<String, Object> configMap, int expectedResponse)
             throws Exception {
 
