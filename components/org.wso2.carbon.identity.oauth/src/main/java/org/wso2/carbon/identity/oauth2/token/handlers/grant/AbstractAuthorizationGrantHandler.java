@@ -154,9 +154,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
         } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception(
-                    "User id is not available for user: " +
-                            tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
+            if (StringUtils.equalsIgnoreCase(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
+                    OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                authorizedUserId = StringUtils.EMPTY;
+                if (log.isDebugEnabled()) {
+                    log.debug("User ID is not available for user: " +
+                            tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId() +
+                            ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                }
+            } else {
+                throw new IdentityOAuth2Exception(
+                        "User id is not available for user: " +
+                                tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
+            }
         }
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
@@ -748,17 +758,27 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
 
                 String userId;
-                String authorizedOrganization;
                 try {
                     userId = tokenToCache.getAuthzUser().getUserId();
-                    authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
-                    if (StringUtils.isBlank(authorizedOrganization)) {
-                        authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
-                    }
                 } catch (UserIdNotFoundException e) {
-                    throw new IdentityOAuth2Exception(
-                            "User id is not available for user: " +
-                                    tokenToCache.getAuthzUser().getLoggableMaskedUserId(), e);
+                    if (StringUtils.equalsIgnoreCase(newTokenBean.getGrantType(),
+                            OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                        userId = StringUtils.EMPTY;
+                        if (log.isDebugEnabled()) {
+                            log.debug("User ID is not available for user: " +
+                                    tokenToCache.getAuthzUser().getLoggableMaskedUserId() +
+                                    ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                        }
+                    } else {
+                        throw new IdentityOAuth2Exception(
+                                "User id is not available for user: " +
+                                        tokenToCache.getAuthzUser().getLoggableMaskedUserId(), e);
+                    }
+                }
+
+                String authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
+                if (StringUtils.isBlank(authorizedOrganization)) {
+                    authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
                 }
 
                 String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());

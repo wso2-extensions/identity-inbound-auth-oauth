@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -66,19 +67,30 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
         OAuthCacheKey oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
         oauthCache.clearCacheEntry(oauthcacheKey, accessTokenDO.getAuthzUser().getTenantDomain());
 
+        String userId;
         try {
-            String userId = accessTokenDO.getAuthzUser().getUserId();
-            String cacheKeyString;
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
-                    accessTokenDO.getAuthzUser().getFederatedIdPName();
-
-            oauthcacheKey = new OAuthCacheKey(cacheKeyString);
-
-            oauthCache.clearCacheEntry(oauthcacheKey);
+            userId = accessTokenDO.getAuthzUser().getUserId();
         } catch (UserIdNotFoundException e) {
-            throw new CacheEntryListenerException("User id not found for user: "
-                    + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());
+            if (StringUtils.equalsIgnoreCase(accessTokenDO.getGrantType(),
+                    OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                userId = StringUtils.EMPTY;
+                if (log.isDebugEnabled()) {
+                    log.debug("User ID is not available for user: " +
+                            accessTokenDO.getAuthzUser().getLoggableMaskedUserId() +
+                            ". Setting user ID as empty since the flow is a client credentials grant flow.");
+                }
+            } else {
+                throw new CacheEntryListenerException("User id not found for user: "
+                        + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());
+            }
         }
+        String cacheKeyString;
+        cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
+                OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
+                accessTokenDO.getAuthzUser().getFederatedIdPName();
+
+        oauthcacheKey = new OAuthCacheKey(cacheKeyString);
+
+        oauthCache.clearCacheEntry(oauthcacheKey);
     }
 }
