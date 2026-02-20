@@ -337,6 +337,7 @@ public class AccessTokenEventUtil {
         if (tokReqMsgCtx != null) {
             String tenantDomain = tokenReqDTO.getTenantDomain();
             String organizationId = StringUtils.EMPTY;
+            String rootOrgTenantDomain = StringUtils.EMPTY;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Retrieving organization details for tenant domain: " + tenantDomain);
             }
@@ -350,21 +351,25 @@ public class AccessTokenEventUtil {
                 LOG.error("Error while retrieving the organization Id for tenant domain : " +
                         tenantDomain, e);
             }
+            properties.put(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID,
+                    organizationId);
             try {
-                String rootOrgTenantDomain =
+                rootOrgTenantDomain =
                         OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
                                 tokenReqDTO.getTenantDomain());
-                properties.put(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN,
-                        rootOrgTenantDomain);
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
                         tenantDomain, e);
             }
+            properties.put(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN,
+                    rootOrgTenantDomain);
             String accessingOrganizationId = StringUtils.EMPTY;
             if (tokReqMsgCtx.getAuthorizedUser() != null
                     && tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
                 accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
             }
+            properties.put(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID,
+                    accessingOrganizationId);
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
                 try {
                     properties.put(IdentityEventConstants.EventProperty.USER_ID,
@@ -382,21 +387,22 @@ public class AccessTokenEventUtil {
                         tokReqMsgCtx.getAuthorizedUser().isOrganizationUser());
                 properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
                         tokReqMsgCtx.getAuthorizedUser().getUserResidentOrganization());
-                properties.put(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID,
-                        organizationId);
-                properties.put(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID,
-                        accessingOrganizationId);
             }
 
             properties.put(IdentityEventConstants.EventProperty.IAT, tokReqMsgCtx.getAccessTokenIssuedTime());
             properties.put(IdentityEventConstants.EventProperty.JTI, tokReqMsgCtx.getJWTID());
             properties.put(IdentityEventConstants.EventProperty.GRANT_TYPE, tokenReqDTO.getGrantType());
-            properties.put(OAuthConstants.EventProperty.USER_TYPE,
-                    tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
             properties.put(OAuthConstants.EventProperty.CLIENT_ID,
                     tokenReqDTO.getClientId());
             properties.put(OAuthConstants.EventProperty.EXISTING_TOKEN_USED,
                     existingTokenUsed(tokReqMsgCtx));
+
+            Object userTypeObj = tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE);
+            if (userTypeObj != null) {
+                properties.put(OAuthConstants.EventProperty.USER_TYPE, userTypeObj.toString());
+            } else {
+                properties.put(OAuthConstants.EventProperty.USER_TYPE, StringUtils.EMPTY);
+            }
 
             if (tokReqMsgCtx.getProperty(APP_DAO) != null &&
                     tokReqMsgCtx.getProperty(APP_DAO) instanceof OAuthAppDO) {
