@@ -1067,7 +1067,7 @@
         <joda.wso2.version>2.9.4.wso2v1</joda.wso2.version>
         <joda.wso2.osgi.version.range>[2.8.2,3.0.0)</joda.wso2.osgi.version.range>
 
-        <tomcat.version>9.0.96</tomcat.version>
+        <tomcat.version>9.0.108</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
         <httpcore.version>4.4.16.wso2v1</httpcore.version>
