@@ -1116,7 +1116,7 @@
         <h2database.version>2.1.210</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <jaxp-ri.version>1.4.5</jaxp-ri.version>
-        <jose4j.version>0.9.5</jose4j.version>
+        <jose4j.version>0.9.6</jose4j.version>
         <!--SAML component version for test-->
         <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
         <spring-context.version>5.1.1.RELEASE</spring-context.version>
