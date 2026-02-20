@@ -522,6 +522,10 @@ public final class OAuthUtil {
      */
     public static OAuthConsumerSecretDTO buildConsumerSecretDTO(OAuthConsumerSecretDO consumerSecretDO) {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Building OAuthConsumerSecretDTO for clientId: " + consumerSecretDO.getClientId()
+                    + ", secretId: " + consumerSecretDO.getSecretId());
+        }
         OAuthConsumerSecretDTO consumerSecretDTO = new OAuthConsumerSecretDTO();
         consumerSecretDTO.setClientId(consumerSecretDO.getClientId());
         consumerSecretDTO.setDescription(consumerSecretDO.getDescription());

@@ -169,6 +169,10 @@ public class OAuthAppDAO {
                     // If multiple client secrets are allowed, store the client secret in the
                     // IDN_OAUTH_CONSUMER_SECRETS table.
                     if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Multiple client secrets are enabled. Adding consumer secret for client: "
+                                    + consumerAppDO.getOauthConsumerKey());
+                        }
                         OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
                         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
                         consumerSecretDO.setDescription(consumerAppDO.getSecretDescription());

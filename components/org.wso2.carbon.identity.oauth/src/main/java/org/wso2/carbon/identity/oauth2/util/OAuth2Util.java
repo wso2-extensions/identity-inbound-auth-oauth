@@ -557,12 +557,15 @@ public class OAuth2Util {
         // When multiple client secrets support is enabled, check in the IDN_OAUTH_CONSUMER_SECRET table first.
         // If not found, fall back to the IDN_OAUTH_CONSUMER_APPS table.
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Multiple client secrets are enabled. Checking for client secrets in secrets storage.");
+            }
             OAuthConsumerSecretDO secret = getClientSecret(clientId, clientSecretProvided);
             // If secret is found in the IDN_OAUTH_CONSUMER_SECRET table, use it for authentication.
             // Else, fall back to the IDN_OAUTH_CONSUMER_APPS table.
             if (secret != null) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Client Secret found for client ID: " + clientId + " in new secret storage");
+                    log.debug("Client Secret found for client ID: " + clientId + " in secrets storage");
                 }
                 // If secret is found, check whether it is expired.
                 boolean isExpired = isClientSecretExpired(secret.getExpiresAt());

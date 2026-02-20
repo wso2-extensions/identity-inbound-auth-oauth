@@ -403,6 +403,9 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Creating a new OAuth consumer secret for consumer key: " + consumerSecretDTO.getClientId());
+        }
         String consumerKey = consumerSecretDTO.getClientId();
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
         // Validate the provided expiry time to check whether it's in the past.
@@ -452,6 +455,9 @@ public class OAuthAdminServiceImpl {
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Removing OAuth consumer secret with ID: " + secretId);
         }
         OAuthConsumerSecretDTO secretDTO = getOAuthConsumerSecret(secretId);
         if (secretDTO == null) {
