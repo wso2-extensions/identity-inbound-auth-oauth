@@ -113,7 +113,7 @@ public class JdbcUtils {
     public static boolean isH2DB(Connection connection) throws SQLException {
 
         String databaseProductName = connection.getMetaData().getDatabaseProductName();
-        return H2.equalsIgnoreCase(databaseProductName);
+        return databaseProductName != null && databaseProductName.contains(H2);
     }
 
     /**
