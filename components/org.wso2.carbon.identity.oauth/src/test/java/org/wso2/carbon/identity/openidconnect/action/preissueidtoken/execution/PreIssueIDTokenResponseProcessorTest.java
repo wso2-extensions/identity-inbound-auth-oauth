@@ -835,6 +835,30 @@ public class PreIssueIDTokenResponseProcessorTest {
     }
 
     @Test
+    public void testProcessSuccessResponse_RemoveNestedClaim() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> nestedClaim = new HashMap<>();
+        Map<String, Object> innerMap = new HashMap<>();
+        innerMap.put("childKey", "childValue");
+        nestedClaim.put("parentKey", innerMap);
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                CLAIMS_PATH_PREFIX + "rootClaim/parentKey/childKey", null));
+        Map<String, Object> existingClaims = new HashMap<>();
+        existingClaims.put("rootClaim", nestedClaim);
+
+        requestIDTokenBuilder.addClaim("rootClaim", nestedClaim);
+        IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, existingClaims);
+
+        assertNotNull(idTokenDTO.getCustomOIDCClaims());
+        Map<String, Object> rootClaim = (Map<String, Object>) idTokenDTO.getCustomOIDCClaims().get("rootClaim");
+        Map<String, Object> parentKey = (Map<String, Object>) rootClaim.get("parentKey");
+
+        assertFalse(parentKey.containsKey("childKey"), "Nested childKey should be removed.");
+    }
+
+    @Test
     public void testProcessSuccessResponse_RemoveGroup() throws ActionExecutionResponseProcessorException {
 
         List<String> initialGroupList = new ArrayList<>(Arrays.asList("value1", "value2", "value3"));
@@ -1077,6 +1101,44 @@ public class PreIssueIDTokenResponseProcessorTest {
     }
 
     @Test
+    public void testProcessSuccessResponse_ReplaceClaim_PrimitiveClaimNotExists()
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
+                CLAIMS_PATH_PREFIX + "nonExistentClaim", "newValue"));
+
+        IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, new HashMap<>());
+        assertNotNull(idTokenDTO.getCustomOIDCClaims());
+        assertNull(idTokenDTO.getCustomOIDCClaims().get("nonExistentClaim"));
+    }
+
+    @Test
+    public void testProcessSuccessResponse_ReplaceNestedClaim() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> nestedClaim = new HashMap<>();
+        Map<String, Object> innerMap = new HashMap<>();
+        innerMap.put("targetKey", "oldValue");
+        nestedClaim.put("intermediate", innerMap);
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
+                CLAIMS_PATH_PREFIX + "complexClaim/intermediate/targetKey", "newValue"));
+
+        Map<String, Object> existingClaims = new HashMap<>();
+        existingClaims.put("complexClaim", nestedClaim);
+        requestIDTokenBuilder.addClaim("complexClaim", nestedClaim);
+        IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, existingClaims);
+
+        assertNotNull(idTokenDTO.getCustomOIDCClaims());
+        Map<String, Object> complexClaim = (Map<String, Object>) idTokenDTO.getCustomOIDCClaims().get("complexClaim");
+        Map<String, Object> intermediate = (Map<String, Object>) complexClaim.get("intermediate");
+
+        assertEquals(intermediate.get("targetKey"), "newValue",
+                "The nested claim value should be updated to the new value.");
+    }
+
+    @Test
     public void testProcessSuccessResponse_ReplaceGroup()
             throws ActionExecutionResponseProcessorException {
 
@@ -1128,19 +1190,6 @@ public class PreIssueIDTokenResponseProcessorTest {
                 "The list should contain the new value: " + replacementValue);
         assertFalse(updatedGroups.contains("value2"),
                 "The list should not contain the old value.");
-    }
-
-    @Test
-    public void testProcessSuccessResponse_ReplaceClaim_PrimitiveClaimNotExists()
-            throws ActionExecutionResponseProcessorException {
-
-        List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
-                CLAIMS_PATH_PREFIX + "nonExistentClaim", "newValue"));
-
-        IDTokenDTO idTokenDTO = executeProcessSuccessResponseForToken(operationsToPerform, new HashMap<>());
-        assertNotNull(idTokenDTO.getCustomOIDCClaims());
-        assertNull(idTokenDTO.getCustomOIDCClaims().get("nonExistentClaim"));
     }
 
     @Test
