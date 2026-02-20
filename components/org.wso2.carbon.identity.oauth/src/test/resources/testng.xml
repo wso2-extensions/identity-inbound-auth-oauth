@@ -81,6 +81,7 @@
             <class name="org.wso2.carbon.identity.oauth.listener.ClaimCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.ClaimMetaDataCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.IdentityOathEventListenerTest"/>
+            <class name="org.wso2.carbon.identity.oauth.listener.UserApplicationCreationListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthAdminServiceImplTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
@@ -168,6 +169,7 @@
             <class name="org.wso2.carbon.identity.oauth.listener.ClaimCacheRemoveListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.listener.ClaimMetaDataCacheRemoveListenerTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth.listener.IdentityOathEventListenerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth.listener.UserApplicationCreationListenerTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthAdminServiceImplTest"/>
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
