@@ -774,6 +774,32 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (!StringUtils.equals(actorTokenSubject, requestedActor)) {
             throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor");
         }
+
+        Object actorAzpClaim = claimsSet.getClaim("azp");
+        if (actorAzpClaim == null) {
+            // Fallback to client_id if azp not present
+            actorAzpClaim = claimsSet.getClaim("client_id");
+        }
+        // Check for existing act claim in actor token for delegation chain
+        Object existingActClaim = claimsSet.getClaim("act");
+        // Set delegation properties in context
+        tokReqMsgCtx.setImpersonationRequest(false);
+        tokReqMsgCtx.addProperty("IS_DELEGATION_REQUEST", true);
+        tokReqMsgCtx.addProperty("ACTOR_SUBJECT", actorTokenSubject);
+        if (actorAzpClaim != null) {
+            tokReqMsgCtx.addProperty("ACTOR_AZP", actorAzpClaim.toString());
+            if (log.isDebugEnabled()) {
+                log.debug("Actor AZP extracted from actor token: " + actorAzpClaim.toString());
+            }
+        }
+        // Preserve existing act claim for delegation chain nesting
+        if (existingActClaim != null) {
+            tokReqMsgCtx.addProperty("EXISTING_ACT_CLAIM", existingActClaim);
+            if (log.isDebugEnabled()) {
+                log.debug("Found existing act claim in actor token - will nest in delegation chain");
+            }
+        }
+
         // Validate mandatory claims
         JWTUtils.validateMandatoryClaims(claimsSet);
         String jwtIssuer = claimsSet.getIssuer();
