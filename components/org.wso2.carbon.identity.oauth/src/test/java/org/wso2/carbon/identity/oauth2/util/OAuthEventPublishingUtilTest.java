@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -201,7 +202,7 @@ public class OAuthEventPublishingUtilTest {
             assertEquals("APPLICATION_USER", properties.get(OAuthConstants.EventProperty.USER_TYPE));
             assertEquals("token-id-123", properties.get(OAuthConstants.EventProperty.TOKEN_ID));
             assertEquals(1, properties.get(OAuthConstants.EventProperty.APP_RESIDENT_TENANT_ID));
-            assertEquals("false", properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
+            assertFalse((Boolean) properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
             assertEquals("carbon.super",
                     properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
             assertEquals("TestApp", properties.get(OAuthConstants.EventProperty.SERVICE_PROVIDER));

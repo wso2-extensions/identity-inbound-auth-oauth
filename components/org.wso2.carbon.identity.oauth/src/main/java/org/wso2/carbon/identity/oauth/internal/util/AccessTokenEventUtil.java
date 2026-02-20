@@ -337,6 +337,9 @@ public class AccessTokenEventUtil {
         if (tokReqMsgCtx != null) {
             String tenantDomain = tokenReqDTO.getTenantDomain();
             String organizationId = StringUtils.EMPTY;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Retrieving organization details for tenant domain: " + tenantDomain);
+            }
             try {
                 OrganizationManager organizationManager =
                         OAuthComponentServiceHolder.getInstance().getOrganizationManager();
@@ -393,7 +396,7 @@ public class AccessTokenEventUtil {
             properties.put(OAuthConstants.EventProperty.CLIENT_ID,
                     tokenReqDTO.getClientId());
             properties.put(OAuthConstants.EventProperty.EXISTING_TOKEN_USED,
-                    String.valueOf(existingTokenUsed(tokReqMsgCtx)));
+                    existingTokenUsed(tokReqMsgCtx));
 
             if (tokReqMsgCtx.getProperty(APP_DAO) != null &&
                     tokReqMsgCtx.getProperty(APP_DAO) instanceof OAuthAppDO) {
@@ -441,11 +444,10 @@ public class AccessTokenEventUtil {
         if (tokReqMsgCtx == null) {
             return false;
         }
-        Boolean existingTokenUsed = (Boolean) tokReqMsgCtx.getProperty(
-                OAuthConstants.EventProperty.EXISTING_TOKEN_USED);
-        if (existingTokenUsed == null) {
-            existingTokenUsed = false;
+        Object property = tokReqMsgCtx.getProperty(OAuthConstants.EventProperty.EXISTING_TOKEN_USED);
+        if (!(property instanceof Boolean)) {
+            return false;
         }
-        return existingTokenUsed;
+        return (Boolean) property;
     }
 }

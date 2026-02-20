@@ -845,8 +845,9 @@ public final class OAuthConstants {
 
     /**
      * Event constants.
-     * This is temporily added until java 21 related issues are resolved.
-     * After we need to use the constants defined at IdentityEventConstants class.
+     * This is temporarily added until java 21 related issues are resolved.
+     * Afterwards, the constants defined in IdentityEventConstants should be used.
+     * Tracking issue : https://github.com/wso2-enterprise/asgardeo-product/issues/34575
      */
     @Deprecated
     public static class EventProperty {
