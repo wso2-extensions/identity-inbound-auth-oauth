@@ -51,8 +51,11 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "code_challenge_methods_supported"
     };
 
-    public String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {
+    public static String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {
 
+        if (oidProviderConfigResponse == null) {
+            throw new IllegalArgumentException("OIDProviderConfigResponse must not be null");
+        }
         Map<String, Object> configs = oidProviderConfigResponse.getConfigMap();
 
         Set<String> allowedKeys = new HashSet<>(Arrays.asList(AUTHZ_SERVER_METADATA_RESPONSE_ATTRIBUTES));
