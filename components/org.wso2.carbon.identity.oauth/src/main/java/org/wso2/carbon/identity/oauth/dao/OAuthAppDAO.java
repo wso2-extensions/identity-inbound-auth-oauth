@@ -48,6 +48,9 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -89,6 +92,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ISSUER_ORGANIZATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -1140,6 +1144,12 @@ public class OAuthAppDAO {
                 CIBA_AUTH_REQ_EXPIRY_TIME, String.valueOf(oauthAppDO.getCibaAuthReqExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1745,7 +1755,7 @@ public class OAuthAppDAO {
     private void addServiceProviderOIDCProperties(Connection connection,
                                                   OAuthAppDO consumerAppDO,
                                                   String processedClientId,
-                                                  int spTenantId) throws SQLException {
+                                                  int spTenantId) throws SQLException, IdentityOAuth2Exception {
 
         try (PreparedStatement prepStmtAddOIDCProperty =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY)) {
@@ -1882,6 +1892,11 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     CIBA_AUTH_REQ_EXPIRY_TIME,
                     String.valueOf(consumerAppDO.getCibaAuthReqExpiryTime()));
+
+            if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
+            }
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -2115,6 +2130,27 @@ public class OAuthAppDAO {
         String cibaAuthReqExpiryTime = getFirstPropertyValue(spOIDCProperties, CIBA_AUTH_REQ_EXPIRY_TIME);
         if (cibaAuthReqExpiryTime != null) {
             oauthApp.setCibaAuthReqExpiryTime(Long.parseLong(cibaAuthReqExpiryTime));
+        }
+
+        // Set issuer details if the issuer organization is available in the OIDC properties
+        String issuerOrg = getFirstPropertyValue(spOIDCProperties, ISSUER_ORGANIZATION);
+        if (StringUtils.isNotEmpty(issuerOrg)) {
+            try {
+                IssuerDetails issuerDetails = new IssuerDetails();
+                issuerDetails.setIssuerOrgId(issuerOrg);
+                String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(issuerOrg);
+                issuerDetails.setIssuerTenantDomain(tenantDomain);
+                issuerDetails.setIssuer(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(tenantDomain));
+                oauthApp.setIssuerDetails(issuerDetails);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtServerException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while retrieving issuer details for the " +
+                        "organization: " + issuerOrg, e);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while resolving tenant domain for the " +
+                        "organization: " + issuerOrg, e);
+            }
+            oauthApp.setIssuerOrg(issuerOrg);
         }
     }
 

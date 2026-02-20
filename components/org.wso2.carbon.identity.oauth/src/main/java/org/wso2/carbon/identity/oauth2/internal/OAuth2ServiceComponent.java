@@ -434,8 +434,12 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,
                     new JWTAccessTokenRARClaimProvider(), null);
             bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
+            OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService =
+                    new OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl();
+            OAuth2ServiceComponentHolder.getInstance()
+                    .setOAuth2OIDCConfigOrgUsageScopeMgtService(oAuth2OIDCConfigOrgUsageScopeMgtService);
             bundleContext.registerService(OAuth2OIDCConfigOrgUsageScopeMgtService.class,
-                    new OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl(), null);
+                    oAuth2OIDCConfigOrgUsageScopeMgtService, null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur

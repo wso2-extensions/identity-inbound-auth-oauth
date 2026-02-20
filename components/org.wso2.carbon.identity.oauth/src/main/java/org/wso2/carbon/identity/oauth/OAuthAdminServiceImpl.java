@@ -78,6 +78,10 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -151,6 +155,8 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
+    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
+            "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -586,6 +592,21 @@ public class OAuthAdminServiceImpl {
                             throw handleClientError(INVALID_REQUEST,
                                     "CIBA authentication request expiry time must be greater than 0");
                         }
+
+                        String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveOrganizationId(tenantDomain);
+                        boolean isPrimaryOrg = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                isPrimaryOrganization(orgId);
+                        /*
+                         If the app is not registering under a primary organization, and it is not a fragment app,
+                         validate the issuer organization and set the issuer org of the app.
+                        */
+                        if (Boolean.parseBoolean(
+                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
+                            if (!isPrimaryOrg && !application.getIsFragmentApp()) {
+                                resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
+                            }
+                        }
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -638,6 +659,10 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityApplicationManagementException e) {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
+        } catch (OrganizationManagementException e) {
+            throw handleError("Error while resolving organization for tenant: " + tenantDomain, e);
+        } catch (OAuth2OIDCConfigOrgUsageScopeMgtException e) {
+            throw handleError("Error while retrieving allowed issuers for tenant: " + tenantDomain, e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
@@ -1086,6 +1111,27 @@ public class OAuthAdminServiceImpl {
                 throw handleClientError(INVALID_REQUEST,
                         "CIBA authentication request expiry time must be greater than 0");
             }
+
+            try {
+                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveOrganizationId(tenantDomain);
+                boolean isPrimaryOrg = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        isPrimaryOrganization(orgId);
+                /*
+                 If the app is not updating under a primary organization, and it is not a fragment app,
+                 validate the issuer organization and set the issuer org of the app.
+                */
+                if (Boolean.parseBoolean(
+                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
+                    if (!isPrimaryOrg && !consumerAppDTO.getIsFragmentApp()) {
+                        resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);
+                    }
+                }
+            } catch (OrganizationManagementException e) {
+                throw handleError("Error while resolving organization for tenant: " + tenantDomain, e);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtException e) {
+                throw handleError("Error while retrieving allowed issuers for tenant: " + tenantDomain, e);
+            }
         }
         dao.updateConsumerApplication(oAuthAppDO);
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
@@ -1106,6 +1152,102 @@ public class OAuthAdminServiceImpl {
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
+            }
+        }
+    }
+
+    /**
+     * Resolves and validates the application-level token issuer configuration for OAuth applications
+     * in sub organizations.
+     *
+     * <p>This method handles three scenarios:
+     * <ol>
+     *   <li>If explicit issuer is provided: Validates against allowed issuers list</li>
+     *   <li>If single allowed issuer exists: Auto-selects if it matches app registration org</li>
+     *   <li>If multiple allowed issuers exist: Selects primary org issuer if available</li>
+     * </ol>
+     *
+     * @param consumerAppDTO OAuth consumer application DTO with potential issuer details
+     * @param oAuthAppDO OAuth application data object to be updated with issuer configuration
+     * @param tenantDomain Tenant domain of the application
+     * @param orgId Organization ID where the application is registered
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException if unable to retrieve allowed issuers
+     * @throws OrganizationManagementException if unable to resolve organization details
+     * @throws IdentityOAuthClientException if issuer validation fails or issuer configuration is invalid
+     */
+    private void resolveApplicationLevelTokenIssuerConfig(OAuthConsumerAppDTO consumerAppDTO, OAuthAppDO oAuthAppDO, 
+                                                          String tenantDomain, String orgId)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtException, OrganizationManagementException,
+            IdentityOAuthAdminException {
+
+        oAuthAppDO.setIssuerOrg(null);
+        oAuthAppDO.setIssuerDetails(null);
+        
+        OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigMgtService =
+                OAuth2ServiceComponentHolder.getInstance().getOAuth2OIDCConfigOrgUsageScopeMgtService();
+        List<IssuerDetails> allowedIssuers = oAuth2OIDCConfigMgtService.getAllowedIssuerDetails();
+
+        if (allowedIssuers == null || allowedIssuers.isEmpty()) {
+            String message = "No allowed issuers configured for organization: " + tenantDomain;
+            throw handleError(message, null);
+        }
+
+        if (consumerAppDTO.getIssuerDetails() != null) {
+            // Validate whether the issuer organization is allowed to use.
+            String issuerTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(consumerAppDTO.getIssuerDetails().getIssuerOrgId());
+            String resolvedIssuerLocation = OAuth2OIDCConfigOrgUsageScopeUtils.
+                    getIssuerLocation(issuerTenant);
+            for (IssuerDetails issuerDetails : allowedIssuers) {
+                if (issuerDetails.getIssuer().equals(resolvedIssuerLocation) &&
+                        issuerDetails.getIssuerOrgId().equals(consumerAppDTO.getIssuerDetails().
+                                getIssuerOrgId())) {
+                    oAuthAppDO.setIssuerOrg(consumerAppDTO.getIssuerDetails().getIssuerOrgId());
+                    oAuthAppDO.setIssuerDetails(issuerDetails);
+                    break;
+                }
+            }
+            if (StringUtils.isEmpty(oAuthAppDO.getIssuerOrg())) {
+                String message = "Provided issuer organization: " +
+                        consumerAppDTO.getIssuerDetails().getIssuerOrgId() + " is not allowed for " +
+                        "organization: " + tenantDomain;
+                throw handleClientError(INVALID_REQUEST, message);
+            }
+        } else {
+            if (allowedIssuers.size() == 1) {
+                // If there is only one allowed issuer, set it as the issuer org of the app.
+                String onlyAllowedIssuerOrgId = allowedIssuers.get(0).getIssuerOrgId();
+                /*
+                 Validating whether the issuer is from the same organization as the app
+                 registration org.
+                */
+                if (StringUtils.equals(orgId, onlyAllowedIssuerOrgId)) {
+                    oAuthAppDO.setIssuerOrg(onlyAllowedIssuerOrgId);
+                    oAuthAppDO.setIssuerDetails(allowedIssuers.get(0));
+                } else {
+                    String message = "Issuer organization is not provided in the request " +
+                            "while the default issuer does not belong to tenant: " + tenantDomain;
+                    throw handleClientError(INVALID_REQUEST, message);
+                }
+            } else {
+                String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().
+                        getOrganizationManager().getPrimaryOrganizationId(orgId);
+                /*
+                 Setting the primary organization issuer as the app issuer org if it is in
+                 the allowed issuers list.
+                */
+                for (IssuerDetails issuerDetails : allowedIssuers) {
+                    if (issuerDetails.getIssuerOrgId().equals(primaryOrgId)) {
+                        oAuthAppDO.setIssuerOrg(primaryOrgId);
+                        oAuthAppDO.setIssuerDetails(issuerDetails);
+                        break;
+                    }
+                }
+                if (StringUtils.isEmpty(oAuthAppDO.getIssuerOrg())) {
+                    String message = "Issuer organization is not provided in the request while primary organization " +
+                            "issuer is not available as an allowed issuer for tenant: " + tenantDomain;
+                    throw handleClientError(INVALID_REQUEST, message);
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.cert.X509Certificate;
@@ -97,7 +98,7 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
 
             IdentityProvider identityProvider = JWTUtils.getResidentIDPForIssuer(claimsSet.get(), tenantDomain);
 
-            if (!validateSignature(signedJWT, identityProvider)) {
+            if (!validateSignature(signedJWT, identityProvider, tenantDomain)) {
                 // diagnosticLogBuilder will be null if diagnostic logs are disabled.
                 if (diagnosticLogBuilder != null) {
                     diagnosticLogBuilder.resultMessage("Signature validation failed.");
@@ -181,12 +182,13 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
      *
      * @param signedJWT Signed JWT
      * @param idp       Identity Provider
+     * @param tenantDomain Tenant domain that needs to be considered to resolve the certificate
      * @return if signature is valid or not
      * @throws IdentityOAuth2Exception If an error occurs while validating
      * @throws ParseException          If  an error occurs while retrieving claim set
      * @throws JOSEException           If an error occurs while verifying signature
      */
-    private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp)
+    private boolean validateSignature(SignedJWT signedJWT, IdentityProvider idp, String tenantDomain)
             throws IdentityOAuth2Exception, ParseException, JOSEException {
 
         X509Certificate x509Certificate;
@@ -198,7 +200,16 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         if (certificate.isPresent()) {
             x509Certificate = certificate.get();
         } else {
-            x509Certificate = resolveSignerCertificate(header, idp);
+            try {
+                if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                    x509Certificate = resolveSignerCertificateByTenant(idp, tenantDomain);
+                } else {
+                    x509Certificate = resolveSignerCertificate(header, idp);
+                }
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Unable to check whether the tenant is an organization. " +
+                        e.getMessage(), e);
+            }
         }
         if (x509Certificate == null) {
             throw new IdentityOAuth2Exception("Unable to locate certificate for Identity Provider: "
@@ -215,5 +226,19 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         validationReqDTO.addProperty(OAuth2Util.ISS, claimsSet.getIssuer());
         validationReqDTO.addProperty(OAuth2Util.AUD, String.join(",", claimsSet.getAudience()));
         validationReqDTO.addProperty(OAuth2Util.JTI, claimsSet.getJWTID());
+    }
+
+    /**
+     * Resolves the signer certificate for the Identity Provider using the specified tenant domain.
+     *
+     * @param idp The Identity Provider
+     * @param tenantDomain The tenant domain to use for certificate resolution
+     * @return The X509 certificate for signature verification
+     * @throws IdentityOAuth2Exception if unable to resolve the certificate
+     */
+    private X509Certificate resolveSignerCertificateByTenant(IdentityProvider idp, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return OAuth2Util.resolveSignerCertificate(idp, tenantDomain);
     }
 }

@@ -674,6 +674,7 @@ public final class OAuthConstants {
         public static final String CIBA_AUTH_REQ_EXPIRY_TIME = "cibaAuthReqExpiryTime";
         public static final String CIBA_NOTIFICATION_CHANNELS = "cibaNotificationChannels";
 
+        public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
 
         }

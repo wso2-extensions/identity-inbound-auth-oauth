@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -120,6 +121,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     // CIBA related properties.
     private String cibaNotificationChannels;
     private long cibaAuthReqExpiryTime;
+    private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -607,6 +609,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
 
         this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
     }
 
     /**
