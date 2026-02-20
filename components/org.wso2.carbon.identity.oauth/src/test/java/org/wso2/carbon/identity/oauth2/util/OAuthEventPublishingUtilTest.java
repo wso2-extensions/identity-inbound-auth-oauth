@@ -107,7 +107,7 @@ public class OAuthEventPublishingUtilTest {
         when(tokReqMsgCtx.getJWTID()).thenReturn("jti-123");
         when(tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE)).thenReturn("APPLICATION_USER");
         when(tokReqMsgCtx.getProperty("OAuthAppDO")).thenReturn(oAuthAppDO);
-        when(tokReqMsgCtx.getProperty(OAuthConstants.EventProperty.EXISTING_TOKEN_USED))
+        when(tokReqMsgCtx.getProperty(OAuthConstants.OIDCConfigProperties.EXISTING_TOKEN_USED))
                 .thenReturn(null);
 
         when(oAuthAppDO.getId()).thenReturn(123);
@@ -215,7 +215,7 @@ public class OAuthEventPublishingUtilTest {
             IdentityEventException, OrganizationManagementException {
 
         // Override the setup to set EXISTING_TOKEN_USED to true
-        when(tokReqMsgCtx.getProperty(OAuthConstants.EventProperty.EXISTING_TOKEN_USED))
+        when(tokReqMsgCtx.getProperty(OAuthConstants.OIDCConfigProperties.EXISTING_TOKEN_USED))
                 .thenReturn(true);
 
         try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);

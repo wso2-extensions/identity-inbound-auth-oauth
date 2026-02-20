@@ -661,6 +661,7 @@ public final class OAuthConstants {
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
         public static final String ENABLE_JWT_SCOPE_AS_ARRAY = "enableJwtScopeAsArray";
+        public static final String EXISTING_TOKEN_USED = "existingTokenUsed";
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.

@@ -450,7 +450,7 @@ public class AccessTokenEventUtil {
         if (tokReqMsgCtx == null) {
             return false;
         }
-        Object property = tokReqMsgCtx.getProperty(OAuthConstants.EventProperty.EXISTING_TOKEN_USED);
+        Object property = tokReqMsgCtx.getProperty(OAuthConstants.OIDCConfigProperties.EXISTING_TOKEN_USED);
         if (!(property instanceof Boolean)) {
             return false;
         }
