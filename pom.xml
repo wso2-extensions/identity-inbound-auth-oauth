@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.4.7-SNAPSHOT</version>
+    <version>7.4.8-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -1015,8 +1015,8 @@
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
 
         <!--SAML Common Util Version-->
-        <saml.common.util.version>1.4.1</saml.common.util.version>
-        <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
+        <saml.common.util.version>1.6.0</saml.common.util.version>
+        <saml.common.util.version.range>[1.4.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Account lock service versions -->
         <account.lock.service.version>1.9.11</account.lock.service.version>

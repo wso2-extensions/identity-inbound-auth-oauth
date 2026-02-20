@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.4.7-SNAPSHOT</version>
+        <version>7.4.8-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -258,7 +258,7 @@
                                 <importFeatureDef>org.wso2.carbon.claim.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.event.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:${saml.common.util.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:compatible:${saml.common.util.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>
