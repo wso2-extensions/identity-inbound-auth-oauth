@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.common.model.ApplicationBasicInfo;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
@@ -72,6 +73,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 
 /**
  * Unit test cases for OAuth2OIDCConfigMgtServiceImpl class.
@@ -369,6 +371,113 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         verify(configurationManager, never()).replaceResource(anyString(), any(ResourceAdd.class));
     }
 
+    @DataProvider(name = "fragmentAppScenarios")
+    public Object[][] fragmentAppScenarios() {
+        return new Object[][]{
+                // Scenario description, shouldUpdateSucceed, appCount, ServiceProviders array
+                {"Only fragment app in sub-org", true, 1, new ServiceProvider[]{
+                        createFragmentServiceProviderWithOAuth2("fragment-client-1")}},
+
+                {"Mixed fragment and regular apps", false, 2, new ServiceProvider[]{
+                        createFragmentServiceProviderWithOAuth2("fragment-client-1"),
+                        createServiceProviderWithOAuth2(CLIENT_ID)}},
+
+                {"App with null spProperties", false, 1, new ServiceProvider[]{
+                        createServiceProviderWithNullProperties(CLIENT_ID)}}
+        };
+    }
+
+    @Test(dataProvider = "fragmentAppScenarios")
+    public void testUpdateOAuth2OIDCConfigsToNoneScopeWithFragmentApps(
+            String scenario, boolean shouldUpdateSucceed, int appCount, ServiceProvider[] serviceProviders)
+            throws Exception {
+
+        // Create a config with NONE scope to trigger replaceResource flow
+        IssuerUsageScopeConfig issuerUsageScopeConfig = createOAuth2OIDCConfigWithScope(UsageScope.NONE);
+
+        // Existing resource with ALL_EXISTING_AND_FUTURE_ORGS scope
+        Resource existingResource = createResourceWithScope(UsageScope.ALL_EXISTING_AND_FUTURE_ORGS);
+        Resource updatedResource = createResourceWithScope(UsageScope.NONE);
+
+        // Mock getResource - return existing first, then updated after replace (if successful)
+        if (shouldUpdateSucceed) {
+            when(configurationManager.getResource(
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME,
+                    false)).thenReturn(existingResource, updatedResource);
+        } else {
+            when(configurationManager.getResource(
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME,
+                    OAuth2OIDCConfigOrgUsageScopeMgtConstants.TENANT_ISSUER_USAGE_SCOPE_RESOURCE_NAME,
+                    false)).thenReturn(existingResource);
+        }
+
+        // Mock organization calls for NONE scope validation
+        when(organizationManager.resolveOrganizationId(TENANT_DOMAIN)).thenReturn(ORG_ID);
+        when(organizationManager.getChildOrganizationsIds(ORG_ID, true))
+                .thenReturn(Collections.singletonList(SUB_ORG_ID));
+        when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT_DOMAIN);
+
+        // Mock application calls
+        ApplicationBasicInfo[] appBasicInfoArray = new ApplicationBasicInfo[appCount];
+        for (int i = 0; i < appCount; i++) {
+            ApplicationBasicInfo appBasicInfo = new ApplicationBasicInfo();
+            appBasicInfo.setApplicationResourceId("app-resource-id-" + i);
+            appBasicInfoArray[i] = appBasicInfo;
+            when(applicationManagementService.getApplicationByResourceId(
+                    appBasicInfo.getApplicationResourceId(), SUB_ORG_TENANT_DOMAIN))
+                    .thenReturn(serviceProviders[i]);
+        }
+
+        when(applicationManagementService.getCountOfApplications(eq(SUB_ORG_TENANT_DOMAIN), anyString(),
+                any(), anyBoolean())).thenReturn(appCount);
+        when(applicationManagementService.getApplicationBasicInfo(eq(SUB_ORG_TENANT_DOMAIN), anyString(),
+                any(), anyInt(), anyInt(), anyBoolean())).thenReturn(appBasicInfoArray);
+
+        // Mock OAuth app for regular apps (needed when regular app exists)
+        if (!shouldUpdateSucceed) {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setIssuerOrg(ORG_ID);
+            oAuth2UtilMock.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID, SUB_ORG_TENANT_DOMAIN))
+                    .thenReturn(oAuthAppDO);
+        }
+
+        // Mock resource replacement (only used if update succeeds)
+        if (shouldUpdateSucceed) {
+            when(configurationManager.replaceResource(
+                    eq(OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME),
+                    any(ResourceAdd.class))).thenReturn(new Resource());
+        }
+
+        if (shouldUpdateSucceed) {
+            // Should succeed - fragment apps are ignored
+            IssuerUsageScopeConfig result = oAuth2OIDCConfigMgtService.updateIssuerUsageScopeConfig(
+                    TENANT_DOMAIN, issuerUsageScopeConfig);
+
+            assertNotNull(result, "Result should not be null for scenario: " + scenario);
+            assertEquals(result.getUsageScope(), UsageScope.NONE,
+                    "Usage scope should be updated to NONE for scenario: " + scenario);
+
+            // Verify that replaceResource was called
+            verify(configurationManager).replaceResource(
+                    eq(OAuth2OIDCConfigOrgUsageScopeMgtConstants.ISSUER_USAGE_SCOPE_RESOURCE_TYPE_NAME),
+                    any(ResourceAdd.class));
+        } else {
+            // Should fail - regular apps block the update
+            try {
+                oAuth2OIDCConfigMgtService.updateIssuerUsageScopeConfig(TENANT_DOMAIN, issuerUsageScopeConfig);
+                fail("Expected OAuth2OIDCConfigMgtClientException for scenario: " + scenario);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtClientException e) {
+                // Expected - regular apps prevent update
+                validateClientException(e, "60002",
+                        "Cannot modify issuer usage scope. It is currently in use by sub-organization applications.");
+            }
+
+            // Verify that replaceResource was never called
+            verify(configurationManager, never()).replaceResource(anyString(), any(ResourceAdd.class));
+        }
+    }
+
     @Test
     public void testGetAllowedIssuersForPrimaryOrganization() throws Exception {
 
@@ -545,6 +654,32 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         InboundAuthenticationRequestConfig[] requestConfigs = new InboundAuthenticationRequestConfig[]{requestConfig};
         inboundAuthConfig.setInboundAuthenticationRequestConfigs(requestConfigs);
         serviceProvider.setInboundAuthenticationConfig(inboundAuthConfig);
+        return serviceProvider;
+    }
+
+    /**
+     * Helper method to create a fragment ServiceProvider with OAuth2 inbound auth configured.
+     */
+    private ServiceProvider createFragmentServiceProviderWithOAuth2(String clientId) {
+
+        ServiceProvider serviceProvider = createServiceProviderWithOAuth2(clientId);
+
+        // Add fragment app property
+        ServiceProviderProperty fragmentProperty = new ServiceProviderProperty();
+        fragmentProperty.setName(IS_FRAGMENT_APP);
+        fragmentProperty.setValue("true");
+        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fragmentProperty});
+
+        return serviceProvider;
+    }
+
+    /**
+     * Helper method to create a ServiceProvider with OAuth2 inbound auth and null spProperties.
+     */
+    private ServiceProvider createServiceProviderWithNullProperties(String clientId) {
+
+        ServiceProvider serviceProvider = createServiceProviderWithOAuth2(clientId);
+        serviceProvider.setSpProperties(null);
         return serviceProvider;
     }
 
