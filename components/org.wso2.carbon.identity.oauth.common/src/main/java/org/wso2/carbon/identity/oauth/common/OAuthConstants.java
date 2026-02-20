@@ -661,6 +661,7 @@ public final class OAuthConstants {
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
         public static final String ENABLE_JWT_SCOPE_AS_ARRAY = "enableJwtScopeAsArray";
+        public static final String EXISTING_TOKEN_USED = "existingTokenUsed";
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.
@@ -841,6 +842,26 @@ public final class OAuthConstants {
         public static final String FRAGMENT_JWT = "fragment.jwt";
         public static final String FORM_POST_JWT = "form_post.jwt";
         public static final String DIRECT = "direct"; // Used for API based authentication.
+    }
+
+    /**
+     * Event constants.
+     * This is temporarily added until java 21 related issues are resolved.
+     * Afterwards, the constants defined in IdentityEventConstants should be used.
+     * Tracking issue : https://github.com/wso2-enterprise/asgardeo-product/issues/34575
+     */
+    @Deprecated
+    public static class EventProperty {
+
+        public static final String TOKEN_ID = "TOKEN_ID";
+        public static final String USER_TYPE = "USER_TYPE";
+        public static final String CLIENT_ID = "CLIENT_ID";
+        public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
+        public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
+        public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
+        public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
+        public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
+        public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
     }
 
 }

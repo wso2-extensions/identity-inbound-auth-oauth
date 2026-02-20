@@ -408,7 +408,7 @@ public class AccessTokenIssuer {
         }
 
         if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
-            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO, tokenRespDTO);
         }
 
         return tokenRespDTO;
