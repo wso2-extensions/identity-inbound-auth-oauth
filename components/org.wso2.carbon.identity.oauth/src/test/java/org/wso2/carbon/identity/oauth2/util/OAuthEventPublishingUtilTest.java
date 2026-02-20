@@ -52,6 +52,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -206,6 +207,152 @@ public class OAuthEventPublishingUtilTest {
             assertEquals("carbon.super",
                     properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
             assertEquals("TestApp", properties.get(OAuthConstants.EventProperty.SERVICE_PROVIDER));
+        }
+    }
+
+    @Test
+    public void testPublishTokenIssueEventWithExistingTokenUsed() throws UserIdNotFoundException,
+            IdentityEventException, OrganizationManagementException {
+
+        // Override the setup to set EXISTING_TOKEN_USED to true
+        when(tokReqMsgCtx.getProperty(OAuthConstants.EventProperty.EXISTING_TOKEN_USED))
+                .thenReturn(true);
+
+        try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = Mockito.mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> mockedOAuthComponentHolder = Mockito.mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> mockedOrgManagementUtil = Mockito.mockStatic(
+                     OrganizationManagementUtil.class);
+             MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = Mockito.mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(
+                     IdentityTenantUtil.class)) {
+
+            mockedOAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                    .thenReturn(tokenIssuer);
+            when(tokenIssuer.getAccessTokenType()).thenReturn("Opaque");
+
+            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(identityEventService);
+
+            OAuthComponentServiceHolder oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            mockedOAuthComponentHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(oAuthComponentServiceHolder);
+            when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId("carbon.super")).thenReturn("issuer-org-id");
+
+            mockedOrgManagementUtil.when(() -> OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                    "carbon.super")).thenReturn("carbon.super");
+
+            org.wso2.carbon.identity.application.common.model.ServiceProvider serviceProvider =
+                    mock(org.wso2.carbon.identity.application.common.model.ServiceProvider.class);
+            when(serviceProvider.getApplicationName()).thenReturn("TestApp");
+            mockedOAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            mockedTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
+
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO,
+                    oAuth2AccessTokenRespDTO);
+
+            ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+            verify(identityEventService).handleEvent(eventCaptor.capture());
+
+            Event event = eventCaptor.getValue();
+            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
+
+            Map<String, Object> properties = event.getEventProperties();
+
+            // Verify EXISTING_TOKEN_USED is true
+            assertEquals(true, properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
+
+            // Verify other properties are still correctly set
+            assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));
+            assertEquals("authorization_code", properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE));
+            assertEquals("test-client-id", properties.get(OAuthConstants.EventProperty.CLIENT_ID));
+        }
+    }
+
+    @Test
+    public void testPublishTokenIssueEventWithUserNameNotPresent() throws UserIdNotFoundException,
+            IdentityEventException, OrganizationManagementException {
+
+        // Override the setup to set userName to null
+        when(authorizedUser.getUserName()).thenReturn(null);
+
+        try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = Mockito.mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> mockedOAuthComponentHolder = Mockito.mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> mockedOrgManagementUtil = Mockito.mockStatic(
+                     OrganizationManagementUtil.class);
+             MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = Mockito.mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(
+                     IdentityTenantUtil.class)) {
+
+            mockedOAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                    .thenReturn(tokenIssuer);
+            when(tokenIssuer.getAccessTokenType()).thenReturn("Opaque");
+
+            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(identityEventService);
+
+            OAuthComponentServiceHolder oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            mockedOAuthComponentHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(oAuthComponentServiceHolder);
+            when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId("carbon.super")).thenReturn("issuer-org-id");
+
+            mockedOrgManagementUtil.when(() -> OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                    "carbon.super")).thenReturn("carbon.super");
+
+            org.wso2.carbon.identity.application.common.model.ServiceProvider serviceProvider =
+                    mock(org.wso2.carbon.identity.application.common.model.ServiceProvider.class);
+            when(serviceProvider.getApplicationName()).thenReturn("TestApp");
+            mockedOAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            mockedTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
+
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO,
+                    oAuth2AccessTokenRespDTO);
+
+            ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+            verify(identityEventService).handleEvent(eventCaptor.capture());
+
+            Event event = eventCaptor.getValue();
+            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
+
+            Map<String, Object> properties = event.getEventProperties();
+
+            // Verify USER_NAME is null when not present
+            assertNull(properties.get(IdentityEventConstants.EventProperty.USER_NAME));
+
+            // Verify other user-related properties are still set
+            assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));
+            assertEquals("PRIMARY", properties.get(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN));
+            assertEquals(true, properties.get(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER));
+
+            // Verify non-user properties are correctly set
+            assertEquals("authorization_code", properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE));
+            assertEquals("test-client-id", properties.get(OAuthConstants.EventProperty.CLIENT_ID));
+            assertFalse((Boolean) properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
         }
     }
 }
