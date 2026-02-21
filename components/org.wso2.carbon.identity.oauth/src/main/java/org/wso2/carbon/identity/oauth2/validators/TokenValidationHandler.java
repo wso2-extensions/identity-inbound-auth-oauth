@@ -23,21 +23,28 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -436,7 +443,7 @@ public class TokenValidationHandler {
     private OAuth2IntrospectionResponseDTO validateAccessToken(OAuth2TokenValidationMessageContext messageContext,
                                                                OAuth2TokenValidationRequestDTO validationRequest,
                                                                OAuth2TokenValidator tokenValidator)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO accessTokenDO = null;
@@ -536,10 +543,40 @@ public class TokenValidationHandler {
             introResp.setUsername(getAuthzUser(accessTokenDO));
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+
+            String consumerKey = accessTokenDO.getConsumerKey();
+
+            if (!OAuth2Util.isJWT(messageContext.getRequestDTO().getAccessToken().getIdentifier())) {
+                OAuthAppDO oAuthAppDO;
+                try {
+                    oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
+                } catch (InvalidOAuthClientException e) {
+                    throw new IdentityOAuth2Exception(
+                            "Error while retrieving OAuth app information for clientId: " + accessTokenDO.getConsumerKey());
+                }
+                List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
+                introResp.setAud(String.join(",", audience));
+            }
+
             // Set token binding info.
             if (accessTokenDO.getTokenBinding() != null) {
-                introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
+                String bindingType = accessTokenDO.getTokenBinding().getBindingType();
+                introResp.setBindingType(bindingType);
                 introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
+
+                // Validate SSO session bound token.
+                if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
+                    OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+                    if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled() || (appDO.isTokenRevocationWithIDPSessionTerminationEnabled() && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                        if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
+                            log.debug("Token is not bound to an active SSO session.");
+                            // Revoke the SSO session bound access token if the session is invalid/terminated.
+                            revokeSSOSessionBoundToken(accessTokenDO);
+                            introResp.setActive(false);
+                            return introResp;
+                        }
+                    }
+                }
             }
             // add authorized user type
             if (accessTokenDO.getTokenType() != null) {
@@ -805,5 +842,56 @@ public class TokenValidationHandler {
         String[] validatedScopes = accessTokenDO.getScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(validatedScopes, requestedAllowedScopes);
         introResp.setScope(OAuth2Util.buildScopeString((scopesToReturn)));
+    }
+
+    /**
+     * Check whether the SSO-session-bound access token is still tied to an active SSO session.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return True if the token is bound to an active SSO session, false otherwise.
+     */
+    private boolean isTokenBoundToActiveSSOSession(AccessTokenDO accessTokenDO) {
+
+        if (StringUtils.isBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
+            log.debug("No token binding value is found for SSO session bound token.");
+            return false;
+        }
+
+        String sessionIdentifier = accessTokenDO.getTokenBinding().getBindingValue();
+        SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionIdentifier);
+        if (sessionContext == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Session context is not found corresponding to the session identifier: " + sessionIdentifier);
+            }
+            return false;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("SSO session validation successful for the given session identifier: " + sessionIdentifier);
+        }
+        return true;
+    }
+
+    /**
+     * Revoke the SSO session bound access token if the associated session is terminated. This is only applicable for
+     * the applications that has enabled 'revokeTokensWhenIdPSessionTerminated'.
+     *
+     * @param accessTokenDO Access token data object.
+     */
+    private void revokeSSOSessionBoundToken(AccessTokenDO accessTokenDO) {
+
+        String consumerKey = accessTokenDO.getConsumerKey();
+        try {
+            OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey());
+            OAuthRevocationRequestDTO revokeRequestDTO = new OAuthRevocationRequestDTO();
+            revokeRequestDTO.setConsumerKey(consumerKey);
+            revokeRequestDTO.setToken(accessTokenDO.getAccessToken());
+            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
+                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while revoking SSO session bound access token.", e);
+        } catch (UserIdNotFoundException e) {
+            log.error("User id not found for the access token", e);
+        }
     }
 }

@@ -122,6 +122,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -148,6 +149,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -183,6 +185,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
@@ -197,6 +200,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_INTROSPECT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_JWKS_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_REVOKE_EP_URL;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
@@ -363,6 +367,9 @@ public class OAuth2Util {
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
+
+    private static final String ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR = "OAuth.EnableLegacySessionBoundTokenBehaviour";
+    private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY = "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
 
     private OAuth2Util() {
 
@@ -4786,5 +4793,69 @@ public class OAuth2Util {
     public static boolean useUsernameAsSubClaim() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.SERVICE_PROVIDERS_SUB_CLAIM));
+    }
+
+    /**
+     * Get token binding value from the request headers.
+     *
+     * @param oAuth2AccessTokenReqDTO OAuth2AccessTokenReqDTO
+     * @param cookieName              Cookie name
+     * @return Token binding value
+     */
+    public static Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO,
+            String cookieName) {
+
+        HttpRequestHeader[] httpRequestHeaders = oAuth2AccessTokenReqDTO.getHttpRequestHeaders();
+        if (ArrayUtils.isEmpty(httpRequestHeaders)) {
+            return Optional.empty();
+        }
+
+        for (HttpRequestHeader httpRequestHeader : httpRequestHeaders) {
+            if (HttpHeaders.COOKIE.equalsIgnoreCase(httpRequestHeader.getName())) {
+                if (ArrayUtils.isEmpty(httpRequestHeader.getValue())) {
+                    return Optional.empty();
+                }
+
+                String[] cookies = httpRequestHeader.getValue()[0].split(";");
+                String cookiePrefix = cookieName + "=";
+                for (String cookie : cookies) {
+                    if (StringUtils.isNotBlank(cookie) && cookie.trim().startsWith(cookiePrefix) && !HttpCookie.parse(
+                            cookie).isEmpty()) {
+                        String cookieValue = HttpCookie.parse(cookie).get(0).getValue();
+                        if (StringUtils.isNotBlank(cookieValue)) {
+                            if (COMMONAUTH_COOKIE.equals(cookieName)) {
+                                // For sso-session binding, token binding value will be the session context id.
+                                return Optional.of(DigestUtils.sha256Hex(cookieValue));
+                            } else {
+                                return Optional.of(cookieValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Check whether the legacy session bound token behaviour is enabled. Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isLegacySessionBoundTokenBehaviourEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_LEGACY_SESSION_BOUND_TOKEN_BEHAVIOUR));
+    }
+
+    /**
+     * Check whether session bound tokens are allowed after session expiry. Default behaviour is disabled.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    public static boolean isSessionBoundTokensAllowedAfterSessionExpiry() {
+
+        // This setting is only applicable if legacy session bound token behaviour is enabled.
+        return isLegacySessionBoundTokenBehaviourEnabled() && Boolean.parseBoolean(
+                IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
 }
