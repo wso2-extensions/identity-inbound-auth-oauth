@@ -515,7 +515,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         List<String> pathSegments = extractNestedClaimPath(operation.getPath());
 
         // nested remove
-        if (pathSegments.size() > 1) {
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
             return removeNestedClaim(pathSegments, requestAccessToken, responseAccessToken, operation);
         }
         ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
@@ -696,7 +696,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         List<String> pathSegments = extractNestedClaimPath(operation.getPath());
         // nested replace
-        if (pathSegments.size() > 1) {
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
             return replaceNestedClaim(pathSegments, token, tokenBuilder, operation);
         }
 
@@ -925,6 +925,25 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         LOG.info("Invalid index: " + indexPart);
         return -1;
+    }
+
+    private boolean isArrayIndexPath(List<String> pathSegments) {
+
+        if (pathSegments.size() != 2) {
+            return false;
+        }
+
+        String lastSegment = pathSegments.get(1);
+        if (LAST_ELEMENT_CHARACTER.equals(lastSegment)) {
+            return true;
+        }
+
+        try {
+            Integer.parseInt(lastSegment);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private boolean validateNQChar(String input) {
