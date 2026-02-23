@@ -117,13 +117,13 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
             }
 
             // Get the "IsUserServingAgent" flag from ThreadLocal
-            Boolean isUserServingAgent = IdentityUtil.getThreadLocalIsUserServingAgent();
+            Boolean isUserServingAgent = (Boolean) IdentityUtil.threadLocalProperties.get().get("isUserServingAgent");
             if (isUserServingAgent == null) {
                 isUserServingAgent = false;
             }
 
             // Only create the OAuth2/OIDC application if this is a user-serving agent
-            if (Boolean.TRUE.equals(isUserServingAgent)) {
+            if (isUserServingAgent) {
                 createAgentApplication(username, tenantDomain);
             } else {
                 if (log.isDebugEnabled()) {
@@ -274,7 +274,7 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
             if (configs != null) {
                 for (InboundAuthenticationRequestConfig config : configs) {
                     if ("oauth2".equalsIgnoreCase(config.getInboundAuthType())) {
-                        IdentityUtil.setThreadLocalApplicationClientId(config.getInboundAuthKey());
+                        IdentityUtil.threadLocalProperties.get().put("applicationClientId", config.getInboundAuthKey());
                         if (log.isDebugEnabled()) {
                             log.debug("Stored agent application client ID in thread-local " +
                                     "for agent: " + username);
