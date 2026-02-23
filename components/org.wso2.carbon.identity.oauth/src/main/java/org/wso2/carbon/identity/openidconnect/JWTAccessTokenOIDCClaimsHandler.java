@@ -78,6 +78,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -136,6 +137,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
         boolean isOrganizationSSOUserOrgSwitch = isOrganizationSsoUserSwitchingOrganization(
                 requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationSSOUser = isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
         if (allowedClaims.isEmpty()) {
@@ -143,14 +145,18 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return new HashMap<>();
         }
 
+        boolean hasAllRequiredClaimsInCache = hasAllRequiredClaimsInCache(allowedClaims,
+                userAttributes);
+
         if (!returnOnlyAppAssociatedRoles &&
-                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser ||
-                isOrganizationSSOUserOrgSwitch)) {
+                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser
+                || isOrganizationSSOUserOrgSwitch || isOrganizationSSOUser)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
             setOrganizationSwitchAttributes(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
-        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSOUserOrgSwitch)) {
+        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSOUserOrgSwitch
+                || (isOrganizationSSOUser && !hasAllRequiredClaimsInCache))) {
             // This is to handle the case where the user is a local user, or an organization SSO user where this b2b
             // user could be a federated user, but still exist in our userstore.
             setOrganizationSwitchAttributes(requestMsgCtx);
@@ -1028,6 +1034,44 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
            organization. */
         return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
                 (accessingOrganization);
+    }
+
+    /**
+     * Determines whether the authenticated user is an organization SSO user.
+     * An organization SSO user is defined as a federated user with a defined resident organization
+     * where the organization IDP uses SSO authentication.
+     *
+     * @param authenticatedUser the authenticated user to evaluate
+     * @return {@code true} if the user meets all organization SSO criteria, {@code false} otherwise
+     */
+    private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
+
+        return authenticatedUser.isFederatedUser()
+                && authenticatedUser.getUserResidentOrganization() != null
+                && authenticatedUser.getFederatedIdPName().equals(ORGANIZATION_LOGIN_IDP_NAME);
+    }
+
+    /**
+     * Check whether all allowed claims are covered by the user attributes retrieved from the authorization grant cache.
+     * This is used to determine if a userstore lookup can be skipped because all required claims are already cached.
+     *
+     * @param allowedClaims        List of allowed claim URIs configured for the JWT access token.
+     * @param cachedUserAttributes User attributes retrieved from the authorization grant cache,
+     *                             keyed by {@link ClaimMapping}.
+     * @return true if every allowed claim has a corresponding entry in the cached user attributes, false otherwise.
+     */
+    private boolean hasAllRequiredClaimsInCache(List<String> allowedClaims,
+                                                Map<ClaimMapping, String> cachedUserAttributes) {
+
+        if (MapUtils.isEmpty(cachedUserAttributes)) {
+            return false;
+        }
+        // Collect all remote claim URIs present in the cached attributes.
+        java.util.Set<String> cachedClaimUris = cachedUserAttributes.keySet().stream()
+                .map(claimMapping -> claimMapping.getRemoteClaim().getClaimUri())
+                .collect(Collectors.toSet());
+
+        return cachedClaimUris.containsAll(allowedClaims);
     }
 
     /**
