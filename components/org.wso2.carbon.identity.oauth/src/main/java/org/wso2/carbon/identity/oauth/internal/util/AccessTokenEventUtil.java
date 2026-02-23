@@ -354,9 +354,14 @@ public class AccessTokenEventUtil {
             properties.put(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID,
                     organizationId);
             try {
-                rootOrgTenantDomain =
-                        OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
-                                tokenReqDTO.getTenantDomain());
+                if (tokenReqDTO.getTenantDomain() != null) {
+                    if (tokenReqDTO.getTenantDomain().equals("carbon.super")) {
+                        rootOrgTenantDomain = "carbon.super";
+                    } else {
+                        rootOrgTenantDomain = OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                                        tokenReqDTO.getTenantDomain());
+                    }
+                }
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
                         tenantDomain, e);
