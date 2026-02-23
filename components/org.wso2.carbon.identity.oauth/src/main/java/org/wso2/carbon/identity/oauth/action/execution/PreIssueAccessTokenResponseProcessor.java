@@ -514,7 +514,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         List<String> pathSegments = extractNestedClaimPath(operation.getPath());
 
-        // nested remove
+        // nested removal
         if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
             return removeNestedClaim(pathSegments, requestAccessToken, responseAccessToken, operation);
         }
@@ -526,7 +526,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     "Claim not found.");
         }
 
-        return removePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
+        if (claimPathInfo.getIndex() != -1) {
+            return removeClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim,
+                    responseAccessToken);
+        } else {
+            return removePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
+        }
     }
 
     private OperationExecutionResult removeNestedClaim(List<String> pathSegments, AccessToken requestAccessToken,
@@ -578,6 +583,39 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         String relativePath = operationPath.substring(ACCESS_TOKEN_CLAIMS_PATH_PREFIX.length());
         return List.of(relativePath.split("/"));
+    }
+
+    private OperationExecutionResult removeClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
+                                                                               ClaimPathInfo claimPathInfo,
+                                                                               AccessToken.Claim claim,
+                                                                               AccessToken.Builder
+                                                                                       responseAccessToken) {
+
+        if (!(claim.getValue() instanceof List)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim to remove the value from is not an array.");
+        }
+
+        List<String> claimValueList = (List<String>) claim.getValue();
+        if (claimPathInfo.getIndex() < 0 || claimPathInfo.getIndex() >= claimValueList.size()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        String claimValueToRemove = claimValueList.get(claimPathInfo.getIndex());
+
+        AccessToken.Claim claimInResponse =
+                responseAccessToken.getClaim(claimPathInfo.getClaimName());
+        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
+        boolean removed = claimValueListInResponse.remove(claimValueToRemove);
+
+        if (removed) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Claim value removed.");
+        } else {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Failed to remove claim value.");
+        }
     }
 
     private OperationExecutionResult removePrimitiveTypeClaim(PerformableOperation operation,
