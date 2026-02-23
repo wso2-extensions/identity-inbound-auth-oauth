@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,13 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
         this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
     }
+
+    private IssuerDetails issuerDetails;
+
+    // Fragment app flag. This will be used to identify whether the app is a fragment app or not.
+    @XmlTransient
+    @JsonIgnore
+    private boolean isFragmentApp;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -581,6 +589,28 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
+    }
+
+    @XmlTransient
+    public boolean getIsFragmentApp() {
+
+        return isFragmentApp;
+    }
+
+    @XmlTransient
+    public void setIsFragmentApp(boolean isFragmentApp) {
+
+        this.isFragmentApp = isFragmentApp;
     }
 }
 

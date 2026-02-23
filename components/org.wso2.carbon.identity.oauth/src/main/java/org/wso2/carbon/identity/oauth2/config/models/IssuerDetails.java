@@ -18,11 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.config.models;
 
+import java.io.Serializable;
+
 /**
  * Contains details related to an issuer, such as the organization ID and tenant domain it belongs to. This is used
  * when listing allowed issuers, to provide more information about the issuers to the users.
  */
-public class IssuerDetails {
+public class IssuerDetails implements Serializable {
+
+    private static final long serialVersionUID = 3847562910845672893L;
 
     private String issuer;
     private String issuerOrgId;

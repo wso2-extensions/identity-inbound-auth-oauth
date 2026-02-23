@@ -41,12 +41,14 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols.OAUTH2;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 
 /**
  * OAuth Protocol Handler. This class is responsible for handling the protocol operations for OAuth2 according to the
@@ -154,6 +156,19 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                 if (!StringUtils.equals(oauthApp.getOauthConsumerSecret(), consumerAppDTO.getOauthConsumerSecret())) {
                     throw new IdentityOAuthClientException("Invalid ClientSecret provided for update.");
                 }
+
+                /*
+                 Checking whether the application is a fragment app by checking the application properties and set
+                 the value in the DTO. This must be set explicitly to prevent clients from bypassing issuer-org
+                 validation by injecting isFragmentApp=true in the request payload.
+                */
+                boolean isFragmentApp = application.getSpProperties() != null &&
+                        Arrays.stream(application.getSpProperties()).
+                                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                                        Boolean.parseBoolean(property.getValue()));
+                // Always set the flag explicitly based on application properties, never trust client input
+                consumerAppDTO.setIsFragmentApp(isFragmentApp);
+
                 OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().updateConsumerApplication(
                         consumerAppDTO, false);
                 return createInboundAuthRequestConfig(consumerAppDTO);

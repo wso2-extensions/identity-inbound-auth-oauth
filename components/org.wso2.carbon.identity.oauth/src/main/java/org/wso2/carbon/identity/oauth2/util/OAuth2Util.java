@@ -134,6 +134,8 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -4849,18 +4851,31 @@ public class OAuth2Util {
 
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is
-             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
-             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
-             used as the issuer is the root tenant.
-            */
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is
+         registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+         to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+         used as the issuer should be extracted from the application OIDC configurations. If that
+         is not available then the root organization's issuer will be selected as the issuer.
+        */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application resident organization id is found in the carbon context. " +
-                        "Using the root tenant domain to build the id token issuer.");
+            try {
+                String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+                String issuerOrg = oAuthAppDO.getIssuerOrg();
+                if (StringUtils.isNotEmpty(issuerOrg)) {
+                    String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                    return OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(issuerTenantDomain);
+                } else {
+                    tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                }
+            } catch (OrganizationManagementException | OAuth2OIDCConfigOrgUsageScopeMgtServerException |
+                     InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving issuer for clientId: " +
+                        clientId, e);
             }
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
             try {
@@ -6233,19 +6248,44 @@ public class OAuth2Util {
 
     /**
      * Get the X509 certificate of the Identity Provider.
+     * Use {@link #resolveSignerCertificate(IdentityProvider, String)} instead and provide the tenant domain explicitly.
      *
      * @param identityProvider Identity Provider.
      * @return X509Certificate.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
+    @Deprecated
     public static X509Certificate resolverSignerCertificate(IdentityProvider identityProvider)
             throws IdentityOAuth2Exception {
 
-        X509Certificate x509Certificate;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return resolveSignerCertificate(identityProvider, tenantDomain);
+    }
+
+    /**
+     * Retrieves the X509 certificate of the Identity Provider for signature verification.
+     *
+     * <p>If the identity provider is a resident IDP, the certificate is retrieved from the tenant's
+     * keystore. For federated IDPs, the certificate is decoded from the IDP configuration.
+     *
+     * @param identityProvider Identity Provider.
+     * @param tenantDomain     Tenant domain of the IdP to get the certificate.
+     * @return X509Certificate.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static X509Certificate resolveSignerCertificate(IdentityProvider identityProvider, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Resolving signer certificate for Identity Provider: " +
+                    identityProvider.getIdentityProviderName() + " in tenant domain: " + tenantDomain);
+        }
+
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
+
+        X509Certificate x509Certificate;
         try {
             if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
                     identityProvider.getIdentityProviderName())) {
@@ -6636,5 +6676,41 @@ public class OAuth2Util {
                 .map(parameter -> parameter.getValue()[0])
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Retrieve the tenant domain based on the application's configured issuer organization. If the application does
+     * not have an issuer organization configured, it will fall back to the root tenant domain. The issuer
+     * organization configuration is only allowed in sub organization OAuth2 applications.
+     *
+     * @param clientID Client ID of the OAuth application.
+     * @param applicationResidentOrgId Resident organization ID of the OAuth application.
+     * @return Tenant domain based on the application's configured issuer organization.
+     * @throws IdentityOAuth2Exception When an error occurred while retrieving the tenant domain.
+     */
+    public static String getTenantDomainByApplicationTokenIssuer(String clientID, String applicationResidentOrgId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        try {
+            String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(applicationResidentOrgId);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID, appTenant);
+            String issuerOrg = oAuthAppDO.getIssuerOrg();
+            if (StringUtils.isNotEmpty(issuerOrg)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(issuerOrg);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Application issuer configuration is null or empty. Falling back to root " +
+                            "tenant domain token");
+                }
+                tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            }
+        } catch (OrganizationManagementException | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while getting the tenant domain for client id: "
+                    + clientID, e);
+        }
+        return tenantDomain;
     }
 }

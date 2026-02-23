@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 
 import java.io.FileInputStream;
 import java.nio.file.Path;
@@ -82,12 +83,21 @@ public class JWTUtilsTest {
 
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
     private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextMockedStatic;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic;
 
     @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
+
+        // Mock OAuthServerConfiguration to prevent ExceptionInInitializerError in OAuth2Util
+        oAuthServerConfigurationMockedStatic = mockStatic(OAuthServerConfiguration.class);
+        OAuthServerConfiguration oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+        oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                .thenReturn(oAuthServerConfiguration);
+        when(oAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
+
         privilegedCarbonContextMockedStatic = mockStatic(PrivilegedCarbonContext.class);
         privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
         privilegedCarbonContextMockedStatic.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
@@ -100,6 +110,7 @@ public class JWTUtilsTest {
 
         identityKeyStoreResolverMockedStatic.close();
         privilegedCarbonContextMockedStatic.close();
+        oAuthServerConfigurationMockedStatic.close();
     }
 
     @Test(description = "Test the resolveSignerCertificate method")

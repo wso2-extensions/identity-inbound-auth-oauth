@@ -502,17 +502,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return returningClaims;
     }
 
-    private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
          If applicationResidentOrgId is not empty, then the request comes for an application which is
          registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
-         that needs to be signing the token should be the root tenant of the organization in applicationResidentOrgId.
+         that needs to be signing the token should be extracted from the application OIDC configurations. If that
+         is not available then the root organization will be selected as the signing tenant domain.
         */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            return OAuth2Util.getTenantDomainByApplicationTokenIssuer(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), applicationResidentOrgId);
         } else if (isJWTSignedWithSPKey) {
             return (String) tokReqMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         } else {

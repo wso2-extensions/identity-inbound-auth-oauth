@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -141,6 +142,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsValidator authorizationDetailsValidator;
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
+    private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1116,4 +1118,26 @@ public class OAuth2ServiceComponentHolder {
 
         this.orgResourceResolverService = orgResourceResolverService;
     }
+
+    /**
+     * Get the OAuth2 OIDC configuration organization usage scope management service.
+     *
+     * @return OAuth2OIDCConfigOrgUsageScopeMgtService instance.
+     */
+    public OAuth2OIDCConfigOrgUsageScopeMgtService getOAuth2OIDCConfigOrgUsageScopeMgtService() {
+
+        return oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
+
+    /**
+     * Set the OAuth2 OIDC configuration organization usage scope management service.
+     *
+     * @param oAuth2OIDCConfigOrgUsageScopeMgtService OAuth2OIDCConfigOrgUsageScopeMgtService instance.
+     */
+    public void setOAuth2OIDCConfigOrgUsageScopeMgtService(
+            OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService) {
+
+        this.oAuth2OIDCConfigOrgUsageScopeMgtService = oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
 }
+
