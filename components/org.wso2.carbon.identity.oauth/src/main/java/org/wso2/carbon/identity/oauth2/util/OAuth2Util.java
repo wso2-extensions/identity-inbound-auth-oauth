@@ -616,7 +616,8 @@ public class OAuth2Util {
     /**
      * Check whether the client secret is expired.
      *
-     * @param expiresAt expiry timestamp of client secret since epoch
+     * @param expiresAt expiry timestamp of client secret since epoch in milliseconds.
+     *                  Null means the secret does not expire.
      * @return true if the client secret is expired, false otherwise.
      */
     public static boolean isClientSecretExpired(Long expiresAt) {

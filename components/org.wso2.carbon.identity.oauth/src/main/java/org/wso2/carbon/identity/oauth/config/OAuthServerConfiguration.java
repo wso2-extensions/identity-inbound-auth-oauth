@@ -3217,6 +3217,11 @@ public class OAuthServerConfiguration {
                         String secretCountText = isClientSecretLimitElement.getText().trim();
                         try {
                             clientSecretCount = Integer.parseInt(secretCountText);
+                            if (clientSecretCount <= 0) {
+                                log.error("Invalid value for client secret count: '" + secretCountText +
+                                        "'. Secret count should be a positive value. Using default client " +
+                                        "secret count: unlimited secrets");
+                            }
                         } catch (NumberFormatException e) {
                             log.error("Invalid value for client secret count: '" + secretCountText +
                                     "'. Using default client secret count: unlimited secrets", e);
