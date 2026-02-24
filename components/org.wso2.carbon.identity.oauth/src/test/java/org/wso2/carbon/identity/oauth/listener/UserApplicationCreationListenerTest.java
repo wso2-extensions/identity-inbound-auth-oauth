@@ -59,6 +59,7 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
     private static final String TENANT_DOMAIN = "carbon.super";
     private static final int TENANT_ID = -1234;
     public static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
+    public static final String AGENT_LISTENER_ORDER_ID = "AgentIdentity.ApplicationCreatorListener.Order";
 
     @Mock
     private AbstractUserStoreManager userStoreManager;
@@ -82,18 +83,26 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
     private UserApplicationCreationListener listener;
 
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws Exception {
 
         openMocks(this);
 
-        // Set up static mocks BEFORE creating the listener
-        identityUtilMockedStatic = mockStatic(IdentityUtil.class);
+        // Initialize the ThreadLocal in IdentityUtil before mocking
+        // Since threadLocalProperties is static final, we can't replace it,
+        // but we can set its value
+        IdentityUtil.threadLocalProperties.set(new HashMap<>());
+
+        // Set up static mocks - use CALLS_REAL_METHODS to allow field access
+        identityUtilMockedStatic = mockStatic(IdentityUtil.class, org.mockito.Mockito.CALLS_REAL_METHODS);
         identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
         oAuthComponentServiceHolderMockedStatic = mockStatic(OAuthComponentServiceHolder.class);
 
-        when(IdentityUtil.getProperty(AGENT_LISTENER_ENABLE)).thenReturn("true");
+        // Mock only the specific static methods we need
+        identityUtilMockedStatic.when(() -> IdentityUtil.getProperty(AGENT_LISTENER_ENABLE)).thenReturn("true");
+        identityUtilMockedStatic.when(() -> IdentityUtil.getProperty(AGENT_LISTENER_ORDER_ID)).thenReturn("99");
 
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
+        oAuthComponentServiceHolderMockedStatic.when(() -> OAuthComponentServiceHolder.getInstance())
+                .thenReturn(oAuthComponentServiceHolder);
         when(oAuthComponentServiceHolder.getApplicationManagementService())
                 .thenReturn(applicationManagementService);
 
@@ -102,6 +111,9 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
     @AfterMethod
     public void tearDown() {
+
+        // Clean up the ThreadLocal
+        IdentityUtil.threadLocalProperties.remove();
 
         identityUtilMockedStatic.close();
         identityTenantUtilMockedStatic.close();
@@ -123,7 +135,8 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
         setupCommonMocks();
 
         when(user.getUserStoreDomain()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
+        identityUtilMockedStatic.when(() -> IdentityUtil.getAgentIdentityUserstoreName())
+                .thenReturn(AGENT_USERSTORE_DOMAIN);
 
         boolean result = disabledListener.doPostAddUserWithID(user, "password", new String[]{"role1"},
                 new HashMap<>(), null, userStoreManager);
@@ -139,7 +152,8 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         setupCommonMocks();
         when(user.getUserStoreDomain()).thenReturn(PRIMARY_USERSTORE_DOMAIN);
-        when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
+        identityUtilMockedStatic.when(() -> IdentityUtil.getAgentIdentityUserstoreName())
+                .thenReturn(AGENT_USERSTORE_DOMAIN);
 
         boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
                 new HashMap<>(), null, userStoreManager);
@@ -155,8 +169,10 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         setupCommonMocks();
         when(user.getUserStoreDomain()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        when(IdentityUtil.getThreadLocalIsUserServingAgent()).thenReturn(false);
+        identityUtilMockedStatic.when(() -> IdentityUtil.getAgentIdentityUserstoreName())
+                .thenReturn(AGENT_USERSTORE_DOMAIN);
+        // Set isUserServingAgent to false in threadLocalProperties
+        IdentityUtil.threadLocalProperties.get().put("isUserServingAgent", false);
 
         boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
                 new HashMap<>(), null, userStoreManager);
@@ -172,8 +188,6 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         setupCommonMocks();
         setupAgentUserMocks();
-        when(applicationManagementService.createApplication(any(ApplicationDTO.class), anyString(),
-                anyString())).thenReturn(AGENT_USERNAME);
 
         boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
                 new HashMap<>(), null, userStoreManager);
@@ -183,7 +197,7 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
         ArgumentCaptor<ApplicationDTO> applicationDTOCaptor =
                 ArgumentCaptor.forClass(ApplicationDTO.class);
         verify(applicationManagementService).createApplication(applicationDTOCaptor.capture(),
-                eq(TENANT_DOMAIN), anyString());
+                eq(TENANT_DOMAIN), eq(AGENT_USERNAME));
 
         ApplicationDTO capturedAppDTO = applicationDTOCaptor.getValue();
         assertNotNull(capturedAppDTO, "ApplicationDTO should not be null");
@@ -250,8 +264,10 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
         } catch (UserStoreException e) {
             fail("Setup failed: " + e.getMessage());
         }
-        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
-        when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
+        identityTenantUtilMockedStatic.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID))
+                .thenReturn(TENANT_DOMAIN);
+        identityUtilMockedStatic.when(() -> IdentityUtil.getAgentIdentityUserstoreName())
+                .thenReturn(AGENT_USERSTORE_DOMAIN);
         when(applicationManagementService.getApplicationByResourceId(AGENT_USERNAME, TENANT_DOMAIN))
                 .thenReturn(mockServiceProvider);
         when(mockServiceProvider.getApplicationName()).thenReturn(agentAppName);
@@ -273,13 +289,16 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         when(user.getUsername()).thenReturn(AGENT_USERNAME);
         when(userStoreManager.getTenantId()).thenReturn(TENANT_ID);
-        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
+        identityTenantUtilMockedStatic.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID))
+                .thenReturn(TENANT_DOMAIN);
     }
 
     private void setupAgentUserMocks() {
 
         when(user.getUserStoreDomain()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        when(IdentityUtil.getAgentIdentityUserstoreName()).thenReturn(AGENT_USERSTORE_DOMAIN);
-        when(IdentityUtil.getThreadLocalIsUserServingAgent()).thenReturn(true);
+        identityUtilMockedStatic.when(() -> IdentityUtil.getAgentIdentityUserstoreName())
+                .thenReturn(AGENT_USERSTORE_DOMAIN);
+        // Set isUserServingAgent to true in threadLocalProperties
+        IdentityUtil.threadLocalProperties.get().put("isUserServingAgent", true);
     }
 }

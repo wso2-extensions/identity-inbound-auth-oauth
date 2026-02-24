@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
-import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
@@ -260,30 +259,7 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
 
-        applicationManagementService.createApplication(
-                applicationDTO, tenantDomain, username);
-
-        // Retrieve the created application to extract the OAuth client ID and store it
-        // in a thread-local so the SCIM layer can include it in the creation response.
-        ServiceProvider createdApp = applicationManagementService
-                .getApplicationByResourceId(username, tenantDomain);
-
-        if (createdApp != null && createdApp.getInboundAuthenticationConfig() != null) {
-            InboundAuthenticationRequestConfig[] configs =
-                    createdApp.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs();
-            if (configs != null) {
-                for (InboundAuthenticationRequestConfig config : configs) {
-                    if ("oauth2".equalsIgnoreCase(config.getInboundAuthType())) {
-                        IdentityUtil.threadLocalProperties.get().put("applicationClientId", config.getInboundAuthKey());
-                        if (log.isDebugEnabled()) {
-                            log.debug("Stored agent application client ID in thread-local " +
-                                    "for agent: " + username);
-                        }
-                        break;
-                    }
-                }
-            }
-        }
+        applicationManagementService.createApplication(applicationDTO, tenantDomain, username);
 
     }
 
