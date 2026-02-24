@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.internal.util;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -354,9 +355,14 @@ public class AccessTokenEventUtil {
             properties.put(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID,
                     organizationId);
             try {
-                rootOrgTenantDomain =
-                        OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
-                                tokenReqDTO.getTenantDomain());
+                if (tokenReqDTO.getTenantDomain() != null) {
+                    if (tokenReqDTO.getTenantDomain().equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                        rootOrgTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                    } else {
+                        rootOrgTenantDomain = OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                                        tokenReqDTO.getTenantDomain());
+                    }
+                }
             } catch (OrganizationManagementException e) {
                 LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
                         tenantDomain, e);

@@ -355,4 +355,196 @@ public class OAuthEventPublishingUtilTest {
             assertFalse((Boolean) properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
         }
     }
+
+    @Test
+    public void testPublishTokenIssueEventWithSubOrgTenantDomain() throws UserIdNotFoundException,
+            IdentityEventException, OrganizationManagementException {
+
+        // Override the setup to use a sub-organization tenant domain (not carbon.super)
+        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("sub.example.com");
+
+        try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = Mockito.mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> mockedOAuthComponentHolder = Mockito.mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> mockedOrgManagementUtil = Mockito.mockStatic(
+                     OrganizationManagementUtil.class);
+             MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = Mockito.mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(
+                     IdentityTenantUtil.class)) {
+
+            mockedOAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                    .thenReturn(tokenIssuer);
+            when(tokenIssuer.getAccessTokenType()).thenReturn("Opaque");
+
+            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(identityEventService);
+
+            OAuthComponentServiceHolder oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            mockedOAuthComponentHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(oAuthComponentServiceHolder);
+            when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId("sub.example.com")).thenReturn("sub-org-id");
+
+            // Mock getRootOrgTenantDomainBySubOrgTenantDomain to return a root org domain
+            // for the non-carbon.super (else) branch
+            mockedOrgManagementUtil.when(() -> OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                    "sub.example.com")).thenReturn("root.example.com");
+
+            org.wso2.carbon.identity.application.common.model.ServiceProvider serviceProvider =
+                    mock(org.wso2.carbon.identity.application.common.model.ServiceProvider.class);
+            when(serviceProvider.getApplicationName()).thenReturn("TestApp");
+            mockedOAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("sub.example.com");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            mockedTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
+
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO,
+                    oAuth2AccessTokenRespDTO);
+
+            ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+            verify(identityEventService).handleEvent(eventCaptor.capture());
+
+            Event event = eventCaptor.getValue();
+            Map<String, Object> properties = event.getEventProperties();
+
+            // The root org tenant domain must be resolved via getRootOrgTenantDomainBySubOrgTenantDomain
+            assertEquals("root.example.com",
+                    properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
+            assertEquals("sub-org-id",
+                    properties.get(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID));
+        }
+    }
+
+    @Test
+    public void testPublishTokenIssueEventWithNullTenantDomain() throws UserIdNotFoundException,
+            IdentityEventException, OrganizationManagementException {
+
+        // Override the setup so that getTenantDomain() returns null
+        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(null);
+
+        try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = Mockito.mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> mockedOAuthComponentHolder = Mockito.mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> mockedOrgManagementUtil = Mockito.mockStatic(
+                     OrganizationManagementUtil.class);
+             MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = Mockito.mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(
+                     IdentityTenantUtil.class)) {
+
+            mockedOAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                    .thenReturn(tokenIssuer);
+            when(tokenIssuer.getAccessTokenType()).thenReturn("Opaque");
+
+            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(identityEventService);
+
+            OAuthComponentServiceHolder oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            mockedOAuthComponentHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(oAuthComponentServiceHolder);
+            when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            mockedTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
+
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO,
+                    oAuth2AccessTokenRespDTO);
+
+            ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+            verify(identityEventService).handleEvent(eventCaptor.capture());
+
+            Event event = eventCaptor.getValue();
+            Map<String, Object> properties = event.getEventProperties();
+
+            // When tenant domain is null the inner if block is skipped; rootOrgTenantDomain stays empty
+            assertEquals("", properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
+
+            // getRootOrgTenantDomainBySubOrgTenantDomain must never be called
+            mockedOrgManagementUtil.verify(
+                    () -> OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(anyString()),
+                    Mockito.never());
+        }
+    }
+
+    @Test
+    public void testPublishTokenIssueEventWithRootOrgResolutionException() throws UserIdNotFoundException,
+            IdentityEventException, OrganizationManagementException {
+
+        // Use a sub-org tenant domain so the else branch is taken
+        when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("sub.example.com");
+
+        try (MockedStatic<OAuth2Util> mockedOAuth2Util = Mockito.mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedServiceHolder = Mockito.mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> mockedOAuthComponentHolder = Mockito.mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> mockedOrgManagementUtil = Mockito.mockStatic(
+                     OrganizationManagementUtil.class);
+             MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = Mockito.mockStatic(
+                     PrivilegedCarbonContext.class);
+             MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(
+                     IdentityTenantUtil.class)) {
+
+            mockedOAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                    .thenReturn(tokenIssuer);
+            when(tokenIssuer.getAccessTokenType()).thenReturn("Opaque");
+
+            mockedServiceHolder.when(OAuth2ServiceComponentHolder::getIdentityEventService)
+                    .thenReturn(identityEventService);
+
+            OAuthComponentServiceHolder oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            mockedOAuthComponentHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(oAuthComponentServiceHolder);
+            when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId("sub.example.com")).thenReturn("sub-org-id");
+
+            // Simulate an exception thrown by getRootOrgTenantDomainBySubOrgTenantDomain
+            mockedOrgManagementUtil.when(() -> OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                    "sub.example.com")).thenThrow(
+                    new OrganizationManagementException("Error resolving root org"));
+
+            org.wso2.carbon.identity.application.common.model.ServiceProvider serviceProvider =
+                    mock(org.wso2.carbon.identity.application.common.model.ServiceProvider.class);
+            when(serviceProvider.getApplicationName()).thenReturn("TestApp");
+            mockedOAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+
+            PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(carbonContext);
+            when(carbonContext.getTenantDomain()).thenReturn("sub.example.com");
+            when(carbonContext.getTenantId()).thenReturn(-1234);
+
+            mockedTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
+
+            // The event should still be published despite the exception (error is logged and swallowed)
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO,
+                    oAuth2AccessTokenRespDTO);
+
+            ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+            verify(identityEventService).handleEvent(eventCaptor.capture());
+
+            Event event = eventCaptor.getValue();
+            Map<String, Object> properties = event.getEventProperties();
+
+            // rootOrgTenantDomain stays empty because the exception was caught
+            assertEquals("", properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
+        }
+    }
 }
