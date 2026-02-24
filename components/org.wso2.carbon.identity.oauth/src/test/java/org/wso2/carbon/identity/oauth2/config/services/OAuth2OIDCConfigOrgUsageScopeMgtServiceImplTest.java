@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -118,7 +119,6 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     private static final int TENANT_ID = -1234;
 
     @BeforeMethod
-    @SuppressWarnings("resource")
     public void setUp() throws Exception {
 
         // Mock OAuth2ServiceComponentHolder first, before creating service instance
@@ -591,16 +591,22 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     /**
      * Helper method to invoke the private getAllowedIssuerDetailsForOrg method using reflection.
      * Unwraps InvocationTargetException to throw the actual exception from the method.
+     *
+     * @param orgId The organization ID to get issuer details for
+     * @param allowedOrgList List of organization IDs that are allowed (typically contains primaryOrgId and
+     *                       requestingOrgId)
      */
     @SuppressWarnings("unchecked")
-    private java.util.Optional<List<IssuerDetails>> invokeGetAllowedIssuerDetailsForOrg(String orgId)
+    private java.util.Optional<List<IssuerDetails>> invokeGetAllowedIssuerDetailsForOrg(String orgId,
+                                                                                         List<String> allowedOrgList)
             throws Exception {
 
         java.lang.reflect.Method method = OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl.class.getDeclaredMethod(
-                "getAllowedIssuerDetailsForOrg", String.class);
+                "getAllowedIssuerDetailsForOrg", String.class, List.class);
         method.setAccessible(true);
         try {
-            return (java.util.Optional<List<IssuerDetails>>) method.invoke(oAuth2OIDCConfigMgtService, orgId);
+            return (java.util.Optional<List<IssuerDetails>>) method.invoke(oAuth2OIDCConfigMgtService, orgId,
+                    allowedOrgList);
         } catch (java.lang.reflect.InvocationTargetException e) {
             // Unwrap and rethrow the actual exception thrown by the method
             Throwable cause = e.getCause();
@@ -769,8 +775,12 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         // Mock getResource to return null (no resource configured)
         mockGetResource(null);
 
+        // Create allowed org list containing the test org (simulating direct org lookup)
+        List<String> allowedOrgList = Arrays.asList(testOrgId);
+
         // Invoke the private method
-        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId);
+        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId,
+                allowedOrgList);
 
         // Validate results
         assertNotNull(result, "Result should not be null");
@@ -799,8 +809,12 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         Resource noneResource = createResourceWithScope(UsageScope.NONE);
         mockGetResource(noneResource);
 
+        // Create allowed org list containing the test org
+        List<String> allowedOrgList = Arrays.asList(testOrgId);
+
         // Invoke the private method
-        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId);
+        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId,
+                allowedOrgList);
 
         // Validate results - should return empty due to NONE scope
         assertNotNull(result, "Result should not be null");
@@ -825,8 +839,12 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         Resource allOrgsResource = createResourceWithScope(UsageScope.ALL_EXISTING_AND_FUTURE_ORGS);
         mockGetResource(allOrgsResource);
 
+        // Create allowed org list containing the test org
+        List<String> allowedOrgList = Arrays.asList(testOrgId);
+
         // Invoke the private method
-        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId);
+        java.util.Optional<List<IssuerDetails>> result = invokeGetAllowedIssuerDetailsForOrg(testOrgId,
+                allowedOrgList);
 
         // Validate results
         assertNotNull(result, "Result should not be null");
@@ -856,8 +874,11 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
                 "Configuration error", "CONFIG_ERROR");
         mockGetResourceThrowsException(configException);
 
+        // Create allowed org list containing the test org
+        List<String> allowedOrgList = Arrays.asList(testOrgId);
+
         // Invoke the private method - should throw OAuth2OIDCConfigMgtServerException
-        invokeGetAllowedIssuerDetailsForOrg(testOrgId);
+        invokeGetAllowedIssuerDetailsForOrg(testOrgId, allowedOrgList);
         fail("Expected OAuth2OIDCConfigMgtServerException to be thrown");
     }
 
@@ -866,14 +887,18 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
 
         String testOrgId = "test-org-org-error-id";
 
-        when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
+        // Ensure mocks are properly wired through component holder
+        mockOAuth2ServiceComponentHolder();
 
         // Mock resolveTenantDomain to throw OrganizationManagementException
         when(organizationManager.resolveTenantDomain(testOrgId))
                 .thenThrow(new OrganizationManagementException("Organization error"));
 
+        // Create allowed org list containing the test org
+        List<String> allowedOrgList = List.of(testOrgId);
+
         // Invoke the private method - should throw OAuth2OIDCConfigMgtServerException
-        invokeGetAllowedIssuerDetailsForOrg(testOrgId);
+        invokeGetAllowedIssuerDetailsForOrg(testOrgId, allowedOrgList);
         fail("Expected OAuth2OIDCConfigMgtServerException to be thrown");
     }
 }
