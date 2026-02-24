@@ -552,7 +552,8 @@ public class TokenValidationHandler {
                     oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
                 } catch (InvalidOAuthClientException e) {
                     throw new IdentityOAuth2Exception(
-                            "Error while retrieving OAuth app information for clientId: " + accessTokenDO.getConsumerKey());
+                            "Error while retrieving OAuth app information for clientId: "
+                                    + accessTokenDO.getConsumerKey());
                 }
                 List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
                 introResp.setAud(String.join(",", audience));
@@ -567,7 +568,9 @@ public class TokenValidationHandler {
                 // Validate SSO session bound token.
                 if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
                     OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
-                    if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled() || (appDO.isTokenRevocationWithIDPSessionTerminationEnabled() && !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
+                    if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled() ||
+                            (appDO.isTokenRevocationWithIDPSessionTerminationEnabled() &&
+                                    !OAuth2Util.isSessionBoundTokensAllowedAfterSessionExpiry())) {
                         if (!isTokenBoundToActiveSSOSession(accessTokenDO)) {
                             log.debug("Token is not bound to an active SSO session.");
                             // Revoke the SSO session bound access token if the session is invalid/terminated.
