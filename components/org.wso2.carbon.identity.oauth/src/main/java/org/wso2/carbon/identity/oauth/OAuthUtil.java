@@ -37,7 +37,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
@@ -500,7 +502,37 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            dto.setSecretDescription(appDO.getSecretDescription());
+            dto.setSecretExpiryTime(appDO.getSecretExpiryTime());
+        }
         return dto;
+    }
+
+    /**
+     * Builds an {@link OAuthConsumerSecretDTO} object from the given
+     * {@link OAuthConsumerSecretDO}. This method copies the relevant fields such as
+     * client ID, description, expiry time, secret ID, and client secret value from
+     * the data object (DO) to the data transfer object (DTO).
+     *
+     * @param consumerSecretDO The {@link OAuthConsumerSecretDO} containing the
+     *                         persisted consumer secret data.
+     * @return An {@link OAuthConsumerSecretDTO} populated with values from the
+     *         provided {@link OAuthConsumerSecretDO}.
+     */
+    public static OAuthConsumerSecretDTO buildConsumerSecretDTO(OAuthConsumerSecretDO consumerSecretDO) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Building OAuthConsumerSecretDTO for clientId: " + consumerSecretDO.getClientId()
+                    + ", secretId: " + consumerSecretDO.getSecretId());
+        }
+        OAuthConsumerSecretDTO consumerSecretDTO = new OAuthConsumerSecretDTO();
+        consumerSecretDTO.setClientId(consumerSecretDO.getClientId());
+        consumerSecretDTO.setDescription(consumerSecretDO.getDescription());
+        consumerSecretDTO.setExpiresAt(consumerSecretDO.getExpiresAt());
+        consumerSecretDTO.setSecretId(consumerSecretDO.getSecretId());
+        consumerSecretDTO.setClientSecret(consumerSecretDO.getSecretValue());
+        return consumerSecretDTO;
     }
 
     /**

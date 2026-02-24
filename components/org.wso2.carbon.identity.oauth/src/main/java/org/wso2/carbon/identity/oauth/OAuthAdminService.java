@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerSecretDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
@@ -377,6 +378,72 @@ public class OAuthAdminService extends AbstractAdmin {
 
         try {
             return oAuthAdminServiceImpl.updateApproveAlwaysForAppConsentByResourceOwner(appName, state);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    // ----------------- OAuth Consumer Secret Management -----------------
+    /**
+     * Create a new OAuth consumer secret.
+     *
+     * @param consumerSecret OAuthConsumerSecretDTO containing the details of the consumer secret to be created.
+     * @return Created OAuthConsumerSecretDTO object with the details of the created consumer secret.
+     * @throws IdentityOAuthAdminException Error when persisting the consumer secret in the persistence store.
+     */
+    public OAuthConsumerSecretDTO createClientSecret(OAuthConsumerSecretDTO consumerSecret)
+            throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.createOAuthConsumerSecret(consumerSecret);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    /**
+     * Remove an existing OAuth consumer secret.
+     *
+     * @param secretId ID of the consumer secret to be removed.
+     * @throws IdentityOAuthAdminException Error when removing the consumer secret from the persistence store.
+     */
+    public void removeClientSecret(String secretId) throws IdentityOAuthAdminException {
+
+        try {
+            oAuthAdminServiceImpl.removeOAuthConsumerSecret(secretId);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    /**
+     * Get all OAuth consumer secrets associated with a given OAuth consumer key.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return List of OAuthConsumerSecretDTO objects containing the details of the consumer secrets
+     * associated with the given consumer key.
+     * @throws IdentityOAuthAdminException Error when reading the consumer secrets from the persistence store.
+     */
+    public List<OAuthConsumerSecretDTO> getClientSecrets(String consumerKey) throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.getOAuthConsumerSecrets(consumerKey);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    /**
+     * Get details of an OAuth consumer secret by its ID.
+     *
+     * @param secretId ID of the consumer secret.
+     * @return OAuthConsumerSecretDTO object containing the details of the consumer secret.
+     * @throws IdentityOAuthAdminException Error when reading the consumer secret from the persistence store.
+     */
+    public OAuthConsumerSecretDTO getClientSecret(String secretId) throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.getOAuthConsumerSecret(secretId);
         } catch (IdentityOAuthAdminException ex) {
             throw handleError(ex);
         }

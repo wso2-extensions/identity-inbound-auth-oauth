@@ -91,15 +91,20 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretMetadata;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretsCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthClientSecretsCacheEntry;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -168,6 +173,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -376,6 +382,33 @@ public class OAuth2Util {
     }
 
     /**
+     * Returns the {@link TokenPersistenceProcessor} instance used for processing
+     * OAuth consumer secrets.
+     *
+     * The processor is lazily initialized and shared across all callers in
+     * a thread-safe manner.
+     *
+     * @return the {@link TokenPersistenceProcessor} instance
+     */
+    private static TokenPersistenceProcessor getHashingPersistenceProcessor() {
+
+        return HashingPersistenceProcessorHolder.INSTANCE;
+    }
+
+    /**
+     * Holder class for lazy, thread-safe initialization of {@link TokenPersistenceProcessor}.
+     *
+     * This leverages the JVM's class loading mechanism to ensure that the
+     * {@link HashingPersistenceProcessor} instance is created only when it is
+     * first accessed, while also guaranteeing thread safety without explicit
+     * synchronization.
+     */
+    private static class HashingPersistenceProcessorHolder {
+        private static final TokenPersistenceProcessor INSTANCE =
+                new HashingPersistenceProcessor();
+    }
+
+    /**
      * @return
      */
     public static OAuthAuthzReqMessageContext getAuthzRequestContext() {
@@ -528,6 +561,33 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
+        // When multiple client secrets support is enabled, check in the IDN_OAUTH_CONSUMER_SECRET table first.
+        // If not found, fall back to the IDN_OAUTH_CONSUMER_APPS table.
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Multiple client secrets are enabled. Checking for client secrets in secrets storage.");
+            }
+            OAuthConsumerSecretDO secret = getClientSecret(clientId, clientSecretProvided);
+            // If secret is found in the IDN_OAUTH_CONSUMER_SECRET table, use it for authentication.
+            // Else, fall back to the IDN_OAUTH_CONSUMER_APPS table.
+            if (secret != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Client Secret found for client ID: " + clientId + " in secrets storage");
+                }
+                // If secret is found, check whether it is expired.
+                boolean isExpired = isClientSecretExpired(secret.getExpiresAt());
+                if (isExpired) {
+                    log.debug("Provided Client Secret has expired");
+                    return false;
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully authenticated the client with client id : " + clientId);
+                    }
+                    return true;
+                }
+            }
+        }
+
         // Cache miss
         boolean isHashDisabled = isHashDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
@@ -558,6 +618,25 @@ public class OAuth2Util {
         }
 
         return true;
+    }
+
+    /**
+     * Check whether the client secret is expired.
+     *
+     * @param expiresAt expiry timestamp of client secret since epoch in milliseconds.
+     *                  Null means the secret does not expire.
+     * @return true if the client secret is expired, false otherwise.
+     */
+    public static boolean isClientSecretExpired(Long expiresAt) {
+
+        if (expiresAt == null) {
+            // Never expires
+            return false;
+        }
+        Instant nowUtc = Instant.now();
+        long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
+        Instant expiryInstantWithSkew = Instant.ofEpochMilli(expiresAt).plusSeconds(timeStampSkewInSeconds);
+        return expiryInstantWithSkew.isBefore(nowUtc);
     }
 
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
@@ -600,6 +679,25 @@ public class OAuth2Util {
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return !isHashEnabled;
 
+    }
+    /**
+     * Check whether multiple client secret support is enabled or not.
+     *
+     * @return Whether multiple client secret support is enabled or not.
+     */
+    public static boolean isMultipleClientSecretsEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
+    }
+
+     /**
+     * Get the allowed client secret count.
+     *
+     * @return client secret count.
+     */
+    public static int getClientSecretCount() {
+
+        return OAuthServerConfiguration.getInstance().getClientSecretCount();
     }
 
     /**
@@ -2207,6 +2305,87 @@ public class OAuth2Util {
                     + consumerKey);
         }
         return oAuthAppDO.getOauthConsumerSecret();
+    }
+    /**
+     * Get a client secret information of the application.
+     *
+     * @param consumerKey     Consumer Key of the application.
+     * @param consumerSecret  Consumer Secret provided of the application.
+     * @return {@link OAuthConsumerSecretDO} containing the consumer secret retrieved from the DB that matches the
+     *                                       provided secret hash, or {@code null} if no matching secret is found.
+     * @throws IdentityOAuthAdminException Error when loading the application.
+     * @throws IdentityOAuth2Exception     Error when processing the client secret.
+     */
+    public static OAuthConsumerSecretDO getClientSecret(String consumerKey, String consumerSecret)
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+
+        String hashedProvidedSecret = getHashingPersistenceProcessor().getProcessedClientSecret(consumerSecret);
+        // First, try to retrieve the secret from the cache.
+        OAuthClientSecretsCache cache = OAuthClientSecretsCache.getInstance();
+        OAuthClientSecretsCacheEntry cacheEntry = cache.getValueFromCache(consumerKey);
+        if (cacheEntry != null && !cacheEntry.isEmpty()) {
+            for (OAuthClientSecretMetadata metadata : cacheEntry.getSecrets()) {
+                if (StringUtils.equals(metadata.getSecretHash(), hashedProvidedSecret)) {
+                    // Cache hit.
+                    return buildConsumerSecretDO(consumerKey, metadata);
+                }
+            }
+        }
+        // Cache miss or secret not found in cache. Hence, query the database.
+        OAuthConsumerSecretDO secretFromDB =
+                new OAuthAppDAO().getOAuthConsumerSecret(consumerKey, hashedProvidedSecret);
+
+        if (secretFromDB == null) {
+            return null;
+        }
+        // Create a new list to build the next immutable cache snapshot.
+        // This list is intentionally not shared with the existing cache entry.
+        List<OAuthClientSecretMetadata> updatedSecrets = new ArrayList<>();
+
+        // If a cache entry already exists, copy its secrets into the new list.
+        // We copy instead of mutating to preserve immutability and thread safety.
+        if (cacheEntry != null) {
+            updatedSecrets.addAll(cacheEntry.getSecrets());
+        }
+
+        // Check whether the secret retrieved from the DB is already present in the cache.
+        // This prevents duplicate entries and makes cache updates idempotent.
+        boolean exists = updatedSecrets.stream()
+                .anyMatch(m -> StringUtils.equals(m.getSecretHash(),
+                        secretFromDB.getSecretHash()));
+
+        // Add the secret metadata only if it is not already cached.
+        // Only non-sensitive metadata is cached (hashed secret and expiry time).
+        if (!exists) {
+            updatedSecrets.add(new OAuthClientSecretMetadata(
+                    secretFromDB.getSecretHash(),
+                    secretFromDB.getExpiresAt()));
+        }
+
+        // Replace the cache entry with a new immutable snapshot.
+        // Cached entries are never mutated in place.
+        cache.addToCache(
+                consumerKey,
+                new OAuthClientSecretsCacheEntry(updatedSecrets)
+        );
+
+        return secretFromDB;
+    }
+
+    /**
+     * Build {@link OAuthConsumerSecretDO} from {@link OAuthClientSecretMetadata}.
+     *
+     * @param consumerKey Consumer key of the application.
+     * @param metadata    Metadata of the client secret.
+     * @return Built {@link OAuthConsumerSecretDO}.
+     */
+    private static OAuthConsumerSecretDO buildConsumerSecretDO(String consumerKey, OAuthClientSecretMetadata metadata) {
+
+        OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
+        secret.setClientId(consumerKey);
+        secret.setSecretHash(metadata.getSecretHash());
+        secret.setExpiresAt(metadata.getExpiresAt());
+        return secret;
     }
 
     /**

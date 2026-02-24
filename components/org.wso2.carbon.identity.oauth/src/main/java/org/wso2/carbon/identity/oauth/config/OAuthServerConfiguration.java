@@ -282,6 +282,10 @@ public class OAuthServerConfiguration {
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
 
+    // Property to define whether multiple client secrets are allowed for oauth applications
+    private boolean isMultipleClientSecretsEnabled = false;
+    // Property to define the number of client secrets per oauth application. default: unlimited
+    private int clientSecretCount = -1;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -452,6 +456,9 @@ public class OAuthServerConfiguration {
         parseHashAlgorithm(oauthElem);
         // read hash mode config
         parseEnableHashMode(oauthElem);
+
+        // read multiple client secrets config
+        parseEnableMultipleClientSecrets(oauthElem);
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
@@ -1033,6 +1040,30 @@ public class OAuthServerConfiguration {
 
     public boolean isClientSecretHashEnabled() {
         return isClientSecretHashEnabled;
+    }
+
+    /**
+     * Checks whether multiple client secrets are enabled for OAuth applications.
+     *
+     * <p>If multiple client secrets are enabled, an application can have more than
+     * one secret associated with its client ID. Otherwise, only a single secret
+     * is allowed.</p>
+     *
+     * @return {@code true} if multiple client secrets are enabled, {@code false} otherwise.
+     */
+    public boolean isMultipleClientSecretsEnabled() {
+
+        return isMultipleClientSecretsEnabled;
+    }
+
+    /**
+     * Retrieves the maximum number of client secrets allowed for an OAuth application.
+     *
+     * @return the maximum number of client secrets allowed for an OAuth application.
+     */
+    public int getClientSecretCount() {
+
+        return clientSecretCount;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -3163,6 +3194,50 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Parses the OAuth configuration XML element to determine whether
+     * the number of client secrets is allowed for a OAuth application.
+     *
+     * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
+     */
+    private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
+
+        OMElement multipleClientSecretsElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
+        if (multipleClientSecretsElement != null) {
+            OMElement isMultipleClientSecretsEnabledElement = multipleClientSecretsElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
+            if (isMultipleClientSecretsEnabledElement != null) {
+                isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
+                if (isMultipleClientSecretsEnabled) {
+                    OMElement isClientSecretLimitElement = multipleClientSecretsElement
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECRET_COUNT));
+                    if (isClientSecretLimitElement != null &&
+                            StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
+                        String secretCountText = isClientSecretLimitElement.getText().trim();
+                        try {
+                            clientSecretCount = Integer.parseInt(secretCountText);
+                            if (clientSecretCount <= 0) {
+                                log.error("Invalid value for client secret count: '" + secretCountText +
+                                        "'. Secret count should be a positive value. Using default client " +
+                                        "secret count: unlimited secrets");
+                            }
+                        } catch (NumberFormatException e) {
+                            log.error("Invalid value for client secret count: '" + secretCountText +
+                                    "'. Using default client secret count: unlimited secrets", e);
+                        }
+                    }
+                }
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
+            if (isMultipleClientSecretsEnabled) {
+                log.debug("Client secret limit: " + clientSecretCount);
+            }
+        }
+    }
+
     private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem) {
 
         OMElement redirectToOAuthErrorPageElem =
@@ -3547,6 +3622,11 @@ public class OAuthServerConfiguration {
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
+
+        // Multiple client secret configurations
+        private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
+        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
+        private static final String SECRET_COUNT = "SecretCount";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
