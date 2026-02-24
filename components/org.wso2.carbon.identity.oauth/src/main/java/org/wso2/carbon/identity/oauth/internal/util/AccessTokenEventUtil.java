@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.internal.util;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -355,8 +356,8 @@ public class AccessTokenEventUtil {
                     organizationId);
             try {
                 if (tokenReqDTO.getTenantDomain() != null) {
-                    if (tokenReqDTO.getTenantDomain().equals("carbon.super")) {
-                        rootOrgTenantDomain = "carbon.super";
+                    if (tokenReqDTO.getTenantDomain().equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                        rootOrgTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
                     } else {
                         rootOrgTenantDomain = OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
                                         tokenReqDTO.getTenantDomain());
