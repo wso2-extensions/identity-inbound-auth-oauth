@@ -697,7 +697,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         return authenticatedUser.isFederatedUser()
                 && authenticatedUser.getUserResidentOrganization() != null
-                && authenticatedUser.getFederatedIdPName().equals(ORGANIZATION_LOGIN_IDP_NAME);
+                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName());
     }
 
     private boolean isOrganizationSwitchGrantType(OAuthTokenReqMessageContext requestMsgCtx) {
