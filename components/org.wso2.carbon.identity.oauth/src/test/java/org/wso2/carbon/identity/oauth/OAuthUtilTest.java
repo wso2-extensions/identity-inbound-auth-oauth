@@ -39,6 +39,8 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -46,6 +48,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
@@ -68,6 +71,7 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.jdbc.UniqueIDJDBCUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -76,6 +80,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -89,6 +94,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
@@ -586,6 +592,220 @@ public class OAuthUtilTest {
         boolean result = OAuthUtil.revokeAuthzCodes("testUser", userStoreManager);
         // Verify the result
         assertTrue(result, "Authorization code revocation failed.");
+    }
+
+    @Test
+    public void testRemoveAuthzGrantCacheForUser_WithoutDomainInUsername() throws Exception {
+
+        String userName = "testUser";
+        String userStoreDomain = "PRIMARY";
+        String tenantDomain = "carbon.super";
+        int tenantId = -1234;
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        RealmConfiguration realmConfiguration = mock(RealmConfiguration.class);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
+        when(userStoreManager.getTenantId()).thenReturn(tenantId);
+
+        OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        AuthorizationCodeDAO mockAuthorizationCodeDAO = mock(AuthorizationCodeDAO.class);
+        when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
+
+        AccessTokenDO accessTokenDO = mock(AccessTokenDO.class);
+        when(accessTokenDO.getGrantType()).thenReturn("authorization_code");
+        when(accessTokenDO.getAccessToken()).thenReturn("accessToken");
+        when(accessTokenDO.getTokenId()).thenReturn("tokenId");
+
+        AuthzCodeDO authzCodeDO = mock(AuthzCodeDO.class);
+        when(authzCodeDO.getAuthorizationCode()).thenReturn("authCode");
+        when(authzCodeDO.getAuthzCodeId()).thenReturn("authzCodeId");
+
+        when(mockAccessTokenDAO.getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean()))
+                .thenReturn(new HashSet<>(Collections.singletonList(accessTokenDO)))
+                .thenReturn(new HashSet<>());
+        when(mockAuthorizationCodeDAO.getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class)))
+                .thenReturn(new ArrayList<>(Collections.singletonList(authzCodeDO)))
+                .thenReturn(new ArrayList<>());
+
+        AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+        when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
+        when(OrganizationManagementUtil.isOrganization(tenantDomain)).thenReturn(false);
+
+        try (MockedStatic<UserCoreUtil> mockedUserCoreUtil = mockStatic(UserCoreUtil.class);
+             MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
+
+            when(UserCoreUtil.getDomainName(realmConfiguration)).thenReturn(userStoreDomain);
+            when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenantDomain);
+            when(IdentityUtil.addDomainToName(userName, userStoreDomain)).thenReturn(userStoreDomain + "/" + userName);
+
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+
+            // Tokens and codes should be fetched twice: once with plain username, once with domain-qualified username.
+            verify(mockAccessTokenDAO, times(2))
+                    .getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean());
+            verify(mockAuthorizationCodeDAO, times(2))
+                    .getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class));
+            // Cache should be cleared for the retrieved token and code.
+            verify(mockAuthorizationGrantCache)
+                    .clearCacheEntryByTokenId(any(), eq("tokenId"), isNull());
+            verify(mockAuthorizationGrantCache)
+                    .clearCacheEntryByCodeId(any(), eq("authzCodeId"), isNull());
+        }
+    }
+
+    @Test
+    public void testRemoveAuthzGrantCacheForUser_WithDomainInUsername() throws Exception {
+
+        String userName = "PRIMARY/testUser";
+        String userStoreDomain = "PRIMARY";
+        String tenantDomain = "carbon.super";
+        int tenantId = -1234;
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        RealmConfiguration realmConfiguration = mock(RealmConfiguration.class);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
+        when(userStoreManager.getTenantId()).thenReturn(tenantId);
+
+        OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        AuthorizationCodeDAO mockAuthorizationCodeDAO = mock(AuthorizationCodeDAO.class);
+        when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
+
+        AccessTokenDO accessTokenDO = mock(AccessTokenDO.class);
+        when(accessTokenDO.getGrantType()).thenReturn("authorization_code");
+        when(accessTokenDO.getAccessToken()).thenReturn("accessToken");
+        when(accessTokenDO.getTokenId()).thenReturn("tokenId");
+
+        AuthzCodeDO authzCodeDO = mock(AuthzCodeDO.class);
+        when(authzCodeDO.getAuthorizationCode()).thenReturn("authCode");
+        when(authzCodeDO.getAuthzCodeId()).thenReturn("authzCodeId");
+
+        when(mockAccessTokenDAO.getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean()))
+                .thenReturn(new HashSet<>(Collections.singletonList(accessTokenDO)));
+        when(mockAuthorizationCodeDAO.getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class)))
+                .thenReturn(new ArrayList<>(Collections.singletonList(authzCodeDO)));
+
+        AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+        when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
+        when(OrganizationManagementUtil.isOrganization(tenantDomain)).thenReturn(false);
+
+        try (MockedStatic<UserCoreUtil> mockedUserCoreUtil = mockStatic(UserCoreUtil.class);
+             MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            when(UserCoreUtil.getDomainName(realmConfiguration)).thenReturn(userStoreDomain);
+            when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenantDomain);
+
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+
+            // Tokens and codes should be fetched only once since username already contains the domain separator.
+            verify(mockAccessTokenDAO, times(1))
+                    .getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean());
+            verify(mockAuthorizationCodeDAO, times(1))
+                    .getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class));
+            verify(mockAuthorizationGrantCache)
+                    .clearCacheEntryByTokenId(any(), eq("tokenId"), isNull());
+            verify(mockAuthorizationGrantCache)
+                    .clearCacheEntryByCodeId(any(), eq("authzCodeId"), isNull());
+        }
+    }
+
+    @Test
+    public void testRemoveAuthzGrantCacheForUser_OrgUser() throws Exception {
+
+        String userName = "testUser";
+        String userStoreDomain = "PRIMARY";
+        String tenantDomain = "org.carbon.super";
+        int tenantId = 1;
+        String userId = "testUserId";
+        String accessingOrg = "accessingOrgId";
+        String primaryOrgId = "primaryOrgId";
+        String rootTenantDomain = "carbon.super";
+
+        AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
+        RealmConfiguration realmConfiguration = mock(RealmConfiguration.class);
+        when(abstractUserStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
+        when(abstractUserStoreManager.getTenantId()).thenReturn(tenantId);
+
+        org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
+        when(user.getUserID()).thenReturn(userId);
+        when(abstractUserStoreManager.getUser(null, userName)).thenReturn(user);
+
+        OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        AuthorizationCodeDAO mockAuthorizationCodeDAO = mock(AuthorizationCodeDAO.class);
+        when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
+
+        when(mockAccessTokenDAO.getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean()))
+                .thenReturn(new HashSet<>())
+                .thenReturn(new HashSet<>())
+                .thenReturn(new HashSet<>());
+        when(mockAuthorizationCodeDAO.getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class)))
+                .thenReturn(new ArrayList<>())
+                .thenReturn(new ArrayList<>())
+                .thenReturn(new ArrayList<>());
+
+        AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+        when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
+        when(OrganizationManagementUtil.isOrganization(tenantDomain)).thenReturn(true);
+        when(organizationManager.resolveOrganizationId(tenantDomain)).thenReturn(accessingOrg);
+        when(organizationManager.getPrimaryOrganizationId(accessingOrg)).thenReturn(primaryOrgId);
+        when(organizationManager.resolveTenantDomain(primaryOrgId)).thenReturn(rootTenantDomain);
+
+        try (MockedStatic<UserCoreUtil> mockedUserCoreUtil = mockStatic(UserCoreUtil.class);
+             MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
+
+            when(UserCoreUtil.getDomainName(realmConfiguration)).thenReturn(userStoreDomain);
+            when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenantDomain);
+            when(IdentityUtil.addDomainToName(userName, userStoreDomain)).thenReturn(userStoreDomain + "/" + userName);
+
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, abstractUserStoreManager);
+
+            // For org users: 2 fetches for regular user (plain + domain-qualified) + 1 fetch for federated user.
+            verify(mockAccessTokenDAO, times(3))
+                    .getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean());
+            verify(mockAuthorizationCodeDAO, times(3))
+                    .getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class));
+        }
+    }
+
+    @Test
+    public void testRemoveAuthzGrantCacheForUser_WithIdentityOAuth2Exception() throws Exception {
+
+        String userName = "testUser";
+        String userStoreDomain = "PRIMARY";
+        String tenantDomain = "carbon.super";
+        int tenantId = -1234;
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        RealmConfiguration realmConfiguration = mock(RealmConfiguration.class);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
+        when(userStoreManager.getTenantId()).thenReturn(tenantId);
+
+        OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockAccessTokenDAO.getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean()))
+                .thenThrow(new IdentityOAuth2Exception("Test DAO error"));
+
+        try (MockedStatic<UserCoreUtil> mockedUserCoreUtil = mockStatic(UserCoreUtil.class);
+             MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            when(UserCoreUtil.getDomainName(realmConfiguration)).thenReturn(userStoreDomain);
+            when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenantDomain);
+
+            // Should not throw; IdentityOAuth2Exception is caught and logged internally.
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        }
     }
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {

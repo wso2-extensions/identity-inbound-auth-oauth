@@ -1312,8 +1312,8 @@ public final class OAuthUtil {
                     LoggerUtils.getMaskedContent(userName);
             LOG.error(errorMsg, e);
         } catch (OrganizationManagementException e) {
-            String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
-                    LoggerUtils.getMaskedContent(userName) + " from root organization";
+            String errorMsg = "Error occurred while retrieving access tokens for user: " +
+                    LoggerUtils.getMaskedContent(userName) + " due to a failure in resolving the organization ID.";
             LOG.error(errorMsg, e);
         }
     }
