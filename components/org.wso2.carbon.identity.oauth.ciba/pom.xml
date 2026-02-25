@@ -151,6 +151,8 @@
                             "${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.exception.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.central.log.mgt.utils.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.governance.service.notification.*;
                             version ="${carbon.identity.governance.imp.pkg.version.range}",
                         </Import-Package>
