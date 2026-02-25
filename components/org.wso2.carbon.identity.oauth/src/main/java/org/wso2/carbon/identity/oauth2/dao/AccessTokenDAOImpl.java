@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -547,6 +548,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getString(12);
                     }
                     // data loss at dividing the validity period but can be neglected
+                    if (StringUtils.equalsIgnoreCase(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                        try {
+                            authzUser.getUserId();
+                        } catch (UserIdNotFoundException e) {
+                            authzUser.setUserId(StringUtils.EMPTY);
+                            if (log.isDebugEnabled()) {
+                                log.debug("User ID is not available for user: " +
+                                        authzUser.getLoggableMaskedUserId() + ". Setting user ID as empty since " +
+                                        "the flow is a client credentials grant flow.");
+                            }
+                        }
+                    }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
                             tenantDomain, authenticatedIDP);
 
