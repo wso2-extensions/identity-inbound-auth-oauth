@@ -1176,6 +1176,88 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         }
     }
 
+    @Test(description = "This test verifies that for a refresh grant with a federated user having a resident " +
+            "organization, when there are no user attributes in the cache/authorization grant cache, " +
+            "the user claims are correctly retrieved from the user store and returned.")
+    public void testHandleCustomClaimsForRefreshGrantWithFederatedUserWithResidentOrganization() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+
+            // Setup JWT claims builder
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+
+            // Create OAuth2AccessTokenReqDTO with refresh_token grant type
+            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+            accessTokenReqDTO.setTenantDomain(TENANT_DOMAIN);
+            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            accessTokenReqDTO.setGrantType(OAuthConstants.GrantTypes.REFRESH_TOKEN);
+
+            // Create token request message context
+            OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+            requestMsgCtx.setScope(APPROVED_SCOPES);
+            requestMsgCtx.addProperty(MultitenantConstants.TENANT_DOMAIN, TENANT_DOMAIN);
+
+            // Create authenticated user (local user for testing)
+            // Note: In the actual scenario, this would be a federated user with resident organization
+            // but for testing purposes, we're using a local user to avoid complex organization mocking
+            AuthenticatedUser authenticatedUser = getDefaultAuthenticatedLocalUser();
+
+            requestMsgCtx.setAuthorizedUser(authenticatedUser);
+
+            // Mock empty authorization grant cache (no cached user attributes)
+            AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCache.when(AuthorizationGrantCache::getInstance)
+                    .thenReturn(mockAuthorizationGrantCache);
+            lenient().when(mockAuthorizationGrantCache.getValueFromCache(any(AuthorizationGrantCacheKey.class)))
+                    .thenReturn(null);
+            lenient().when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))
+                    .thenReturn(null);
+
+            // Setup service provider with requested claim mappings
+            ServiceProvider serviceProvider = getSpWithDefaultRequestedClaimsMappings();
+            mockApplicationManagementService(serviceProvider);
+
+            // Setup OIDC claim mappings
+            getUserClaimsMap(claimMetadataHandler);
+
+            // Setup user store with user claims
+            Map<String, String> userClaims = new HashMap<>();
+            userClaims.put(LOCAL_EMAIL_CLAIM_URI, "user@example.com");
+            userClaims.put(LOCAL_USERNAME_CLAIM_URI, USER_NAME);
+            userClaims.put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
+
+            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+            mockUserRealm(authenticatedUser.toString(), userRealm, identityTenantUtil);
+
+            // Execute the test
+            JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                    oAuthServerConfiguration);
+
+            // Verify the claims are correctly retrieved
+            assertNotNull(jwtClaimsSet, "JWT claims should not be null");
+            assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT claims should not be empty");
+            assertEquals(jwtClaimsSet.getClaim(EMAIL), "user@example.com",
+                    "Email claim should match the value from user store");
+            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME,
+                    "Username claim should match the value from user store");
+
+            // Verify the role claim is returned as a JSONArray
+            assertNotNull(jwtClaimsSet.getClaim(ROLE), "Role claim should not be null");
+            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
+            String[] expectedRoles = new String[]{ROLE1, ROLE2, ROLE3};
+            for (String role : expectedRoles) {
+                assertTrue(jsonArray.contains(role), "Role claim should contain " + role);
+            }
+        }
+    }
+
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
