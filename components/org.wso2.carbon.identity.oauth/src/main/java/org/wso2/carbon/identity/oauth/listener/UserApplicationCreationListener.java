@@ -270,6 +270,11 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
 
+        if (applicationManagementService == null) {
+            throw new IdentityApplicationManagementException("ApplicationManagementService is not available. " +
+                    "Cannot create agent application.");
+        }
+
         ServiceProvider existingApplication =
                 applicationManagementService.getApplicationByResourceId(username, tenantDomain);
 
