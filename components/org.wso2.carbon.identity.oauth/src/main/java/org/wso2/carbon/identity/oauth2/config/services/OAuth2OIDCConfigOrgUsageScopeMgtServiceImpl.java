@@ -334,8 +334,14 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
             if (OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().isPrimaryOrganization(orgId)) {
                 return null;
             }
+
+            String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getPrimaryOrganizationId(orgId);
+            List<String> allowedOrgList = Arrays.asList(primaryOrgId, orgId);
+
             return orgResourceResolverService.getResourcesFromOrgHierarchy(orgId,
-                    LambdaExceptionUtils.rethrowFunction(this::getAllowedIssuerDetailsForOrg),
+                    LambdaExceptionUtils.rethrowFunction(currentOrgId ->
+                            getAllowedIssuerDetailsForOrg(currentOrgId, allowedOrgList)),
                     new MergeAllAggregationStrategy<>(this::mergeIssuersDetailsInHierarchy));
         } catch (OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleServerException(
@@ -383,14 +389,26 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
         }
     }
 
-    private Optional<List<IssuerDetails>> getAllowedIssuerDetailsForOrg(String orgId) throws
-            OAuth2OIDCConfigOrgUsageScopeMgtServerException {
+    private Optional<List<IssuerDetails>> getAllowedIssuerDetailsForOrg(String orgId, List<String> allowedOrgList)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtServerException {
+
+        // Skipping the middle organizations in the hierarchy.
+        if (!allowedOrgList.contains(orgId)) {
+            return Optional.empty();
+        }
+
+        int tenantId;
+        String tenantDomain;
+        try {
+             tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(orgId);
+            tenantId = OAuth2Util.getTenantId(tenantDomain);
+        } catch (OrganizationManagementException | IdentityOAuth2Exception e) {
+            throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
+                    ERROR_CODE_ISSUER_USAGE_SCOPE_GET, e, orgId);
+        }
 
         try {
-            String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                    resolveTenantDomain(orgId);
-            int tenantId = OAuth2Util.getTenantId(tenantDomain);
-
             PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantId);
 
@@ -418,7 +436,7 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
                 return Optional.of(Collections.singletonList(issuerDetails));
             }
             return Optional.empty();
-        } catch (OrganizationManagementException | IdentityOAuth2Exception | ConfigurationManagementException e) {
+        } catch (ConfigurationManagementException e) {
             throw handleServerException(OAuth2OIDCConfigOrgUsageScopeMgtErrorMessages.
                     ERROR_CODE_ISSUER_USAGE_SCOPE_GET, e, orgId);
         } finally {
