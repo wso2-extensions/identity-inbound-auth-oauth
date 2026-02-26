@@ -634,7 +634,7 @@ public final class OAuthUtil {
                 Set<AccessTokenDO> accessTokenDOs;
                 try {
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
-                    accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                             .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -704,7 +704,7 @@ public final class OAuthUtil {
                     // and client combination.
                     // So need to revoke all the tokens.
                     try {
-                        revokeTokens(accessTokens);
+                        revokeTokens(accessTokens, clientId);
                     } catch (IdentityOAuth2Exception e) {
                         String errorMsg = "Error occurred while revoking Access Token";
                         LOG.error(errorMsg, e);
@@ -725,13 +725,13 @@ public final class OAuthUtil {
         return true;
     }
 
-    private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
+    private static void revokeTokens(List<AccessTokenDO> accessTokens, String clientId) throws IdentityOAuth2Exception {
 
         if (!accessTokens.isEmpty()) {
             // Revoking token from database.
             for (AccessTokenDO accessToken : accessTokens) {
                 OAuthUtil.invokePreRevocationBySystemListeners(accessToken, Collections.emptyMap());
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                         .revokeAccessTokens(new String[]{accessToken.getAccessToken()}, OAuth2Util.isHashEnabled());
                 OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
@@ -747,7 +747,7 @@ public final class OAuthUtil {
             try {
                 // Retrieve latest access token for particular client, user and scope combination
                 // if its ACTIVE or EXPIRED.
-                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                         .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
                                 scope, true);
             } catch (IdentityOAuth2Exception e) {
@@ -759,7 +759,7 @@ public final class OAuthUtil {
             if (scopedToken != null) {
                 try {
                     // Revoking token from database
-                    revokeTokens(Collections.singletonList(scopedToken));
+                    revokeTokens(Collections.singletonList(scopedToken), clientId);
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
                             + scopedToken.getAccessToken() + " for user " + authenticatedUser;

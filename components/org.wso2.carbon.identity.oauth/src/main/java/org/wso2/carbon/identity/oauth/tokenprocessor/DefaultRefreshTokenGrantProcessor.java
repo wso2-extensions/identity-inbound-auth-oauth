@@ -77,7 +77,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
         }
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
                         OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, clientId,
                         UUID.randomUUID().toString(), accessTokenBean, userStoreDomain, oldAccessToken.getGrantType());
@@ -175,7 +175,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                                                     RefreshTokenValidationDataDO validationBean, String userStoreDomain)
             throws IdentityOAuth2Exception {
 
-        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(tokenReq.getClientId())
                 .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,
                         OAuth2Util.buildScopeString(validationBean.getScope()),
                         validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);
@@ -226,6 +227,15 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
+            // If refresh token persistence is disabled and the user is not federated, do not store user attributes.
+            // When a user's profile is updated after the token is issued, the cache cannot be cleared because
+            // the Server will not persist either the refresh token or the access token. As a result,
+            // outdated user attribute data would be returned on the next refresh grant.
+            // To mitigate this, user attributes are set to null.
+            if (OAuth2Util.isNonPersistentTokenEnabled(
+                    accessTokenBean.getConsumerKey()) && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+                grantCacheEntry.setUserAttributes(null);
+            }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
         }
     }

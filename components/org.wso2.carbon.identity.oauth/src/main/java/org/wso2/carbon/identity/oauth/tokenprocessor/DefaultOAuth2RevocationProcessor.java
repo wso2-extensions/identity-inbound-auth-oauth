@@ -38,7 +38,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     public void revokeAccessToken(OAuthRevocationRequestDTO revokeRequestDTO, AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception {
 
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(revokeRequestDTO.getConsumerKey())
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
     }
 
@@ -46,7 +46,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     public void revokeRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO,
                                    RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception {
 
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(revokeRequestDTO.getConsumerKey())
                 .revokeAccessTokens(new String[]{refreshTokenDO.getAccessToken()});
     }
 

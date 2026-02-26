@@ -219,7 +219,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             // in the database
             if (isHashDisabled && existingAccessTokenDO == null) {
 
-                existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                existingAccessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                         .getLatestAccessToken(consumerKey, authorizationReqDTO.getUser(), userStoreDomain, scope,
                                 false);
                 if (existingAccessTokenDO != null) {
@@ -405,8 +405,9 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
             // Persist the access token in database
             try {
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().insertAccessToken(accessToken,
-                        authorizationReqDTO.getConsumerKey(), newAccessTokenDO, existingAccessTokenDO, userStoreDomain);
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(authorizationReqDTO.getConsumerKey())
+                        .insertAccessToken(accessToken, authorizationReqDTO.getConsumerKey(), newAccessTokenDO,
+                                existingAccessTokenDO, userStoreDomain);
                 deactivateCurrentAuthorizationCode(newAccessTokenDO.getAuthorizationCode(),
                         newAccessTokenDO.getTokenId());
                 if (!accessToken.equals(newAccessTokenDO.getAccessToken())) {

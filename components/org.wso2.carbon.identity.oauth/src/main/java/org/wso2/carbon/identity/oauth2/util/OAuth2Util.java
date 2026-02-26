@@ -5039,4 +5039,27 @@ public class OAuth2Util {
         return isLegacySessionBoundTokenBehaviourEnabled() && Boolean.parseBoolean(
                 IdentityUtil.getProperty(ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY));
     }
+
+    /**
+     * Check if the token type is non-persistent token type.
+     *
+     * @param consumerKey Consumer key of the application.
+     * @return True if the token type is non-persistent token type, false otherwise.
+     */
+    public static boolean isNonPersistentTokenEnabled(String consumerKey) {
+
+        try {
+            // Skip App DO call if token persistence is enabled (no need to check further)
+            if (isTokenPersistenceEnabled() || StringUtils.isBlank(consumerKey)) {
+                return false;
+            }
+
+            OAuthAppDO appDO = getAppInformationByClientId(consumerKey);
+            return StringUtils.equals(appDO.getTokenType(), JWT);
+
+        } catch (IdentityException e) {
+            log.error("Error while retrieving the application information for the consumer key: " + consumerKey, e);
+            return false;
+        }
+    }
 }
