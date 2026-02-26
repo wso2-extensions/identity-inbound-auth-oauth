@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oidc.session;
 
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -29,8 +28,9 @@ import static org.testng.Assert.assertTrue;
 
 /**
  * Unit test coverage for OIDCSessionState class.
+ * Migrated from PowerMock to plain Mockito (no static mocking needed here).
  */
-public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
+public class OIDCSessionStateTest {
 
     private static final String USERNAME = "user1";
     private static final String CLIENT_ID_VALUE = "3T9l2uUf8AzNOfmGS9lPEIsdrR8a";
@@ -52,9 +52,9 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
     @Test
     public void testSetSessionParticipants() {
 
-        Set<String> authenticatedUesrs = new HashSet<>();
-        authenticatedUesrs.add(CLIENT_ID_VALUE);
-        oidcSessionState.setSessionParticipants(authenticatedUesrs);
+        Set<String> authenticatedUsers = new HashSet<>();
+        authenticatedUsers.add(CLIENT_ID_VALUE);
+        oidcSessionState.setSessionParticipants(authenticatedUsers);
         assertNotNull(oidcSessionState.getSessionParticipants(), "Session participants is null");
     }
 

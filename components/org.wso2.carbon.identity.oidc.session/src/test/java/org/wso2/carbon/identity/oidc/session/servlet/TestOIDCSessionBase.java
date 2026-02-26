@@ -18,16 +18,19 @@
 package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.apache.commons.dbcp.BasicDataSource;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.BeforeMethod;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 
-public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
+/**
+ * Base class for OIDC session tests. Replaces PowerMockIdentityBaseTest with plain Mockito.
+ * Note: Subclasses should open/close MockedStatic instances themselves per test method or class,
+ * as MockitoAnnotations.openMocks() initialises @Mock fields here.
+ */
+public class TestOIDCSessionBase {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
@@ -35,6 +38,11 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
     protected Connection connection;
     protected BasicDataSource dataSource;
+
+    @BeforeMethod
+    public void initMocks() {
+        MockitoAnnotations.openMocks(this);
+    }
 
     protected void initiateInMemoryH2() throws Exception {
 
@@ -46,8 +54,7 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
         connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/h2.sql'");
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        // IdentityDatabaseUtil.getDBConnection() is mocked inline in each test using mockStatic()
     }
 
     protected void createOAuthApp(String clientId, String secret, String username, String appName, String appState,

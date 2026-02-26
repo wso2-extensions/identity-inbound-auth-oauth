@@ -18,7 +18,10 @@
 package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -33,21 +36,20 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({OAuthServerConfiguration.class, IdentityDatabaseUtil.class, IdentityTenantUtil.class,
-        OIDCSessionManagementUtil.class})
-@WithCarbonHome
 /**
- * Unit test coverage for OIDCSessionIFrameServlet class
+ * Unit test coverage for OIDCSessionIFrameServlet class.
+ * Migrated from PowerMock to Mockito MockedStatic (Java 21 compatible).
  */
+@WithCarbonHome
 public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     private OIDCSessionIFrameServlet oidcSessionIFrameServlet;
@@ -63,6 +65,8 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
+
+    private AutoCloseable mocks;
 
     private static final String CLIENT_ID_VALUE = "3T9l2uUf8AzNOfmGS9lPEIsdrR8a";
     private static final String APP_NAME = "myApp";
@@ -83,6 +87,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
     public void setupBeforeClass() throws Exception {
 
         initiateInMemoryH2();
+        cleanUpExistingApps();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_NO_CALLBACK_URL, SECRET__WITH_NO_CALLBACK_URL, USERNAME, APP_NAME, "ACTIVE",
                 " ");
@@ -91,17 +96,20 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
         createOAuthApp(CLIENT_ID_WITH_VALID_REGEX_CALLBACK_URL, SECRET, USERNAME, APP_NAME, "ACTIVE",
                 VALID_REGEX_CALLBACK_URL);
     }
+
     @BeforeMethod
     public void setUp() throws Exception {
 
+        mocks = MockitoAnnotations.openMocks(this);
         oidcSessionIFrameServlet = new OIDCSessionIFrameServlet();
     }
 
-    /**
-     * This provides data to testDoGet(String clientId, String redirectUri, String expected)
-     *
-     * @return
-     */
+    @AfterClass
+    public void cleanUp() throws Exception {
+
+        super.cleanData();
+    }
+
     @DataProvider(name = "provideDataForTestDoGet")
     public Object[][] provideDataForTestDoGet() {
 
@@ -119,28 +127,47 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
     @Test(dataProvider = "provideDataForTestDoGet")
     public void testDoGet(String clientId, String redirectUri, String expected) throws Exception {
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        oidcSessionIFrameServlet.init();
+        try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtilMock =
+                     Mockito.mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMock =
+                     Mockito.mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtilMock =
+                     Mockito.mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OIDCSessionManagementUtil> oidcSessionManagementUtilMock =
+                     Mockito.mockStatic(OIDCSessionManagementUtil.class)) {
 
-        when(request.getParameter("client_id")).thenReturn(clientId);
-        when(request.getParameter(OIDCSessionConstants.OIDC_REDIRECT_URI_PARAM)).thenReturn(redirectUri);
+            identityDatabaseUtilMock.when(IdentityDatabaseUtil::getDBConnection)
+                    .thenAnswer(invocationOnMock -> dataSource.getConnection());
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
-                .thenAnswer(invocation -> invocation.getArguments()[0]);
+            oidcSessionIFrameServlet.init();
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+            Mockito.when(request.getParameter("client_id")).thenReturn(clientId);
+            Mockito.when(request.getParameter(OIDCSessionConstants.OIDC_REDIRECT_URI_PARAM)).thenReturn(redirectUri);
 
-        mockStatic(OIDCSessionManagementUtil.class);
-        when(OIDCSessionManagementUtil.getOrigin((CALLBACK_URL))).thenReturn("http://localhost:8080/playground2");
-        StringWriter outStringwriter = new StringWriter();
-        PrintWriter out = new PrintWriter(outStringwriter);
-        when(response.getWriter()).thenReturn(out);
-        oidcSessionIFrameServlet.doGet(request, response);
-        assertTrue(outStringwriter.toString().contains(expected), "Expected one is different from the actual one");
+            oAuthServerConfigurationMock.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            Mockito.when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+            Mockito.when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                    .thenAnswer(invocation -> invocation.getArguments()[0]);
+
+            identityTenantUtilMock.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+
+            oidcSessionManagementUtilMock.when(() -> OIDCSessionManagementUtil.getOrigin(CALLBACK_URL))
+                    .thenReturn("http://localhost:8080/playground2");
+
+            StringWriter outStringwriter = new StringWriter();
+            PrintWriter out = new PrintWriter(outStringwriter);
+            Mockito.when(response.getWriter()).thenReturn(out);
+
+            oidcSessionIFrameServlet.doGet(request, response);
+            assertTrue(outStringwriter.toString().contains(expected),
+                    "Expected one is different from the actual one");
+        }
+    }
+        private void cleanUpExistingApps() throws Exception {
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement ps = connection.prepareStatement("DELETE FROM IDN_OAUTH_CONSUMER_APPS")) {
+                ps.executeUpdate();
+        }
     }
 }
