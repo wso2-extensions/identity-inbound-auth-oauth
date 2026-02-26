@@ -5,12 +5,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>6.13.45</version>
+        <version>6.13.46-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
-    <version>6.13.45</version>
+    <version>6.13.46-SNAPSHOT</version>
 
     <name>WSO2 Carbon - Identity OAuth 2.0 Scope Rest APIs</name>
     <description>Rest APIs for OAuth 2.0 Scope Handling</description>
