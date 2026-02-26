@@ -281,6 +281,30 @@ public class PreIssueIDTokenRequestBuilderTest {
     }
 
     @Test
+    public void testCollectNestedClaimPathsWithInvalidKeys() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        Map<Object, Object> invalidKeyMap = new HashMap<>();
+        invalidKeyMap.put(123, "value");
+        invalidKeyMap.put("valid", "value");
+        customClaims.put("parent", invalidKeyMap);
+
+        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
+        idTokenDTO.setCustomOIDCClaims(customClaims);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+        ActionExecutionRequest request = preIssueIDTokenRequestBuilder.
+                buildActionExecutionRequest(flowContext, null);
+        List<String> paths = request.getAllowedOperations().get(1).getPaths();
+
+        Assert.assertTrue(paths.contains("/idToken/claims/parent/valid"));
+        Assert.assertFalse(paths.contains("/idToken/claims/parent/123"));
+    }
+
+    @Test
     public void testBuildActionExecutionRequestWithMultipleScopes() throws ActionExecutionRequestBuilderException {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = getMockOAuth2AccessTokenReqDTO();
@@ -739,6 +763,7 @@ public class PreIssueIDTokenRequestBuilderTest {
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
         Assert.assertNotNull(event.getUser());
+        Assert.assertNotNull(event.getUser().getAccessingOrganization());
     }
 
     @Test
@@ -1197,6 +1222,19 @@ public class PreIssueIDTokenRequestBuilderTest {
         return idTokenDTO;
     }
 
+    private void assertComplexPaths(List<String> paths) {
+
+        Assert.assertTrue(paths.contains("/idToken/claims/simple"));
+        Assert.assertTrue(paths.contains("/idToken/claims/nested"));
+        Assert.assertTrue(paths.contains("/idToken/claims/nested/intermediate"));
+        Assert.assertTrue(paths.contains("/idToken/claims/nested/intermediate/leaf"));
+
+        Assert.assertTrue(paths.contains("/idToken/claims/list_claim"));
+        Assert.assertTrue(paths.contains("/idToken/claims/list_claim/"));
+
+        Assert.assertTrue(paths.contains("/idToken/claims/aud/"));
+    }
+
     @Test
     public void buildActionExecutionRequestWithMultipleHeadersForTokenFlow()
             throws ActionExecutionRequestBuilderException {
@@ -1612,5 +1650,68 @@ public class PreIssueIDTokenRequestBuilderTest {
         Assert.assertEquals(request.getAdditionalHeaders().size(), 2);
         Assert.assertNotNull(request.getAdditionalParams());
         Assert.assertEquals(request.getAdditionalParams().size(), 2);
+    }
+
+    @Test
+    public void testGetRemoveOrReplacePathsWithDeeplyNestedClaims() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("simple", "value");
+        Map<String, Object> level1 = new HashMap<>();
+        Map<String, Object> level2 = new HashMap<>();
+        level2.put("leaf", "value");
+        level1.put("intermediate", level2);
+        customClaims.put("nested", level1);
+        customClaims.put("list_claim", Arrays.asList("a", "b"));
+
+        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
+        idTokenDTO.setCustomOIDCClaims(customClaims);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+        ActionExecutionRequest request = preIssueIDTokenRequestBuilder.buildActionExecutionRequest(
+                flowContext, null);
+
+        List<String> removePaths = request.getAllowedOperations().stream()
+                .filter(op -> op.getOp() == Operation.REMOVE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("REMOVE operation not found"))
+                .getPaths();
+        assertComplexPaths(removePaths);
+
+        List<String> replacePaths = request.getAllowedOperations().stream()
+                .filter(op -> op.getOp() == Operation.REPLACE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("REPLACE operation not found"))
+                .getPaths();
+        assertComplexPaths(replacePaths);
+    }
+
+    @Test
+    public void testGetRemoveAndReplacePathsWithArrays() throws ActionExecutionRequestBuilderException {
+
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("array_claim", new String[]{"val1", "val2"});
+
+        IDTokenDTO idTokenDTO = getMockIDTokenDTO();
+        idTokenDTO.setCustomOIDCClaims(customClaims);
+
+        FlowContext flowContext = FlowContext.create()
+                .add(TOKEN_REQUEST_MESSAGE_CONTEXT, getMockTokenMessageContext())
+                .add(ID_TOKEN_DTO, idTokenDTO)
+                .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
+
+        ActionExecutionRequest request = preIssueIDTokenRequestBuilder.buildActionExecutionRequest(
+                flowContext, null);
+        List<String> removePaths = request.getAllowedOperations().get(1).getPaths();
+        List<String> replacePaths = request.getAllowedOperations().get(2).getPaths();
+
+        Assert.assertTrue(removePaths.contains("/idToken/claims/array_claim"));
+        Assert.assertTrue(removePaths.contains("/idToken/claims/array_claim/"));
+
+        Assert.assertTrue(replacePaths.contains("/idToken/claims/array_claim"));
+        Assert.assertTrue(replacePaths.contains("/idToken/claims/array_claim/"));
     }
 }
