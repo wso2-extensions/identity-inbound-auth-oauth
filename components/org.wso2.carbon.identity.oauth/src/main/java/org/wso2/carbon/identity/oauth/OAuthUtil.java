@@ -1589,6 +1589,10 @@ public final class OAuthUtil {
     public static void clearOAuthCacheUsingPersistedScopes(String tokenBindingReference, AccessTokenDO accessTokenDO,
                                                            OAuthRevocationRequestDTO revokeRequestDTO) {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing OAuth cache for persisted scopes. Consumer key: " + revokeRequestDTO.getConsumerKey());
+        }
+
         if (OAuthServerConfiguration.getInstance().getAllowedScopes().isEmpty()) {
             return;
         }
@@ -1614,6 +1618,11 @@ public final class OAuthUtil {
                     accessTokenDO.getAuthzUser(), dbTokenScopeString, tokenBindingReference);
             OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(),
                     accessTokenDO.getAuthzUser(), dbTokenScopeString);
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully cleared OAuth cache entries for consumer key: " +
+                        revokeRequestDTO.getConsumerKey());
+            }
 
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error while clearing cache entries for extended scopes. Consumer key: "
