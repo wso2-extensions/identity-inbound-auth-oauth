@@ -160,6 +160,9 @@ public class OAuth2CibaEndpointTest {
 
         oAuth2Util = mockStatic(OAuth2Util.class);
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY, "carbon.super"))
+                .thenReturn(oAuthAppDO);
+        lenient().when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
 
         endpointUtil = mockStatic(EndpointUtil.class);
         endpointUtil.when(() -> EndpointUtil.getIssuerIdentifierFromClientId(any()))
@@ -644,6 +647,76 @@ public class OAuth2CibaEndpointTest {
 
         Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
         Assert.assertTrue(response.getEntity().toString().contains("Invalid characters present in (binding_message)"));
+    }
+
+    @Test
+    public void testCibaParamRequestWithCibaGrantEnabled() throws Exception {
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory = mockStatic(CibaAuthServiceFactory.class)) {
+
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
+            oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+            when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                    oAuthClientAuthnContext);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY, "carbon.super"))
+                    .thenReturn(oAuthAppDO);
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("openid");
+            when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
+
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+
+            MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+            paramMap.put("scope", Collections.singletonList("openid"));
+            paramMap.put("login_hint", Collections.singletonList("user"));
+
+            when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+            Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            Assert.assertEquals(HttpServletResponse.SC_OK, response.getStatus());
+        }
+    }
+
+    @Test
+    public void testCibaParamRequestWithCibaGrantDisabled() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+
+        // Client only has authorization_code grant, NOT CIBA.
+        OAuthAppDO appDO = mock(OAuthAppDO.class);
+        when(appDO.getGrantTypes()).thenReturn("authorization_code refresh_token");
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CONSUMER_KEY, "carbon.super"))
+                .thenReturn(appDO);
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertTrue(response.getEntity().toString().contains("Client has not configured grant_type properly"));
     }
 
     @Test
