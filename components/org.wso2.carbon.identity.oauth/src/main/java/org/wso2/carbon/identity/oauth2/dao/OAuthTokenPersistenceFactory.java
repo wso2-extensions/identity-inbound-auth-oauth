@@ -115,11 +115,6 @@ public class OAuthTokenPersistenceFactory {
         return oauthUserConsentedScopesDAO;
     }
 
-    public RevokedTokenPersistenceDAO getRevokedTokenPersistenceDAO() {
-
-        return revokedTokenPersistenceDAO;
-    }
-
     /**
      * Retrieves the DAO for revoked token persistence.
      * <p>
