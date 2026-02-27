@@ -176,7 +176,15 @@ public class AuthorizationGrantCache extends
      * @param key Key to clear cache.
      */
     public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId) {
-        super.clearCacheEntry(key);
+
+        if (key != null) {
+            super.clearCacheEntry(key);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Key is null, skipping clearing from cache. Clearing from session store " +
+                        "by tokenId: " + tokenId);
+            }
+        }
         clearFromSessionStore(tokenId);
     }
 

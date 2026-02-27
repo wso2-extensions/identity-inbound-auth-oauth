@@ -44,6 +44,7 @@ public class OAuthTokenPersistenceFactory {
     private TokenBindingMgtDAO tokenBindingMgtDAO;
     private OAuthUserConsentedScopesDAO oauthUserConsentedScopesDAO;
     private final AuthorizationDetailsDAO authorizationDetailsDAO;
+    private final RevokedTokenPersistenceDAO revokedTokenPersistenceDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -56,6 +57,7 @@ public class OAuthTokenPersistenceFactory {
         this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
         this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
         this.authorizationDetailsDAO = new AuthorizationDetailsDAOImpl();
+        this.revokedTokenPersistenceDAO = new RevokedTokenDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
@@ -111,6 +113,20 @@ public class OAuthTokenPersistenceFactory {
     public OAuthUserConsentedScopesDAO getOAuthUserConsentedScopesDAO() {
 
         return oauthUserConsentedScopesDAO;
+    }
+
+    /**
+     * Retrieves the DAO for revoked token persistence.
+     * <p>
+     * This method returns a {@link RevokedTokenPersistenceDAO} instance that provides access to the
+     * revoked token data. This DAO is used to interact with the underlying data store to manage revoked tokens,
+     * including checking if a token is revoked and adding revoked tokens.
+     *</p>
+     * @return the {@link RevokedTokenPersistenceDAO} instance that provides access to revoked token data.
+     */
+    public RevokedTokenPersistenceDAO getRevokedTokenPersistenceDAO() {
+
+        return revokedTokenPersistenceDAO;
     }
 
     /**
