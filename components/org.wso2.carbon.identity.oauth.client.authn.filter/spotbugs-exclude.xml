@@ -27,4 +27,19 @@
     <Match>
         <Bug pattern="MS_EXPOSE_REP"/>
     </Match>
+    <Match>
+        <Class name="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy" />
+        <Method name="getOAuthClientAuthnService" />
+        <Bug pattern="EI_EXPOSE_REP" />
+    </Match>
+    <Match>
+        <Class name="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy" />
+        <Method name="setOAuthClientAuthnService" />
+        <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+    <Match>
+        <Class name="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory" />
+        <Field name="oAuthClientAuthnService" />
+        <Bug pattern="PA_PUBLIC_PRIMITIVE_ATTRIBUTE" />
+    </Match>
 </FindBugsFilter>

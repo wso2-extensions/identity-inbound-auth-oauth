@@ -81,10 +81,6 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -130,7 +126,8 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
         FrameworkUtils.class,
         JDBCPersistenceManager.class,
         OAuthServerConfiguration.class,
-        PrivilegedCarbonContext.class
+        PrivilegedCarbonContext.class,
+        ClaimMetadataHandler.class
 })
 
 public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
@@ -730,37 +727,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         claimMappings.put(DIVISION, LOCAL_DIVISION_CLAIM_URI);
         claimMappings.put(DIVISION_WITH_DOT, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI);
         claimMappings.put(GROUPS, LOCAL_GROUPS_CLAIM_URI);
-        // claimMappings.put(DIVISION_WITH_DOT_IN_URL, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_IN_URL_FORMAT_URI);
 
         ClaimMetadataHandler claimMetadataHandler = spy(ClaimMetadataHandler.class);
         doReturn(claimMappings).when(claimMetadataHandler).getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null,
                 TENANT_DOMAIN, false);
-        // Set Claim Handler instance
-        setStaticField(ClaimMetadataHandler.class, "INSTANCE", claimMetadataHandler);
-    }
 
-    private void setStaticField(Class classname,
-                                String fieldName,
-                                Object value)
-            throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-
-        Field declaredField = classname.getDeclaredField(fieldName);
-        declaredField.setAccessible(true);
-
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(declaredField, declaredField.getModifiers() & ~Modifier.FINAL);
-
-        declaredField.set(null, value);
+        // Use PowerMock to intercept the getInstance() call
+        mockStatic(ClaimMetadataHandler.class);
+        when(ClaimMetadataHandler.getInstance()).thenReturn(claimMetadataHandler);
     }
 
     private void mockUserRealm(String username, UserRealm userRealm) throws IdentityException {
@@ -901,7 +875,10 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         when(applicationManagementService.getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(SERVICE_PROVIDER_NAME);
-        setStaticField(OAuth2ServiceComponentHolder.class, "applicationMgtService", applicationManagementService);
+
+        // Use PowerMock's built-in reflection utility to set the private static field safely
+        org.powermock.reflect.Whitebox.setInternalState(OAuth2ServiceComponentHolder.class,
+                "applicationMgtService", applicationManagementService);
     }
 
     private void mockApplicationManagementService(ServiceProvider sp) throws Exception {
