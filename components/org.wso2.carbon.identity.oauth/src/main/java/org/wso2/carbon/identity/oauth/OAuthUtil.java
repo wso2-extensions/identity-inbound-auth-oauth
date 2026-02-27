@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -62,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -1571,6 +1573,51 @@ public final class OAuthUtil {
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Failed to retrieve the user store domain for the parent user with ID: "
                     + parentUserId + " in tenant domain: " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Triggers a cache clearance for the original scopes associated with a token.
+     * This is necessary because the scopes in the provided {@code accessTokenDO} might have been
+     * filtered or mutated during the request lifecycle. Fetch the original scopes from the
+     * database to ensure the cache is cleared using the correct keys.
+     *
+     * @param tokenBindingReference The token binding identifier.
+     * @param accessTokenDO        The current (potentially mutated) access token object.
+     * @param revokeRequestDTO     The revocation request details containing the consumer key.
+     */
+    public static void clearOAuthCacheUsingPersistedScopes(String tokenBindingReference, AccessTokenDO accessTokenDO,
+                                                           OAuthRevocationRequestDTO revokeRequestDTO) {
+
+        if (OAuthServerConfiguration.getInstance().getAllowedScopes().isEmpty()) {
+            return;
+        }
+
+        String accessToken = accessTokenDO.getAccessToken();
+        if (StringUtils.isBlank(accessToken)) {
+            return;
+        }
+
+        try {
+            // The in-memory scopes may be mutated during validation. To avoid cache-key
+            // mismatches, retrieve the original scopes from the database before clearing
+            // the OAuth cache.
+            AccessTokenDO dbTokenDO = OAuthTokenPersistenceFactory.getInstance()
+                    .getAccessTokenDAO()
+                    .getAccessToken(accessToken, true);
+            if (dbTokenDO == null || dbTokenDO.getScope() == null || dbTokenDO.getScope().length == 0) {
+                return;
+            }
+
+            String dbTokenScopeString = OAuth2Util.buildScopeString(dbTokenDO.getScope());
+            OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(),
+                    accessTokenDO.getAuthzUser(), dbTokenScopeString, tokenBindingReference);
+            OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(),
+                    accessTokenDO.getAuthzUser(), dbTokenScopeString);
+
+        } catch (IdentityOAuth2Exception e) {
+            LOG.error("Error while clearing cache entries for extended scopes. Consumer key: "
+                    + revokeRequestDTO.getConsumerKey(), e);
         }
     }
 }
