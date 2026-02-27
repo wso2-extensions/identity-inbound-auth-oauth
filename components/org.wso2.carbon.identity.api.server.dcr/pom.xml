@@ -5,12 +5,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>6.14.0-SNAPSHOT</version>
+        <version>6.14.0</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.dcr</artifactId>
-    <version>6.14.0-SNAPSHOT</version>
+    <version>6.14.0</version>
     <name>WSO2 Carbon -  User DCR Rest API</name>
     <description>WSO2 Carbon - User DCR Rest API</description>
 
