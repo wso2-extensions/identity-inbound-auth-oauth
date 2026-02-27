@@ -534,14 +534,24 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         ActionExecutionStatus<?> executionStatus = null;
-        if (checkExecutePreIssueAccessTokensActions(tokenReqMessageContext)) {
+        OAuthAppDO oAuthAppDO = getoAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+
+        if (checkExecutePreIssueAccessTokensActions(tokenReqMessageContext, oAuthAppDO)) {
 
             FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
             try {
+                String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+                // Selecting the action execution tenant domain based on the application's issuer organization.
+                if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                        getApplicationResidentOrganizationId())) {
+                    if (StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
+                        tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveTenantDomain(oAuthAppDO.getIssuerOrg());
+                    }
+                }
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext,
-                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext, tenantDomain);
 
                 if (log.isDebugEnabled()) {
                     log.debug(String.format(
@@ -552,15 +562,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
             } catch (ActionExecutionException e) {
                 throw new IdentityOAuth2Exception("Error occurred while executing pre issue access token actions.", e);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain from organization " +
+                        "while pre issue access token actions.", e);
             }
         }
         return executionStatus;
     }
 
-    private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext)
-            throws IdentityOAuth2Exception {
+    private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                            OAuthAppDO oAuthAppBean) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppBean = getoAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
 
         // Allow for following grant types and for JWT access tokens if,
