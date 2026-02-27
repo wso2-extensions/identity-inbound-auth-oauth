@@ -35,9 +35,10 @@ import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -57,9 +58,6 @@ public class CibaUserNotificationHandlerTest {
 
     @Mock
     private CibaNotificationChannel channel2;
-
-    @Mock
-    private OAuthAppDO oAuthAppDO;
 
     private MockedStatic<ServiceURLBuilder> serviceURLBuilder;
     private ServiceURLBuilder mockServiceURLBuilder;
@@ -123,7 +121,7 @@ public class CibaUserNotificationHandlerTest {
         // App has no notification channels configured.
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Collections.emptyList())
                 .build();
         cibaUserNotificationHandler.sendNotification(context);
     }
@@ -133,10 +131,9 @@ public class CibaUserNotificationHandlerTest {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel1.getName()).thenReturn("channel1");
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1");
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("channel1"))
                 .build();
         String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
@@ -149,11 +146,10 @@ public class CibaUserNotificationHandlerTest {
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel1.getName()).thenReturn("external");
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("external");
 
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("external"))
                 .build();
         String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
@@ -170,11 +166,10 @@ public class CibaUserNotificationHandlerTest {
         when(channel2.getName()).thenReturn("channel2");
         when(channel1.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1,channel2");
 
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("channel1", "channel2"))
                 .build();
         cibaUserNotificationHandler.sendNotification(context);
 
@@ -194,7 +189,6 @@ public class CibaUserNotificationHandlerTest {
         when(channel1.getName()).thenReturn("channel1");
         when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
         when(channel2.getName()).thenReturn("channel2");
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1,channel2");
 
         // Channel 1 throws exception
         org.mockito.Mockito.doThrow(new CibaCoreException("Error")).when(channel1)
@@ -202,7 +196,7 @@ public class CibaUserNotificationHandlerTest {
 
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("channel1", "channel2"))
                 .build();
         String usedChannel = cibaUserNotificationHandler.sendNotification(context);
 
@@ -220,12 +214,11 @@ public class CibaUserNotificationHandlerTest {
         when(channel1.getName()).thenReturn("channel1");
         when(channel2.getName()).thenReturn("channel2");
         when(channel2.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("Channel1,Channel2");
 
         // Request Channel2 specifically
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("channel1", "channel2"))
                 .setRequestedChannel("channel2")
                 .build();
         cibaUserNotificationHandler.sendNotification(context);
@@ -237,12 +230,11 @@ public class CibaUserNotificationHandlerTest {
     @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp =
             "Requested notification channel is not allowed for this application.")
     public void testSendNotificationDisallowedChannel() throws Exception {
-        when(oAuthAppDO.getCibaNotificationChannels()).thenReturn("channel1");
         CibaServiceComponentHolder.getInstance().addNotificationChannel(channel1);
         when(channel1.getName()).thenReturn("channel1");
         CibaNotificationContext context = new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
-                .setAuthAppDO(oAuthAppDO)
+                .setAppAllowedChannels(Arrays.asList("channel1"))
                 .setRequestedChannel("channel2")
                 .build();
         cibaUserNotificationHandler.sendNotification(context);

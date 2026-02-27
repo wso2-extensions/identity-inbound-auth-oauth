@@ -46,6 +46,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -153,8 +154,15 @@ public class CibaAuthServiceImpl implements CibaAuthService {
 
         try {
             CibaUserNotificationHandler notificationHandler = new CibaUserNotificationHandler();
-            CibaNotificationContext cibaNotificationContext = buildNotificationContext(
-                    resolvedUser, cibaAuthCodeDO, bindingMessage, authUrl, oAuthAppDO, notificationChannel);
+            List<String> allowedChannels = new ArrayList<>();
+            if (oAuthAppDO != null && StringUtils.isNotBlank(oAuthAppDO.getCibaNotificationChannels())) {
+                String[] channelArr = oAuthAppDO.getCibaNotificationChannels().split(",");
+                for (String ch : channelArr) {
+                    allowedChannels.add(ch.trim().toLowerCase(Locale.ROOT));
+                }
+            }
+            CibaNotificationContext cibaNotificationContext = buildNotificationContext(resolvedUser, cibaAuthCodeDO,
+                    bindingMessage, authUrl, notificationChannel, allowedChannels);
             String usedChannel = notificationHandler.sendNotification(cibaNotificationContext);
 
             if (log.isDebugEnabled()) {
@@ -308,11 +316,9 @@ public class CibaAuthServiceImpl implements CibaAuthService {
     }
 
     private CibaNotificationContext buildNotificationContext(CibaUserResolver.ResolvedUser resolvedUser,
-                                                             CibaAuthCodeDO cibaAuthCodeDO,
-                                                             String bindingMessage,
-                                                             String authUrl,
-                                                             OAuthAppDO oAuthAppDO,
-                                                             String notificationChannel) {
+                                                             CibaAuthCodeDO cibaAuthCodeDO, String bindingMessage,
+                                                             String authUrl, String notificationChannel,
+                                                             List<String> appAllowedChannels) {
 
         return new CibaNotificationContext.Builder()
                 .setResolvedUser(resolvedUser)
@@ -320,8 +326,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
                 .setAuthUrl(authUrl)
                 .setBindingMessage(bindingMessage)
                 .setTenantDomain(resolvedUser.getTenantDomain())
-                .setAuthAppDO(oAuthAppDO)
                 .setRequestedChannel(notificationChannel)
+                .setAppAllowedChannels(appAllowedChannels)
                 .build();
     }
 }
