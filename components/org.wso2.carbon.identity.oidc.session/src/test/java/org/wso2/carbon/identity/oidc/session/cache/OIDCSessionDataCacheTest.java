@@ -24,12 +24,13 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
 /**
  * Unit test coverage for OIDCSessionDataCache class.
+ * Migrated from PowerMock to plain Mockito (Java 21 compatible).
  */
 @WithCarbonHome
 @WithRealmService

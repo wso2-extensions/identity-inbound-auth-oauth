@@ -19,21 +19,22 @@ package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.reflect.Whitebox;
-import org.testng.annotations.AfterTest;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -52,9 +53,14 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
+import java.lang.reflect.Method;
 import java.security.KeyStore;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -64,23 +70,20 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({OIDCSessionManagementUtil.class, OIDCSessionManager.class, FrameworkUtils.class,
-        IdentityConfigParser.class, OAuthServerConfiguration.class, IdentityTenantUtil.class, KeyStoreManager.class,
-        CarbonCoreDataHolder.class, IdentityDatabaseUtil.class, OAuth2Util.class,
-        OIDCSessionManagementComponentServiceHolder.class, ServiceURLBuilder.class, OIDCSessionDataCache.class})
 /*
   Unit test coverage for OIDCLogoutServlet class.
  */
+@WithCarbonHome
 public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @Mock
@@ -139,10 +142,12 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private static final String REGEX_CALLBACK_URL = "regexp=http://localhost:8080/playground2/oauth2client";
 
     private OIDCLogoutServlet logoutServlet;
+    private AutoCloseable mocks;
 
     @BeforeClass
     public void setupBeforeClass() throws Exception {
         initiateInMemoryH2();
+        cleanUpExistingApps();
         createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
         createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE",
                 REGEX_CALLBACK_URL);
@@ -151,7 +156,17 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        mocks = MockitoAnnotations.openMocks(this);
         logoutServlet = new OIDCLogoutServlet();
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
+        // Strongly clear inline mocks to prevent any matchers leaking to the next tests
+        Mockito.framework().clearInlineMocks();
     }
 
     @DataProvider(name = "provideDataForTestDoGet")
@@ -248,8 +263,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {opbsCookie, true, redirectUrl[4], "oauth2client", " ", null, true, "", false, "", null},
                 // opbs cookie and previous session are existing, user consent is empty and there is a value for
                 // sessionDataKey and skipUserConsent=false.
-                {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", false, "", false, "",
-                        null},
+                {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", false, "",
+                        false, "", null},
                 // opbs cookie and previous session are existing, user consent is empty, there is a value for
                 // sessionDataKey, skipUserConsent=true and an invalid idTokenHint.
                 {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", true,
@@ -316,100 +331,128 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        mockStatic(OIDCSessionManagementUtil.class);
-        when(OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()).thenReturn(false);
-        when(OIDCSessionManagementUtil.getOPBrowserStateCookie(request)).thenReturn((Cookie) cookie);
-        when(OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString())).thenReturn(redirectUrl);
+        List<MockedStatic<?>> mockedStatics = new ArrayList<>();
 
-        mockStatic(OIDCSessionManager.class);
-        when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
-                thenReturn(sessionExists);
+        try {
+            // Sequence of mocking is critical. Configuration and DB Mocks must be initialized FIRST
+            // before OAuth2Util relies on them during its static block initialization.
+            MockedStatic<IdentityConfigParser> identityConfigParserStatic = mockStatic(IdentityConfigParser.class);
+            mockedStatics.add(identityConfigParserStatic);
+            identityConfigParserStatic.when(IdentityConfigParser::getInstance).thenReturn(identityConfigParser);
 
-        when(request.getParameter("consent")).thenReturn(consent);
-        when(request.getHeaderNames()).thenReturn(Collections.enumeration(Arrays.asList(new String[]{"cookie"})));
-        when(request.getHeader("COOKIE")).thenReturn("opbs");
-        when(request.getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS)).thenReturn(flowStatus);
+            MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationStatic
+                    = mockStatic(OAuthServerConfiguration.class);
+            mockedStatics.add(oAuthServerConfigurationStatic);
+            oAuthServerConfigurationStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            when(oAuthServerConfiguration.getOpenIDConnectSkipLogoutConsentConfig()).thenReturn(skipUserConsent);
+            when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
+            when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+            when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                    .thenAnswer(invocation -> invocation.getArguments()[0]);
 
-        doThrow(new ServletException()).when(commonAuthenticationHandler).doPost(request, response);
+            MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+            mockedStatics.add(identityDatabaseUtil);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection)
+                    .thenAnswer(invocationOnMock -> dataSource.getConnection());
 
-        when(request.getSession()).thenReturn(httpSession);
-        when(httpSession.getMaxInactiveInterval()).thenReturn(2);
+            // By this point, configs are safe. We can safely static-mock OAuth2Util.
+            MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+            mockedStatics.add(oAuth2Util);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("wso2.com");
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn("wso2.com");
 
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
+            MockedStatic<OIDCSessionManagementUtil> oidcSessionManagementUtil =
+                    mockStatic(OIDCSessionManagementUtil.class);
+            mockedStatics.add(oidcSessionManagementUtil);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::handleAlreadyLoggedOutSessionsGracefully)
+                    .thenReturn(false);
+            oidcSessionManagementUtil.when(() -> OIDCSessionManagementUtil.getOPBrowserStateCookie(request))
+                    .thenReturn((Cookie) cookie);
+            oidcSessionManagementUtil.when(() -> OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString()))
+                    .thenReturn(redirectUrl);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::getSessionManager).thenReturn(oidcSessionManager);
+            oidcSessionManagementUtil.when(() -> OIDCSessionManagementUtil
+                    .removeOPBrowserStateCookie(any(HttpServletRequest.class), any(HttpServletResponse.class)))
+                    .thenReturn((Cookie) cookie);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::getOIDCLogoutConsentURL)
+                    .thenReturn(redirectUrl);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::getOIDCLogoutURL).thenReturn(redirectUrl);
 
-        when(request.getParameter("sessionDataKey")).thenReturn(sessionDataKey);
+            MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+            mockedStatics.add(identityTenantUtil);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getOpenIDConnectSkipLogoutConsentConfig()).thenReturn(skipUserConsent);
+            MockedStatic<KeyStoreManager> keyStoreManagerStatic = mockStatic(KeyStoreManager.class);
+            mockedStatics.add(keyStoreManagerStatic);
+            keyStoreManagerStatic.when(() -> KeyStoreManager.getInstance(TENANT_ID)).thenReturn(keyStoreManager);
 
-        when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+            MockedStatic<OIDCSessionManagementComponentServiceHolder> serviceHolder
+                    = mockStatic(OIDCSessionManagementComponentServiceHolder.class);
+            mockedStatics.add(serviceHolder);
+            serviceHolder.when(OIDCSessionManagementComponentServiceHolder::getApplicationMgtService)
+                    .thenReturn(mockedApplicationManagementService);
 
-        when(OIDCSessionManagementUtil
-                .removeOPBrowserStateCookie(any(HttpServletRequest.class), any(HttpServletResponse.class)))
-                .thenReturn((Cookie) cookie);
+            MockedStatic<ServiceURLBuilder> serviceURLBuilderStatic = mockStatic(ServiceURLBuilder.class);
+            mockedStatics.add(serviceURLBuilderStatic);
+            mockServiceURLBuilder(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT, serviceURLBuilderStatic);
 
-        when(OIDCSessionManagementUtil.getOIDCLogoutConsentURL()).thenReturn(redirectUrl);
-        when(OIDCSessionManagementUtil.getOIDCLogoutURL()).thenReturn(redirectUrl);
+            MockedStatic<OIDCSessionDataCache> oidcSessionDataCacheStatic = mockStatic(OIDCSessionDataCache.class);
+            mockedStatics.add(oidcSessionDataCacheStatic);
+            oidcSessionDataCacheStatic.when(OIDCSessionDataCache::getInstance).thenReturn(oidcSessionDataCache);
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
-        when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            // Regular Stubbing
+            when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(sessionExists);
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
+            when(request.getParameter("consent")).thenReturn(consent);
+            when(request.getHeaderNames()).thenReturn(Collections.enumeration(Arrays.asList("cookie")));
+            when(request.getHeader("COOKIE")).thenReturn("opbs");
+            when(request.getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS)).thenReturn(flowStatus);
 
-        mockStatic(KeyStoreManager.class);
-        when(KeyStoreManager.getInstance(TENANT_ID)).thenReturn(keyStoreManager);
-        when(keyStoreManager.getDefaultPublicKey())
-                .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                        .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
+            doThrow(new ServletException()).when(commonAuthenticationHandler).doPost(request, response);
 
-        mockStatic(OIDCSessionManagementComponentServiceHolder.class);
-        when(OIDCSessionManagementComponentServiceHolder.getApplicationMgtService())
-                .thenReturn(mockedApplicationManagementService);
-        when(mockedApplicationManagementService.getServiceProviderNameByClientId(
-                anyString(), anyString(), anyString())).thenReturn("SP1");
+            when(request.getSession()).thenReturn(httpSession);
+            when(httpSession.getMaxInactiveInterval()).thenReturn(2);
+            when(request.getParameter("sessionDataKey")).thenReturn(sessionDataKey);
+            when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+            when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
-                .thenAnswer(invocation -> invocation.getArguments()[0]);
-        when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
-        when(OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("wso2.com");
-        when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
-        when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+            when(keyStoreManager.getDefaultPublicKey())
+                    .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                            .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
+            when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                    .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
 
-        mockServiceURLBuilder(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT);
+            when(mockedApplicationManagementService.getServiceProviderNameByClientId(
+                    anyString(), anyString(), anyString())).thenReturn("SP1");
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            OIDCSessionDataCacheKey opbsKey = mock(OIDCSessionDataCacheKey.class);
+            OIDCSessionDataCacheKey sessionIdKey = mock(OIDCSessionDataCacheKey.class);
+            when(opbsKey.getSessionDataId()).thenReturn(OPBROWSER_STATE);
+            when(sessionIdKey.getSessionDataId()).thenReturn(sessionDataKey);
+            when(oidcSessionDataCache.getValueFromCache(opbsKey)).thenReturn(opbsCacheEntry);
+            when(oidcSessionDataCache.getValueFromCache(sessionIdKey)).thenReturn(sessionIdCacheEntry);
 
-        mockStatic(OIDCSessionDataCache.class);
-        when(OIDCSessionDataCache.getInstance()).thenReturn(oidcSessionDataCache);
-        OIDCSessionDataCacheKey opbsKey = mock(OIDCSessionDataCacheKey.class);
-        OIDCSessionDataCacheKey sessionIdKey = mock(OIDCSessionDataCacheKey.class);
-        when(opbsKey.getSessionDataId()).thenReturn(OPBROWSER_STATE);
-        when(sessionIdKey.getSessionDataId()).thenReturn(sessionDataKey);
-        when(OIDCSessionDataCache.getInstance().getValueFromCache(opbsKey)).thenReturn(opbsCacheEntry);
-        when(OIDCSessionDataCache.getInstance().getValueFromCache(sessionIdKey)).thenReturn(sessionIdCacheEntry);
-        ConcurrentMap<String, String> paramMap = new ConcurrentHashMap<>();
-        paramMap.put(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM, CLIENT_ID_VALUE);
-        paramMap.put(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM, SUPER_TENANT_DOMAIN_NAME);
-        when(opbsCacheEntry.getParamMap()).thenReturn(paramMap);
-        when(sessionIdCacheEntry.getParamMap()).thenReturn(paramMap);
+            ConcurrentMap<String, String> paramMap = new ConcurrentHashMap<>();
+            paramMap.put(OIDCSessionConstants.OIDC_CACHE_CLIENT_ID_PARAM, CLIENT_ID_VALUE);
+            paramMap.put(OIDCSessionConstants.OIDC_CACHE_TENANT_DOMAIN_PARAM, SUPER_TENANT_DOMAIN_NAME);
+            when(opbsCacheEntry.getParamMap()).thenReturn(paramMap);
+            when(sessionIdCacheEntry.getParamMap()).thenReturn(paramMap);
 
-        logoutServlet.doGet(request, response);
-        verify(response).sendRedirect(captor.capture());
-        assertTrue(captor.getValue().contains(expected));
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            logoutServlet.doGet(request, response);
+            verify(response).sendRedirect(captor.capture());
+            assertTrue(captor.getValue().contains(expected));
+
+        } finally {
+            for (MockedStatic<?> mockedStatic : mockedStatics) {
+                mockedStatic.close();
+            }
+        }
     }
 
     @DataProvider(name = "provideDataForTestHandleMissingSessionStateGracefully")
@@ -476,50 +519,76 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        mockStatic(OIDCSessionManagementUtil.class);
-        when(OIDCSessionManagementUtil.getOPBrowserStateCookie(request)).thenReturn((Cookie) cookie);
-        when(OIDCSessionManagementUtil.handleAlreadyLoggedOutSessionsGracefully()).thenReturn(true);
-        when(OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString())).thenReturn(errorPageURL);
-        when(OIDCSessionManagementUtil.getOIDCLogoutURL()).thenReturn(oidcLogoutURL);
-        when(OIDCSessionManagementUtil.getSessionManager()).thenReturn(oidcSessionManager);
-        when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
-                thenReturn(sessionExists);
+        List<MockedStatic<?>> mockedStatics = new ArrayList<>();
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
-                invocation -> invocation.getArguments()[0]);
+        try {
+            MockedStatic<IdentityConfigParser> identityConfigParserStatic = mockStatic(IdentityConfigParser.class);
+            mockedStatics.add(identityConfigParserStatic);
+            identityConfigParserStatic.when(IdentityConfigParser::getInstance).thenReturn(identityConfigParser);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
-        when(OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass()))).thenReturn("wso2.com");
+            MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationStatic
+                    = mockStatic(OAuthServerConfiguration.class);
+            mockedStatics.add(oAuthServerConfigurationStatic);
+            oAuthServerConfigurationStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
+            when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+            when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
+                    invocation -> invocation.getArguments()[0]);
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+            MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+            mockedStatics.add(identityDatabaseUtil);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection)
+                    .thenAnswer(invocationOnMock -> dataSource.getConnection());
 
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
+            MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+            mockedStatics.add(oAuth2Util);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenCallRealMethod();
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class)))
+                    .thenReturn("wso2.com");
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+            MockedStatic<OIDCSessionManagementUtil> oidcSessionManagementUtil =
+                    mockStatic(OIDCSessionManagementUtil.class);
+            mockedStatics.add(oidcSessionManagementUtil);
+            oidcSessionManagementUtil.when(() -> OIDCSessionManagementUtil.getOPBrowserStateCookie(request))
+                    .thenReturn((Cookie) cookie);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::handleAlreadyLoggedOutSessionsGracefully)
+                    .thenReturn(true);
+            oidcSessionManagementUtil.when(() -> OIDCSessionManagementUtil.getErrorPageURL(anyString(), anyString()))
+                    .thenReturn(errorPageURL);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::getOIDCLogoutURL).thenReturn(oidcLogoutURL);
+            oidcSessionManagementUtil.when(OIDCSessionManagementUtil::getSessionManager).thenReturn(oidcSessionManager);
 
-        mockStatic(KeyStoreManager.class);
-        when(KeyStoreManager.getInstance(TENANT_ID)).thenReturn(keyStoreManager);
-        when(keyStoreManager.getDefaultPublicKey())
-                .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                        .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
-        when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+            MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+            mockedStatics.add(identityTenantUtil);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
 
-        when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
-        when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
+            MockedStatic<KeyStoreManager> keyStoreManagerStatic = mockStatic(KeyStoreManager.class);
+            mockedStatics.add(keyStoreManagerStatic);
+            keyStoreManagerStatic.when(() -> KeyStoreManager.getInstance(TENANT_ID)).thenReturn(keyStoreManager);
 
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        logoutServlet.doGet(request, response);
-        verify(response).sendRedirect(captor.capture());
-        assertTrue(captor.getValue().contains(expected));
+            when(oidcSessionManager.sessionExists(OPBROWSER_STATE, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(sessionExists);
+
+            when(keyStoreManager.getDefaultPublicKey())
+                    .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                            .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
+            when(keyStoreManager.getKeyStore(anyString())).thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
+                    .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+
+            when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+            when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
+
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            logoutServlet.doGet(request, response);
+            verify(response).sendRedirect(captor.capture());
+            assertTrue(captor.getValue().contains(expected));
+
+        } finally {
+            for (MockedStatic<?> mockedStatic : mockedStatics) {
+                mockedStatic.close();
+            }
+        }
     }
 
     @DataProvider(name = "provideDataForStateParamTest")
@@ -544,26 +613,34 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        Object expected = Whitebox.invokeMethod(logoutServlet, "appendStateQueryParam",
-                postLogoutUrl, stateParam);
+        Method appendStateQueryParamMethod = OIDCLogoutServlet.class
+                .getDeclaredMethod("appendStateQueryParam", String.class, String.class);
+        appendStateQueryParamMethod.setAccessible(true);
+        Object expected = appendStateQueryParamMethod.invoke(logoutServlet, postLogoutUrl, stateParam);
+
         assertEquals(expected, outputRedirectUrl);
     }
 
-    @AfterTest
+    @AfterClass
     public void cleanData() throws Exception {
-
         super.cleanData();
     }
 
-    private void mockServiceURLBuilder(String context) throws URLBuilderException {
-
-        mockStatic(ServiceURLBuilder.class);
+    private void mockServiceURLBuilder(String context, MockedStatic<ServiceURLBuilder> serviceURLBuilderStatic)
+            throws URLBuilderException {
         ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
+        serviceURLBuilderStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
         when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
 
         ServiceURL serviceURL = mock(ServiceURL.class);
         when(serviceURL.getRelativeInternalURL()).thenReturn(context);
         when(serviceURLBuilder.build()).thenReturn(serviceURL);
+    }
+
+    private void cleanUpExistingApps() throws Exception {
+        try (Connection connection = dataSource.getConnection();
+                PreparedStatement ps = connection.prepareStatement("DELETE FROM IDN_OAUTH_CONSUMER_APPS")) {
+                ps.executeUpdate();
+        }
     }
 }

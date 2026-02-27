@@ -34,6 +34,12 @@
     <url>http://wso2.org</url>
 
     <dependencies>
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>${javassist.version}</version>
+            <scope>test</scope>
+        </dependency>
         <!--
             This dependency is added as a quick fix
             for https://github.com/wso2-extensions/identity-inbound-auth-oauth/issues/543. Remove this tomcat
@@ -482,6 +488,10 @@
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED
                         --add-opens java.base/java.util.concurrent=ALL-UNNAMED
                         --add-opens java.base/sun.reflect.misc=ALL-UNNAMED
+                        --add-exports java.base/sun.security.x509=ALL-UNNAMED
+                        --add-opens java.base/sun.security.x509=ALL-UNNAMED
+                        --add-opens java.base/java.security.cert=ALL-UNNAMED
+                        --add-opens java.base/java.time=ALL-UNNAMED
                     </argLine>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>

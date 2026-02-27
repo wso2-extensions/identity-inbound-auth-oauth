@@ -18,20 +18,17 @@
 package org.wso2.carbon.identity.oidc.session.util;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
@@ -40,18 +37,13 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
-@PrepareForTest({OAuthServerConfiguration.class, OIDCSessionManagementConfiguration.class,
-        IdentityCoreServiceComponent.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        ServiceURLBuilder.class})
-/*
- Unit test coverage for OIDCSessionManagementUtil class
+/**
+ * Unit test coverage for OIDCSessionManagementUtil class.
+ * Migrated from PowerMock/PowerMockTestCase to Mockito MockedStatic (Java 21 compatible).
  */
-public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
+public class OIDCSessionManagementUtilTest {
 
     @Mock
     OIDCSessionManagementConfiguration oidcSessionManagementConfiguration;
@@ -63,20 +55,31 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     ServiceURL serviceURL;
 
     @Mock
-    private ServiceURLBuilder serviceURLBuilder;
+    ServiceURLBuilder serviceURLBuilder;
+
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMock;
+    private AutoCloseable mocks;
 
     private static final String CLIENT_ID = "u5FIfG5xzLvBGiamoAYzzcqpBqga";
     private static final String CALLBACK_URL = "http://localhost:8080/playground2/oauth2client";
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final String SESSION_STATE = "18b2343e6edaec1c8b1208169ffa141d158156518135350be60dfbf6f41d340f" +
             ".W2Gf-RAzLUFy2xq_8tuM6A";
-    String responseType[] = new String[]{"id_token", "token", "code"};
+    String[] responseType = new String[]{"id_token", "token", "code"};
 
     @BeforeMethod
     public void setUp() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        mocks = MockitoAnnotations.openMocks(this);
+        oAuthServerConfigurationMock = Mockito.mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfigurationMock.when(OAuthServerConfiguration::getInstance).thenReturn(oAuthServerConfiguration);
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+
+        oAuthServerConfigurationMock.close();
+        mocks.close();
     }
 
     @Test
@@ -86,11 +89,6 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
         Assert.assertNotNull(state, "This is empty");
     }
 
-    /***
-     * This provides data to testAddSessionStateToURL(String url, String sessionState, String responseType, String
-     * actual)
-     * @return
-     */
     @DataProvider(name = "provideDataFortestAddSessionStateToURL")
     public Object[][] provideDataFortestAddSessionStateToURL() {
 
@@ -125,7 +123,6 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
                 {url2, SESSION_STATE, responseType[2], actual4},
                 {url2, "", responseType[2], url2}
         };
-
     }
 
     @Test(dataProvider = "provideDataFortestAddSessionStateToURL")
@@ -165,10 +162,6 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
         Assert.assertNotNull(state, "This is empty");
     }
 
-    /***
-     * This provides data to testGetOPBrowserStateCookie(Object cookie, Object expectedResult)
-     * @return
-     */
     @DataProvider(name = "provideDataForTestGetOPBrowserStateCookie")
     public Object[][] provideDataForTestGetOPBrowserStateCookie() {
 
@@ -186,23 +179,19 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideDataForTestGetOPBrowserStateCookie")
     public void testGetOPBrowserStateCookie(Object[] cookie, Object expectedResult) {
 
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getCookies()).thenReturn((Cookie[]) cookie);
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(request.getCookies()).thenReturn((Cookie[]) cookie);
         Assert.assertEquals(OIDCSessionManagementUtil.getOPBrowserStateCookie(request), expectedResult);
     }
 
     @Test
     public void testAddOPBrowserStateCookie() {
 
-        HttpServletResponse response = mock(HttpServletResponse.class);
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         Cookie cookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
         Assert.assertNotNull(cookie, "Opbs cookie is null");
     }
 
-    /***
-     * Provide data to testRemoveOPBrowserStateCookie(Object[] cookie, Object expected)
-     * @return
-     */
     @DataProvider(name = "provideDataForTestRemoveOPBrowserStateCookie")
     public Object[][] provideDataForTestRemoveOPBrowserStateCookie() {
 
@@ -220,9 +209,9 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideDataForTestRemoveOPBrowserStateCookie")
     public void testRemoveOPBrowserStateCookie(Object[] cookie, Object expected) {
 
-        HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getCookies()).thenReturn((Cookie[]) cookie);
-        HttpServletResponse response = mock(HttpServletResponse.class);
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        Mockito.when(request.getCookies()).thenReturn((Cookie[]) cookie);
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
         Cookie returnedCookie = OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
         Assert.assertEquals(returnedCookie, expected, "Returned cookie is not equal as expected one");
@@ -235,10 +224,6 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
         Assert.assertEquals(returnedUrl, "http://localhost:8080", "Returned Url is different from expected url");
     }
 
-    /***
-     * Provides data to testGetOIDCLogoutConsentURL(String consentUrl, String expectedUrl)
-     * @return
-     */
     @DataProvider(name = "provideDataForTestGetOIDCLogoutConsentURL")
     public Object[][] provideDataForTestGetOIDCLogoutConsentURL() {
 
@@ -252,20 +237,20 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideDataForTestGetOIDCLogoutConsentURL")
     public void testGetOIDCLogoutConsentURL(String consentUrl, String expectedUrl) throws Exception {
 
-        mockStatic(OIDCSessionManagementConfiguration.class);
-        when(OIDCSessionManagementConfiguration.getInstance()).thenReturn(oidcSessionManagementConfiguration);
-        when(oidcSessionManagementConfiguration.getOIDCLogoutConsentPageUrl()).thenReturn(consentUrl);
+        try (MockedStatic<OIDCSessionManagementConfiguration> configMock =
+                     Mockito.mockStatic(OIDCSessionManagementConfiguration.class)) {
 
-        mockServiceURLBuilder(OAuthConstants.OAuth20Endpoints.OIDC_LOGOUT_CONSENT_EP_URL);
+            configMock.when(OIDCSessionManagementConfiguration::getInstance)
+                    .thenReturn(oidcSessionManagementConfiguration);
+            Mockito.when(oidcSessionManagementConfiguration.getOIDCLogoutConsentPageUrl()).thenReturn(consentUrl);
 
-        String returnedUrl = OIDCSessionManagementUtil.getOIDCLogoutConsentURL();
-        Assert.assertEquals(returnedUrl, expectedUrl, "Consent Url is not same as the Expected Consent Url");
+            mockServiceURLBuilder(OAuthConstants.OAuth20Endpoints.OIDC_LOGOUT_CONSENT_EP_URL);
+
+            String returnedUrl = OIDCSessionManagementUtil.getOIDCLogoutConsentURL();
+            Assert.assertEquals(returnedUrl, expectedUrl, "Consent Url is not same as the Expected Consent Url");
+        }
     }
 
-    /***
-     * Provides data to testGetOIDCLogoutURL(String logoutPageUrl, String expectedUrl)
-     * @return
-     */
     @DataProvider(name = "provideDataForTestGetOIDCLogoutURL")
     public Object[][] provideDataForTestGetOIDCLogoutURL() {
 
@@ -280,21 +265,21 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideDataForTestGetOIDCLogoutURL")
     public void testGetOIDCLogoutURL(String logoutPageUrl, String expectedUrl) throws Exception {
 
-        mockStatic(OIDCSessionManagementConfiguration.class);
-        when(OIDCSessionManagementConfiguration.getInstance()).thenReturn(oidcSessionManagementConfiguration);
-        when(oidcSessionManagementConfiguration.getOIDCLogoutPageUrl()).thenReturn(logoutPageUrl);
+        try (MockedStatic<OIDCSessionManagementConfiguration> configMock =
+                     Mockito.mockStatic(OIDCSessionManagementConfiguration.class)) {
 
-        mockServiceURLBuilder(OAuthConstants.OAuth20Endpoints.OIDC_DEFAULT_LOGOUT_RESPONSE_URL);
+            configMock.when(OIDCSessionManagementConfiguration::getInstance)
+                    .thenReturn(oidcSessionManagementConfiguration);
+            Mockito.when(oidcSessionManagementConfiguration.getOIDCLogoutPageUrl()).thenReturn(logoutPageUrl);
 
-        String returnedUrl = OIDCSessionManagementUtil.getOIDCLogoutURL();
-        Assert.assertEquals(returnedUrl, expectedUrl, "Expected logout page url and actual logout url are " +
-                "different");
+            mockServiceURLBuilder(OAuthConstants.OAuth20Endpoints.OIDC_DEFAULT_LOGOUT_RESPONSE_URL);
+
+            String returnedUrl = OIDCSessionManagementUtil.getOIDCLogoutURL();
+            Assert.assertEquals(returnedUrl, expectedUrl,
+                    "Expected logout page url and actual logout url are different");
+        }
     }
 
-    /***
-     * This provides data for testGetErrorPageURL(String errorPageUrl, String expectedUrl)
-     * @return
-     */
     @DataProvider(name = "provideDataForTestGetErrorPageURL")
     public Object[][] provideDataForTestGetErrorPageURL() {
 
@@ -313,39 +298,49 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     @Test(dataProvider = "provideDataForTestGetErrorPageURL")
     public void testGetErrorPageURL(String errorPageUrl, String expectedUrl) throws Exception {
 
-        when(oAuthServerConfiguration.getOauth2ErrorPageUrl()).thenReturn(errorPageUrl);
+        Mockito.when(oAuthServerConfiguration.getOauth2ErrorPageUrl()).thenReturn(errorPageUrl);
         mockServiceURLBuilder(OAuthConstants.OAuth20Endpoints.OAUTH2_ERROR_EP_URL);
 
         String returnedErrorPageUrl = OIDCSessionManagementUtil.getErrorPageURL("404", "not found");
-        Assert.assertEquals(returnedErrorPageUrl, expectedUrl, "Expected error page url and actual url are " +
-                "different");
+        Assert.assertEquals(returnedErrorPageUrl, expectedUrl,
+                "Expected error page url and actual url are different");
     }
 
     @Test
     public void testGetOpenIDConnectSkipeUserConsent() {
 
-        when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
+        Mockito.when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
 
         boolean returned = OIDCSessionManagementUtil.getOpenIDConnectSkipeUserConsent();
         Assert.assertTrue(returned, "Expected value and actual value are different");
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
-    }
-
     private void mockServiceURLBuilder(String context) throws URLBuilderException {
 
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addFragmentParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.build()).thenReturn(serviceURL);
+        // Note: ServiceURLBuilder mock must be opened/closed within the test scope.
+        // Since this helper is called from tests that already have OAuthServerConfigurationMock open,
+        // we open ServiceURLBuilder mock here and rely on the test's try-with-resources or @AfterMethod
+        // to manage it. For simplicity in shared helper, we use a field-level mock opened per-method.
+        MockedStatic<ServiceURLBuilder> serviceURLBuilderMock = Mockito.mockStatic(ServiceURLBuilder.class);
+        serviceURLBuilderMock.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+        Mockito.when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
+        Mockito.when(serviceURLBuilder.addFragmentParameter(any(), any())).thenReturn(serviceURLBuilder);
+        Mockito.when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
+        Mockito.when(serviceURLBuilder.build()).thenReturn(serviceURL);
+        Mockito.when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443" + context);
+        // Register for cleanup at end of test
+        serviceURLBuilderMocks = serviceURLBuilderMock;
+    }
 
-        when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443" + context);
+    // Holds the ServiceURLBuilder mock so it can be closed in @AfterMethod
+    private MockedStatic<ServiceURLBuilder> serviceURLBuilderMocks;
+
+    @AfterMethod(alwaysRun = true)
+    public void closeServiceURLBuilderMock() {
+        if (serviceURLBuilderMocks != null) {
+            serviceURLBuilderMocks.close();
+            serviceURLBuilderMocks = null;
+        }
     }
 
     @Test(dataProvider = "provideDataForTestIsIDTokenEncrypted")
@@ -359,8 +354,8 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
     public Object[][] provideDataForTestIsIDTokenEncrypted() {
 
         String encryptedIdToken =
-                "eyJraWQiOiJPVFpsTUdZMk1HRXlPVEExTkdJd01URXpPRFppT0RCa05UTXpZakJqTVdOaE9UbGpaR1pqTldaaFpHRmtPRFEyWXp" +
-                        "aaE9HRXpZbVF4TTJaa05HWmpZUSIsImVuYyI6IkExMjhHQ00iLCJhbGciOiJSU0EtT0FFUCJ9.ayBFPA_EJHl7W7C9e" +
+                "eyJraWQiOiJPVFpsTUdZMk1HRXlPVEExTkdJd01URXpPRFppT0RCa05UTXpZakJqTVdOaE9UbGpaR1pqTldaaFpHRmtPRFEyWX" +
+                        "phaE9HRXpZbVF4TTJaa05HWmpZUSIsImVuYyI6IkExMjhHQ00iLCJhbGciOiJSU0EtT0FFUCJ9.ayBFPA_EJHl7W7C9e" +
                         "wu4wQlo4y83DgQdgJZGuHzIAn9k3La30DmRckx7PAdIiZgrm9SPlfd59PMuyEcoYg6FEolV2zirOm1b_J7RH8bAydVP" +
                         "Wv-bBL_vfJKMWZV1vkuWTB-HNCg6drp8iuvpEroNOvn8yFL-NMltzSbGKAzSMikhTNqy2MkI9Ds9Ems3_dpERd6P65X" +
                         "U2hMXILpG5YtqUN1VVtv-oHbWX0ZZEWGxeEjw327d4CfZ77FXUdZbemAo3HTq0QrrEVF7NKVHv8sufGu533Aw_9xRIk" +
@@ -404,5 +399,4 @@ public class OIDCSessionManagementUtilTest extends PowerMockTestCase {
                 {null, false}
         };
     }
-
 }

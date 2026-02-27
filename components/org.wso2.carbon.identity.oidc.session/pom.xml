@@ -125,20 +125,10 @@
             <artifactId>org.jacoco.agent</artifactId>
             <classifier>runtime</classifier>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-testng -->
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <version>${mockito.5.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -153,11 +143,6 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.idp.mgt</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.parsers</groupId>
-            <artifactId>jaxp-ri</artifactId>
-            <scope>test</scope>
         </dependency>
 
     </dependencies>

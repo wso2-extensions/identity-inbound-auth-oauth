@@ -19,28 +19,41 @@ package org.wso2.carbon.identity.oidc.session.config;
 
 import org.apache.axiom.om.OMElement;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import static org.mockito.Matchers.eq;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.testng.Assert.assertNotNull;
 
 /**
  * Unit test coverage for OIDCSessionManagementConfiguration.
+ * Migrated from PowerMock to Mockito MockedStatic (Java 21 compatible).
  */
-@PrepareForTest({IdentityConfigParser.class})
-public class OIDCSessionManagementConfigurationTest extends PowerMockIdentityBaseTest {
+public class OIDCSessionManagementConfigurationTest {
 
     @Mock
     IdentityConfigParser configParser;
 
     @Mock
     OMElement oauthConfigElement;
+
+    private AutoCloseable mocks;
+
+    @BeforeMethod
+    public void setUp() {
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+        mocks.close();
+    }
 
     @DataProvider(name = "provideDataForTestGetInstance")
     public Object[][] provideDataForTestGetInstance() {
@@ -53,9 +66,11 @@ public class OIDCSessionManagementConfigurationTest extends PowerMockIdentityBas
     @Test(dataProvider = "provideDataForTestGetInstance")
     public void testGetInstance(Object oauthConfigElement) {
 
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(configParser);
-        when(configParser.getConfigElement(eq("OAuth"))).thenReturn((OMElement) oauthConfigElement);
-        assertNotNull(OIDCSessionManagementConfiguration.getInstance());
+        try (MockedStatic<IdentityConfigParser> identityConfigParserMock =
+                     Mockito.mockStatic(IdentityConfigParser.class)) {
+            identityConfigParserMock.when(IdentityConfigParser::getInstance).thenReturn(configParser);
+            Mockito.when(configParser.getConfigElement(eq("OAuth"))).thenReturn((OMElement) oauthConfigElement);
+            assertNotNull(OIDCSessionManagementConfiguration.getInstance());
+        }
     }
 }

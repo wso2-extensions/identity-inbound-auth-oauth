@@ -34,6 +34,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>${javassist.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <scope>provided</scope>
@@ -255,7 +261,7 @@
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
                                             <!--<minimum>0.60</minimum>-->
-                                        </limit>
+                                            </limit>
                                     </limits>
                                 </rule>
                             </rules>
@@ -272,6 +278,7 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <threshold>High</threshold>
+                    <excludeFilterFile>${project.basedir}/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
             </plugin>
         </plugins>

@@ -856,7 +856,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.732</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.27.2</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -967,10 +967,11 @@
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
         <testng.version>6.9.10</testng.version>
-        <jacoco.version>0.8.7</jacoco.version>
+        <jacoco.version>0.8.12</jacoco.version>
         <mockito.version>2.28.2</mockito.version>
+        <mockito.5.version>5.11.0</mockito.5.version>
         <powermock.version>2.0.9</powermock.version>
-        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
+        <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
         <h2database.version>2.1.210</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
@@ -989,7 +990,7 @@
         <log4j.verison>1.2.17</log4j.verison>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
-        <spotbugs-maven-plugin.version>4.7.2.1</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.8.6.6</spotbugs-maven-plugin.version>
         <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
@@ -997,6 +998,8 @@
 
         <!--Identity Apps-->
         <authentication.portal.version>1.0.51</authentication.portal.version>
+        <javassist.version>3.30.2-GA</javassist.version>
+        <argLine></argLine>
     </properties>
 
 </project>
