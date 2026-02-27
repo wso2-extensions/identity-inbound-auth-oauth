@@ -425,7 +425,7 @@ public class HybridOAuth2RevocationProcessor implements OAuth2RevocationProcesso
         OAuthUtil.invokePreRevocationBySystemListeners(clientId, params);
         OAuthTokenPersistenceFactory.getInstance().getRevokedTokenPersistenceDAO()
                 .revokeTokensBySubjectEvent(clientId, ENTITY_ID_TYPE_CLIENT_ID, revocationTime, tenantId);
-        new RefreshTokenDAOImpl().revokeTokensForApp(clientId);
+        refreshTokenDAO.revokeTokensForApp(clientId);
         OAuthUtil.invokePostRevocationBySystemListeners(clientId, params);
     }
 

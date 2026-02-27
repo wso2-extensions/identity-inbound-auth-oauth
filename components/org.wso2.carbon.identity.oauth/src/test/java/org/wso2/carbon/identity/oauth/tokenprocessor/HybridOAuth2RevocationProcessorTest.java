@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterMethod;
@@ -50,6 +49,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
+import java.lang.reflect.Field;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +61,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -98,6 +97,9 @@ public class HybridOAuth2RevocationProcessorTest {
     private RevokedTokenPersistenceDAO mockRevokedTokenPersistenceDAO;
 
     @Mock
+    private RefreshTokenDAOImpl mockRefreshTokenDAO;
+
+    @Mock
     private AbstractUserStoreManager mockUserStoreManager;
 
     @Mock
@@ -124,6 +126,11 @@ public class HybridOAuth2RevocationProcessorTest {
 
         closeable = MockitoAnnotations.openMocks(this);
         hybridOAuth2RevocationProcessor = new HybridOAuth2RevocationProcessor();
+
+        // Inject mock RefreshTokenDAOImpl using reflection
+        Field refreshTokenDAOField = HybridOAuth2RevocationProcessor.class.getDeclaredField("refreshTokenDAO");
+        refreshTokenDAOField.setAccessible(true);
+        refreshTokenDAOField.set(hybridOAuth2RevocationProcessor, mockRefreshTokenDAO);
 
         oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);
         oAuthTokenPersistenceFactoryMockedStatic = mockStatic(OAuthTokenPersistenceFactory.class);
@@ -273,22 +280,14 @@ public class HybridOAuth2RevocationProcessorTest {
         OAuthRevocationRequestDTO revokeRequestDTO = createOAuthRevocationRequestDTO();
         RefreshTokenValidationDataDO refreshTokenDO = createRefreshTokenValidationDataDO(true); // With non-persisted AT
 
-        // Mock the RefreshTokenDAOImpl construction
-        try (MockedConstruction<RefreshTokenDAOImpl> mockedConstruction =
-                     mockConstruction(RefreshTokenDAOImpl.class)) {
+        hybridOAuth2RevocationProcessor.revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
 
-            hybridOAuth2RevocationProcessor.revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
+        // Verify RefreshTokenDAOImpl.revokeToken was called with correct token
+        verify(mockRefreshTokenDAO).revokeToken(eq(TEST_REFRESH_TOKEN));
 
-            // Verify RefreshTokenDAOImpl was instantiated and revokeToken was called
-            assertEquals(mockedConstruction.constructed().size(), 1,
-                    "RefreshTokenDAOImpl should be instantiated once");
-            RefreshTokenDAOImpl mockedRefreshTokenDAO = mockedConstruction.constructed().get(0);
-            verify(mockedRefreshTokenDAO).revokeToken(eq(TEST_REFRESH_TOKEN));
-
-            // Verify refresh token state is updated to REVOKED
-            assertEquals(refreshTokenDO.getRefreshTokenState(), "REVOKED",
-                    "Refresh token state should be set to REVOKED");
-        }
+        // Verify refresh token state is updated to REVOKED
+        assertEquals(refreshTokenDO.getRefreshTokenState(), "REVOKED",
+                "Refresh token state should be set to REVOKED");
     }
 
     @Test
@@ -349,31 +348,23 @@ public class HybridOAuth2RevocationProcessorTest {
         removedScopes.add("scope1");
         removedScopes.add("scope2");
 
-        // Mock the RefreshTokenDAOImpl construction
-        try (MockedConstruction<RefreshTokenDAOImpl> mockedConstruction =
-                     mockConstruction(RefreshTokenDAOImpl.class)) {
+        hybridOAuth2RevocationProcessor.revokeTokens(TEST_APP_ID, TEST_API_ID, removedScopes, TEST_TENANT_DOMAIN);
 
-            hybridOAuth2RevocationProcessor.revokeTokens(TEST_APP_ID, TEST_API_ID, removedScopes, TEST_TENANT_DOMAIN);
+        // Verify revokeTokensBySubjectEvent is called with client ID
+        verify(mockRevokedTokenPersistenceDAO).revokeTokensBySubjectEvent(
+                eq(TEST_CLIENT_ID),
+                eq("CLIENT_ID"),
+                anyLong(),
+                eq(TEST_TENANT_ID)
+        );
 
-            // Verify revokeTokensBySubjectEvent is called with client ID
-            verify(mockRevokedTokenPersistenceDAO).revokeTokensBySubjectEvent(
-                    eq(TEST_CLIENT_ID),
-                    eq("CLIENT_ID"),
-                    anyLong(),
-                    eq(TEST_TENANT_ID)
-            );
+        // Verify RefreshTokenDAOImpl.revokeTokensForApp was called
+        verify(mockRefreshTokenDAO).revokeTokensForApp(eq(TEST_CLIENT_ID));
 
-            // Verify RefreshTokenDAOImpl.revokeTokensForApp was called
-            assertEquals(mockedConstruction.constructed().size(), 1,
-                    "RefreshTokenDAOImpl should be instantiated once");
-            RefreshTokenDAOImpl mockedRefreshTokenDAO = mockedConstruction.constructed().get(0);
-            verify(mockedRefreshTokenDAO).revokeTokensForApp(eq(TEST_CLIENT_ID));
-
-            // Verify AccessTokenEventUtil.publishTokenRevokeEvent was called
-            accessTokenEventUtilMockedStatic.verify(() ->
-                    AccessTokenEventUtil.publishTokenRevokeEvent(
-                            eq(TEST_APP_ID), eq(TEST_CLIENT_ID), eq(TEST_TENANT_DOMAIN)));
-        }
+        // Verify AccessTokenEventUtil.publishTokenRevokeEvent was called
+        accessTokenEventUtilMockedStatic.verify(() ->
+                AccessTokenEventUtil.publishTokenRevokeEvent(
+                        eq(TEST_APP_ID), eq(TEST_CLIENT_ID), eq(TEST_TENANT_DOMAIN)));
     }
 
     @Test
@@ -443,35 +434,27 @@ public class HybridOAuth2RevocationProcessorTest {
         when(mockApplicationManagementService.getApplicationByResourceId(eq(TEST_APP_ID), eq(TEST_TENANT_DOMAIN)))
                 .thenReturn(serviceProvider);
 
-        // Mock the RefreshTokenDAOImpl construction
-        try (MockedConstruction<RefreshTokenDAOImpl> mockedConstruction =
-                     mockConstruction(RefreshTokenDAOImpl.class)) {
+        boolean result = hybridOAuth2RevocationProcessor.revokeTokens(
+                TEST_USERNAME, mockUserStoreManager, TEST_ROLE_ID);
 
-            boolean result = hybridOAuth2RevocationProcessor.revokeTokens(
-                    TEST_USERNAME, mockUserStoreManager, TEST_ROLE_ID);
+        assertTrue(result, "Should return true for successful revocation");
 
-            assertTrue(result, "Should return true for successful revocation");
+        // Verify revokeTokensBySubjectEvent is called with client ID
+        verify(mockRevokedTokenPersistenceDAO).revokeTokensBySubjectEvent(
+                eq(TEST_CLIENT_ID),
+                eq("CLIENT_ID"),
+                anyLong(),
+                eq(TEST_TENANT_ID)
+        );
 
-            // Verify revokeTokensBySubjectEvent is called with client ID
-            verify(mockRevokedTokenPersistenceDAO).revokeTokensBySubjectEvent(
-                    eq(TEST_CLIENT_ID),
-                    eq("CLIENT_ID"),
-                    anyLong(),
-                    eq(TEST_TENANT_ID)
-            );
+        // Verify RefreshTokenDAOImpl.revokeTokensForApp was called
+        verify(mockRefreshTokenDAO).revokeTokensForApp(eq(TEST_CLIENT_ID));
 
-            // Verify RefreshTokenDAOImpl.revokeTokensForApp was called
-            assertEquals(mockedConstruction.constructed().size(), 1,
-                    "RefreshTokenDAOImpl should be instantiated once");
-            RefreshTokenDAOImpl mockedRefreshTokenDAO = mockedConstruction.constructed().get(0);
-            verify(mockedRefreshTokenDAO).revokeTokensForApp(eq(TEST_CLIENT_ID));
-
-            // Verify pre and post revocation listeners were invoked
-            oAuthUtilMockedStatic.verify(() ->
-                    OAuthUtil.invokePreRevocationBySystemListeners(eq(TEST_CLIENT_ID), any()));
-            oAuthUtilMockedStatic.verify(() ->
-                    OAuthUtil.invokePostRevocationBySystemListeners(eq(TEST_CLIENT_ID), any()));
-        }
+        // Verify pre and post revocation listeners were invoked
+        oAuthUtilMockedStatic.verify(() ->
+                OAuthUtil.invokePreRevocationBySystemListeners(eq(TEST_CLIENT_ID), any()));
+        oAuthUtilMockedStatic.verify(() ->
+                OAuthUtil.invokePostRevocationBySystemListeners(eq(TEST_CLIENT_ID), any()));
     }
 
     @Test
