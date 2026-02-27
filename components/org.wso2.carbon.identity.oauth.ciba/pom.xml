@@ -20,7 +20,7 @@
     <parent>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-        <version>6.13.46-SNAPSHOT</version>
+        <version>6.14.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
