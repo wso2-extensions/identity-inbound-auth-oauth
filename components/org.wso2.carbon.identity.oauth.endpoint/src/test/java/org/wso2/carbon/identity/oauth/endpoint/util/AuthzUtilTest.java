@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -153,6 +154,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.interfaces.RSAPrivateKey;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -199,6 +201,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
@@ -312,6 +315,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
     private static final String INVALID_CLIENT_ID = "invalidId";
     private static final String SP_DISPLAY_NAME = "DisplayName";
     private static final String SP_NAME = "Name";
+    private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
     private static final int MILLISECONDS_PER_SECOND = 1000;
     private static final int TIME_MARGIN_IN_SECONDS = 3000;
 
@@ -2022,5 +2026,190 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                         any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
 
         when(mockedSSOConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
+    }
+
+
+    @DataProvider(name = "provideApiBasedAuthResponseData")
+    public Object[][] provideApiBasedAuthResponseData() {
+
+        return new Object[][]{
+                // Success scenario - no errors, redirect to client
+                {"http://localhost:8080/redirect?code=auth_code_123&state=state_value", false},
+
+                // Client redirect with error
+                {"http://localhost:8080/redirect?error=invalid_request&error_description=Invalid%20request", false},
+
+                // Internal redirect to error page (non-client redirect)
+                {ERROR_PAGE_URL + "?oauthErrorCode=server_error&oauthErrorMsg=Server%20error%20occurred", false},
+
+                // Already handled scenario
+                {"http://localhost:8080/redirect?code=auth_code_123", true},
+
+                // Empty location header
+                {null, false},
+
+                // Blank location
+                {"", false}
+        };
+    }
+
+    // Test whether AuthzUtil.handleApiBasedAuthenticationResponse method return original response or
+    // another based on different scenarios when Flow_status is null.
+    @Test(dataProvider = "provideApiBasedAuthResponseData")
+    public void testHandleApiBasedAuthenticationResponse(String locationUrl, boolean alreadyHandled) throws Exception {
+
+        try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class)) {
+
+            // Mock OAuth2Util.OAuthURL methods
+            oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+            // Mock the request and response
+            Map<String, Object> requestAttributes = new HashMap<>();
+            if (alreadyHandled) {
+                requestAttributes.put(IS_API_BASED_AUTH_HANDLED, true);
+            }
+            requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, null);
+
+            mockHttpRequest(new HashMap<>(), requestAttributes, HttpMethod.POST);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            // Mock the OAuth response with location header
+            Response mockOAuthResponse = mock(Response.class);
+            MultivaluedMap<String, Object> metadata = mock(MultivaluedMap.class);
+            when(mockOAuthResponse.getMetadata()).thenReturn(metadata);
+            when(mockOAuthResponse.getStatus()).thenReturn(HttpServletResponse.SC_FOUND);
+
+            if (locationUrl != null) {
+                List<Object> locationHeader = new ArrayList<>();
+                locationHeader.add(locationUrl);
+                when(metadata.get("Location")).thenReturn(locationHeader);
+            } else {
+                when(metadata.get("Location")).thenReturn(null);
+            }
+
+            Response response = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, mockOAuthResponse);
+
+            assertNotNull(response);
+
+            if (alreadyHandled) {
+                // When already handled, should return the original response
+                assertEquals(response, mockOAuthResponse,
+                        "Response should be the original when already handled.");
+            } else if (locationUrl == null || StringUtils.isBlank(locationUrl)) {
+                // When no location or blank location, should return original response
+                assertEquals(response, mockOAuthResponse,
+                        "Response should be the original when location is null or blank.");
+            } else {
+                // For non-API based auth flow (which this test simulates since we're not mocking it as API based),
+                // the method returns the original response
+                assertNotNull(response, "Response should not be null.");
+                assertNotEquals(response, mockOAuthResponse, "Response should not be specific.");
+            }
+        }
+    }
+
+    private static Map<String, String> getErrorResponsePayloadParams(String oauthErrorCode, String oauthErrorMsg) {
+
+        Map<String, String> errorPayload = new HashMap<>();
+        errorPayload.put("code", "ABA-60001");
+        errorPayload.put("message", AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code());
+        String message = "";
+        if (StringUtils.isNotBlank(oauthErrorCode)) {
+            message = oauthErrorCode;
+        }
+        if (StringUtils.isNotBlank(oauthErrorMsg)) {
+            if (StringUtils.isNotBlank(oauthErrorCode)) {
+                message += " " + AuthServiceConstants.INTERNAL_ERROR_MSG_SEPARATOR + " ";
+            }
+            message += oauthErrorMsg;
+        }
+        errorPayload.put("description", message);
+        return errorPayload;
+    }
+
+
+    @DataProvider(name = "provideApiBasedAuthResponseWithLocationData")
+    public Object[][] provideApiBasedAuthResponseWithLocationData() {
+
+        Map<String, String> errorPayload1 = getErrorResponsePayloadParams(
+                "access_denied", "Denied access");
+        Map<String, String> errorPayload2 = getErrorResponsePayloadParams(
+                "invalid_request", "Missing parameter");
+        Map<String, String> errorPayload3 = getErrorResponsePayloadParams(
+                "unauthorized_client", "Client not authorized");
+        Map<String, String> errorPayload4 = getErrorResponsePayloadParams(
+                "server_error", "Internal server error");
+
+        // {locationUrl, expectedErrorPayloadParams, expectedStatus}
+        return new Object[][]{
+                // Success - redirect to client with authorization code
+                {"http://localhost:8080/redirect?code=authorization_code_xyz&state=test_state",
+                        null, HttpServletResponse.SC_OK},
+
+                // Success - redirect to client with multiple query params
+                {"http://localhost:8080/redirect?code=auth_code&state=state123&session_state=session_xyz",
+                        null, HttpServletResponse.SC_OK},
+
+                // Error - client redirect with OAuth error
+                {"http://localhost:8080/redirect?error=access_denied&error_description=Denied%20access&state=test",
+                        errorPayload1, HttpServletResponse.SC_BAD_REQUEST},
+
+                // Error - client redirect with invalid_request
+                {"http://localhost:8080/redirect?error=invalid_request&error_description=Missing%20parameter",
+                        errorPayload2, HttpServletResponse.SC_BAD_REQUEST},
+
+                // Error - internal redirect to error page
+                {ERROR_PAGE_URL + "?oauthErrorCode=unauthorized_client&oauthErrorMsg=Client%20not%20authorized",
+                        errorPayload3, HttpServletResponse.SC_BAD_REQUEST},
+
+                // Error - internal redirect with server error
+                {ERROR_PAGE_URL + "?oauthErrorCode=server_error&oauthErrorMsg=Internal%20server%20error",
+                        errorPayload4, HttpServletResponse.SC_BAD_REQUEST}
+        };
+    }
+
+    @Test(dataProvider = "provideApiBasedAuthResponseWithLocationData")
+    public void testHandleApiBasedAuthResponseLocationHandling(String locationUrl,
+                                                               Map<String, String> expectedErrorPayloadParams,
+                                                               int expectedStatus) throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class)) {
+
+            Map<String, Object> requestAttributes = new HashMap<>();
+            mockHttpRequest(new HashMap<>(), requestAttributes, HttpMethod.POST);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            oAuth2Util.when(() -> OAuth2Util.isApiBasedAuthenticationFlow(any(HttpServletRequest.class)))
+                    .thenReturn(true);
+            oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+            Response mockOAuthResponse = mock(Response.class);
+            MultivaluedMap<String, Object> metadata = mock(MultivaluedMap.class);
+            when(mockOAuthResponse.getMetadata()).thenReturn(metadata);
+            when(mockOAuthResponse.getStatus()).thenReturn(HttpServletResponse.SC_FOUND);
+
+            List<Object> locationHeader = new ArrayList<>();
+            locationHeader.add(locationUrl);
+            when(metadata.get("Location")).thenReturn(locationHeader);
+
+            Response response = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, mockOAuthResponse);
+
+            assertNotNull(response, "Response should not be null.");
+            assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP status code.");
+
+            String responsePayload = (String) response.getEntity();
+            if (expectedStatus == HttpServletResponse.SC_OK) {
+                assertTrue(responsePayload.contains("flowStatus") &&
+                                responsePayload.contains(AuthenticatorFlowStatus.SUCCESS_COMPLETED.toString()),
+                        "Response payload should indicate success flow status.");
+            } else {
+                for (String key : expectedErrorPayloadParams.keySet()) {
+                    assertTrue(responsePayload.contains(key) &&
+                                    responsePayload.contains(expectedErrorPayloadParams.get(key)),
+                            "Response payload should contain expected error parameters.");
+                }
+            }
+        }
     }
 }
