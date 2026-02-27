@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>7.4.23</version>
+        <version>7.4.24-SNAPSHOT</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
-    <version>7.4.23</version>
+    <version>7.4.24-SNAPSHOT</version>
 
     <name>WSO2 Carbon - Identity OAuth 2.0 Scope Rest APIs</name>
     <description>Rest APIs for OAuth 2.0 Scope Handling</description>
