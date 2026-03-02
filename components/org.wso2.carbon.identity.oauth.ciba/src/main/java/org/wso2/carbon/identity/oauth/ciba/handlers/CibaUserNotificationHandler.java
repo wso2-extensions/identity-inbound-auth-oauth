@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
@@ -134,8 +135,8 @@ public class CibaUserNotificationHandler {
         }
 
         if (lastSuccessfulChannel == null) {
-            log.warn("Could not send CIBA notification to user: " + resolvedUser.getUsername()
-                    + ". No suitable channel found or all channels failed.");
+            log.warn("Could not send CIBA notification to user: " + LoggerUtils.getMaskedContent(
+                    resolvedUser.getUsername()) + ". No suitable channel found or all channels failed.");
         }
         return lastSuccessfulChannel;
     }
