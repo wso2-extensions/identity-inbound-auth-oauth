@@ -18,11 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.ciba.notifications;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+
+import java.util.List;
 
 /**
  * Implementation of CibaNotificationChannel for External channel.
@@ -48,8 +49,13 @@ public class ExternalNotificationChannel implements CibaNotificationChannel {
         // External channel should only be used when explicitly configured
         // as the app default or requested channel, not during fallback.
         String requestedChannel = cibaNotificationContext.getRequestedChannel();
-        return StringUtils.isNotBlank(requestedChannel) && CibaConstants.CibaNotificationChannel.EXTERNAL.equals(
-                requestedChannel);
+        if (CibaConstants.CibaNotificationChannel.EXTERNAL.equals(requestedChannel)) {
+            return true;
+        }
+
+        List<String> appAllowedChannels = cibaNotificationContext.getAppAllowedChannels();
+        return appAllowedChannels.size() == 1 &&
+                CibaConstants.CibaNotificationChannel.EXTERNAL.equals(appAllowedChannels.get(0));
     }
 
     @Override
