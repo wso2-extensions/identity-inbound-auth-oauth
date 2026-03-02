@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import net.minidev.json.JSONArray;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -72,8 +73,10 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ID_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
@@ -153,7 +156,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
         if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
+                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser())
+                || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser()))) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
@@ -219,8 +223,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         Map<String, Object> filteredUserClaimsByOIDCScopes =
                 filterClaimsByScope(userClaimsInOIDCDialect, approvedScopes, clientId, spTenantDomain);
 
-        // TODO: Get claims filtered by essential claims and add to returning claims
-        // https://github.com/wso2/product-is/issues/2680
+        /*
+         * Add the essential claims from the authorization grant cache if any.
+         * This will be used for the request object flow where essential claims are requested.
+         */
+        Map<String, Object> essentialClaims = getEssentialClaims(accessToken, userClaimsInOIDCDialect);
+        filteredUserClaimsByOIDCScopes.putAll(essentialClaims);
 
         if (accessToken != null) {
             if (StringUtils.isNotBlank(authorizationCode)) {
@@ -255,6 +263,37 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
                 spTenantDomain, isConsentedToken);
+    }
+
+    private Map<String, Object> getEssentialClaims(String accessToken, Map<String, Object> claims) {
+
+        Map<String, Object> essentialClaimMap = new HashMap<>();
+        List<String> essentialClaims = getEssentialClaimUris(accessToken);
+        if (CollectionUtils.isNotEmpty(essentialClaims)) {
+            for (String key : essentialClaims) {
+                if (claims.get(key) != null) {
+                    essentialClaimMap.put(key, claims.get(key));
+                }
+            }
+        }
+        return essentialClaimMap;
+    }
+
+    private List<String> getEssentialClaimUris(String accessToken) {
+
+        if (accessToken != null) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
+                    .getValueFromCacheByToken(cacheKey);
+
+            if (cacheEntry != null) {
+                if (StringUtils.isNotEmpty(cacheEntry.getEssentialClaims())) {
+                    return OAuth2Util.getEssentialClaims(cacheEntry.getEssentialClaims(), ID_TOKEN);
+                }
+            }
+        }
+
+        return new ArrayList<>();
     }
 
     private boolean isPreserverClaimUrisInAssertion(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -644,6 +683,21 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
            organization. */
         return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
                 (accessingOrganization);
+    }
+
+    /**
+     * Determines whether the authenticated user is an organization SSO user.
+     * An organization SSO user is defined as a federated user with a defined resident organization
+     * where the organization IDP uses SSO authentication.
+     *
+     * @param authenticatedUser the authenticated user to evaluate
+     * @return {@code true} if the user meets all organization SSO criteria, {@code false} otherwise
+     */
+    private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
+
+        return authenticatedUser.isFederatedUser()
+                && authenticatedUser.getUserResidentOrganization() != null
+                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName());
     }
 
     private boolean isOrganizationSwitchGrantType(OAuthTokenReqMessageContext requestMsgCtx) {

@@ -45,8 +45,25 @@ public class CibaConstants {
     public static final String TRANSACTION_CONTEXT = "transaction_context";
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
+    public static final String NOTIFICATION_CHANNEL = "notification_channel";
+    public static final String AUTH_URL = "auth_url";
+
+    // CIBA User Authentication Endpoint constants.
+    public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
+    public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_authorize";
+    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
 
     private CibaConstants() {
 
+    }
+
+    /**
+     * Contains the constants related to CIBA notification channels.
+     */
+    public static class CibaNotificationChannel {
+
+        public static final String EMAIL = "email";
+        public static final String SMS = "sms";
+        public static final String EXTERNAL = "external";
     }
 }

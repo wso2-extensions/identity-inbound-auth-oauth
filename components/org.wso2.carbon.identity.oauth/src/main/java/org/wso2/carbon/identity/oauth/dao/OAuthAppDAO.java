@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -48,6 +48,9 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -78,6 +81,10 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_AUTH_REQ_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_NOTIFICATION_CHANNELS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
@@ -85,6 +92,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ISSUER_ORGANIZATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -1029,6 +1037,11 @@ public class OAuthAppDAO {
                 oauthAppDO.getRenewRefreshTokenEnabled(), prepStatementForPropertyAdd,
                 preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME,
+                String.valueOf(oauthAppDO.isExtendRenewedRefreshTokenExpiryTime()), prepStatementForPropertyAdd,
+                preparedStatementForPropertyUpdate);
+
         if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(oauthAppDO.getTokenBindingType())) {
             oauthAppDO.setTokenBindingType(null);
         }
@@ -1110,12 +1123,30 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(oauthAppDO.isJwtScopeAsArrayEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         if (oauthAppDO.isHybridFlowEnabled()) {
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                     HYBRID_FLOW_RESPONSE_TYPE, oauthAppDO.getHybridFlowResponseType(),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_NOTIFICATION_CHANNELS, oauthAppDO.getCibaNotificationChannels(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_AUTH_REQ_EXPIRY_TIME, String.valueOf(oauthAppDO.getCibaAuthReqExpiryTime()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
@@ -1724,7 +1755,7 @@ public class OAuthAppDAO {
     private void addServiceProviderOIDCProperties(Connection connection,
                                                   OAuthAppDO consumerAppDO,
                                                   String processedClientId,
-                                                  int spTenantId) throws SQLException {
+                                                  int spTenantId) throws SQLException, IdentityOAuth2Exception {
 
         try (PreparedStatement prepStmtAddOIDCProperty =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY)) {
@@ -1763,6 +1794,9 @@ public class OAuthAppDAO {
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     RENEW_REFRESH_TOKEN, consumerAppDO.getRenewRefreshTokenEnabled());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME, consumerAppDO.getRenewRefreshTokenEnabled());
 
             if (TOKEN_BINDING_TYPE_NONE.equalsIgnoreCase(consumerAppDO.getTokenBindingType())) {
                 consumerAppDO.setTokenBindingType(null);
@@ -1828,6 +1862,11 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
+            if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(consumerAppDO.isJwtScopeAsArrayEnabled()));
+            }
+
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_SUBJECT_TOKEN_ENABLED, String.valueOf(consumerAppDO.isSubjectTokenEnabled()));
 
@@ -1844,6 +1883,20 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
                     String.valueOf(consumerAppDO.getHybridFlowResponseType()));
+
+            // CIBA Notification Channels Configuration.
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_NOTIFICATION_CHANNELS, consumerAppDO.getCibaNotificationChannels());
+
+            // CIBA Auth Request Expiry Time Configuration - 0 means use default (3600 seconds).
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_AUTH_REQ_EXPIRY_TIME,
+                    String.valueOf(consumerAppDO.getCibaAuthReqExpiryTime()));
+
+            if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
+            }
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -1949,6 +2002,15 @@ public class OAuthAppDAO {
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
 
+        String isExtendRenewedRefreshTokenExpiryTime = getFirstPropertyValue(spOIDCProperties,
+                EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME);
+        // Overriding null value with server default.
+        if (isExtendRenewedRefreshTokenExpiryTime == null) {
+            isExtendRenewedRefreshTokenExpiryTime =
+                    String.valueOf(OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled());
+        }
+        oauthApp.setExtendRenewedRefreshTokenExpiryTime(Boolean.parseBoolean(isExtendRenewedRefreshTokenExpiryTime));
+
         String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
         if (tokenAuthMethod != null) {
             oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
@@ -2008,6 +2070,11 @@ public class OAuthAppDAO {
             oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
         }
 
+        String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);
+        if (isJwtScopeAsArray != null && !isJwtScopeAsArray.equals("null")) {
+            oauthApp.setJwtScopeAsArrayEnabled(Boolean.parseBoolean(isJwtScopeAsArray));
+        }
+
         String isSubjectTokenEnabled = getFirstPropertyValue(spOIDCProperties, IS_SUBJECT_TOKEN_ENABLED);
         if (isSubjectTokenEnabled != null) {
             oauthApp.setSubjectTokenEnabled(Boolean.parseBoolean(isSubjectTokenEnabled));
@@ -2051,6 +2118,39 @@ public class OAuthAppDAO {
 
             // Configure the hybrid flow response type (null if not explicitly set)
             oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
+
+        // CIBA Notification Channels Configuration.
+        String cibaNotificationChannels = getFirstPropertyValue(spOIDCProperties, CIBA_NOTIFICATION_CHANNELS);
+        if (cibaNotificationChannels != null) {
+            oauthApp.setCibaNotificationChannels(cibaNotificationChannels);
+        }
+
+        // CIBA Auth Request Expiry Time Configuration.
+        String cibaAuthReqExpiryTime = getFirstPropertyValue(spOIDCProperties, CIBA_AUTH_REQ_EXPIRY_TIME);
+        if (cibaAuthReqExpiryTime != null) {
+            oauthApp.setCibaAuthReqExpiryTime(Long.parseLong(cibaAuthReqExpiryTime));
+        }
+
+        // Set issuer details if the issuer organization is available in the OIDC properties
+        String issuerOrg = getFirstPropertyValue(spOIDCProperties, ISSUER_ORGANIZATION);
+        if (StringUtils.isNotEmpty(issuerOrg)) {
+            try {
+                IssuerDetails issuerDetails = new IssuerDetails();
+                issuerDetails.setIssuerOrgId(issuerOrg);
+                String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(issuerOrg);
+                issuerDetails.setIssuerTenantDomain(tenantDomain);
+                issuerDetails.setIssuer(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(tenantDomain));
+                oauthApp.setIssuerDetails(issuerDetails);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtServerException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while retrieving issuer details for the " +
+                        "organization: " + issuerOrg, e);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while resolving tenant domain for the " +
+                        "organization: " + issuerOrg, e);
+            }
+            oauthApp.setIssuerOrg(issuerOrg);
         }
     }
 

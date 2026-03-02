@@ -473,4 +473,57 @@ public class OIDProviderConfigResponseTest {
         oidProviderConfigResponse.setCodeChallengeMethodsSupported(codeChallengeMethodsSupported);
         assertEquals(oidProviderConfigResponse.getCodeChallengeMethodsSupported(), codeChallengeMethodsSupported);
     }
+
+    @Test
+    public void testSetAndGetFrontchannelLogoutSupported() {
+        Boolean frontchannelLogoutSupported = Boolean.TRUE;
+        oidProviderConfigResponse.setFrontchannelLogoutSupported(frontchannelLogoutSupported);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED), frontchannelLogoutSupported);
+    }
+
+    @Test
+    public void testSetAndGetFrontchannelLogoutSupportedFalse() {
+        Boolean frontchannelLogoutSupported = Boolean.FALSE;
+        oidProviderConfigResponse.setFrontchannelLogoutSupported(frontchannelLogoutSupported);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED), frontchannelLogoutSupported);
+    }
+
+    @Test
+    public void testSetAndGetFrontchannelLogoutSessionSupported() {
+        Boolean frontchannelLogoutSessionSupported = Boolean.TRUE;
+        oidProviderConfigResponse.setFrontchannelLogoutSessionSupported(frontchannelLogoutSessionSupported);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED),
+                frontchannelLogoutSessionSupported);
+    }
+
+    @Test
+    public void testSetAndGetFrontchannelLogoutSessionSupportedFalse() {
+        Boolean frontchannelLogoutSessionSupported = Boolean.FALSE;
+        oidProviderConfigResponse.setFrontchannelLogoutSessionSupported(frontchannelLogoutSessionSupported);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED),
+                frontchannelLogoutSessionSupported);
+    }
+
+    @Test
+    public void testFrontchannelLogoutSupportedInConfigMap() {
+        oidProviderConfigResponse.setFrontchannelLogoutSupported(Boolean.TRUE);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        Assert.assertNotNull(configMap);
+        Assert.assertTrue(configMap.containsKey(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED));
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED), Boolean.TRUE);
+    }
+
+    @Test
+    public void testFrontchannelLogoutSessionSupportedInConfigMap() {
+        oidProviderConfigResponse.setFrontchannelLogoutSessionSupported(Boolean.TRUE);
+        Map<String, Object> configMap = oidProviderConfigResponse.getConfigMap();
+        Assert.assertNotNull(configMap);
+        Assert.assertTrue(configMap.containsKey(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED));
+        assertEquals(configMap.get(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED), Boolean.TRUE);
+    }
+
 }

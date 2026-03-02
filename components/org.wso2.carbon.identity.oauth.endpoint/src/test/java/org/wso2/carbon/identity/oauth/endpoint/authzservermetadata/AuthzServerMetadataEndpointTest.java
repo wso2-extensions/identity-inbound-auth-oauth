@@ -1,0 +1,189 @@
+/*
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.identity.oauth.endpoint.authzservermetadata;
+
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
+import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
+import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
+import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
+import org.wso2.carbon.identity.discovery.OIDCProcessor;
+import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
+import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * This class tests the OAuth 2.0 Authorization Server Metadata Endpoint functionality
+ */
+@WithCarbonHome
+@Listeners(MockitoTestNGListener.class)
+public class AuthzServerMetadataEndpointTest {
+
+    @Mock
+    HttpServletRequest httpServletRequest;
+
+    @Mock
+    OIDProviderConfigResponse oidProviderConfigResponse;
+
+    @Mock
+    DefaultOIDCProcessor defaultOIDCProcessor;
+
+    @Mock
+    OIDProviderResponseBuilder oidProviderResponseBuilder;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
+
+    private AuthzServerMetadataEndpoint authzServerMetadataEndpoint;
+    private Object identityUtilObj;
+
+    @BeforeClass
+    public void setUp() throws Exception {
+
+        authzServerMetadataEndpoint = new AuthzServerMetadataEndpoint();
+        Class<?> clazz = IdentityUtil.class;
+        identityUtilObj = clazz.newInstance();
+    }
+
+    @BeforeMethod
+    public void setUpMethod() {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OIDProviderResponseBuilder.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{oidProviderResponseBuilder});
+                    }
+                    if (argumentCaptor.getValue().contains(OIDCProcessor.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{defaultOIDCProcessor});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedConstruction.close();
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    @DataProvider(name = "provideDataForGetOAuthAuthzServerMetadataEndpoint")
+    public Object[][] provideDataForGetOAuthAuthzServerMetadataEndpoint() {
+
+        return new Object[][] {
+            { getSampleConfigMap(), Response.Status.OK.getStatusCode() },
+            { new HashMap<>(), Response.Status.OK.getStatusCode() }
+        };
+    }
+
+    @Test(dataProvider = "provideDataForGetOAuthAuthzServerMetadataEndpoint")
+    public void testGetOAuthAuthzServerMetadataEndpoint(Map<String, Object> configMap, int expectedResponse)
+            throws Exception {
+
+        ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
+            protected Map<String, Object> initialValue() {
+
+                return new HashMap();
+            }
+        };
+
+        threadLocalProperties.get().put(
+                OAuthConstants.TENANT_NAME_FROM_CONTEXT, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
+
+        threadLocalPropertiesField.setAccessible(true);
+
+        // Use Unsafe to modify static final fields in Java 12+.
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+        Object fieldBase = unsafe.staticFieldBase(threadLocalPropertiesField);
+        long fieldOffset = unsafe.staticFieldOffset(threadLocalPropertiesField);
+        unsafe.putObject(fieldBase, fieldOffset, threadLocalProperties);
+
+        try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
+                     mockStatic(OIDCProviderServiceFactory.class);
+             MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceFactory =
+                     mockStatic(OIDCDiscoveryServiceFactory.class)) {
+
+            oidcDiscoveryServiceFactory.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
+                    .thenReturn(oidProviderResponseBuilder);
+            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
+                    .thenReturn(defaultOIDCProcessor);
+            lenient().when(defaultOIDCProcessor.getResponse(any(), any())).thenReturn(oidProviderConfigResponse);
+            lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+            lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
+                    .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(httpServletRequest);
+            Assert.assertEquals(expectedResponse, response.getStatus());
+            threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        }
+    }
+
+    private Map<String, Object> getSampleConfigMap() {
+
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put("sampleStringKey", "sampleString");
+        configMap.put("sampleStringArrayKey", new String[]{"sampleStringArrayElement1", "sampleStringArrayElement2"});
+        return configMap;
+    }
+}

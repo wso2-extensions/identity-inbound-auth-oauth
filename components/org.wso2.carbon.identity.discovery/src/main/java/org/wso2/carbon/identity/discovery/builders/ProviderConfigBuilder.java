@@ -140,6 +140,8 @@ public class ProviderConfigBuilder {
 
         providerConfig.setBackchannelLogoutSupported(Boolean.TRUE);
         providerConfig.setBackchannelLogoutSessionSupported(Boolean.TRUE);
+        providerConfig.setFrontchannelLogoutSupported(Boolean.TRUE);
+        providerConfig.setFrontchannelLogoutSessionSupported(Boolean.TRUE);
 
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());

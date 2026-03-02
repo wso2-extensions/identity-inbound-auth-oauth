@@ -816,7 +816,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             refreshToken = tokenReq.getRefreshToken();
             refreshTokenIssuedTime = validationBean.getIssuedTime();
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
-        } else if (!OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled()) {
+        } else if (!oAuthAppDO.isExtendRenewedRefreshTokenExpiryTime()) {
             // If refresh token renewal enabled and extend token expiry disabled, set the old token issued and validity.
             refreshTokenIssuedTime = validationBean.getIssuedTime();
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
@@ -1058,7 +1058,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
+            String tenantDomain = tokenReqDTO.getTenantDomain();
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId(), tenantDomain)
+                    : OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(
                     "Failed load the application with client id: " + tokenReqDTO.getClientId());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -73,6 +74,8 @@ import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuth
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
@@ -386,6 +389,8 @@ public class OAuth2ServiceComponent {
                 log.error("DeviceAuthService could not be registered.");
             }
 
+            OAuth2ServiceComponentHolder.getInstance().addRevocationProcessor(new DefaultOAuth2RevocationProcessor());
+
             // Register the default OpenIDConnect claim filter
             bundleContext.registerService(OpenIDConnectClaimFilter.class, new OpenIDConnectClaimFilterImpl(), null);
             if (log.isDebugEnabled()) {
@@ -429,6 +434,12 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,
                     new JWTAccessTokenRARClaimProvider(), null);
             bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
+            OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService =
+                    new OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl();
+            OAuth2ServiceComponentHolder.getInstance()
+                    .setOAuth2OIDCConfigOrgUsageScopeMgtService(oAuth2OIDCConfigOrgUsageScopeMgtService);
+            bundleContext.registerService(OAuth2OIDCConfigOrgUsageScopeMgtService.class,
+                    oAuth2OIDCConfigOrgUsageScopeMgtService, null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
@@ -578,7 +589,8 @@ public class OAuth2ServiceComponent {
                service = TokenBinderInfo.class,
                cardinality = ReferenceCardinality.MULTIPLE,
                policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetTokenBinderInfo")
+               unbind = "unsetTokenBinderInfo"
+    )
     protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
@@ -603,7 +615,8 @@ public class OAuth2ServiceComponent {
             service = ResponseTypeRequestValidator.class,
             cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetResponseTypeRequestValidator")
+            unbind = "unsetResponseTypeRequestValidator"
+    )
     protected void setResponseTypeRequestValidator(ResponseTypeRequestValidator validator) {
 
         OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(validator);
@@ -964,9 +977,9 @@ public class OAuth2ServiceComponent {
     protected void setOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting Oauth2 revocation processor.");
+            log.debug("Setting Oauth2 revocation processor: " + oAuth2RevocationProcessor.getClass().getName());
         }
-        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(oAuth2RevocationProcessor);
+        OAuth2ServiceComponentHolder.getInstance().addRevocationProcessor(oAuth2RevocationProcessor);
     }
 
     /**
@@ -977,9 +990,9 @@ public class OAuth2ServiceComponent {
     protected void unsetOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unset Oauth2 revocation processor.");
+            log.debug("Unset Oauth2 revocation processor: " + oAuth2RevocationProcessor.getClass().getName());
         }
-        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(null);
+        OAuth2ServiceComponentHolder.getInstance().removeRevocationProcessor(oAuth2RevocationProcessor);
     }
 
     @Reference(

@@ -99,8 +99,6 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -904,21 +902,17 @@ public class EndpointUtilTest {
         Object claimUtilObject = constructor.newInstance(new Object[0]);
         Field logField = claimUtilObject.getClass().getDeclaredField("log");
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
-
         logField.setAccessible(true);
-        logField.set(claimUtilObject, mockedLog);
+
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+        Object fieldBase = unsafe.staticFieldBase(logField);
+        long fieldOffset = unsafe.staticFieldOffset(logField);
+        unsafe.putObject(fieldBase, fieldOffset, mockedLog);
+
         lenient().when(mockedLog.isDebugEnabled()).thenReturn(isDebugEnabled);
     }
 

@@ -176,6 +176,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             RequestObjectException {
 
         try {
+            IdentityUtil.validateX5CLength(requestObjectString);
             JOSEObject jwt = JOSEObject.parse(requestObjectString);
             if (jwt.getHeader().getAlgorithm() == null || jwt.getHeader().getAlgorithm().equals(JWSAlgorithm.NONE)) {
                 requestObjectInstance.setPlainJWT(PlainJWT.parse(requestObjectString));

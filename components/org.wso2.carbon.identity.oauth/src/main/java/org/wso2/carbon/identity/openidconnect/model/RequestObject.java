@@ -18,7 +18,6 @@ package org.wso2.carbon.identity.openidconnect.model;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -87,7 +86,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -121,7 +120,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -147,7 +146,7 @@ public class RequestObject implements Serializable {
             if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
                 JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
 
-                //To iterate the claims json object to fetch the claim requestor and all requested claims.
+                //To iterate the claims json object to fetch the claim requester and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
                     List<RequestedClaim> requestedClaimsList = new ArrayList();
                     if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {
@@ -201,10 +200,10 @@ public class RequestObject implements Serializable {
                     } else if (VALUE.equals(claimAttributes.getKey())) {
                         claim.setValue((String) value);
                     } else if (VALUES.equals(claimAttributes.getKey())) {
-                        JSONArray jsonArray = (JSONArray) value;
-                        if (jsonArray != null && jsonArray.size() > 0) {
+                        List<Object> attributeList = (List) value;
+                        if (attributeList != null && !attributeList.isEmpty()) {
                             List<String> values = new ArrayList<>();
-                            for (Object aJsonArray : jsonArray) {
+                            for (Object aJsonArray : attributeList) {
                                 values.add(aJsonArray.toString());
                             }
                             claim.setValues(values);
