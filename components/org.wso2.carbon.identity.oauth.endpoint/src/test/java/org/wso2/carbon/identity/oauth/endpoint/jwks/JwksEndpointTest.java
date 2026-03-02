@@ -68,7 +68,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint.JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED;
-import static org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint.JWKS_IS_X5T_REQUIRED;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 
 @Listeners(MockitoTestNGListener.class)
 public class JwksEndpointTest {
@@ -308,7 +308,7 @@ public class JwksEndpointTest {
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
                 identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
                         .thenReturn(String.valueOf(hexifyRequired));
-                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))
+                identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_ENABLED))
                         .thenReturn(String.valueOf(enableX5tInJWKS));
 
                 String result = jwksEndpoint.jwks();
