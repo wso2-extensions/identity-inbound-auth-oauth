@@ -251,8 +251,9 @@ public class JwksEndpoint {
                     String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
                     jwk.x509CertThumbprint(new Base64URL(certThumbPrint));
                 }
-                JWK parsedJWK = JWK.parse(certificate);
-                jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+                // JWK.parse(certificate) does not support Ed25519 keys, so compute the SHA-256
+                // thumbprint directly instead of going through JWK.parse().
+                jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
             } else {
                 if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))) {
                     String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
