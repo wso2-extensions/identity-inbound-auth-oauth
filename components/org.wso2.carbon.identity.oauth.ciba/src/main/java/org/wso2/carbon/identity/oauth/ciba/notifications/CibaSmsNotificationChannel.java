@@ -83,12 +83,12 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
             String mobile = resolvedUser.getMobile();
             boolean hasMobile = StringUtils.isNotBlank(mobile);
             if (log.isDebugEnabled()) {
-                log.debug("SmsCibaNotificationChannel.canHandle: User " + resolvedUser.getUsername() +
+                log.debug("SmsCibaNotificationChannel.canHandle: User " + resolvedUser.getUserId() +
                         " has mobile: " + hasMobile);
             }
             return hasMobile;
         } catch (Exception e) {
-            log.warn("Error checking mobile for user: " + resolvedUser.getUsername(), e);
+            log.warn("Error checking mobile for user: " + resolvedUser.getUserId(), e);
             return false;
         }
     }
@@ -100,7 +100,7 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
         String authUrl = cibaNotificationContext.getAuthUrl();
         String bindingMessage = cibaNotificationContext.getBindingMessage();
         if (log.isDebugEnabled()) {
-            log.debug("Sending CIBA authentication SMS to user: " + resolvedUser.getUsername() +
+            log.debug("Sending CIBA authentication SMS to user: " + resolvedUser.getUserId() +
                     " with auth URL: " + authUrl);
         }
 

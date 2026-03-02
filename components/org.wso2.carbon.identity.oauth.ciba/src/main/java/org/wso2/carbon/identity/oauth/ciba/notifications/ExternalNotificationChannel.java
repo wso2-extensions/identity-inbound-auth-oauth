@@ -38,7 +38,7 @@ public class ExternalNotificationChannel implements CibaNotificationChannel {
 
         if (log.isDebugEnabled()) {
             log.debug("External notification channel selected. Skipping internal notification sending for user: " +
-                    cibaNotificationContext.getResolvedUser().getUsername());
+                    cibaNotificationContext.getResolvedUser().getUserId());
         }
         // No-op: Notification is handled externally.
     }
@@ -49,13 +49,13 @@ public class ExternalNotificationChannel implements CibaNotificationChannel {
         // External channel should only be used when explicitly configured
         // as the app default or requested channel, not during fallback.
         String requestedChannel = cibaNotificationContext.getRequestedChannel();
-        if (CibaConstants.CibaNotificationChannel.EXTERNAL.equals(requestedChannel)) {
+        if (CibaConstants.CibaNotificationChannel.EXTERNAL.equalsIgnoreCase(requestedChannel)) {
             return true;
         }
 
         List<String> appAllowedChannels = cibaNotificationContext.getAppAllowedChannels();
         return appAllowedChannels.size() == 1 &&
-                CibaConstants.CibaNotificationChannel.EXTERNAL.equals(appAllowedChannels.get(0));
+                CibaConstants.CibaNotificationChannel.EXTERNAL.equalsIgnoreCase(appAllowedChannels.get(0));
     }
 
     @Override

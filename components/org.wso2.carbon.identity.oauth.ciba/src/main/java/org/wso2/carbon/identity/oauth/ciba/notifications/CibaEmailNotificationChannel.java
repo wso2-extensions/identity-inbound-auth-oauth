@@ -82,12 +82,12 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             String email = resolvedUser.getEmail();
             boolean hasEmail = StringUtils.isNotBlank(email);
             if (log.isDebugEnabled()) {
-                log.debug("EmailCibaNotificationChannel.canHandle: User " + resolvedUser.getUsername() +
+                log.debug("EmailCibaNotificationChannel.canHandle: User " + resolvedUser.getUserId() +
                         " has email: " + hasEmail);
             }
             return hasEmail;
         } catch (Exception e) {
-            log.warn("Error checking email for user: " + resolvedUser.getUsername(), e);
+            log.warn("Error checking email for user: " + resolvedUser.getUserId(), e);
             return false;
         }
     }

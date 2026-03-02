@@ -161,9 +161,11 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
             return resolvedUser;
 
         } catch (UserStoreClientException e) {
-            throw new CibaClientException("Client error resolving user from login_hint: " + loginHint, e);
+            throw new CibaClientException("Client error resolving user from login_hint: " +
+                    LoggerUtils.getMaskedContent(loginHint), e);
         } catch (UserStoreException e) {
-            throw new CibaCoreException("Error resolving user from login_hint: " + loginHint, e);
+            throw new CibaCoreException("Error resolving user from login_hint: " +
+                    LoggerUtils.getMaskedContent(loginHint), e);
         }
     }
 
