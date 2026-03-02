@@ -431,6 +431,9 @@ public class TokenValidationHandlerTest {
                      mockStatic(OAuth2ServiceComponentHolder.class);
              MockedStatic<OrganizationManagementConfigUtil> organizationManagementConfigUtil =
                      mockStatic(OrganizationManagementConfigUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
@@ -439,12 +442,14 @@ public class TokenValidationHandlerTest {
                     jwtToken, "bearer", "dummyKey", "dummyValue");
 
             identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(mockIdentityProviderManager);
-            when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
+            lenient().when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(identityProvider);
             jwtUtils.when(() -> JWTUtils.isJWT(anyString())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.parseJWT(anyString())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.getJWTClaimSet(any())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.validateRequiredFields(any())).thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.getResidentIDPForIssuer(any(), any())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.getResidentIDPIssuer(anyString(), anyString(), anyString(), anyString()))
+                    .thenCallRealMethod();
             jwtUtils.when(() -> JWTUtils.getIDPForIssuer(anyString(), anyString(), anyString()))
                     .thenCallRealMethod();
             jwtUtils.when(JWTUtils::getSubOrgStartLevel).thenCallRealMethod();
@@ -452,7 +457,8 @@ public class TokenValidationHandlerTest {
             jwtUtils.when(() -> JWTUtils.getSigningTenantDomain(any(), any()))
                     .thenReturn(clientAppTenantDomain);
             FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
-            when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
+            lenient().when(identityProvider.getFederatedAuthenticatorConfigs())
+                    .thenReturn(federatedAuthenticatorConfigs);
 
             identityApplicationManagementUtil.when(
                     () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
@@ -462,7 +468,7 @@ public class TokenValidationHandlerTest {
             Property property = new Property();
             property.setName("IdPEntityId");
             property.setValue("https://localhost:9443/o/" + switchedOrganizationId + "/oauth2/token");
-            when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+            lenient().when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
             identityApplicationManagementUtil.when(
                             () -> IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId"))
                     .thenReturn(property);
@@ -472,11 +478,22 @@ public class TokenValidationHandlerTest {
                     Mockito.mock(OAuth2ServiceComponentHolder.class);
             oAuth2ServiceComponentHolder.when(
                     OAuth2ServiceComponentHolder::getInstance).thenReturn(oAuth2ServiceComponentHolderInstance);
-            when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled()).thenReturn(true);
-            when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
-            when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
-            when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId)).thenReturn(
-                    parentHierarchyFromSwitchedOrg);
+            lenient().when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled())
+                    .thenReturn(true);
+            lenient().when(oAuth2ServiceComponentHolderInstance.getOrganizationManager())
+                    .thenReturn(organizationManager);
+            lenient().when(organizationManager.resolveOrganizationId(clientAppTenantDomain))
+                    .thenReturn(clientAppOrganizationId);
+            lenient().when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId))
+                    .thenReturn(parentHierarchyFromSwitchedOrg);
+
+            // Mock OrganizationManagementUtil and OAuth2Util for client-based issuer validation
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(true);
+            OAuthAppDO oAuthAppDO = Mockito.mock(OAuthAppDO.class);
+            lenient().when(oAuthAppDO.getIssuerDetails()).thenReturn(null);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                    .thenReturn(oAuthAppDO);
 
             organizationManagementConfigUtil.when(
                             () -> OrganizationManagementConfigUtil.getProperty(SUB_ORG_START_LEVEL))

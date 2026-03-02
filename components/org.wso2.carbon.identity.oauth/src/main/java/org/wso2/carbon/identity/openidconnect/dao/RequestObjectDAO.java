@@ -126,4 +126,17 @@ public interface RequestObjectDAO {
      * @throws IdentityOAuth2Exception
      */
     void updateRequestObjectReferenceCodeToToken(String codeId, String tokenId) throws IdentityOAuth2Exception;
+
+    /**
+     * Replaces the code reference with a token reference and removes the associated code ID.
+     * Code column will be updated to null and token column will be set with the tokenId.
+     *
+     * @param codeId code id.
+     * @param tokenId token id.
+     * @throws IdentityOAuth2Exception when error occurs while updating.
+     */
+    default void updateRequestObjectReferenceToTokenByCodeId(String codeId, String tokenId)
+            throws IdentityOAuth2Exception {
+
+    }
 }

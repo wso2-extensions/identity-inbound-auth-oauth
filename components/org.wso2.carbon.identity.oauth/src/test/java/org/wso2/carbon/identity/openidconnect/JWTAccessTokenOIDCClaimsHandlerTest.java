@@ -23,6 +23,7 @@ package org.wso2.carbon.identity.openidconnect;
  */
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import net.minidev.json.JSONArray;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -54,6 +55,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -77,9 +79,6 @@ import org.wso2.carbon.user.core.UserStoreManager;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
@@ -133,8 +132,18 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private static final String LOCAL_GROUPS_CLAIM_URI = "http://wso2.org/claims/groups";
     private static final String LOCAL_COUNTRY_CLAIM_URI = "http://wso2.org/claims/country";
     private static final String LOCAL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/addresses";
+    private static final String LOCAL_ROLE_CLAIM_URI = "http://wso2.org/claims/role";
     private static final String ROLES = "roles";
     private static final String ADDRESS = "address";
+    private static final String EMAIL = "email";
+    private static final String USERNAME = "username";
+    private static final String ROLE = "role";
+    private static final String ROLE1 = "role1";
+    private static final String ROLE2 = "role2";
+    private static final String ROLE3 = "role3";
+    private static final String ROLE_CLAIM_DEFAULT_VALUE =
+            ROLE1 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE2 + MULTI_ATTRIBUTE_SEPARATOR_DEFAULT + ROLE3;
+    private static final String[] APPROVED_SCOPES = {"openid", "testScope1", "testScope2"};
     private static final String[] jwtAccessTokenClaims =
             new String[]{
                     "email",
@@ -551,6 +560,84 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         }
     }
 
+    @Test(description = "This test verifies that for a refresh grant with a federated user having a resident " +
+            "organization, when there are no user attributes in the cache/authorization grant cache, " +
+            "the user claims are correctly retrieved from the user store and returned.")
+    public void testHandleCustomClaimsForRefreshGrantWithFederatedUserWithResidentOrganization() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+            // Setup JWT claims builder
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+
+            // Create OAuth2AccessTokenReqDTO with refresh_token grant type
+            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+            accessTokenReqDTO.setTenantDomain(TENANT_DOMAIN);
+            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            accessTokenReqDTO.setGrantType(OAuthConstants.GrantTypes.REFRESH_TOKEN);
+
+            // Create token request message context
+            OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+            requestMsgCtx.setScope(APPROVED_SCOPES);
+            requestMsgCtx.addProperty(MultitenantConstants.TENANT_DOMAIN, TENANT_DOMAIN);
+
+            // Create authenticated user (local user for testing)
+            AuthenticatedUser authenticatedUser = getDefaultAuthenticatedLocalUser();
+            requestMsgCtx.setAuthorizedUser(authenticatedUser);
+
+            // Setup OAuth app configuration
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any()))
+                    .thenReturn(getoAuthAppDO(new String[]{EMAIL, USERNAME, ROLE}));
+
+            // Setup service provider
+            mockApplicationManagementService();
+
+            // Setup OIDC claim mappings
+            Map<String, String> claimMappings = new HashMap<>();
+            claimMappings.put(EMAIL, LOCAL_EMAIL_CLAIM_URI);
+            claimMappings.put(USERNAME, LOCAL_USERNAME_CLAIM_URI);
+            claimMappings.put(ROLE, LOCAL_ROLE_CLAIM_URI);
+            claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+            lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                    anyString(), isNull(), anyString(), anyBoolean())).thenReturn(claimMappings);
+
+            // Setup user store with user claims
+            Map<String, String> userClaims = new HashMap<>();
+            userClaims.put(LOCAL_EMAIL_CLAIM_URI, "user@example.com");
+            userClaims.put(LOCAL_USERNAME_CLAIM_URI, USER_NAME);
+            userClaims.put(LOCAL_ROLE_CLAIM_URI, ROLE_CLAIM_DEFAULT_VALUE);
+
+            UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
+            mockUserRealm(authenticatedUser.toString(), userRealm, identityTenantUtil);
+
+            // Execute the test
+            JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                    oAuthServerConfiguration);
+
+            // Verify the claims are correctly retrieved
+            assertNotNull(jwtClaimsSet, "JWT claims should not be null");
+            assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT claims should not be empty");
+            assertEquals(jwtClaimsSet.getClaim(EMAIL), "user@example.com",
+                    "Email claim should match the value from user store");
+            assertEquals(jwtClaimsSet.getClaim(USERNAME), USER_NAME,
+                    "Username claim should match the value from user store");
+
+            // Verify the role claim is returned as a JSONArray
+            assertNotNull(jwtClaimsSet.getClaim(ROLE), "Role claim should not be null");
+            JSONArray jsonArray = (JSONArray) jwtClaimsSet.getClaim(ROLE);
+            String[] expectedRoles = new String[]{ROLE1, ROLE2, ROLE3};
+            for (String role : expectedRoles) {
+                assertTrue(jsonArray.contains(role), "Role claim should contain " + role);
+            }
+        }
+    }
+
     private void mockAuthorizationGrantCache(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                              MockedStatic<AuthorizationGrantCache> authorizationGrantCache) {
 
@@ -739,23 +826,11 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private void setStaticField(Class classname,
                                 String fieldName,
                                 Object value)
-            throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+            throws NoSuchFieldException, IllegalAccessException {
 
         Field declaredField = classname.getDeclaredField(fieldName);
         declaredField.setAccessible(true);
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(declaredField, declaredField.getModifiers() & ~Modifier.FINAL);
 
         declaredField.set(null, value);
     }

@@ -33,6 +33,7 @@ public class CibaAuthCodeResponse {
     private String transactionContext;
     private String[] scopes;
     private long expiresIn;
+    private String authUrl;
 
     public String getBindingMessage() {
 
@@ -114,5 +115,15 @@ public class CibaAuthCodeResponse {
     public void setExpiresIn(long expiresIn) {
 
         this.expiresIn = expiresIn;
+    }
+
+    public String getAuthUrl() {
+
+        return authUrl;
+    }
+
+    public void setAuthUrl(String authUrl) {
+
+        this.authUrl = authUrl;
     }
 }

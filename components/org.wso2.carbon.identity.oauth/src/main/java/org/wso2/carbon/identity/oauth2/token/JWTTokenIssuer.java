@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -48,6 +48,8 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
@@ -74,6 +76,7 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
 /**
@@ -436,12 +439,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-         directly in the organization of the applicationResidentOrgId. In this scenario, the signing tenant domain
-         should be the root tenant domain of the applicationResidentOrgId.
+         If applicationResidentOrgId is not empty, then the request comes for an application which is
+         registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
+         that needs to be signing the token should be extracted from the application OIDC configurations. If that
+         is not available then the root organization will be selected as the signing tenant domain.
         */
         if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            tenantDomain = OAuth2Util.getTenantDomainByApplicationTokenIssuer(clientID, applicationResidentOrgId);
         } else if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
             if (log.isDebugEnabled()) {
                 log.debug("Using the tenant domain of the SP to sign the token");
@@ -497,8 +501,40 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
+            String certThumbPrint;
+
             Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
-            String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+            if (OAuth2Util.isJWTX5tHexifyingRequired()) {
+                // Handle x5t.
+                if (IdentityUtil.getProperty(JWT_X5T_ENABLED) == null) {
+                    /* When x5t enable is not set, default to incorrect behaviour of setting hexified SHA-256
+                       thumbprint for x5t header parameter. */
+                    certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                } else if (Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_ENABLED))) {
+                    /* When x5t enable is set, set the hexified SHA-1 for x5t header parameter. */
+                    certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, true);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                }
+
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrint(certificate, true);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            } else {
+                // Handle x5t.
+                if (OAuth2Util.isX5tEnabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+                    headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
+                }
+                // Handle x5t#s256.
+                if (OAuth2Util.isX5tS256Enabled()) {
+                    certThumbPrint = OAuth2Util.getThumbPrint(certificate, false);
+                    headerBuilder.x509CertSHA256Thumbprint(new Base64URL(certThumbPrint));
+                }
+            }
+
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
@@ -508,7 +544,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
                 headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
             }
-            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT.serialize();
@@ -625,15 +660,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-         directly in the organization of the applicationResidentOrgId. spTenantDomain is used to get the idTokenIssuer
-         for the token. In this scenario, the tenant domain that needs to be used as the issuer is the root tenant.
-        */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            spTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();;
-        }
-
         boolean isMTLSrequest;
         if (authAuthzReqMessageContext != null) {
             /* If the auth request is originated from a request object reference(ex: PAR), then that endpoint should be
@@ -645,7 +671,27 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             isMTLSrequest = OAuth2Util.isMtlsRequest(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                     .getHttpServletRequestWrapper().getRequestURL().toString());
         }
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
+
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. spTenantDomain is used to get the idTokenIssuer
+         for the token. In this scenario, the tenant domain that needs to be used as the issuer should be extracted
+         from the application OIDC configurations. If that is not available, then the root tenant domain will be used
+         to get the idTokenIssuer.
+        */
+
+        String issuer;
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            String issuerOrg = oAuthAppDO.getIssuerOrg();
+            if (StringUtils.isNotEmpty(issuerOrg)) {
+                issuer = getIssuerForApplication(consumerKey, issuerOrg);
+            } else {
+                issuer = OAuth2Util.getIdTokenIssuer(
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain(), isMTLSrequest);
+            }
+        } else {
+            issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
+        }
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
@@ -679,7 +725,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
-            jwtClaimsSetBuilder.claim(SCOPE, scope);
+            if (OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain)) {
+                // Convert space-delimited string to array.
+                jwtClaimsSetBuilder.claim(SCOPE, Arrays.asList(OAuth2Util.buildScopeArray(scope)));
+            } else {
+                // Use as space-delimited string (default).
+                jwtClaimsSetBuilder.claim(SCOPE, scope);
+            }
         }
 
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
@@ -726,6 +778,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * Retrieves the issuer location URL for the specified issuer organization.
+     *
+     * @param consumerKey The OAuth consumer key (client ID) of the application
+     * @param issuerOrg The organization ID of the issuer
+     * @return The issuer location URL for the given organization
+     * @throws IdentityOAuth2Exception if unable to resolve tenant domain or issuer location
+     */
+    private static String getIssuerForApplication(String consumerKey, String issuerOrg)
+            throws IdentityOAuth2Exception {
+
+        String issuer;
+        try {
+            String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(issuerOrg);
+            issuer = OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(issuerTenantDomain);
+        } catch (OrganizationManagementException | OAuth2OIDCConfigOrgUsageScopeMgtServerException e) {
+            throw new IdentityOAuth2Exception("Error occurred while getting the issuer tenant domain for " +
+                    "client id: " + consumerKey, e);
+        }
+        return issuer;
     }
 
     /**

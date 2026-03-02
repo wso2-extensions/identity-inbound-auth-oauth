@@ -72,9 +72,12 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
@@ -95,8 +98,10 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
@@ -168,6 +173,8 @@ public class OAuthAdminServiceImplTest {
     TokenManagementDAO mockTokenManagementDAO;
     @Mock
     IdentityEventService identityEventService;
+    @Mock
+    OrganizationManager mockOrganizationManager;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     private MockedStatic<LoggerUtils> loggerUtils;
@@ -307,7 +314,9 @@ public class OAuthAdminServiceImplTest {
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
@@ -325,6 +334,13 @@ public class OAuthAdminServiceImplTest {
             oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
             oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
             oAuthConsumerAppDTO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn("org-id");
+            when(mockOrganizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                     (mock, context) -> {
@@ -876,10 +892,31 @@ public class OAuthAdminServiceImplTest {
 
         try (MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
             oAuthUtil.when(OAuthUtil::getRandomNumberSecure).thenReturn(UPDATED_CONSUMER_SECRET);
+            oAuthUtil.when(() -> OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserId(USER_ID);
+
             OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
             doThrow(new IdentityOAuthAdminException("Error while regenerating consumer secret")).when(
                     oAuthAdminServiceImpl).updateAppAndRevokeTokensAndAuthzCodes(anyString(), any(Properties.class));
-            oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
+            oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+            oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("test_user");
+            oAuthAppDO.setAppOwner(authenticatedUser);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(CONSUMER_KEY, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(
+                                oAuthAppDO);
+                    })) {
+                oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
+            }
         }
     }
 
@@ -1588,6 +1625,184 @@ public class OAuthAdminServiceImplTest {
             Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("authorization_code"));
             Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("refresh_token"));
             Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("password"));
+        }
+    }
+
+
+    private static final String CIBA_GRANT_TYPE = "urn:openid:params:grant-type:ciba";
+
+    @Test
+    public void testRegisterOAuthApplicationDataWithCibaGrantAndValidExpiry() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            
+            Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
+            supportedGrantTypes.put(CIBA_GRANT_TYPE, null);
+            supportedGrantTypes.put("authorization_code", null);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(supportedGrantTypes);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+            oAuthConsumerAppDTO.setApplicationName("SAMPLE_APP_CIBA");
+            oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
+            oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
+            oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(3600); // Valid expiry
+            oAuthConsumerAppDTO.setUsername("admin");
+            oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class));
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+
+                try {
+                    oAuthAdminServiceImpl.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.fail("Should not throw exception for valid CIBA configuration. Error: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testRegisterOAuthApplicationDataWithCibaGrantAndInvalidExpiry() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+
+            Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
+            supportedGrantTypes.put(CIBA_GRANT_TYPE, null);
+            supportedGrantTypes.put("authorization_code", null);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(supportedGrantTypes);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+            oAuthConsumerAppDTO.setApplicationName("SAMPLE_APP_CIBA_INVALID");
+            oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
+            oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
+            oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(0); // Invalid expiry
+            oAuthConsumerAppDTO.setUsername("admin");
+            oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class));
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+
+                try {
+                    oAuthAdminServiceImpl.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                    Assert.fail("Should throw exception for invalid CIBA configuration");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e.getMessage().contains("CIBA authentication request expiry time must " +
+                                    "be greater than 0"),
+                            "Expected error message not found. Got: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testUpdateConsumerApplicationWithCibaGrantAndInvalidExpiry() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = "consumer-key-ciba-update";
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
+
+            Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
+            supportedGrantTypes.put(CIBA_GRANT_TYPE, null);
+            supportedGrantTypes.put("authorization_code", null);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(supportedGrantTypes);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+
+            OAuthAppDO app = buildDummyOAuthAppDO("admin");
+            app.setOauthConsumerKey(consumerKey);
+            app.setGrantTypes(CIBA_GRANT_TYPE);
+
+            try (MockedConstruction<OAuthAppDAO> ignored = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, -1234)).thenReturn(app);
+                    });
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
+
+                ServiceProvider serviceProvider = new ServiceProvider();
+                serviceProvider.setApplicationName("SAMPLE_APP_CIBA_UPDATE");
+
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                        .thenReturn(serviceProvider);
+
+                OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+                OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+                oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
+                oAuthConsumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
+                oAuthConsumerAppDTO.setApplicationName("SAMPLE_APP_CIBA_UPDATE");
+                oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
+                oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
+                oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(0); // Invalid expiry
+                oAuthConsumerAppDTO.setUsername("admin");
+                oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+
+
+                try {
+                    oAuthAdminServiceImpl.updateConsumerApplication(oAuthConsumerAppDTO);
+                    Assert.fail("Should throw exception for invalid CIBA configuration during update");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e.getMessage().contains("CIBA authentication request expiry time must " +
+                                    "be greater than 0"),
+                            "Expected error message not found. Got: " + e.getMessage());
+                }
+            }
         }
     }
 }

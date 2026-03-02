@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -68,6 +69,7 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setFrontchannelLogoutUri(registrationRequestDTO.getFrontchannelLogoutUri());
         appRegistrationRequest.setIsManagementApp(registrationRequestDTO.isManagementApp());
         appRegistrationRequest.setExtApplicationDisplayName(registrationRequestDTO.getExtApplicationDisplayName());
         appRegistrationRequest.setExtApplicationOwner(registrationRequestDTO.getExtApplicationOwner());
@@ -116,6 +118,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setFrontchannelLogoutUri(updateRequestDTO.getFrontchannelLogoutUri());
         applicationUpdateRequest.setExtApplicationDisplayName(updateRequestDTO.getExtApplicationDisplayName());
         applicationUpdateRequest.setExtApplicationVersion(updateRequestDTO.getExtApplicationVersion());
         applicationUpdateRequest.setExtApplicationOwner(updateRequestDTO.getExtApplicationOwner());
@@ -259,6 +262,9 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
+        if (StringUtils.isNotBlank(application.getFrontchannelLogoutUri())) {
+            applicationDTO.setFrontchannelLogoutUri(application.getFrontchannelLogoutUri());
+        }
         applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
         applicationDTO.setExtAllowedAudience(application.getExtAllowedAudience());
         return applicationDTO;

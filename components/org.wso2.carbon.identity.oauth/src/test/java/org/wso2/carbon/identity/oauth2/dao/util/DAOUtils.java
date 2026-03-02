@@ -79,4 +79,19 @@ public class DAOUtils {
         }
         return null;
     }
+
+    /**
+     * Closes and removes the BasicDataSource associated with the given database name.
+     *
+     * @param databaseName Name of the database whose datasource should be closed.
+     * @throws Exception If an error occurs while closing the datasource.
+     */
+    public static void closeDataSource(String databaseName) throws Exception {
+
+        BasicDataSource dataSource = dataSourceMap.get(databaseName);
+        if (dataSource != null) {
+            dataSource.close();
+            dataSourceMap.remove(databaseName);
+        }
+    }
 }

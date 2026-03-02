@@ -25,4 +25,5 @@ public class Constants {
 
     public static final String OPENJDK_SCRIPT_CLASS_NAME = "org.openjdk.nashorn.api.scripting.ScriptObjectMirror";
     public static final String JDK_SCRIPT_CLASS_NAME = "jdk.nashorn.api.scripting.ScriptObjectMirror";
+    public static final String GRAALJS_SCRIPTER_CLASS_NAME = "org.graalvm.polyglot.Context";
 }
