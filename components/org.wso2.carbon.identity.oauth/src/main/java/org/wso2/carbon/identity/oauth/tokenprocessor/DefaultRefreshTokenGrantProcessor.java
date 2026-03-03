@@ -217,7 +217,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
         RefreshTokenValidationDataDO oldAccessToken =
                 (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
-        if (oldAccessToken.getAccessToken() == null) {
+        if (oldAccessToken == null || StringUtils.isBlank(oldAccessToken.getAccessToken())) {
             return;
         }
         AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken

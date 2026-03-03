@@ -246,7 +246,7 @@ public class HybridRefreshTokenGrantProcessor implements RefreshTokenGrantProces
      */
     private Optional<OAuthAppDO> getOAuthApp(String clientId) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = null;
+        OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
             if (LOG.isDebugEnabled()) {
@@ -254,9 +254,8 @@ public class HybridRefreshTokenGrantProcessor implements RefreshTokenGrantProces
                         + oAuthAppDO.getAppOwner().toString());
             }
         } catch (InvalidOAuthClientException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("OAuth application : " + clientId + " not found");
-            }
+            throw new IdentityOAuth2Exception("Error while retrieving OAuth application for client id: " + clientId,
+                    e);
         }
         return Optional.ofNullable(oAuthAppDO);
     }
