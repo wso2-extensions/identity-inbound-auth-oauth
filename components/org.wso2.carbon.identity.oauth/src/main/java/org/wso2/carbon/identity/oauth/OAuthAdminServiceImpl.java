@@ -1560,9 +1560,12 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-            handleNonPersistentTokenRevocation(consumerKey);
-            handleInternalTokenRevocation(consumerKey, properties);
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            try {
+                handleNonPersistentTokenRevocation(consumerKey);
+                handleInternalTokenRevocation(consumerKey, properties);
+            } finally {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            }
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -3240,13 +3243,14 @@ public class OAuthAdminServiceImpl {
 
         if (OAuth2Util.isNonPersistentTokenEnabled(consumerKey)) {
             long revocationTime = System.currentTimeMillis();
-            int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
             try {
+                String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
                 OAuthTokenPersistenceFactory.getInstance().getRevokedTokenPersistenceDAO().
                         revokeTokensBySubjectEvent(consumerKey, ENTITY_ID_TYPE_CLIENT_ID, revocationTime, tenantId);
                 new RefreshTokenDAOImpl().revokeTokensForApp(consumerKey);
 
-            } catch (IdentityOAuth2Exception e) {
+            } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
                 throw new IdentityOAuthAdminException(
                         "Error while recording non-persistent token revocation event for consumer key: "
                                 + consumerKey, e);
