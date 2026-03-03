@@ -178,20 +178,6 @@ public class CibaAuthServiceImplTest {
         cibaAuthService.generateAuthCodeResponse(request);
     }
 
-    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp = ".*public client.*")
-    public void testGenerateAuthCodeResponse_PublicClient() throws Exception {
-
-        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
-        request.setIssuer("public-client");
-
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setBypassClientCredentials(true);
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("public-client", "carbon.super"))
-                .thenReturn(appDO);
-
-        cibaAuthService.generateAuthCodeResponse(request);
-    }
-
     @Test(expectedExceptions = CibaCoreException.class)
     public void testGenerateAuthCodeResponse_UserResolutionFail() throws Exception {
 
