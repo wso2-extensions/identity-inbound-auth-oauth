@@ -208,6 +208,8 @@ public class JwksEndpointTest {
                         .thenReturn(JWSAlgorithm.RS512);
                 oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
                         .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("EdDSA"))
+                        .thenReturn(JWSAlgorithm.EdDSA);
                 if ("foo.com".equals(tenantDomain)) {
                     oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
                             .thenReturn(JWSAlgorithm.RS256);
