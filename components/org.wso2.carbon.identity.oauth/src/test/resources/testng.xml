@@ -88,6 +88,7 @@
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.HybridOAuth2RevocationProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.tokenprocessor.HybridPersistenceTokenProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
             <class name="org.wso2.carbon.identity.oauth.user.UserInfoEndpointExceptionTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimCacheKeyTest"/>
@@ -129,6 +130,7 @@
             <class name="org.wso2.carbon.identity.oauth2.util.OAuthEventPublishingUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtilsTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.util.TokenMgtUtilTest"/>
             <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
@@ -179,6 +181,7 @@
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.HybridOAuth2RevocationProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.tokenprocessor.HybridPersistenceTokenProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
             <class name="org.wso2.carbon.identity.oauth.user.UserInfoEndpointExceptionTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimCacheKeyTest"/>
@@ -223,6 +226,7 @@
             <class name="org.wso2.carbon.identity.oauth2.util.OAuthEventPublishingUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtilsTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.util.TokenMgtUtilTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
