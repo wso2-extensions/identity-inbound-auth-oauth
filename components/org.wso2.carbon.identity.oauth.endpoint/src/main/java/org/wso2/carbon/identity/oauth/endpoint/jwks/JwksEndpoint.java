@@ -136,7 +136,13 @@ public class JwksEndpoint {
             String alias = certInfo.getCertificateAlias();
             X509Certificate cert = (X509Certificate) certInfo.getCertificate();
             Certificate[] certChain = certInfo.getCertificateChain();
-            List<Base64> encodedCertList = generateEncodedCertList(certChain, alias);
+            
+            // Handle null or empty certificate chain
+            List<Base64> encodedCertList = new ArrayList<>();
+            if (certChain != null && certChain.length > 0) {
+                encodedCertList = generateEncodedCertList(certChain, alias);
+            }
+            
             PublicKey publicKey = cert.getPublicKey();
             List<JWSAlgorithm> algorithms = resolveSupportedSigningAlgorithms(publicKey);
 
