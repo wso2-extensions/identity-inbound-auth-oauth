@@ -6623,11 +6623,7 @@ public class OAuth2Util {
      */
     public static boolean isAccessTokenPersistenceEnabled() {
 
-        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE) != null) {
-            return Boolean.parseBoolean
-                    (IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE));
-        }
-        return OAuth2Constants.DEFAULT_ACCESS_TOKEN_PERSIST_ENABLED;
+        return OAuthServerConfiguration.getInstance().isAccessTokenPersistenceEnabled();
     }
 
     /**
@@ -6637,11 +6633,7 @@ public class OAuth2Util {
      */
     public static boolean isKeepRevokedAccessTokenEnabled() {
 
-        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_KEEP_REVOKED_ACCESS_TOKEN_LIST) != null) {
-            return Boolean.parseBoolean
-                    (IdentityUtil.getProperty(OAuth2Constants.OAUTH_KEEP_REVOKED_ACCESS_TOKEN_LIST));
-        }
-        return OAuth2Constants.DEFAULT_KEEP_REVOKED_ACCESS_TOKEN_LIST;
+        return OAuthServerConfiguration.getInstance().isKeepRevokedTokenEnabled();
     }
 
     /**
@@ -6651,12 +6643,7 @@ public class OAuth2Util {
      */
     public static boolean isRefreshTokenPersistenceEnabled() {
 
-
-        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_REFRESH_TOKEN_PERSISTENCE_ENABLE) != null) {
-            return Boolean.parseBoolean
-                    (IdentityUtil.getProperty(OAuth2Constants.OAUTH_REFRESH_TOKEN_PERSISTENCE_ENABLE));
-        }
-        return OAuth2Constants.DEFAULT_REFRESH_TOKEN_PERSIST_ENABLED;
+        return OAuthServerConfiguration.getInstance().isRefreshTokenPersistenceEnabled();
     }
 
     /**

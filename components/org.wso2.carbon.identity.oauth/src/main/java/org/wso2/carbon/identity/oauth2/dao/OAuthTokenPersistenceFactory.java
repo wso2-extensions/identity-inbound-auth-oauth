@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAO;
 import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAOImpl;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedUnifiedScopeMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
@@ -45,6 +46,7 @@ public class OAuthTokenPersistenceFactory {
     private OAuthUserConsentedScopesDAO oauthUserConsentedScopesDAO;
     private final AuthorizationDetailsDAO authorizationDetailsDAO;
     private final RevokedTokenPersistenceDAO revokedTokenPersistenceDAO;
+    private final AccessTokenDAO nonPersistedTokenDAO;
 
     public OAuthTokenPersistenceFactory() {
 
@@ -58,6 +60,7 @@ public class OAuthTokenPersistenceFactory {
         this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
         this.authorizationDetailsDAO = new AuthorizationDetailsDAOImpl();
         this.revokedTokenPersistenceDAO = new RevokedTokenDAOImpl();
+        this.nonPersistedTokenDAO = new NonPersistentAccessTokenDAOImpl();
     }
 
     public static OAuthTokenPersistenceFactory getInstance() {
@@ -70,6 +73,10 @@ public class OAuthTokenPersistenceFactory {
         return authorizationCodeDAO;
     }
 
+    /**
+     * @deprecated Use {@link #getAccessTokenDAOImpl(String)} instead.
+     */
+    @Deprecated
     public AccessTokenDAO getAccessTokenDAO() {
 
         AccessTokenDAO accessTokenDAO = OAuthComponentServiceHolder.getInstance().getAccessTokenDAOService();
@@ -140,5 +147,25 @@ public class OAuthTokenPersistenceFactory {
      */
     public AuthorizationDetailsDAO getAuthorizationDetailsDAO() {
         return this.authorizationDetailsDAO;
+    }
+
+    /**
+     * Retrieves the appropriate AccessTokenDAO implementation based on the consumer key.
+     *
+     * <p>
+     * This method checks if non-persistent tokens are enabled for the given consumer key. If they are enabled,
+     * it returns an instance of {@link NonPersistentAccessTokenDAOImpl}. Otherwise, it returns the default
+     * {@link AccessTokenDAO} implementation.
+     * </p>
+     *
+     * @param consumerKey The consumer key for which to retrieve the AccessTokenDAO implementation.
+     * @return An instance of AccessTokenDAO based on the configuration for the given consumer key.
+     */
+    public AccessTokenDAO getAccessTokenDAOImpl(String consumerKey) {
+
+        if (OAuth2Util.isNonPersistentTokenEnabled(consumerKey)) {
+            return nonPersistedTokenDAO;
+        }
+        return getAccessTokenDAO();
     }
 }

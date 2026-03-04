@@ -176,6 +176,9 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    private boolean isAccessTokenPersistenceEnabled = true;
+    private boolean isRefreshTokenPersistenceEnabled = true;
+    private boolean isKeepRevokedTokenEnabled = true;
     private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
     private boolean isValidateAuthenticatedUserForRefreshGrantEnabled = false;
     private boolean assertionsUserNameEnabled = false;
@@ -459,6 +462,9 @@ public class OAuthServerConfiguration {
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
+
+        // read token persistence config
+        parseTokenPersistenceConfiguration(oauthElem);
 
         // Read the authenticated user validation config for refresh grant.
         parseRefreshTokenGrantValidationConfiguration(oauthElem);
@@ -1199,6 +1205,33 @@ public class OAuthServerConfiguration {
 
     public boolean isRefreshTokenRenewalEnabled() {
         return isRefreshTokenRenewalEnabled;
+    }
+
+    /**
+     * Check if access token persistence is enabled.
+     *
+     * @return True if access token persistence is enabled.
+     */
+    public boolean isAccessTokenPersistenceEnabled() {
+        return isAccessTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if refresh token persistence is enabled.
+     *
+     * @return True if refresh token persistence is enabled.
+     */
+    public boolean isRefreshTokenPersistenceEnabled() {
+        return isRefreshTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if keeping revoked access tokens in the list is enabled.
+     *
+     * @return True if keeping revoked access tokens is enabled.
+     */
+    public boolean isKeepRevokedTokenEnabled() {
+        return isKeepRevokedTokenEnabled;
     }
 
     public boolean isExtendRenewedTokenExpiryTimeEnabled() {
@@ -2674,6 +2707,34 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("ExtendRenewedRefreshTokenExpiryTime was set to : " + isExtendRenewedTokenExpiryTimeEnabled);
+        }
+    }
+
+    private void parseTokenPersistenceConfiguration(OMElement oauthConfigElem) {
+
+        OMElement tokenPersistenceElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.TOKEN_PERSISTENCE));
+        if (tokenPersistenceElem != null) {
+            OMElement persistAccessTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_ACCESS_TOKEN));
+            if (persistAccessTokenElem != null) {
+                isAccessTokenPersistenceEnabled = Boolean.parseBoolean(persistAccessTokenElem.getText());
+            }
+            OMElement persistRefreshTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_REFRESH_TOKEN));
+            if (persistRefreshTokenElem != null) {
+                isRefreshTokenPersistenceEnabled = Boolean.parseBoolean(persistRefreshTokenElem.getText());
+            }
+            OMElement keepRevokedAccessTokensElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.KEEP_REVOKED_ACCESS_TOKENS));
+            if (keepRevokedAccessTokensElem != null) {
+                isKeepRevokedTokenEnabled = Boolean.parseBoolean(keepRevokedAccessTokensElem.getText());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AccessTokenPersistence was set to : " + isAccessTokenPersistenceEnabled);
+            log.debug("RefreshTokenPersistence was set to : " + isRefreshTokenPersistenceEnabled);
+            log.debug("KeepRevokedTokens was set to : " + isKeepRevokedTokenEnabled);
         }
     }
 
@@ -4524,6 +4585,11 @@ public class OAuthServerConfiguration {
                 "ValidateAuthenticatedUserForRefreshGrant";
         // Enable/Disable extend the lifetime of the new refresh token
         private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
+        // Token persistence config
+        private static final String TOKEN_PERSISTENCE = "TokenPersistence";
+        private static final String PERSIST_ACCESS_TOKEN = "PersistAccessToken";
+        private static final String PERSIST_REFRESH_TOKEN = "PersistRefreshToken";
+        private static final String KEEP_REVOKED_ACCESS_TOKENS = "KeepRevokedAccessTokens";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
         // Token issuer generator.

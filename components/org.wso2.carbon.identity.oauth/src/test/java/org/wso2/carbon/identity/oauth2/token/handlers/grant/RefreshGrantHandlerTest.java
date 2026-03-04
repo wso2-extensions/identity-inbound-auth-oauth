@@ -440,7 +440,7 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(oAuthServerConfiguration);
             oAuthTokenPersistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
                     .thenReturn(oAuthTokenPersistenceFactory);
-            when(oAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(oAuthTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
             PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
             privilegedCarbonContextMockedStatic.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
                     .thenReturn(carbonContext);
