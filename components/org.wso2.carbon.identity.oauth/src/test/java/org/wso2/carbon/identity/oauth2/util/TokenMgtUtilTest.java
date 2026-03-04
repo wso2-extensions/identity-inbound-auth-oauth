@@ -489,7 +489,23 @@ public class TokenMgtUtilTest {
     @Test
     public void testIsNonPersistenceAccessToken_WithNonJWTToken() {
 
-        assertFalse(TokenMgtUtil.isNonPersistenceAccessToken("plain-opaque-token"));
-        assertFalse(TokenMgtUtil.isNonPersistenceAccessToken(null));
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isAccessTokenPersistenceEnabled).thenReturn(false);
+
+            assertFalse(TokenMgtUtil.isNonPersistenceAccessToken("plain-opaque-token"));
+            assertFalse(TokenMgtUtil.isNonPersistenceAccessToken(null));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistenceAccessToken_WhenTokenPersistenceEnabled() {
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isAccessTokenPersistenceEnabled).thenReturn(true);
+
+            // Should return false regardless of token format when persistence is enabled.
+            assertFalse(TokenMgtUtil.isNonPersistenceAccessToken("plain-opaque-token"));
+            assertFalse(TokenMgtUtil.isNonPersistenceAccessToken(null));
+        }
     }
 }

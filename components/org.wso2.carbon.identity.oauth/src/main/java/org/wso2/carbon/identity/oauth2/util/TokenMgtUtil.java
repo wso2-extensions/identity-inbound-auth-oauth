@@ -516,7 +516,7 @@ public class TokenMgtUtil {
      */
     public static boolean isNonPersistenceAccessToken(String token) {
 
-        if (JWTUtils.isJWT(token)) {
+        if (!OAuth2Util.isAccessTokenPersistenceEnabled() && JWTUtils.isJWT(token)) {
             try {
                 SignedJWT signedJWT = parseJWT(token);
                 JWTClaimsSet claimsSet = getTokenJWTClaims(signedJWT);

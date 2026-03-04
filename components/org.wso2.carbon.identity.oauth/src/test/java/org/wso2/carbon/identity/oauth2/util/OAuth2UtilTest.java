@@ -3876,4 +3876,97 @@ public class OAuth2UtilTest {
             assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
         }
     }
+
+    // ======================== isNonPersistentTokenEnabled ========================
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenAccessTokenPersistenceEnabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn("true");
+
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled("test_consumer_key"));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenConsumerKeyIsBlank() {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn("false");
+
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(""));
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(null));
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled("   "));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsJWT() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn("false");
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("JWT");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertTrue(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsNotJWT() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn("false");
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("Default");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenExceptionOccurs() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
+                    .thenReturn("false");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(anyString(), anyInt()))
+                                .thenThrow(new InvalidOAuthClientException("Client not found"));
+                    })) {
+
+                assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+            }
+        }
+    }
 }
