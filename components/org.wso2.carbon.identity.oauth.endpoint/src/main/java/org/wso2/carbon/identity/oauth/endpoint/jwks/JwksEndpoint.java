@@ -33,6 +33,8 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -164,6 +166,12 @@ public class JwksEndpoint {
             }
             throw new IdentityOAuth2Exception("Only P256 EC keys are supported for ES256. Found " + curve);
         } else if ("Ed25519".equals(publicKey.getAlgorithm()) || "EdDSA".equals(publicKey.getAlgorithm())) {
+            // Validate that EdDSA is specifically Ed25519, not Ed448
+            byte[] encodedKey = publicKey.getEncoded();
+            if (!isEd25519Spki(encodedKey)) {
+                throw new IdentityOAuth2Exception("Only Ed25519 keys are supported for EdDSA." + 
+                "Found different EdDSA variant.");
+            }
             algs.add(JWSAlgorithm.EdDSA);
             return algs;
         }
@@ -233,6 +241,9 @@ public class JwksEndpoint {
         } else if ("Ed25519".equals(publicKey.getAlgorithm()) || "EdDSA".equals(publicKey.getAlgorithm())) {
             // Extract the raw 32-byte public key identifier from the ASN.1 encoded public key
             byte[] encodedKey = publicKey.getEncoded();
+            if (!isEd25519Spki(encodedKey)) {
+                throw new IdentityOAuth2Exception("Only Ed25519 keys are supported for EdDSA.");
+            }
             byte[] xCoordinate = Arrays.copyOfRange(encodedKey, encodedKey.length - 32, encodedKey.length);
 
             OctetKeyPair.Builder jwk = new OctetKeyPair.Builder(Curve.Ed25519, Base64URL.encode(xCoordinate));
@@ -361,5 +372,29 @@ public class JwksEndpoint {
             }
         }
         return certList;
+    }
+
+    /**
+     * Validates that the EdDSA public key is specifically Ed25519 (not Ed448).
+     * Per RFC 8410, the EdDSA variant is identified by the AlgorithmIdentifier OID
+     * in the X.509 SubjectPublicKeyInfo structure.
+     * Ed25519 OID: 1.3.101.112
+     * Ed448 OID: 1.3.101.113
+     *
+     * @param encodedKey the ASN.1 encoded public key from publicKey.getEncoded()
+     * @return true if the key is Ed25519, false otherwise
+     */
+    private boolean isEd25519Spki(byte[] encodedKey) {
+
+        try {
+            SubjectPublicKeyInfo spki = SubjectPublicKeyInfo.getInstance(ASN1Primitive.fromByteArray(encodedKey));
+            // Get the algorithm OID from the SubjectPublicKeyInfo
+            String oid = spki.getAlgorithm().getAlgorithm().getId();
+            // Ed25519 OID: 1.3.101.112
+            return "1.3.101.112".equals(oid);
+        } catch (Exception e) {
+            log.error("Error while validating Ed25519 SPKI structure for tenant domain: " + getTenantDomain(), e);
+            return false;
+        }
     }
 }
