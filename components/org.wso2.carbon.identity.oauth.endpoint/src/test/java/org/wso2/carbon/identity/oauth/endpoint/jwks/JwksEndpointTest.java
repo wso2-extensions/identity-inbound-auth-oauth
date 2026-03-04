@@ -752,6 +752,9 @@ public class JwksEndpointTest {
                 String result = jwksEndpoint.jwks();
                 assertTrue(result.contains("keys"));
             }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
         }
     }
 
@@ -784,7 +787,9 @@ public class JwksEndpointTest {
                 oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
                         .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
                                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
-                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any()))
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(false)))
+                        .thenReturn("oldThumbprint");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(true)))
                         .thenReturn("oldThumbprint");
 
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
@@ -844,6 +849,9 @@ public class JwksEndpointTest {
                 JSONObject keyObject = objectArray.getJSONObject(0);
                 assertEquals(keyObject.get("alg"), "RS256", "Incorrect alg value");
             }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
         }
     }
 
