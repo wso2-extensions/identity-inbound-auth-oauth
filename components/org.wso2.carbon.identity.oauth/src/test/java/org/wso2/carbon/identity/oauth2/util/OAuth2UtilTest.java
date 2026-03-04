@@ -3814,67 +3814,48 @@ public class OAuth2UtilTest {
     public Object[][] accessTokenPersistenceEnabledProvider() {
 
         return new Object[][]{
-                {"true", true},   // Config enabled -> true
-                {"false", false}, // Config disabled -> false
-                {null, true}      // Config null -> default true
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
         };
     }
 
     @Test(dataProvider = "accessTokenPersistenceEnabledProvider")
-    public void testIsAccessTokenPersistenceEnabled(String accessTokenPersistenceConfig,
-                                                    boolean expected) {
+    public void testIsAccessTokenPersistenceEnabled(boolean expected) {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn(accessTokenPersistenceConfig);
-
-            assertEquals(OAuth2Util.isAccessTokenPersistenceEnabled(), expected);
-        }
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isAccessTokenPersistenceEnabled(), expected);
     }
 
     @DataProvider(name = "keepRevokedAccessTokenEnabledProvider")
     public Object[][] keepRevokedAccessTokenEnabledProvider() {
 
         return new Object[][]{
-                {"true", true},   // Config enabled -> true
-                {"false", false}, // Config disabled -> false
-                {null, true}      // Config null -> default true
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
         };
     }
 
     @Test(dataProvider = "keepRevokedAccessTokenEnabledProvider")
-    public void testIsKeepRevokedAccessTokenEnabled(String configValue, boolean expected) {
+    public void testIsKeepRevokedAccessTokenEnabled(boolean expected) {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_KEEP_REVOKED_ACCESS_TOKEN_LIST))
-                    .thenReturn(configValue);
-
-            assertEquals(OAuth2Util.isKeepRevokedAccessTokenEnabled(), expected);
-        }
+        when(oauthServerConfigurationMock.isKeepRevokedTokenEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isKeepRevokedAccessTokenEnabled(), expected);
     }
 
     @DataProvider(name = "refreshTokenPersistenceEnabledProvider")
     public Object[][] refreshTokenPersistenceEnabledProvider() {
 
         return new Object[][]{
-                {"true", true},   // Config enabled -> true
-                {"false", false}, // Config disabled -> false
-                {null, true}      // Config null -> default true
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
         };
     }
 
     @Test(dataProvider = "refreshTokenPersistenceEnabledProvider")
-    public void testIsRefreshTokenPersistenceEnabled(String configValue, boolean expected) {
+    public void testIsRefreshTokenPersistenceEnabled(boolean expected) {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_REFRESH_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn(configValue);
-
-            assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
-        }
+        when(oauthServerConfigurationMock.isRefreshTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
     }
 
     // ======================== isNonPersistentTokenEnabled ========================
@@ -3882,35 +3863,25 @@ public class OAuth2UtilTest {
     @Test
     public void testIsNonPersistentTokenEnabled_WhenAccessTokenPersistenceEnabled() {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn("true");
-
-            assertFalse(OAuth2Util.isNonPersistentTokenEnabled("test_consumer_key"));
-        }
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(true);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("test_consumer_key"));
     }
 
     @Test
     public void testIsNonPersistentTokenEnabled_WhenConsumerKeyIsBlank() {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn("false");
-
-            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(""));
-            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(null));
-            assertFalse(OAuth2Util.isNonPersistentTokenEnabled("   "));
-        }
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(""));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(null));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("   "));
     }
 
     @Test
     public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsJWT() throws Exception {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
 
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn("false");
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
 
             OAuthAppDO appDO = new OAuthAppDO();
             appDO.setOauthConsumerKey(clientId);
@@ -3927,11 +3898,9 @@ public class OAuth2UtilTest {
     @Test
     public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsNotJWT() throws Exception {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
 
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn("false");
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
 
             OAuthAppDO appDO = new OAuthAppDO();
             appDO.setOauthConsumerKey(clientId);
@@ -3948,11 +3917,9 @@ public class OAuth2UtilTest {
     @Test
     public void testIsNonPersistentTokenEnabled_WhenExceptionOccurs() throws Exception {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
 
-            identityUtil.when(() -> IdentityUtil.getProperty(OAuth2Constants.OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE))
-                    .thenReturn("false");
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
 
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
             when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);

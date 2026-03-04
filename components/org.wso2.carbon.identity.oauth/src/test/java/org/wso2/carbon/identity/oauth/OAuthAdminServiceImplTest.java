@@ -948,7 +948,7 @@ public class OAuthAdminServiceImplTest {
             OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
             mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
                     .thenReturn(mockTokenPersistenceFactory);
-            when(mockTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
             when(mockTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
             when(mockTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(mockTokenManagementDAO);
             when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(CONSUMER_KEY)).thenReturn(activeTokens);

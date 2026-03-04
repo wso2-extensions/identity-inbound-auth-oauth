@@ -1672,7 +1672,7 @@ public class OAuthAdminServiceImpl {
         int countToken = 0;
         try {
             Set<AccessTokenDO> activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
             String[] accessTokens = new String[activeDetailedTokens.size()];
 
             for (AccessTokenDO detailToken : activeDetailedTokens) {
@@ -1738,7 +1738,7 @@ public class OAuthAdminServiceImpl {
         Set<AccessTokenDO> activeDetailedTokens;
         try {
             activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
@@ -1862,7 +1862,7 @@ public class OAuthAdminServiceImpl {
             Set<AccessTokenDO> accessTokenDOs;
             try {
                 accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getAccessTokens(
+                        .getAccessTokenDAOImpl(clientId).getAccessTokens(
                                 clientId, loggedInUser, userStoreDomain, true);
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1888,12 +1888,12 @@ public class OAuthAdminServiceImpl {
                         }
                         if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, tokenBindingReference, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, tokenBindingReference, true);
                         } else {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, true);
                         }
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
@@ -1971,7 +1971,7 @@ public class OAuthAdminServiceImpl {
                             // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this
                             // user
                             accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                                    .getAccessTokenDAO().getAccessTokens(
+                                    .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey()).getAccessTokens(
                                             appDTO.getOauthConsumerKey(), user, userStoreDomain, true);
                         } catch (IdentityOAuth2Exception e) {
                             String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -2003,7 +2003,8 @@ public class OAuthAdminServiceImpl {
                             AccessTokenDO scopedToken;
                             try {
                                 if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -2016,7 +2017,8 @@ public class OAuthAdminServiceImpl {
                                      Retrieve latest access token for particular client, user and scope combination if
                                      its ACTIVE or EXPIRED.
                                     */
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -2035,7 +2037,8 @@ public class OAuthAdminServiceImpl {
                             if (scopedToken != null) {
                                 //Revoking token from database
                                 try {
-                                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .revokeAccessTokens(new String[]{scopedToken
                                                     .getAccessToken()});
                                 } catch (IdentityOAuth2Exception e) {
@@ -2292,7 +2295,8 @@ public class OAuthAdminServiceImpl {
         List<AccessTokenDO> accessTokenDOs;
         try {
             accessTokenDOs = new ArrayList<>(OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey));
+                    .getInstance().getAccessTokenDAOImpl(consumerKey)
+                    .getActiveAcessTokenDataByConsumerKey(consumerKey));
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while retrieving access tokens issued for OAuth " +
                     "app with consumer key: %s.", consumerKey);
@@ -2305,7 +2309,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                     .revokeAccessTokens(accessTokens, OAuth2Util.isHashEnabled());
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while revoking access tokens for OAuth app in " +

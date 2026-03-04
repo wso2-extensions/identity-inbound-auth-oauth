@@ -64,13 +64,6 @@ public class OAuth2Constants {
     public static final String STORE_OPERATION = "STORE";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
-
-    public static final boolean DEFAULT_ACCESS_TOKEN_PERSIST_ENABLED = true;
-    public static final String OAUTH_ACCESS_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.PersistAccessToken";
-    public static final boolean DEFAULT_KEEP_REVOKED_ACCESS_TOKEN_LIST = true;
-    public static final String OAUTH_KEEP_REVOKED_ACCESS_TOKEN_LIST = "OAuth.TokenPersistence.KeepRevokedAccessTokens";
-    public static final boolean DEFAULT_REFRESH_TOKEN_PERSIST_ENABLED = true;
-    public static final String OAUTH_REFRESH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.PersistRefreshToken";
     public static final String REFRESH_TOKEN_SCOPE_CLAIM_KEY = "rt_scope";
     public static final String TOKEN_ID = "token_id";
 

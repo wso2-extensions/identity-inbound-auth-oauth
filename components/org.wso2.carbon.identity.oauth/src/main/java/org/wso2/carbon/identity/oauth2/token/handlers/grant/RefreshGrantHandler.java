@@ -313,7 +313,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String sessionId = getSessionContextIdentifier(validationBean.getAccessToken());
         if (sessionId == null) {
             String oldTokenId = validationBean.getTokenId();
-            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId())
                     .getSessionIdentifierByTokenId(oldTokenId);
         }
         if (sessionId != null) {
