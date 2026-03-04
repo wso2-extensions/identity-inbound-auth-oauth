@@ -33,7 +33,6 @@ import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.bouncycastle.jcajce.interfaces.EdDSAPublicKey;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -48,6 +47,7 @@ import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.EdECPublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -170,7 +170,7 @@ public class JwksEndpoint {
                 }
             }
             if (algs.isEmpty()) {
-                throw new IdentityOAuth2Exception("No RSA-compatible signing algorithm configured for RSA key.");
+                log.warn("No RSA-compatible signing algorithm configured for RSA key.");
             }
             return algs;
         } else if (publicKey instanceof ECPublicKey) {
@@ -179,13 +179,15 @@ public class JwksEndpoint {
                 algs.add(JWSAlgorithm.ES256);
                 return algs;
             }
-            throw new IdentityOAuth2Exception("Only P256 EC keys are supported for ES256. Found " + curve);
-        } else if (publicKey instanceof EdDSAPublicKey) {
+            log.warn("Only P256 EC keys are supported for ES256. Found " + curve);
+            return algs;
+        } else if (publicKey instanceof EdECPublicKey) {
             algs.add(JWSAlgorithm.EdDSA);
             return algs;
         }
-        throw new IdentityOAuth2Exception("Unsupported public key type in JWKS: " + publicKey.getAlgorithm() +
+        log.warn("Unsupported public key type in JWKS: " + publicKey.getAlgorithm() +
                 " (" + publicKey.getClass().getName() + ")");
+        return algs;
     }
 
     private JWK getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
@@ -207,7 +209,7 @@ public class JwksEndpoint {
             addX509CertChain(jwk, encodedCertList);
             addThumbprints(jwk, certificate, alias);
             return jwk.build();
-        } else if (publicKey instanceof EdDSAPublicKey) {
+        } else if (publicKey instanceof EdECPublicKey) {
             byte[] encodedKey = publicKey.getEncoded();
             byte[] xCoordinate = Arrays.copyOfRange(encodedKey, encodedKey.length - 32, encodedKey.length);
             OctetKeyPair.Builder jwk = new OctetKeyPair.Builder(Curve.Ed25519, Base64URL.encode(xCoordinate));
