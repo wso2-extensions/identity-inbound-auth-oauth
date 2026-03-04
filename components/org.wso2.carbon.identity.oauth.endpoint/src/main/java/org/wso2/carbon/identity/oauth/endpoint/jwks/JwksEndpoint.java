@@ -175,7 +175,8 @@ public class JwksEndpoint {
             algs.add(JWSAlgorithm.EdDSA);
             return algs;
         }
-        return algs;
+        throw new IdentityOAuth2Exception("Unsupported public key type in JWKS: " + publicKey.getAlgorithm() +
+                " (" + publicKey.getClass().getName() + ")");
     }
 
     private JWK getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
