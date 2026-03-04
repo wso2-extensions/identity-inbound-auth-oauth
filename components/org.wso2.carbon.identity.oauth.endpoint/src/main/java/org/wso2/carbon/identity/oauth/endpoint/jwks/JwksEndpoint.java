@@ -185,8 +185,7 @@ public class JwksEndpoint {
             algs.add(JWSAlgorithm.EdDSA);
             return algs;
         }
-        log.warn("Unsupported public key type in JWKS: " + publicKey.getAlgorithm() +
-                " (" + publicKey.getClass().getName() + ")");
+        log.warn("Unsupported public key type in JWKS: " + publicKey.getAlgorithm());
         return algs;
     }
 
