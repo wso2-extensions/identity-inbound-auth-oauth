@@ -278,6 +278,10 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             }
             return;
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Persisting token to session mapping for sessionId: " + sessionContextId +
+                    ", tokenId: " + tokenId + ", tenantId: " + tenantId + ", clientId: " + clientId);
+        }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .storeTokenToSessionMapping(sessionContextId, tokenId, tenantId);
     }

@@ -1347,6 +1347,12 @@ public class OAuthAdminServiceImpl {
                                     OAuthTokenPersistenceFactory.getInstance()
                                             .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .revokeAccessTokens(new String[] { scopedToken.getAccessToken() });
+                                    if (LOG.isDebugEnabled()) {
+                                        LOG.debug(
+                                                "Successfully revoked access token for client: "
+                                                        + appDTO.getOauthConsumerKey() + " and user: "
+                                                        + user.getUserName());
+                                    }
                                 } catch (IdentityOAuth2Exception e) {
                                     String errorMsg = "Error occurred while revoking " + "Access Token : " +
                                             scopedToken.getAccessToken();

@@ -77,6 +77,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
         }
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
+        if (log.isDebugEnabled()) {
+            log.debug("Invalidating old access token and creating new token for client: " + clientId);
+        }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
                         OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, clientId,
@@ -234,6 +237,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // To mitigate this, user attributes are set to null.
             if (OAuth2Util.isNonPersistentTokenEnabled(
                     accessTokenBean.getConsumerKey()) && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Non-persistent token enabled for non-federated user. Setting user attributes to"
+                            + " null.");
+                }
                 grantCacheEntry.setUserAttributes(null);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);

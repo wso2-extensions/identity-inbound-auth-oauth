@@ -241,6 +241,9 @@ public class AuthorizationGrantCache extends
         // Check if the access token is a non-persistent access token, and if so, retrieve the token ID
         // from the non-persistent access token.
         if (TokenMgtUtil.isNonPersistenceAccessToken(keyValue)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Non-persistent access token detected, attempting to retrieve token ID.");
+            }
             try {
                 return TokenMgtUtil.getTokenIDFromNonPersistenceAccessToken(keyValue);
             } catch (IdentityOAuth2Exception e) {
@@ -249,6 +252,9 @@ public class AuthorizationGrantCache extends
         }
         try {
             AccessTokenDO accessTokenDO = OAuth2Util.findAccessToken(keyValue, true);
+            if (log.isDebugEnabled()) {
+                log.debug("Attempting to retrieve token ID from persistent token store.");
+            }
             if (accessTokenDO != null) {
                 return accessTokenDO.getTokenId();
             }
