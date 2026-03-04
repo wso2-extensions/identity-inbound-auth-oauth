@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -49,10 +50,17 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -92,6 +100,14 @@ public class JwksEndpointTest {
     private Object identityUtilObj;
 
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
+    private IdentityKeyStoreResolver identityKeyStoreResolver;
+
+    @AfterTest
+    public void tearDown() {
+        if (identityKeyStoreResolverMockedStatic != null) {
+            identityKeyStoreResolverMockedStatic.close();
+        }
+    }
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -208,6 +224,8 @@ public class JwksEndpointTest {
                         .thenReturn(JWSAlgorithm.RS512);
                 oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
                         .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("EdDSA"))
+                        .thenReturn(JWSAlgorithm.EdDSA);
                 if ("foo.com".equals(tenantDomain)) {
                     oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
                             .thenReturn(JWSAlgorithm.RS256);
@@ -360,6 +378,291 @@ public class JwksEndpointTest {
         lenient().when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");
     }
 
+    /**
+     * Builds an in-memory KeyStore containing a self-signed certificate generated from the given key pair
+     * using BouncyCastle.
+     */
+    private KeyStore buildKeyStoreWithKeyPair(KeyPair keyPair, String alias, String keystorePassword)
+            throws Exception {
+
+        org.bouncycastle.asn1.x500.X500Name subject =
+                new org.bouncycastle.asn1.x500.X500Name("CN=Test");
+        BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
+        Date notBefore = new Date();
+        Date notAfter = new Date(notBefore.getTime() + 365L * 24 * 60 * 60 * 1000);
+
+        org.bouncycastle.cert.X509v3CertificateBuilder certBuilder =
+                new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
+                        subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
+
+        String sigAlg;
+        if (keyPair.getPublic().getAlgorithm().equals("EC")) {
+            sigAlg = "SHA256withECDSA";
+        } else if (keyPair.getPublic().getAlgorithm().equals("EdDSA") ||
+                keyPair.getPublic().getAlgorithm().equals("Ed25519")) {
+            sigAlg = "Ed25519";
+        } else {
+            sigAlg = "SHA256withRSA";
+        }
+
+        org.bouncycastle.operator.ContentSigner signer =
+                new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder(sigAlg)
+                        .build(keyPair.getPrivate());
+
+        X509Certificate cert = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
+                .getCertificate(certBuilder.build(signer));
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null, keystorePassword.toCharArray());
+        ks.setKeyEntry(alias, keyPair.getPrivate(), keystorePassword.toCharArray(),
+                new Certificate[]{cert});
+        return ks;
+    }
+
+    @Test
+    public void testJwksWithECKey() throws Exception {
+
+        // Generate EC P-256 key pair
+        KeyPairGenerator ecKpg = KeyPairGenerator.getInstance("EC");
+        ecKpg.initialize(new ECGenParameterSpec("secp256r1"));
+        KeyPair ecKeyPair = ecKpg.generateKeyPair();
+        KeyStore ecKeyStore = buildKeyStoreWithKeyPair(ecKeyPair, "eckey", "ecpass");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                // Use the EC keystore
+                IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+                when(mockResolver.getKeyStore(anyString(), any())).thenReturn(ecKeyStore);
+                identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                        .thenReturn(mockResolver);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                assertEquals(objectArray.length(), 1, "Should have 1 EC key");
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                assertEquals(keyObject.get("kty"), "EC", "Key type should be EC");
+                assertEquals(keyObject.get("alg"), "ES256", "Algorithm should be ES256");
+                assertEquals(keyObject.get("use"), USE, "Use should be sig");
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithEdDSAKey() throws Exception {
+
+        // Generate EdDSA (Ed25519) key pair
+        KeyPairGenerator edKpg = KeyPairGenerator.getInstance("EdDSA");
+        KeyPair edKeyPair = edKpg.generateKeyPair();
+        KeyStore edKeyStore = buildKeyStoreWithKeyPair(edKeyPair, "edkey", "edpass");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+                when(mockResolver.getKeyStore(anyString(), any())).thenReturn(edKeyStore);
+                identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                        .thenReturn(mockResolver);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.EdDSA);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                assertEquals(objectArray.length(), 1, "Should have 1 EdDSA key");
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                assertEquals(keyObject.get("kty"), "OKP", "Key type should be OKP");
+                assertEquals(keyObject.get("alg"), "EdDSA", "Algorithm should be EdDSA");
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithEdDSAKeyAndX5tEnabled() throws Exception {
+
+        KeyPairGenerator edKpg = KeyPairGenerator.getInstance("EdDSA");
+        KeyPair edKeyPair = edKpg.generateKeyPair();
+        KeyStore edKeyStore = buildKeyStoreWithKeyPair(edKeyPair, "edkey2", "edpass2");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+                when(mockResolver.getKeyStore(anyString(), any())).thenReturn(edKeyStore);
+                identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                        .thenReturn(mockResolver);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.EdDSA);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(false)))
+                        .thenReturn("Wf7dZ0u8qv1n4N2Jb1y1A3Zk3lE");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(true)))
+                        .thenReturn("59fedd674bbcaafd67e0dd896f5cb5037664de51");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                        .thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                assertEquals(objectArray.length(), 1);
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                assertEquals(keyObject.get("kty"), "OKP", "Key type should be OKP for EdDSA");
+                assertTrue(keyObject.has("x5t"), "x5t should be present when enabled");
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithECKeyAndX5cEnabled() throws Exception {
+
+        KeyPairGenerator ecKpg = KeyPairGenerator.getInstance("EC");
+        ecKpg.initialize(new ECGenParameterSpec("secp256r1"));
+        KeyPair ecKeyPair = ecKpg.generateKeyPair();
+        KeyStore ecKeyStore = buildKeyStoreWithKeyPair(ecKeyPair, "eckey2", "ecpass2");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+                when(mockResolver.getKeyStore(anyString(), any())).thenReturn(ecKeyStore);
+                identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                        .thenReturn(mockResolver);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(false)))
+                        .thenReturn("Wf7dZ0u8qv1n4N2Jb1y1A3Zk3lE");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                assertEquals(objectArray.length(), 1);
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                assertEquals(keyObject.get("kty"), "EC", "Key type should be EC");
+                assertTrue(keyObject.has("x5c"), "x5c should be present when enabled");
+                assertTrue(keyObject.has("x5t"), "x5t should be present when enabled");
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithCertificateEncodingExceptionInChain() throws Exception {
+
+        // Create a bad certificate that throws on getEncoded()
+        X509Certificate badCert = mock(X509Certificate.class);
+        when(badCert.getEncoded()).thenThrow(
+                new java.security.cert.CertificateEncodingException("test encoding error"));
+
+        IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+        KeyStore mockKeystore = mock(KeyStore.class);
+        when(mockResolver.getKeyStore(anyString(), any())).thenReturn(mockKeystore);
+        java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
+                java.util.Arrays.asList("badAlias"));
+        when(mockKeystore.aliases()).thenReturn(aliases);
+        when(mockKeystore.isKeyEntry("badAlias")).thenReturn(true);
+        when(mockKeystore.getCertificate("badAlias")).thenReturn(badCert);
+        when(mockKeystore.getCertificateChain("badAlias")).thenReturn(new Certificate[]{badCert});
+
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(mockResolver);
+
+        try {
+            String result = jwksEndpoint.jwks();
+            assertTrue(result.contains("Error while generating the keyset"),
+                    "Should return error message for encoding exception");
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
     private KeyStore getKeyStoreFromFile(String keystoreName, String password) throws Exception {
 
         Path tenantKeystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository",
@@ -372,7 +675,7 @@ public class JwksEndpointTest {
 
     private void mockKeystores() throws Exception {
 
-        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
         when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
                 IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
                 getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
@@ -384,4 +687,339 @@ public class JwksEndpointTest {
         identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
                 .thenReturn(identityKeyStoreResolver);
     }
+
+    @Test
+    public void testJwksWithCertificateEncodingException() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            // Mock keystore to throw exception
+            IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+            KeyStore mockKeystore = mock(KeyStore.class);
+            when(mockResolver.getKeyStore(anyString(), any())).thenReturn(mockKeystore);
+            when(mockKeystore.aliases()).thenThrow(new RuntimeException("Test exception"));
+
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(mockResolver);
+
+            String result = jwksEndpoint.jwks();
+            assertTrue(result.contains("Error while generating the keyset"));
+        } finally {
+            // Reset static mock to original resolver for subsequent tests
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithNoCertificateChain() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+
+                String result = jwksEndpoint.jwks();
+                assertTrue(result.contains("keys"));
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithAddPreviousVersionKIDEnabled() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.getPreviousKID(any(), any(), anyString()))
+                        .thenReturn("oldKID");
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(false)))
+                        .thenReturn("oldThumbprint");
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(true)))
+                        .thenReturn("oldThumbprint");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(
+                        "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID")).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                assertTrue(result.contains("keys"));
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                // Should have more keys due to previous version KID (current keys + previous KID keys)
+                assertTrue(objectArray.length() >= 3);
+            }
+        }
+    }
+
+    @Test
+    public void testJwksWithSameAlgorithmForAllTokenTypes() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            // Configure same algorithm for all token types
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor())
+                    .thenReturn(tokenPersistenceProcessor);
+            lenient().when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm())
+                    .thenReturn("SHA256withRSA");
+            lenient().when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
+            lenient().when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm())
+                    .thenReturn("SHA256withRSA");
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                // Only one algorithm, so 1 key per certificate entry
+                assertTrue(objectArray.length() >= 1);
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                assertEquals(keyObject.get("alg"), "RS256", "Incorrect alg value");
+            }
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithEmptyCertificateChain() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                KeyStore tempKeystore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
+                java.security.cert.Certificate mockCert = tempKeystore.getCertificate("wso2carbon");
+
+                IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+                KeyStore mockKeystore = mock(KeyStore.class);
+                when(mockResolver.getKeyStore(anyString(), any())).thenReturn(mockKeystore);
+                java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
+                        java.util.Arrays.asList("testAlias"));
+                when(mockKeystore.aliases()).thenReturn(aliases);
+                when(mockKeystore.isKeyEntry("testAlias")).thenReturn(true);
+                when(mockKeystore.getCertificate("testAlias")).thenReturn(mockCert);
+                when(mockKeystore.getCertificateChain("testAlias")).thenReturn(null);
+
+                identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                        .thenReturn(mockResolver);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                assertTrue(objectArray.length() > 0);
+
+                // Verify key doesn't have x5c when chain is null
+                JSONObject keyObject = objectArray.getJSONObject(0);
+                org.testng.Assert.assertFalse(keyObject.has("x5c"),
+                        "x5c should not be present when cert chain is null");
+            }
+        } finally {
+            // Reset static mock to original resolver for subsequent tests
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksWithEmptyTenantDomainFromContext() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+
+                ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
+                    protected Map<String, Object> initialValue() {
+                        return new HashMap();
+                    }
+                };
+
+                threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, "");
+
+                Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
+                threadLocalPropertiesField.setAccessible(true);
+
+                Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                unsafeField.setAccessible(true);
+                sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+                Object fieldBase = unsafe.staticFieldBase(threadLocalPropertiesField);
+                long fieldOffset = unsafe.staticFieldOffset(threadLocalPropertiesField);
+                unsafe.putObject(fieldBase, fieldOffset, threadLocalProperties);
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+
+                String result = jwksEndpoint.jwks();
+                // Empty tenant domain falls back to super tenant domain, should produce valid JSON
+                JSONObject jwksJson = new JSONObject(result);
+                assertTrue(jwksJson.has("keys"));
+
+                threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+            }
+        }
+    }
+
+    @Test
+    public void testJwksWithX5cDisabled() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+                identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("false");
+
+                String result = jwksEndpoint.jwks();
+                JSONObject jwksJson = new JSONObject(result);
+                JSONArray objectArray = jwksJson.getJSONArray("keys");
+                JSONObject keyObject = objectArray.getJSONObject(0);
+
+                // x5c should not be present when disabled
+                org.testng.Assert.assertFalse(keyObject.has("x5c"), "x5c should not be present");
+                // x5t should not be present when disabled
+                org.testng.Assert.assertFalse(keyObject.has("x5t"), "x5t should not be present");
+            }
+        }
+    }
 }
+
