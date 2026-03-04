@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.jcajce.interfaces.EdDSAPublicKey;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -157,11 +158,6 @@ public class JwksEndpoint {
 
         List<JWSAlgorithm> algs = new ArrayList<>();
         
-        // Check if there is a publicKey instance
-        if (publicKey == null) {
-            throw new IdentityOAuth2Exception("Public key is null. Unable to resolve supported signing algorithms.");
-        }
-        
         // Preserving previous behaviour for backward compatibility
         if (publicKey instanceof RSAPublicKey) {
             OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
@@ -186,12 +182,12 @@ public class JwksEndpoint {
                 return algs;
             }
             throw new IdentityOAuth2Exception("Only P256 EC keys are supported for ES256. Found " + curve);
-        } else if ("Ed25519".equals(publicKey.getAlgorithm()) || "EdDSA".equals(publicKey.getAlgorithm())) {
+        } else if (publicKey instanceof EdDSAPublicKey) {
             // Validate that EdDSA is specifically Ed25519, not Ed448
             byte[] encodedKey = publicKey.getEncoded();
             if (!isEd25519Spki(encodedKey)) {
-                throw new IdentityOAuth2Exception("Only Ed25519 keys are supported for EdDSA." + 
-                "Found different EdDSA variant.");
+                throw new IdentityOAuth2Exception("Only Ed25519 keys are supported for EdDSA. " +
+                        "Found different EdDSA variant.");
             }
             algs.add(JWSAlgorithm.EdDSA);
             return algs;
@@ -260,7 +256,7 @@ public class JwksEndpoint {
                 jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
             }
             return jwk.build();
-        } else if ("Ed25519".equals(publicKey.getAlgorithm()) || "EdDSA".equals(publicKey.getAlgorithm())) {
+        } else if (publicKey instanceof EdDSAPublicKey) {
             // Extract the raw 32-byte public key identifier from the ASN.1 encoded public key
             byte[] encodedKey = publicKey.getEncoded();
             if (!isEd25519Spki(encodedKey)) {
