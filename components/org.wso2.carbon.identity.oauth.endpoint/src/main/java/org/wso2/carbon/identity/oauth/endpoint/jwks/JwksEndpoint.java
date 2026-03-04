@@ -162,7 +162,16 @@ public class JwksEndpoint {
             JWSAlgorithm accessTokenSignAlgorithm =
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(config.getSignatureAlgorithm());
             // If we read different algorithms from identity.xml then put them in a list.
-            algs = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+            List<JWSAlgorithm> configuredAlgs = findDifferentAlgorithms(accessTokenSignAlgorithm, config);
+            // Filter to only include RSA-compatible algorithms for RSA keys
+            for (JWSAlgorithm configuredAlg : configuredAlgs) {
+                if (JWSAlgorithm.Family.RSA.contains(configuredAlg)) {
+                    algs.add(configuredAlg);
+                }
+            }
+            if (algs.isEmpty()) {
+                throw new IdentityOAuth2Exception("No RSA-compatible signing algorithm configured for RSA key.");
+            }
             return algs;
         } else if (publicKey instanceof ECPublicKey) {
             Curve curve = Curve.forECParameterSpec(((ECPublicKey) publicKey).getParams());
