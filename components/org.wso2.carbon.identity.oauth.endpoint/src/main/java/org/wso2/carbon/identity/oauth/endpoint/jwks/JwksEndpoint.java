@@ -150,6 +150,12 @@ public class JwksEndpoint {
     private List<JWSAlgorithm> resolveSupportedSigningAlgorithms(PublicKey publicKey) throws IdentityOAuth2Exception {
 
         List<JWSAlgorithm> algs = new ArrayList<>();
+        
+        // Check if there is a publicKey instance
+        if (publicKey == null) {
+            throw new IdentityOAuth2Exception("Public key is null. Unable to resolve supported signing algorithms.");
+        }
+        
         // Preserving previous behaviour for backward compatibility
         if (publicKey instanceof RSAPublicKey) {
             OAuthServerConfiguration config = OAuthServerConfiguration.getInstance();
