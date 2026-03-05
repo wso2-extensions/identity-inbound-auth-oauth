@@ -109,6 +109,7 @@ public class DCRMServiceTest {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private final String dummyFrontchannelLogoutUri = "http://frontchannel.com/logout";
     private static final String ORG_ROLE_AUDIENCE = "organization";
 
     @Mock
@@ -166,8 +167,20 @@ public class DCRMServiceTest {
     @AfterMethod
     public void tearDown() {
 
-        oAuthServerConfiguration.close();
-        oAuth2Util.close();
+        try {
+            if (oAuthServerConfiguration != null) {
+                oAuthServerConfiguration.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            if (oAuth2Util != null) {
+                oAuth2Util.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
     }
 
     @BeforeClass
@@ -1303,5 +1316,243 @@ public class DCRMServiceTest {
         Field declaredField = object.getClass().getDeclaredField(fieldName);
         declaredField.setAccessible(true);
         declaredField.set(object, value);
+    }
+
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void testRegisterApplicationWithFrontchannelLogoutUri(List<String> redirectUri, String roleAudience)
+            throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setFrontchannelLogoutUri(dummyFrontchannelLogoutUri);
+
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setApplicationName(dummyClientName);
+        oAuthConsumerApp.setGrantTypes(grantType);
+        oAuthConsumerApp.setOauthConsumerKey(dummyConsumerKey);
+        oAuthConsumerApp.setOauthConsumerSecret(dummyConsumerSecret);
+        oAuthConsumerApp.setCallbackUrl(redirectUri.get(0));
+        oAuthConsumerApp.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+
+        lenient().when(mockOAuthAdminService.getOAuthApplicationDataByAppName(dummyClientName))
+                .thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
+        lenient().when(mockApplicationManagementService.getServiceProviderNameByClientId(
+                oAuthConsumerApp.getOauthConsumerKey(), DCRMConstants.OAUTH2, dummyTenantDomain))
+                .thenReturn(IdentityApplicationConstants.DEFAULT_SP_CONFIG);
+
+        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getGrantTypes(), dummyGrantTypes);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test
+    public void testRegisterApplicationWithInvalidFrontchannelLogoutUri() throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        // Invalid frontchannel logout URI with fragment
+        applicationRegistrationRequest.setFrontchannelLogoutUri("http://frontchannel.com/logout#fragment");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI");
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
+    }
+
+    @Test(dataProvider = "RoleAudience")
+    public void testGetApplicationWithFrontchannelLogoutUri(String roleAudience) throws Exception {
+
+        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        dto.setApplicationName(dummyClientName);
+        dto.setOauthConsumerSecret(dummyConsumerSecret);
+        dto.setOauthConsumerKey(dummyConsumerKey);
+        dto.setCallbackUrl(dummyCallbackUrl);
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
+        dto.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setJwksUri("dummyJwksUri");
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
+                .thenReturn(serviceProvider);
+
+        Application application = dcrmService.getApplication(dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void testUpdateApplicationWithFrontchannelLogoutUri(List<String> redirectUri, String roleAudience)
+            throws Exception {
+
+        updateApplication();
+        applicationUpdateRequest.setRedirectUris(redirectUri);
+        applicationUpdateRequest.setFrontchannelLogoutUri(dummyFrontchannelLogoutUri);
+        applicationUpdateRequest.setExtAllowedAudience(roleAudience);
+
+        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        dto.setApplicationName(dummyClientName);
+        dto.setOauthConsumerSecret(dummyConsumerSecret);
+        dto.setOauthConsumerKey(dummyConsumerKey);
+        dto.setCallbackUrl(redirectUri.get(0));
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
+        dto.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
+                .thenReturn(new OAuthConsumerAppDTO[]{dto});
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test
+    public void testUpdateApplicationWithInvalidFrontchannelLogoutUri() throws Exception {
+
+        updateApplication();
+        // Invalid frontchannel logout URI with fragment
+        applicationUpdateRequest.setFrontchannelLogoutUri("http://frontchannel.com/logout#fragment");
+
+        try {
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+            when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+            dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI");
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
+    }
+
+    @Test
+    public void testUpdateApplicationClearFrontchannelLogoutUri() throws Exception {
+
+        OAuthConsumerAppDTO dto = updateApplication();
+        // Set redirect URIs
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        applicationUpdateRequest.setRedirectUris(redirectUri);
+        // Set empty string to clear the frontchannel logout URI
+        applicationUpdateRequest.setFrontchannelLogoutUri("");
+
+        dto.setFrontchannelLogoutUrl("");
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
+                .thenReturn(new OAuthConsumerAppDTO[]{dto});
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName(dummyClientName);
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(DCRConstants.APP_ROLE_AUDIENCE);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(serviceProvider);
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        // Verify frontchannel logout URI is cleared
+        assertTrue(StringUtils.isEmpty(application.getFrontchannelLogoutUri()));
+    }
+
+    @DataProvider(name = "invalidFrontchannelLogoutUris")
+    public Object[][] getInvalidFrontchannelLogoutUris() {
+        return new Object[][]{
+                {"http://frontchannel.com/logout#fragment"}, // Contains fragment
+                {"not-a-valid-uri"},                          // Not a valid URI
+                {"relative/path"},                            // Relative URI
+                {"http:\\\\invalid.com"}                      // Invalid format
+        };
+    }
+
+    @Test(dataProvider = "invalidFrontchannelLogoutUris")
+    public void testRegisterApplicationWithVariousInvalidFrontchannelLogoutUris(String invalidUri) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setFrontchannelLogoutUri(invalidUri);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI: " + invalidUri);
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
     }
 }

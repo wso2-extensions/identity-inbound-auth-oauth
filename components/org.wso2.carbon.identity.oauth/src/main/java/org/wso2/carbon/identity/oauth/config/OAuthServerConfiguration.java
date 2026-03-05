@@ -176,6 +176,9 @@ public class OAuthServerConfiguration {
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    private boolean isAccessTokenPersistenceEnabled = true;
+    private boolean isRefreshTokenPersistenceEnabled = true;
+    private boolean isKeepRevokedTokenEnabled = true;
     private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
     private boolean isValidateAuthenticatedUserForRefreshGrantEnabled = false;
     private boolean assertionsUserNameEnabled = false;
@@ -245,6 +248,7 @@ public class OAuthServerConfiguration {
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
     private boolean requestObjectEnabled = true;
+    private boolean useEntityIDAsIssuer = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -458,6 +462,9 @@ public class OAuthServerConfiguration {
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
+
+        // read token persistence config
+        parseTokenPersistenceConfiguration(oauthElem);
 
         // Read the authenticated user validation config for refresh grant.
         parseRefreshTokenGrantValidationConfiguration(oauthElem);
@@ -1200,6 +1207,33 @@ public class OAuthServerConfiguration {
         return isRefreshTokenRenewalEnabled;
     }
 
+    /**
+     * Check if access token persistence is enabled.
+     *
+     * @return True if access token persistence is enabled.
+     */
+    public boolean isAccessTokenPersistenceEnabled() {
+        return isAccessTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if refresh token persistence is enabled.
+     *
+     * @return True if refresh token persistence is enabled.
+     */
+    public boolean isRefreshTokenPersistenceEnabled() {
+        return isRefreshTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if keeping revoked access tokens in the list is enabled.
+     *
+     * @return True if keeping revoked access tokens is enabled.
+     */
+    public boolean isKeepRevokedTokenEnabled() {
+        return isKeepRevokedTokenEnabled;
+    }
+
     public boolean isExtendRenewedTokenExpiryTimeEnabled() {
         return isExtendRenewedTokenExpiryTimeEnabled;
     }
@@ -1715,6 +1749,10 @@ public class OAuthServerConfiguration {
 
     public String getUserInfoJWTSignatureAlgorithm() {
         return userInfoJWTSignatureAlgorithm;
+    }
+
+    public boolean getIsUseEntityIDAsIssuerEnabled() {
+        return useEntityIDAsIssuer;
     }
 
     /**
@@ -2672,6 +2710,34 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseTokenPersistenceConfiguration(OMElement oauthConfigElem) {
+
+        OMElement tokenPersistenceElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.TOKEN_PERSISTENCE));
+        if (tokenPersistenceElem != null) {
+            OMElement persistAccessTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_ACCESS_TOKEN));
+            if (persistAccessTokenElem != null) {
+                isAccessTokenPersistenceEnabled = Boolean.parseBoolean(persistAccessTokenElem.getText());
+            }
+            OMElement persistRefreshTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_REFRESH_TOKEN));
+            if (persistRefreshTokenElem != null) {
+                isRefreshTokenPersistenceEnabled = Boolean.parseBoolean(persistRefreshTokenElem.getText());
+            }
+            OMElement keepRevokedAccessTokensElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.KEEP_REVOKED_ACCESS_TOKENS));
+            if (keepRevokedAccessTokensElem != null) {
+                isKeepRevokedTokenEnabled = Boolean.parseBoolean(keepRevokedAccessTokensElem.getText());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AccessTokenPersistence was set to : " + isAccessTokenPersistenceEnabled);
+            log.debug("RefreshTokenPersistence was set to : " + isRefreshTokenPersistenceEnabled);
+            log.debug("KeepRevokedTokens was set to : " + isKeepRevokedTokenEnabled);
+        }
+    }
+
     private void parseRefreshTokenGrantValidationConfiguration(OMElement oauthConfigElem) {
 
         OMElement validateAuthenticatedUserForRefreshGrantElem = oauthConfigElem.getFirstChildWithName(
@@ -3513,7 +3579,8 @@ public class OAuthServerConfiguration {
         if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
-                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText()
+                    .trim();
         }
     }
 
@@ -3726,6 +3793,14 @@ public class OAuthServerConfiguration {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)) != null) {
+                useEntityIDAsIssuer = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).getText().
+                        trim());
+            }
+
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr = openIDConnectConfigElem
@@ -4434,6 +4509,7 @@ public class OAuthServerConfiguration {
                 "ReturnOnlyAppAssociatedRolesInUserInfo";
 
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
+        public static final String OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER = "UseEntityIdAsIssuer";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
@@ -4509,6 +4585,11 @@ public class OAuthServerConfiguration {
                 "ValidateAuthenticatedUserForRefreshGrant";
         // Enable/Disable extend the lifetime of the new refresh token
         private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
+        // Token persistence config
+        private static final String TOKEN_PERSISTENCE = "TokenPersistence";
+        private static final String PERSIST_ACCESS_TOKEN = "PersistAccessToken";
+        private static final String PERSIST_REFRESH_TOKEN = "PersistRefreshToken";
+        private static final String KEEP_REVOKED_ACCESS_TOKENS = "KeepRevokedAccessTokens";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
         // Token issuer generator.

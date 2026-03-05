@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -335,7 +336,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         IDTokenRequest.Builder tokenRequestBuilder = new IDTokenRequest.Builder();
         tokenRequestBuilder.clientId(tokenRequestDTO.getClientId());
         tokenRequestBuilder.grantType(tokenRequestDTO.getGrantType());
-        if (tokenRequestDTO.getScope() != null) {
+        if (tokenRequestDTO.getScope() != null && !ArrayUtils.isEmpty(tokenRequestDTO.getScope())) {
             tokenRequestBuilder.scopes(Arrays.asList(tokenRequestDTO.getScope()));
         } else {
             tokenRequestBuilder.scopes(Arrays.asList(requestScopes));

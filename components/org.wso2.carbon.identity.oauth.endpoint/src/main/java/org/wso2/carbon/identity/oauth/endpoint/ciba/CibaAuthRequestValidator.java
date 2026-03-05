@@ -21,12 +21,13 @@ package org.wso2.carbon.identity.oauth.endpoint.ciba;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -48,6 +49,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_TOKEN_EP_URL;
@@ -109,6 +111,9 @@ public class CibaAuthRequestValidator {
             // Validate the requested_expiry of the Request.
             validateRequestedExpiry(claimsSet);
 
+            // Validate the notification_channel of the Request.
+            validateNotificationChannel(claimsSet);
+
             if (log.isDebugEnabled()) {
                 log.debug("CIBA Authentication Request made by client with clientID : " +
                         claimsSet.getIssuer() + "is properly validated.");
@@ -146,31 +151,35 @@ public class CibaAuthRequestValidator {
     }
 
     /**
-     * Checks whether the transaction_context values exists and is valid.
+     * Checks whether the notification_channel value exists and is valid.
      *
      * @param claimsSet JWT claimsets of the authentication request.
      * @throws CibaAuthFailureException CIBA Authentication Failed Server Exception.
      */
-    private void valiateTransactionContext(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
+    private void validateNotificationChannel(JWTClaimsSet claimsSet) throws CibaAuthFailureException {
 
         try {
-            // Validation for transaction_context.
-            if ((claimsSet.getClaim(CibaConstants.TRANSACTION_CONTEXT)) == null) {
-                // Request has no transaction_context claim.
-                return;
-            }
-            if (StringUtils.isBlank(claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT).toJSONString())) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
-                            claimsSet.getIssuer() + ".The request is with invalid  " +
-                            "value for (transaction_context).");
+            if (claimsSet.getClaim(CibaConstants.NOTIFICATION_CHANNEL) != null) {
+                String notificationChannel = claimsSet.getStringClaim(CibaConstants.NOTIFICATION_CHANNEL);
+                if (StringUtils.isBlank(notificationChannel)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
+                                claimsSet.getIssuer() + ". The request is with invalid value for " +
+                                "(notification_channel).");
+                    }
+                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid value for (notification_channel).");
                 }
-                throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid value for (transaction_context).");
+                // Validate channel against app-level allowed channels.
+                String tenantDomain = CarbonContext
+                        .getThreadLocalCarbonContext().getTenantDomain();
+                CibaNotificationChannelValidator.validateChannelForClient(
+                        notificationChannel, claimsSet.getIssuer(),
+                        tenantDomain);
             }
         } catch (ParseException e) {
-            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error in validating request parameters.",
-                    e);
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error in validating request parameters.", e);
         }
     }
 
@@ -198,11 +207,14 @@ public class CibaAuthRequestValidator {
                     throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
                             "Invalid value for (binding_message).");
                 }
-                // Validate binding message contains only plain text
-                boolean isNoSpecialCharactersAvailable = bindingMessage.chars().allMatch(Character::isLetterOrDigit);
-                if (!isNoSpecialCharactersAvailable) {
-                    throw new CibaAuthFailureException(ErrorCodes.INVALID_BINDING_MESSAGE,
-                            "Invalid characters present in (binding_message).");
+                // Validate binding message contains only printable characters.
+                // Reject control characters and HTML-dangerous characters
+                // (< and >) to prevent XSS.
+                if (!bindingMessage.matches("^[^<>\\x00-\\x1F\\x7F]+$")) {
+                    throw new CibaAuthFailureException(
+                            ErrorCodes.INVALID_BINDING_MESSAGE,
+                            "Invalid characters present in "
+                                    + "(binding_message).");
                 }
 
             }
@@ -798,9 +810,15 @@ public class CibaAuthRequestValidator {
             cibaAuthCodeRequest.setBindingMessage(claimsSet.getStringClaim(CibaConstants.BINDING_MESSAGE));
 
             // Setting transaction_context to AuthenticationRequest after successful validation.
-            JSONObject transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
+            Map<String, Object> transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
             if (transactionContext != null) {
-                cibaAuthCodeRequest.setTransactionContext(transactionContext.toJSONString());
+                cibaAuthCodeRequest.setTransactionContext(JSONObjectUtils.toJSONString(transactionContext));
+            }
+
+            // Setting notification_channel to AuthenticationRequest.
+            if (claimsSet.getClaim(CibaConstants.NOTIFICATION_CHANNEL) != null) {
+                 cibaAuthCodeRequest.setNotificationChannel(claimsSet.getStringClaim(CibaConstants
+                         .NOTIFICATION_CHANNEL));
             }
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.

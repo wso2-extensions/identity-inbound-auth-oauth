@@ -1,7 +1,7 @@
 /*
-*  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+*  Copyright (c) 2005-2026, WSO2 LLC. (http://www.wso2.com).
 *
-*  WSO2 Inc. licenses this file to you under the Apache License,
+*  WSO2 LLC. licenses this file to you under the Apache License,
 *  Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License.
 *  You may obtain a copy of the License at
@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -84,6 +85,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String[] audiences = new String[0];
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
+    private boolean extendRenewedRefreshTokenExpiryTime;
     // OIDC related properties.
     private boolean requestObjectSignatureValidationEnabled;
     private boolean idTokenEncryptionEnabled;
@@ -111,9 +113,15 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
+    private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    private String issuerOrg;
+    // CIBA related properties.
+    private String cibaNotificationChannels;
+    private long cibaAuthReqExpiryTime;
+    private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -366,6 +374,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         return renewRefreshTokenEnabled;
     }
 
+    public boolean isExtendRenewedRefreshTokenExpiryTime() {
+
+        return extendRenewedRefreshTokenExpiryTime;
+    }
+
+    public void setExtendRenewedRefreshTokenExpiryTime(boolean extendRenewedRefreshTokenExpiryTime) {
+
+        this.extendRenewedRefreshTokenExpiryTime = extendRenewedRefreshTokenExpiryTime;
+    }
+
     public String getTokenBindingType() {
 
         return tokenBindingType;
@@ -525,6 +543,15 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         fapiConformanceEnabled = fapiConformant;
     }
 
+    public Boolean isJwtScopeAsArrayEnabled() {
+
+        return jwtScopeAsArrayEnabled;
+    }
+
+    public void setJwtScopeAsArrayEnabled(Boolean jwtScopeAsArrayEnabled) {
+
+        this.jwtScopeAsArrayEnabled = jwtScopeAsArrayEnabled;
+    }
 
     public boolean isSubjectTokenEnabled() {
 
@@ -554,6 +581,44 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public String getIssuerOrg() {
+
+        return issuerOrg;
+    }
+
+    public void setIssuerOrg(String issuerOrg) {
+
+        this.issuerOrg = issuerOrg;
+    }
+
+    public String getCibaNotificationChannels() {
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    public long getCibaAuthReqExpiryTime() {
+
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
     }
 
     /**

@@ -551,7 +551,7 @@ public class AbstractAuthorizationGrantHandlerTest {
             OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
             AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
             factoryMock.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
             when(mockAccessTokenDAO.getLatestAccessToken(
                     eq(clientId),
                     eq(authenticatedUser),

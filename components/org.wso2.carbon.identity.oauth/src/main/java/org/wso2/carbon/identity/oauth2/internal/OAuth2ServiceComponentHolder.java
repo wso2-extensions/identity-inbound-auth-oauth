@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -122,6 +123,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private List<OAuth2RevocationProcessor> revocationProcessors = new ArrayList<>();
     private TokenProvider tokenProvider;
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
@@ -141,6 +143,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsValidator authorizationDetailsValidator;
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
+    private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
     private OrganizationDiscoveryHandler organizationDiscoveryHandler;
 
     private OAuth2ServiceComponentHolder() {
@@ -581,6 +584,37 @@ public class OAuth2ServiceComponentHolder {
 
         this.revocationProcessor = revocationProcessor;
     }
+
+    /**
+     * Retrieves the list of registered {@link OAuth2RevocationProcessor} instances.
+     *
+     * @return A list of revocation processors currently registered in the system.
+     */
+    public List<OAuth2RevocationProcessor> getRevocationProcessors() {
+
+        return Collections.unmodifiableList(revocationProcessors);
+    }
+
+    /**
+     * Registers a new {@link OAuth2RevocationProcessor} to the list of revocation processors.
+     *
+     * @param oAuth2RevocationProcessor The revocation processor to be added.
+     */
+    public void addRevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        this.revocationProcessors.add(oAuth2RevocationProcessor);
+    }
+
+    /**
+     * Unregisters the given {@link OAuth2RevocationProcessor} from the list of revocation processors.
+     *
+     * @param oAuth2RevocationProcessor The revocation processor to be removed.
+     */
+    public void removeRevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        this.revocationProcessors.remove(oAuth2RevocationProcessor);
+    }
+
 
     public static boolean isRestrictUnassignedScopes() {
 
@@ -1088,6 +1122,27 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
+     * Get the OAuth2 OIDC configuration organization usage scope management service.
+     *
+     * @return OAuth2OIDCConfigOrgUsageScopeMgtService instance.
+     */
+    public OAuth2OIDCConfigOrgUsageScopeMgtService getOAuth2OIDCConfigOrgUsageScopeMgtService() {
+
+        return oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
+
+    /**
+     * Set the OAuth2 OIDC configuration organization usage scope management service.
+     *
+     * @param oAuth2OIDCConfigOrgUsageScopeMgtService OAuth2OIDCConfigOrgUsageScopeMgtService instance.
+     */
+    public void setOAuth2OIDCConfigOrgUsageScopeMgtService(
+            OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService) {
+
+        this.oAuth2OIDCConfigOrgUsageScopeMgtService = oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
+
+    /**
      * Get the Organization Discovery Handler.
      *
      * @return OrganizationDiscoveryHandler instance.
@@ -1107,3 +1162,4 @@ public class OAuth2ServiceComponentHolder {
         this.organizationDiscoveryHandler = organizationDiscoveryHandler;
     }
 }
+

@@ -73,6 +73,7 @@ import static org.mockito.Mockito.when;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_HEXIFY_REQUIRED;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
@@ -183,6 +184,17 @@ public class JWTTokenGeneratorTest {
             accessToken.setTokenType("Bearer");
             oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
 
+            // Hexify disabled.
+            jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
+
+            Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                    .getTokenString(), "JWT Token not set");
+            Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                    .getTokenType(), "JWT");
+
+            // Hexify enabled.
+            identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_HEXIFY_REQUIRED))
+                    .thenReturn(String.valueOf(true));
             jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
 
             Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -321,6 +321,7 @@ public final class OAuthConstants {
         public static final String DEVICE_CODE_URN = "urn:ietf:params:oauth:grant-type:device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
         public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+        public static final String CIBA = "urn:openid:params:grant-type:ciba";
 
         private GrantTypes() {
 
@@ -637,6 +638,7 @@ public final class OAuthConstants {
         public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
+        public static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "extendRenewedRefreshTokenExpiryTime";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
@@ -658,6 +660,8 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
+        public static final String ENABLE_JWT_SCOPE_AS_ARRAY = "enableJwtScopeAsArray";
+        public static final String EXISTING_TOKEN_USED = "existingTokenUsed";
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.
@@ -666,6 +670,12 @@ public final class OAuthConstants {
         public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
+
+        // CIBA Configuration Properties.
+        public static final String CIBA_AUTH_REQ_EXPIRY_TIME = "cibaAuthReqExpiryTime";
+        public static final String CIBA_NOTIFICATION_CHANNELS = "cibaNotificationChannels";
+
+        public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
 
         }
@@ -833,6 +843,52 @@ public final class OAuthConstants {
         public static final String FRAGMENT_JWT = "fragment.jwt";
         public static final String FORM_POST_JWT = "form_post.jwt";
         public static final String DIRECT = "direct"; // Used for API based authentication.
+    }
+
+    /**
+     * Event constants.
+     * This is temporarily added until java 21 related issues are resolved.
+     * Afterwards, the constants defined in IdentityEventConstants should be used.
+     * Tracking issue : https://github.com/wso2-enterprise/asgardeo-product/issues/34575
+     */
+    @Deprecated
+    public static class EventProperty {
+
+        public static final String TOKEN_ID = "TOKEN_ID";
+        public static final String USER_TYPE = "USER_TYPE";
+        public static final String CLIENT_ID = "CLIENT_ID";
+        public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
+        public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
+        public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
+        public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
+        public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
+        public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
+    }
+
+    /**
+     * Define constants for non-persistence access token related operations.
+     */
+    public static class NonPersistenceConstants {
+
+        // JWT Claim constants
+        public static final String ENTITY_ID = "entity_id";
+        public static final String ENTITY_TYPE = "entityType";
+        public static final String ENTITY_ID_TYPE_CLIENT_ID = "CLIENT_ID";
+        public static final String ENTITY_ID_TYPE_USER_ID = "USER_ID";
+        public static final String ENTITY_ID_TYPE_USER_NAME = "USER_NAME";
+        public static final String APP_DOMAIN = "app_td";
+        public static final String USER_TENANT_DOMAIN = "user_td";
+        public static final String REFRESH_TOKEN_PREFIX = "npr_";
+
+        // Event related constants
+        public static final String TENANT_ID = "tenantId";
+        public static final String USERNAME = "username";
+        public static final String REVOCATION_TIME = "revocationTime";
+        public static final String TENANT_DOMAIN = "tenantDomain";
+        public static final String CLIENT_ID = "client_id";
+        public static final String SCOPE = "scope";
+        public static final String GRANT_TYPE = "grantType";
+        public static final String AUTHORIZATION_PARTY = "azp";
     }
 
 }

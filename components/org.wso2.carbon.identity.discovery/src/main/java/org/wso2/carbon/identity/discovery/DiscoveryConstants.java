@@ -341,6 +341,20 @@ public class DiscoveryConstants {
      * If omitted, the default value is false.
      */
     public static final String BACKCHANNEL_LOGOUT_SESSION_SUPPORTED = "backchannel_logout_session_supported";
+
+    /**
+     * frontchannel_logout_session_supported
+     * OPTIONAL. Boolean value specifying whether the OP can pass a sid and issuer claims in the logout response to
+     * identify the RP session with the OP.
+     */
+    public static final String FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED = "frontchannel_logout_session_supported";
+    
+    /**
+     * frontchannel_logout_supported
+     * OPTIONAL. Boolean value specifying whether the OP supports front-channel logout, with true indicating support.
+     */
+    public static final String FRONTCHANNEL_LOGOUT_SUPPORTED = "frontchannel_logout_supported";
+
     /**
      * code_challenge_methods_supported
      * OPTIONAL. JSON array containing a list of Proof Key for Code Exchange (PKCE) [RFC7636] code challenge methods

@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.text.ParseException;
 
 import static org.junit.Assert.assertEquals;
@@ -84,13 +83,14 @@ public class AuthorizationGrantCacheTest {
                 AuthorizationGrantCache.class.getDeclaredField("log");
         logField.setAccessible(true);
 
-        // Remove the 'final' modifier using reflection
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
 
-        // Set the static field to the mock object
-        logField.set(null, mockLog);
+        Object fieldBase = unsafe.staticFieldBase(logField);
+        long fieldOffset = unsafe.staticFieldOffset(logField);
+        unsafe.putObject(fieldBase, fieldOffset, mockLog);
     }
 
     @Test(dataProvider = "replaceFromTokenIdDataProvider")

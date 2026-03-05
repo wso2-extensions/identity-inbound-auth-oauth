@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -42,6 +42,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -78,6 +79,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -451,6 +453,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                     InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
                     response = invalidRequestExceptionMapper.toResponse(ire);
                 }
+                Assert.assertNull(IdentityUtil.threadLocalProperties.get().get(
+                                IdentityCoreConstants.IS_SYSTEM_APPLICATION),
+                        "Thread local should be cleaned up after ID token building.");
 
                 assertEquals(response.getStatus(), expected, "Unexpected HTTP response status");
             }
