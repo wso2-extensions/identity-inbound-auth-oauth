@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
