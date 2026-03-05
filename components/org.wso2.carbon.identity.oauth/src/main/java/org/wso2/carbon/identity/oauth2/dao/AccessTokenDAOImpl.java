@@ -111,10 +111,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                    Connection connection, String userStoreDomain, int retryAttemptCounter)
             throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
-            return;
-        }
-
         if (accessTokenDO == null) {
             throw new IdentityOAuth2Exception(
                     "Access token data object should be available for further execution.");
@@ -355,10 +351,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     public boolean insertAccessToken(String accessToken, String consumerKey,
                                      AccessTokenDO newAccessTokenDO, AccessTokenDO existingAccessTokenDO,
                                      String rawUserStoreDomain) throws IdentityOAuth2Exception {
-
-        if (!isPersistenceEnabled()) {
-            return false;
-        }
 
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
