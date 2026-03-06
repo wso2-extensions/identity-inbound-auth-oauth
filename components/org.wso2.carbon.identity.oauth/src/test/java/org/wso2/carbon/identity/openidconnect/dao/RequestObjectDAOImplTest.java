@@ -22,9 +22,9 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Assert;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -107,9 +107,9 @@ public class RequestObjectDAOImplTest {
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                     requestedEssentialClaims);
         Result result = getData(sessionDataKey);
-        Assert.assertEquals(consumerId, result.consumerId);
-        Assert.assertEquals("email", requestObjectDAO.getRequestedClaimsbySessionDataKey(sessionDataKey,
-                    true).get(0).getName());
+        Assert.assertEquals(result.consumerId, consumerId);
+        Assert.assertEquals(requestObjectDAO.getRequestedClaimsbySessionDataKey(sessionDataKey,
+                    true).get(0).getName(), "email");
     }
 
     @Test (dependsOnMethods = {"testInsertRequestObject"})
@@ -118,7 +118,7 @@ public class RequestObjectDAOImplTest {
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
-        Assert.assertEquals(tokenId, getData(sessionDataKey).tokenId);
+        Assert.assertEquals(getData(sessionDataKey).tokenId, tokenId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByToken"})
@@ -128,7 +128,7 @@ public class RequestObjectDAOImplTest {
                 requestedEssentialClaims);
         requestObjectDAO.updateRequestObjectReferencebyTokenId(sessionDataKey, tokenId);
         requestObjectDAO.refreshRequestObjectReference(tokenId, newToken);
-        Assert.assertEquals(newToken, getData(sessionDataKey).tokenId);
+        Assert.assertEquals(getData(sessionDataKey).tokenId, newToken);
     }
 
     @Test (dependsOnMethods = {"testRefreshRequestObjectReference"})
@@ -144,7 +144,7 @@ public class RequestObjectDAOImplTest {
             if (resultSet.next()) {
                 resultSize = resultSet.getRow();
             }
-            Assert.assertEquals(0, resultSize);
+            Assert.assertEquals(resultSize, 0);
         }
     }
 
@@ -155,7 +155,7 @@ public class RequestObjectDAOImplTest {
                 requestedEssentialClaims);
         insertCodeId(codeId);
         requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, codeId);
-        Assert.assertEquals(codeId, getData(sessionDataKey).codeId);
+        Assert.assertEquals(getData(sessionDataKey).codeId, codeId);
     }
 
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByCodeId"})
@@ -173,7 +173,7 @@ public class RequestObjectDAOImplTest {
                     resultSize = resultSet.getFetchSize();
                 }
                 IdentityDatabaseUtil.commitTransaction(connection);
-                Assert.assertEquals(0, resultSize);
+                Assert.assertEquals(resultSize, 0);
             }
         } finally {
             deleteCodeId(codeId);
@@ -198,7 +198,7 @@ public class RequestObjectDAOImplTest {
             if (resultSet.next()) {
                 resultSize = resultSet.getRow();
             }
-            Assert.assertEquals(1, resultSize);
+            Assert.assertEquals(resultSize, 1);
         }
     }
 
@@ -226,10 +226,10 @@ public class RequestObjectDAOImplTest {
                 if (resultSet.next()) {
                     // After updateRequestObjectReferenceToTokenByCodeId, CODE_ID should be null.
                     // and TOKEN_ID should be set.
-                    Assert.assertNull("CODE_ID should be null after update",
-                            resultSet.getString("CODE_ID"));
-                    Assert.assertEquals("TOKEN_ID should match the new token", newTokenId,
-                            resultSet.getString("TOKEN_ID"));
+                    Assert.assertNull(resultSet.getString("CODE_ID"),
+                            "CODE_ID should be null after update");
+                    Assert.assertEquals(resultSet.getString("TOKEN_ID"), newTokenId,
+                            "TOKEN_ID should match the new token");
                 } else {
                     Assert.fail("No record found for the session data key");
                 }
@@ -275,9 +275,9 @@ public class RequestObjectDAOImplTest {
                 ResultSet resultSet = statement.executeQuery();
 
                 if (resultSet.next()) {
-                    Assert.assertNull("CODE_ID should be null", resultSet.getString("CODE_ID"));
-                    Assert.assertEquals("TOKEN_ID should be set to existing token", existingTokenId, 
-                            resultSet.getString("TOKEN_ID"));
+                    Assert.assertNull(resultSet.getString("CODE_ID"), "CODE_ID should be null");
+                    Assert.assertEquals(resultSet.getString("TOKEN_ID"), existingTokenId,
+                            "TOKEN_ID should be set to existing token");
                 } else {
                     Assert.fail("No record found for the second session data key");
                 }
@@ -286,7 +286,7 @@ public class RequestObjectDAOImplTest {
                 statement = connection.prepareStatement(query);
                 statement.setString(1, newSessionKey);
                 resultSet = statement.executeQuery();
-                Assert.assertFalse("Old entry with same token should be deleted", resultSet.next());
+                Assert.assertFalse(resultSet.next(), "Old entry with same token should be deleted");
             }
         } finally {
             deleteCodeId(existingCodeId);
@@ -322,7 +322,7 @@ public class RequestObjectDAOImplTest {
             } catch (IdentityOAuth2Exception e) {
                 boolean isExpectedException = e.getMessage().contains("Can not delete existing entry") ||
                         e.getMessage().contains("Can not update token id");
-                Assert.assertTrue("Exception should be from delete or update operation", isExpectedException);
+                Assert.assertTrue(isExpectedException, "Exception should be from delete or update operation");
                 throw e; // Re-throw for expectedExceptions annotation.
             }
         } finally {
