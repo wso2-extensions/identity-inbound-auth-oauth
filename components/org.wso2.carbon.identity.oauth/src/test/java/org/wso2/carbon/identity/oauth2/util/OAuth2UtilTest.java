@@ -92,6 +92,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -3934,6 +3935,25 @@ public class OAuth2UtilTest {
 
                 assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
             }
+        }
+    }
+
+    @Test
+    public void testGetTokenProvider() {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+
+            TokenProvider result = OAuth2Util.getTokenProvider();
+
+            Assert.assertNotNull(result);
+            Assert.assertEquals(result, mockTokenProvider);
         }
     }
 }
