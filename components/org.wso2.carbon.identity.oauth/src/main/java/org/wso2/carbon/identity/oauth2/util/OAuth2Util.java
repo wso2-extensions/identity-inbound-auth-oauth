@@ -6734,4 +6734,23 @@ public class OAuth2Util {
 
         return OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
     }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param serviceProviderProperties Service provider properties of the OAuth application.
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
+    }
 }

@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -45,8 +46,10 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -58,6 +61,7 @@ import java.util.Date;
 import java.util.Optional;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.REFRESH_TOKEN_PREFIX;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isFragmentApp;
 
 /**
  * Util class for token management related activities.
@@ -65,6 +69,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenc
 public class TokenMgtUtil {
 
     private static final Log LOG = LogFactory.getLog(TokenMgtUtil.class);
+    private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
 
     /**
      * Check if the given refresh token is a non-persisted token.
@@ -495,10 +500,34 @@ public class TokenMgtUtil {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Getting signing tenant domain from OAuth app.");
                 }
+                                /*
+                 Check if the OAuth application is a fragment application. Based on that we can define what
+                 is the tenant that signed the JWT. In this case the signing tenant should be extracted from the
+                 application OIDC configurations. If that is not available, then the root organization will be used as
+                 the signing tenant domain.
+                */
+                String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
+                ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
+                        consumerKey, appTenantDomain).getSpProperties();
+                if (OrganizationManagementUtil.isOrganization(appTenantDomain) &&
+                        !isFragmentApp(serviceProviderProperties)) {
+                    OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey,
+                            appTenantDomain);
+                    String issuerOrg = oAuthAppDO.getIssuerOrg();
+                    if (org.apache.commons.lang.StringUtils.isNotEmpty(issuerOrg)) {
+                        return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveTenantDomain(issuerOrg);
+                    } else {
+                        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                    }
+                }
                 return OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
             } catch (InvalidOAuthClientException e) {
                 throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with consumer key: "
                         + consumerKey);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with " +
+                        "consumer key: " + consumerKey, e);
             }
         } else {
             if (LOG.isDebugEnabled()) {
@@ -521,6 +550,28 @@ public class TokenMgtUtil {
                 SignedJWT signedJWT = parseJWT(token);
                 JWTClaimsSet claimsSet = getTokenJWTClaims(signedJWT);
                 return claimsSet.getClaim(NonPersistenceConstants.ENTITY_ID) != null;
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while parsing the JWT token.", e);
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * Check if the given token is a non-persistence access token.
+     *
+     * @param token Access Token
+     * @return True if the token is a non-persistence access token.
+     */
+    public static boolean isNonPersistenceRefreshToken(String token) {
+
+        if (!OAuth2Util.isRefreshTokenPersistenceEnabled() && JWTUtils.isJWT(token)) {
+            try {
+                SignedJWT signedJWT = parseJWT(token);
+                return signedJWT.getHeader() != null &&
+                        signedJWT.getHeader().getType() != null &&
+                        StringUtils.startsWith(signedJWT.getHeader().getType().toString(), DEFAULT_JWT_RT_HEADER_VALUE);
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error while parsing the JWT token.", e);
             }

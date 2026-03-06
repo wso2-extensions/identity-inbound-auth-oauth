@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -506,6 +510,62 @@ public class TokenMgtUtilTest {
             // Should return false regardless of token format when persistence is enabled.
             assertFalse(TokenMgtUtil.isNonPersistenceAccessToken("plain-opaque-token"));
             assertFalse(TokenMgtUtil.isNonPersistenceAccessToken(null));
+        }
+    }
+
+    // ======================== isNonPersistenceRefreshToken ========================
+
+    @Test
+    public void testIsNonPersistenceRefreshToken_WhenPersistenceEnabled_ShouldReturnFalse() {
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(true);
+
+            assertFalse(TokenMgtUtil.isNonPersistenceRefreshToken("plain-opaque-token"));
+            assertFalse(TokenMgtUtil.isNonPersistenceRefreshToken(null));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistenceRefreshToken_WhenPersistenceDisabled_WithNonJWTToken_ShouldReturnFalse() {
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+
+            assertFalse(TokenMgtUtil.isNonPersistenceRefreshToken("plain-opaque-token"));
+            assertFalse(TokenMgtUtil.isNonPersistenceRefreshToken(null));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistenceRefreshToken_WhenPersistenceDisabled_WithRtJwtToken_ShouldReturnTrue()
+            throws Exception {
+
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+                .type(new JOSEObjectType("rt+jwt"))
+                .build();
+        String rtJwtToken = header.toBase64URL() + "." + new Payload("{}").toBase64URL() + ".AAAA";
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+
+            assertTrue(TokenMgtUtil.isNonPersistenceRefreshToken(rtJwtToken));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistenceRefreshToken_WhenPersistenceDisabled_WithNonRtJwtToken_ShouldReturnFalse()
+            throws Exception {
+
+        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+                .type(new JOSEObjectType("at+jwt"))
+                .build();
+        String atJwtToken = header.toBase64URL() + "." + new Payload("{}").toBase64URL() + ".AAAA";
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+            oAuth2UtilMockedStatic.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+
+            assertFalse(TokenMgtUtil.isNonPersistenceRefreshToken(atJwtToken));
         }
     }
 }

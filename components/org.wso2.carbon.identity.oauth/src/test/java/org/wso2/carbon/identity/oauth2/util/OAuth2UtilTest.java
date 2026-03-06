@@ -3690,6 +3690,41 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "fragmentAppPropertiesOnlyTestCases")
+    public Object[][] fragmentAppPropertiesOnlyTestCases() {
+
+        return new Object[][] {
+                {"null properties", null, false},
+                {"empty properties", new ServiceProviderProperty[0], false},
+                {"IS_FRAGMENT_APP is true", new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "true")},
+                        true},
+                {"IS_FRAGMENT_APP is false",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "false")}, false},
+                {"IS_FRAGMENT_APP value is invalid",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "invalid")}, false},
+                {"IS_FRAGMENT_APP property absent",
+                        new ServiceProviderProperty[]{createProperty("otherProperty", "true")}, false},
+                {"IS_FRAGMENT_APP is true among multiple properties",
+                        new ServiceProviderProperty[]{
+                                createProperty("otherProp", "value"),
+                                createProperty(IS_FRAGMENT_APP, "true"),
+                                createProperty("anotherProp", "value2")
+                        }, true},
+                {"IS_FRAGMENT_APP value is null",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, null)}, false},
+                {"IS_FRAGMENT_APP value is TRUE (case insensitive)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "TRUE")}, true},
+        };
+    }
+
+    @Test(dataProvider = "fragmentAppPropertiesOnlyTestCases")
+    public void testIsFragmentAppWithPropertiesArray(String description,
+                                                     ServiceProviderProperty[] properties,
+                                                     boolean expectedResult) {
+
+        assertEquals(OAuth2Util.isFragmentApp(properties), expectedResult, "Failed for case: " + description);
+    }
+
     private ServiceProviderProperty createProperty(String name, String value) {
 
         ServiceProviderProperty property = new ServiceProviderProperty();
