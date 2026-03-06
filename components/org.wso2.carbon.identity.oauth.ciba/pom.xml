@@ -58,6 +58,10 @@
             <artifactId>servlet-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
         </dependency>
@@ -152,6 +156,10 @@
                             org.wso2.carbon.identity.application.authentication.framework.exception.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.central.log.mgt.utils.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.util.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.multi.attribute.login.mgt.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.governance.service.notification.*;
                             version ="${carbon.identity.governance.imp.pkg.version.range}",

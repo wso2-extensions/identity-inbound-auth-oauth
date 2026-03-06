@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeRequestValidator;
@@ -161,6 +162,23 @@ public class CibaServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("RealmService unset in CIBA component.");
         }
+    }
+
+    @Reference(
+            name = "MultiAttributeLoginService",
+            service = MultiAttributeLoginService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetMultiAttributeLoginService"
+    )
+    protected void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
+
+        CibaServiceComponentHolder.getInstance().setMultiAttributeLoginService(multiAttributeLoginService);
+    }
+
+    protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
+
+        CibaServiceComponentHolder.getInstance().setMultiAttributeLoginService(null);
     }
 
     @Reference(
