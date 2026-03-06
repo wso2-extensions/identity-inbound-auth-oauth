@@ -23,23 +23,23 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreClientException;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.api.UserStoreManager;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Default implementation of CibaUserResolver.
@@ -83,50 +83,54 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
                 tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
             }
         }
-        String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(loginHint);
-        String userStoreDomain = UserCoreUtil.extractDomainFromName(tenantAwareUsername);
-        if (StringUtils.isBlank(userStoreDomain)) {
-            userStoreDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-        }
-
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            UserStoreManager userStoreManager = getUserStoreManager(tenantDomain, tenantId);
+            AbstractUserStoreManager userStoreManager = getUserStoreManager(tenantDomain, tenantId);
 
             boolean isUserFound = false;
             String resolvedUserId = null;
             String resolvedUsername = null;
+            String userStoreDomain = null;
             Map<String, String> claimValues = null;
+            MultiAttributeLoginService multiAttributeLoginService = CibaServiceComponentHolder.getInstance()
+                    .getMultiAttributeLoginService();
 
-            // 1. Try to resolve as a Username.
-            if (userStoreManager.isExistingUser(tenantAwareUsername)) {
-                isUserFound = true;
-                resolvedUsername = tenantAwareUsername;
-                claimValues = userStoreManager.getUserClaimValues(resolvedUsername, REQUIRED_CLAIMS, null);
+            // 1. Try multi-attribute login identification.
+            if (multiAttributeLoginService.isEnabled(tenantDomain)) {
+                ResolvedUserResult resolvedUserResult = multiAttributeLoginService.resolveUser(loginHint, tenantDomain);
+                if (resolvedUserResult != null && ResolvedUserResult.UserResolvedStatus.SUCCESS
+                        .equals(resolvedUserResult.getResolvedStatus())) {
+                    isUserFound = true;
+                    resolvedUsername = resolvedUserResult.getUser().getUsername();
+                    resolvedUserId = resolvedUserResult.getUser().getUserID();
+                    userStoreDomain = resolvedUserResult.getUser().getUserStoreDomain();
+                }
             }
 
-            // 2. If not found, try to resolve as a User ID.
-            if (!isUserFound && userStoreManager instanceof AbstractUserStoreManager) {
-                AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
-                // Identifying the login hint as a possible user ID.
+            // 2. If multi-attribute login is not enabled or didn't resolve, try as a username.
+            if (!isUserFound) {
+                Optional<User> userOpt = resolveUserByUsername(userStoreManager, loginHint);
+                if (userOpt.isPresent()) {
+                    isUserFound = true;
+                    User user = userOpt.get();
+                    resolvedUsername = user.getUsername();
+                    resolvedUserId = user.getUserID();
+                    userStoreDomain = user.getUserStoreDomain();
+                }
+            }
+            // 3. Fallback: Try to resolve as a User ID.
+            if (!isUserFound) {
                 try {
-                    if (abstractUserStoreManager.isExistingUserWithID(loginHint)) {
+                    if (userStoreManager.isExistingUserWithID(loginHint)) {
                         isUserFound = true;
                         resolvedUserId = loginHint;
-                        resolvedUsername = abstractUserStoreManager.getUserNameFromUserID(resolvedUserId);
-                        claimValues = abstractUserStoreManager.getUserClaimValuesWithID(resolvedUserId, REQUIRED_CLAIMS,
-                                null);
-                        User user = abstractUserStoreManager.getUser(resolvedUsername, resolvedUserId);
+                        resolvedUsername = userStoreManager.getUserNameFromUserID(resolvedUserId);
+                        User user = userStoreManager.getUser(resolvedUserId, null);
                         if (user != null) {
                             userStoreDomain = user.getUserStoreDomain();
-                        } else {
-                            log.warn("User object is null for login_hint: " +
-                                    LoggerUtils.getMaskedContent(loginHint) +
-                                    ". Falling back to default user store domain.");
                         }
                     }
                 } catch (UserStoreException e) {
-                    // Fallback to not found for user store errors during ID-based resolution.
                     log.warn("Error while resolving user with user ID: " + LoggerUtils.getMaskedContent(
                             loginHint), e);
                 }
@@ -140,6 +144,12 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
                 throw new CibaClientException("Invalid ciba request.");
             }
 
+            // Fetch user claims.
+            if (resolvedUserId != null) {
+                claimValues = userStoreManager.getUserClaimValuesWithID(resolvedUserId, REQUIRED_CLAIMS, null);
+            } else if (resolvedUsername != null) {
+                claimValues = userStoreManager.getUserClaimValues(resolvedUsername, REQUIRED_CLAIMS, null);
+            }
             if (claimValues == null) {
                 claimValues = new HashMap<>();
             }
@@ -169,7 +179,7 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
         }
     }
 
-    private static UserStoreManager getUserStoreManager(String tenantDomain, int tenantId)
+    private AbstractUserStoreManager getUserStoreManager(String tenantDomain, int tenantId)
             throws CibaCoreException, UserStoreException {
 
         RealmService realmService = CibaServiceComponentHolder.getInstance().getRealmService();
@@ -180,6 +190,18 @@ public class DefaultCibaUserResolver implements CibaUserResolver {
         if (userRealm == null) {
             throw new CibaCoreException("User realm not found for tenant: " + tenantDomain);
         }
-        return userRealm.getUserStoreManager();
+        return (AbstractUserStoreManager) userRealm.getUserStoreManager();
+    }
+
+    private Optional<User> resolveUserByUsername(AbstractUserStoreManager userStoreManager, String username)
+            throws UserStoreException {
+
+        do {
+            if (userStoreManager.isExistingUser(username)) {
+                return Optional.of(userStoreManager.getUser(null, username));
+            }
+            userStoreManager = (AbstractUserStoreManager) userStoreManager.getSecondaryUserStoreManager();
+        } while (userStoreManager != null);
+        return Optional.empty();
     }
 }
