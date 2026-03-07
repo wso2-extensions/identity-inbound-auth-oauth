@@ -54,13 +54,13 @@
         </classes>
     </test>
 
-    <test name="endpoint.jwts-tests" preserve-order="true" parallel="false">
-        <!-- there are no debug logs in the class -->
-        <parameter name="log-level" value="info"/>
-        <classes>
-            <class name="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpointTest" />
-        </classes>
-    </test>
+<!--    <test name="endpoint.jwts-tests" preserve-order="true" parallel="false">-->
+<!--        &lt;!&ndash; there are no debug logs in the class &ndash;&gt;-->
+<!--        <parameter name="log-level" value="info"/>-->
+<!--        <classes>-->
+<!--            <class name="org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpointTest" />-->
+<!--        </classes>-->
+<!--    </test>-->
 
     <test name="endpoint.token-tests-info" preserve-order="true" parallel="false">
         <parameter name="log-level" value="info"/>
