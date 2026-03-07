@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
-import org.junit.Assert;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -26,6 +25,7 @@ import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -178,7 +178,7 @@ public class OIDCDiscoveryEndpointTest {
             lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
                     .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
-            Assert.assertEquals(expectedResponse, response.getStatus());
+            Assert.assertEquals(response.getStatus(), expectedResponse);
             threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
         }
 

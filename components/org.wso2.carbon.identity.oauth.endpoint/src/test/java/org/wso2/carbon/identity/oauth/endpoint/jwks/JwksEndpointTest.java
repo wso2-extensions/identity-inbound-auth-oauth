@@ -50,17 +50,12 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.security.spec.ECGenParameterSpec;
 import java.util.Base64;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -378,55 +373,10 @@ public class JwksEndpointTest {
         lenient().when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");
     }
 
-    /**
-     * Builds an in-memory KeyStore containing a self-signed certificate generated from the given key pair
-     * using BouncyCastle.
-     */
-    private KeyStore buildKeyStoreWithKeyPair(KeyPair keyPair, String alias, String keystorePassword)
-            throws Exception {
-
-        org.bouncycastle.asn1.x500.X500Name subject =
-                new org.bouncycastle.asn1.x500.X500Name("CN=Test");
-        BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
-        Date notBefore = new Date();
-        Date notAfter = new Date(notBefore.getTime() + 365L * 24 * 60 * 60 * 1000);
-
-        org.bouncycastle.cert.X509v3CertificateBuilder certBuilder =
-                new org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder(
-                        subject, serial, notBefore, notAfter, subject, keyPair.getPublic());
-
-        String sigAlg;
-        if (keyPair.getPublic().getAlgorithm().equals("EC")) {
-            sigAlg = "SHA256withECDSA";
-        } else if (keyPair.getPublic().getAlgorithm().equals("EdDSA") ||
-                keyPair.getPublic().getAlgorithm().equals("Ed25519")) {
-            sigAlg = "Ed25519";
-        } else {
-            sigAlg = "SHA256withRSA";
-        }
-
-        org.bouncycastle.operator.ContentSigner signer =
-                new org.bouncycastle.operator.jcajce.JcaContentSignerBuilder(sigAlg)
-                        .build(keyPair.getPrivate());
-
-        X509Certificate cert = new org.bouncycastle.cert.jcajce.JcaX509CertificateConverter()
-                .getCertificate(certBuilder.build(signer));
-
-        KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(null, keystorePassword.toCharArray());
-        ks.setKeyEntry(alias, keyPair.getPrivate(), keystorePassword.toCharArray(),
-                new Certificate[]{cert});
-        return ks;
-    }
-
     @Test
     public void testJwksWithECKey() throws Exception {
 
-        // Generate EC P-256 key pair
-        KeyPairGenerator ecKpg = KeyPairGenerator.getInstance("EC");
-        ecKpg.initialize(new ECGenParameterSpec("secp256r1"));
-        KeyPair ecKeyPair = ecKpg.generateKeyPair();
-        KeyStore ecKeyStore = buildKeyStoreWithKeyPair(ecKeyPair, "eckey", "ecpass");
+        KeyStore ecKeyStore = getKeyStoreFromFile("ec-p256-test.jks", "wso2carbon");
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -475,10 +425,7 @@ public class JwksEndpointTest {
     @Test
     public void testJwksWithEdDSAKey() throws Exception {
 
-        // Generate EdDSA (Ed25519) key pair
-        KeyPairGenerator edKpg = KeyPairGenerator.getInstance("EdDSA");
-        KeyPair edKeyPair = edKpg.generateKeyPair();
-        KeyStore edKeyStore = buildKeyStoreWithKeyPair(edKeyPair, "edkey", "edpass");
+        KeyStore edKeyStore = getKeyStoreFromFile("ed25519-test.jks", "wso2carbon");
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -525,9 +472,7 @@ public class JwksEndpointTest {
     @Test
     public void testJwksWithEdDSAKeyAndX5tEnabled() throws Exception {
 
-        KeyPairGenerator edKpg = KeyPairGenerator.getInstance("EdDSA");
-        KeyPair edKeyPair = edKpg.generateKeyPair();
-        KeyStore edKeyStore = buildKeyStoreWithKeyPair(edKeyPair, "edkey2", "edpass2");
+        KeyStore edKeyStore = getKeyStoreFromFile("ed25519-test.jks", "wso2carbon");
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -581,10 +526,7 @@ public class JwksEndpointTest {
     @Test
     public void testJwksWithECKeyAndX5cEnabled() throws Exception {
 
-        KeyPairGenerator ecKpg = KeyPairGenerator.getInstance("EC");
-        ecKpg.initialize(new ECGenParameterSpec("secp256r1"));
-        KeyPair ecKeyPair = ecKpg.generateKeyPair();
-        KeyStore ecKeyStore = buildKeyStoreWithKeyPair(ecKeyPair, "eckey2", "ecpass2");
+        KeyStore ecKeyStore = getKeyStoreFromFile("ec-p256-test.jks", "wso2carbon");
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);

@@ -16,7 +16,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.map.HashedMap;
-import org.junit.Assert;
+import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.TestConstants;
@@ -39,13 +39,13 @@ public class RememberMeStoreTest {
     public void testStore() {
         rememberMeStore.addUserToStore(TestConstants.USER_NAME);
         boolean userInStore = rememberMeStore.isUserInStore(TestConstants.USER_NAME);
-        Assert.assertTrue("User is not added to the store", userInStore);
+        Assert.assertTrue(userInStore, "User is not added to the store");
     }
 
     @Test
     public void testStoreInvalidUser() {
         boolean userInStore = rememberMeStore.isUserInStore("invalid_username");
-        Assert.assertFalse("Invalid user cannot exist in the store", userInStore);
+        Assert.assertFalse(userInStore, "Invalid user cannot exist in the store");
     }
 
     @Test
@@ -55,7 +55,7 @@ public class RememberMeStoreTest {
         rememberMeMap.put(TestConstants.USER_NAME, timeInMillis - 1400000);
         setPrivateField(rememberMeStore, "rememberMeMap", rememberMeMap);
         boolean userInStore = rememberMeStore.isUserInStore(TestConstants.USER_NAME);
-        Assert.assertFalse("Session is not expired", userInStore);
+        Assert.assertFalse(userInStore, "Session is not expired");
     }
 
     private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
