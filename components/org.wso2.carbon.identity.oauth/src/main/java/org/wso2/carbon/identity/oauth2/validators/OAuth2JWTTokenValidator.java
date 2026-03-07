@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -54,6 +55,10 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
             throws IdentityOAuth2Exception {
 
         if (!JWTUtils.isJWT(validationReqDTO.getRequestDTO().getAccessToken().getIdentifier())) {
+            return false;
+        }
+        if (TokenMgtUtil.isNonPersistenceRefreshToken(validationReqDTO.getRequestDTO()
+                .getAccessToken().getIdentifier())) {
             return false;
         }
 
