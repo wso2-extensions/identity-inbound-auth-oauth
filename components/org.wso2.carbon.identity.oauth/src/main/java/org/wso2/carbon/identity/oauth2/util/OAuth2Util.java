@@ -123,6 +123,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -6910,5 +6911,15 @@ public class OAuth2Util {
             log.error("Error while retrieving the application information for the consumer key: " + consumerKey, e);
             return false;
         }
+    }
+
+    /**
+     * Get token provider.
+     *
+     * @return TokenProvider
+     */
+    public static TokenProvider getTokenProvider() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
     }
 }
