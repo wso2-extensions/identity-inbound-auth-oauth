@@ -1021,5 +1021,210 @@ public class JwksEndpointTest {
             }
         }
     }
+
+    /**
+     * DataProvider for key type testing scenarios.
+     * Parameters: keyType, algorithm, ecCurve, expectedJwkClass, expectSuccess
+     */
+    @DataProvider(name = "keyTypeTestData")
+    public Object[][] provideKeyTypeTestData() {
+        return new Object[][]{
+                {"RSA", JWSAlgorithm.RS256, null, com.nimbusds.jose.jwk.RSAKey.class, true},
+                {"EC", JWSAlgorithm.ES256, "secp256r1", com.nimbusds.jose.jwk.ECKey.class, true},
+                {"EdDSA", JWSAlgorithm.EdDSA, null, com.nimbusds.jose.jwk.OctetKeyPair.class, true}
+        };
+    }
+
+    /**
+     * Test getJWKWithTenantAwareKID for different key types (RSA, EC, EdDSA).
+     */
+    @Test(dataProvider = "keyTypeTestData")
+    public void testGetJWKWithTenantAwareKIDForDifferentKeyTypes(String keyType, JWSAlgorithm algorithm,
+                                                                   String ecCurve, Class<?> expectedJwkClass,
+                                                                   boolean expectSuccess) throws Exception {
+
+        // Generate key pair based on key type
+        KeyPair keyPair;
+        if ("RSA".equals(keyType)) {
+            KeyPairGenerator rsaKpg = KeyPairGenerator.getInstance("RSA");
+            rsaKpg.initialize(2048);
+            keyPair = rsaKpg.generateKeyPair();
+        } else if ("EC".equals(keyType)) {
+            KeyPairGenerator ecKpg = KeyPairGenerator.getInstance("EC");
+            ecKpg.initialize(new ECGenParameterSpec(ecCurve));
+            keyPair = ecKpg.generateKeyPair();
+        } else if ("EdDSA".equals(keyType)) {
+            KeyPairGenerator edKpg = KeyPairGenerator.getInstance("EdDSA");
+            keyPair = edKpg.generateKeyPair();
+        } else {
+            throw new IllegalArgumentException("Unsupported key type: " + keyType);
+        }
+
+        String alias = keyType.toLowerCase() + "key";
+        KeyStore keyStore = buildKeyStoreWithKeyPair(keyPair, alias, "password");
+        X509Certificate cert = (X509Certificate) keyStore.getCertificate(alias);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            String tenantDomain = keyType.toLowerCase() + "-test.com";
+            String keyID = "test-" + keyType.toLowerCase() + "-kid";
+
+            oAuth2Util.when(() -> OAuth2Util.getKID(any(), eq(algorithm), eq(tenantDomain)))
+                    .thenReturn(keyID);
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                    .thenReturn("test-thumbprint");
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), any(Boolean.class)))
+                    .thenReturn("sha1-thumbprint");
+
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))
+                    .thenReturn("true");
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE))
+                    .thenReturn("true");
+
+            java.lang.reflect.Method method = JwksEndpoint.class.getDeclaredMethod(
+                    "getJWKWithTenantAwareKID",
+                    com.nimbusds.jose.JWSAlgorithm.class,
+                    java.util.List.class,
+                    java.security.cert.X509Certificate.class,
+                    String.class,
+                    String.class,
+                    String.class
+            );
+            method.setAccessible(true);
+
+            com.nimbusds.jose.util.Base64 encodedCert = com.nimbusds.jose.util.Base64.encode(cert.getEncoded());
+            java.util.List<com.nimbusds.jose.util.Base64> encodedCertList =
+                    java.util.Collections.singletonList(encodedCert);
+
+            com.nimbusds.jose.jwk.JWK result = (com.nimbusds.jose.jwk.JWK) method.invoke(
+                    jwksEndpoint,
+                    algorithm,
+                    encodedCertList,
+                    cert,
+                    OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM,
+                    alias,
+                    tenantDomain
+            );
+
+            if (expectSuccess) {
+                org.testng.Assert.assertNotNull(result, "JWK should not be null for " + keyType + " key");
+                org.testng.Assert.assertTrue(expectedJwkClass.isInstance(result),
+                        "JWK should be " + expectedJwkClass.getSimpleName() + " instance");
+                org.testng.Assert.assertEquals(result.getKeyID(), keyID, "Key ID should match");
+                org.testng.Assert.assertEquals(result.getAlgorithm().getName(), algorithm.getName(),
+                        "Algorithm should be " + algorithm.getName());
+                org.testng.Assert.assertEquals(result.getKeyUse().getValue(), "sig", "Key use should be sig");
+            }
+        }
+    }
+
+    /**
+     * DataProvider for configuration testing scenarios.
+     * Parameters: testName, hashingAlgo, thumbprintHexify, x5tRequired, x5cEnabled, hasCertList
+     */
+    @DataProvider(name = "configurationTestData")
+    public Object[][] provideConfigurationTestData() {
+        return new Object[][]{
+                {"PreviousKID", OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM,
+                        "false", "false", "false", false},
+                {"X5cEnabled", OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM,
+                        "false", "false", "true", true},
+                {"X5cDisabled", OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM,
+                        "false", "false", "true", false},
+                {"ThumbprintHexified", OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM,
+                        "true", "true", "true", true}
+        };
+    }
+
+    /**
+     * Test getJWKWithTenantAwareKID with different configuration scenarios.
+     */
+    @Test(dataProvider = "configurationTestData")
+    public void testGetJWKWithTenantAwareKIDWithDifferentConfigurations(String testName, String hashingAlgo,
+                                                                          String thumbprintHexify, String x5tRequired,
+                                                                          String x5cEnabled, boolean hasCertList)
+            throws Exception {
+
+        KeyPairGenerator rsaKpg = KeyPairGenerator.getInstance("RSA");
+        rsaKpg.initialize(2048);
+        KeyPair rsaKeyPair = rsaKpg.generateKeyPair();
+        String alias = "rsakey-" + testName.toLowerCase();
+        KeyStore rsaKeyStore = buildKeyStoreWithKeyPair(rsaKeyPair, alias, "password");
+        X509Certificate rsaCert = (X509Certificate) rsaKeyStore.getCertificate(alias);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            String tenantDomain = testName.toLowerCase() + "-test.com";
+            String keyID = testName.toLowerCase() + "-kid";
+
+            // Mock based on hashing algorithm
+            if (hashingAlgo.equals(OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM)) {
+                oAuth2Util.when(() -> OAuth2Util.getPreviousKID(any(), any(), eq(tenantDomain)))
+                        .thenReturn(keyID);
+            } else {
+                oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), eq(tenantDomain)))
+                        .thenReturn(keyID);
+            }
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                    .thenReturn("thumbprint-" + testName);
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), any(Boolean.class)))
+                    .thenReturn("sha1-" + testName);
+
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn(thumbprintHexify);
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED))
+                    .thenReturn(x5tRequired);
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE))
+                    .thenReturn(x5cEnabled);
+
+            java.lang.reflect.Method method = JwksEndpoint.class.getDeclaredMethod(
+                    "getJWKWithTenantAwareKID",
+                    com.nimbusds.jose.JWSAlgorithm.class,
+                    java.util.List.class,
+                    java.security.cert.X509Certificate.class,
+                    String.class,
+                    String.class,
+                    String.class
+            );
+            method.setAccessible(true);
+
+            java.util.List<com.nimbusds.jose.util.Base64> certList;
+            if (hasCertList) {
+                com.nimbusds.jose.util.Base64 encodedCert =
+                        com.nimbusds.jose.util.Base64.encode(rsaCert.getEncoded());
+                certList = java.util.Collections.singletonList(encodedCert);
+            } else {
+                certList = java.util.Collections.emptyList();
+            }
+
+            com.nimbusds.jose.jwk.JWK result = (com.nimbusds.jose.jwk.JWK) method.invoke(
+                    jwksEndpoint,
+                    JWSAlgorithm.RS256,
+                    certList,
+                    rsaCert,
+                    hashingAlgo,
+                    alias,
+                    tenantDomain
+            );
+
+            org.testng.Assert.assertNotNull(result, "JWK should not be null for " + testName);
+            org.testng.Assert.assertEquals(result.getKeyID(), keyID, "Key ID should match for " + testName);
+
+            // Verify x5c based on configuration
+            if ("true".equals(x5cEnabled) && hasCertList) {
+                org.testng.Assert.assertNotNull(result.getX509CertChain(),
+                        "x5c chain should be present when enabled for " + testName);
+                org.testng.Assert.assertEquals(result.getX509CertChain().size(), 1,
+                        "x5c chain should have 1 certificate for " + testName);
+            } else if ("true".equals(x5cEnabled) && !hasCertList) {
+                org.testng.Assert.assertTrue(result.getX509CertChain() == null || result.getX509CertChain().isEmpty(),
+                        "x5c chain should be empty when certificate list is empty for " + testName);
+            }
+        }
+    }
 }
 
