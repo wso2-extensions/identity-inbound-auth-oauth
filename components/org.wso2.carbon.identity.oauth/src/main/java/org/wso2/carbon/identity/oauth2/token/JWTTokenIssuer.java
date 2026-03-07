@@ -61,8 +61,8 @@ import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -499,7 +499,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
+            JWSSigner signer = OAuth2Util.createJWSSigner((PrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint;
 
