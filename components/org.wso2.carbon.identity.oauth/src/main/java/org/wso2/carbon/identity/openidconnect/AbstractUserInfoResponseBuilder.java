@@ -293,17 +293,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                     .getVerifiedAccessToken(accessToken, false);
             grantType = getGrantType(accessTokenDO);
-            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                // Get the Access Token details from the database/cache to check if the token is consented or not.
-                boolean isConsentedToken = accessTokenDO.isConsentedToken();
-                return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
-                        getServiceProvider(tenantDomain, clientId), isConsentedToken);
-            }
+            // Get the Access Token details from the database/cache to check if the token is consented or not.
+            boolean isConsentedToken = accessTokenDO.isConsentedToken();
+            return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
+                    getServiceProvider(tenantDomain, clientId), isConsentedToken);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("An error occurred while fetching the access token details.", e);
         }
-        return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
-                getServiceProvider(tenantDomain, clientId));
     }
 
 
