@@ -67,6 +67,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private boolean isPreIssueIDTokenActionExecuted;
 
     private IDTokenDTO preIssueIDTokenActionDTO;
+    private String tokenId;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -319,5 +320,15 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setPreIssueIDTokenActionDTO(IDTokenDTO preIssueIDTokenActionDTO) {
 
         this.preIssueIDTokenActionDTO = preIssueIDTokenActionDTO;
+    }
+
+    public String getTokenId() {
+
+        return tokenId;
+    }
+
+    public void setTokenId(String tokenId) {
+
+        this.tokenId = tokenId;
     }
 }
