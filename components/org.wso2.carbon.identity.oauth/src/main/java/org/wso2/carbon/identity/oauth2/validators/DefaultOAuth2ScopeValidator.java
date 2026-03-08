@@ -523,6 +523,10 @@ public class DefaultOAuth2ScopeValidator {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         try {
             ServiceProvider serviceProvider = applicationMgtService.getApplicationByResourceId(appId, tenantDomain);
+            if (serviceProvider == null) {
+                throw new IdentityOAuth2Exception("No service provider found for applicationId: " + appId
+                        + " in tenant domain: " + tenantDomain);
+            }
             Set<String> requestedClaimUris = getRequestedClaimUris(serviceProvider);
             return getOIDCScopesForRequestedClaims(requestedClaimUris, requestedScopes, tenantDomain);
         } catch (ClaimMetadataException | IdentityApplicationManagementException | IdentityOAuth2Exception e) {
@@ -558,13 +562,13 @@ public class DefaultOAuth2ScopeValidator {
             return validatedOIDCScopes;
         }
 
-        // Retrieve OIDC to Local Claim Mappings.
-        Map<String, String> oidcToLocalClaimMappings = getLocalClaimUriToOIDCClaimMap(tenantDomain);
+        // Retrieve Local Claim URI to OIDC Claim Mappings.
+        Map<String, String> localToOIDCClaimMappings = getLocalClaimUriToOIDCClaimMap(tenantDomain);
         // Retrieve OIDC Claim to Scopes Mappings.
         Map<String, String> oidcClaimToScopeMap = getOIDCClaimsToScopesMap(tenantDomain);
 
         for (String localClaim : requestedClaimUris) {
-            String oidcClaim = oidcToLocalClaimMappings.get(localClaim);
+            String oidcClaim = localToOIDCClaimMappings.get(localClaim);
             if (oidcClaim != null) {
                 String scope = oidcClaimToScopeMap.get(oidcClaim);
                 if (scope != null && requestedScopes.contains(scope)) {
@@ -587,7 +591,7 @@ public class DefaultOAuth2ScopeValidator {
         return ClaimMetadataHandler.getInstance()
                 .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false)
                 .entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey, (existing, replacement) -> existing));
     }
 
     private Map<String, String> getOIDCClaimsToScopesMap(String tenantDomain) throws IdentityOAuth2Exception {
