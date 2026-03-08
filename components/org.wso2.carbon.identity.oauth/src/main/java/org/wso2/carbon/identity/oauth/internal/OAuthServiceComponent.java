@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
+import org.wso2.carbon.identity.oauth.listener.UserApplicationCreationListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -74,7 +75,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
-    private ServiceRegistration serviceRegistration = null;
+    private ServiceRegistration serviceRegistration , userAppCreationListenerRegistration = null;
 
     protected void activate(ComponentContext context) {
 
@@ -90,6 +91,14 @@ public class OAuthServiceComponent {
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
+
+            UserApplicationCreationListener  userApplicationCreationListener = new UserApplicationCreationListener();
+            userAppCreationListenerRegistration = context.getBundleContext().registerService(UserOperationEventListener.
+                            class.getName(),
+                    userApplicationCreationListener, null);
+            if (log.isDebugEnabled()) {
+                log.debug("User Application Creation Listener registered successfully");
+            }
 
             context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
                     new IdentityOauthEventHandler(), null);
@@ -157,6 +166,10 @@ public class OAuthServiceComponent {
         }
         if (log.isDebugEnabled()) {
             log.debug("Identity OAuth bundle is deactivated");
+        }
+
+        if (userAppCreationListenerRegistration != null) {
+            userAppCreationListenerRegistration.unregister();
         }
     }
 

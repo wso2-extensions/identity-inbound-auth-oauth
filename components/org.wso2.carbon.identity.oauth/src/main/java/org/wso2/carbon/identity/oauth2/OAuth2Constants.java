@@ -48,6 +48,7 @@ public class OAuth2Constants {
     public static final String ENTITY_ID = "entity_id";
     public static final String IS_CONSENTED = "is_consented";
     public static final String IS_FEDERATED = "is_federated";
+    public static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
     public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
@@ -63,6 +64,8 @@ public class OAuth2Constants {
     public static final String STORE_OPERATION = "STORE";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
+    public static final String REFRESH_TOKEN_SCOPE_CLAIM_KEY = "rt_scope";
+    public static final String TOKEN_ID = "token_id";
 
     /**
      * Constants for global role based scope issuer.

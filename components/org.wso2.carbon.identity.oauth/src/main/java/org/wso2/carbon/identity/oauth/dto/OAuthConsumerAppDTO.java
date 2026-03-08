@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -53,6 +54,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String[] audiences;
     private boolean bypassClientCredentials;
     private String renewRefreshTokenEnabled;
+    private boolean extendRenewedRefreshTokenExpiryTime;
     // OIDC related properties
     private boolean isRequestObjectSignatureValidationEnabled;
     private boolean isIdTokenEncryptionEnabled;
@@ -78,9 +80,38 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
+    private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] accessTokenClaims;
+    private String cibaNotificationChannels;
+
+    public String getCibaNotificationChannels() {
+
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    private long cibaAuthReqExpiryTime;
+
+    public long getCibaAuthReqExpiryTime() {
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    private IssuerDetails issuerDetails;
+
+    // Fragment app flag. This will be used to identify whether the app is a fragment app or not.
+    @XmlTransient
+    @JsonIgnore
+    private boolean isFragmentApp;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -335,6 +366,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         return renewRefreshTokenEnabled;
     }
 
+    public boolean getExtendRenewedRefreshTokenExpiryTime() {
+
+        return extendRenewedRefreshTokenExpiryTime;
+    }
+
+    public void setExtendRenewedRefreshTokenExpiryTime(boolean extendRenewedRefreshTokenExpiryTime) {
+
+        this.extendRenewedRefreshTokenExpiryTime = extendRenewedRefreshTokenExpiryTime;
+    }
+
     public String getTokenBindingType() {
 
         return tokenBindingType;
@@ -484,6 +525,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         fapiConformanceEnabled = fapiConformant;
     }
 
+    public Boolean isJwtScopeAsArrayEnabled() {
+
+        return jwtScopeAsArrayEnabled;
+    }
+
+    public void setJwtScopeAsArrayEnabled(Boolean jwtScopeAsArrayEnabled) {
+
+        this.jwtScopeAsArrayEnabled = jwtScopeAsArrayEnabled;
+    }
+
     @Override
     public String fetchProtocolName() {
 
@@ -538,6 +589,28 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
+    }
+
+    @XmlTransient
+    public boolean getIsFragmentApp() {
+
+        return isFragmentApp;
+    }
+
+    @XmlTransient
+    public void setIsFragmentApp(boolean isFragmentApp) {
+
+        this.isFragmentApp = isFragmentApp;
     }
 }
 

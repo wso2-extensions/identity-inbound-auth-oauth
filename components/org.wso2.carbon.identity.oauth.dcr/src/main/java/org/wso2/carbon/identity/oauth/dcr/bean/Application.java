@@ -62,6 +62,7 @@ public class Application implements Serializable {
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareStatement = null;
+    private String frontchannelLogoutUri = null;
 
     private Map<String, Object> additionalAttributes;
     private String extAllowedAudience;
@@ -263,6 +264,16 @@ public class Application implements Serializable {
     public void setJwksURI(String jwksURI) {
 
         this.jwksURI = jwksURI;
+    }
+
+    public String getFrontchannelLogoutUri() {
+
+        return frontchannelLogoutUri;
+    }
+
+    public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+
+        this.frontchannelLogoutUri = frontchannelLogoutUri;
     }
 
     public String getTokenEndpointAuthMethod() {

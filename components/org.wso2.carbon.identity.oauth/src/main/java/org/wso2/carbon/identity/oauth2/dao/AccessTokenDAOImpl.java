@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -247,24 +248,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
-            int appTenantId = IdentityTenantUtil.getLoginTenantId();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
-             tenant domain of the organization to get the application tenant id.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                try {
-                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(applicationResidentOrgId);
-                    appTenantId = OAuth2Util.getTenantId(tenantDomain);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                            + applicationResidentOrgId, e);
-                }
-            }
+            int appTenantId = getAppTenantId();
 
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
@@ -564,6 +548,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getString(12);
                     }
                     // data loss at dividing the validity period but can be neglected
+                    if (StringUtils.equalsIgnoreCase(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                        try {
+                            authzUser.getUserId();
+                        } catch (UserIdNotFoundException e) {
+                            authzUser.setUserId(StringUtils.EMPTY);
+                            if (log.isDebugEnabled()) {
+                                log.debug("User ID is not available for user: " +
+                                        authzUser.getLoggableMaskedUserId() + ". Setting user ID as empty since " +
+                                        "the flow is a client credentials grant flow.");
+                            }
+                        }
+                    }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
                             tenantDomain, authenticatedIDP);
 
@@ -750,7 +746,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            int appTenantId = getAppTenantId();
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
@@ -1919,7 +1915,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
 
         try {
-            String sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME;
+            String sqlQuery = SQLQueries.
+                    GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, userStoreDomain);
 
             ps = connection.prepareStatement(sqlQuery);
@@ -1946,6 +1943,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String authenticatedIDP = null;
                     authenticatedIDP = rs.getString(6);
                     authorizedOrganizationId = rs.getString(8);
+                    Timestamp timeCreated = rs.getTimestamp(9, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    long validityPeriod = rs.getLong(10);
 
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
@@ -1958,6 +1957,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
                     aTokenDetail.setAuthorizedOrganizationId(authorizedOrganizationId);
+                    aTokenDetail.setIssuedTime(timeCreated);
+                    aTokenDetail.setValidityPeriod(validityPeriod);
                     tokenMap.put(token, aTokenDetail);
                 }
             }
@@ -2044,9 +2045,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 updateTokenIdIfAutzCodeGrantType(oldAccessTokenId, accessTokenDO.getTokenId(), connection);
             }
 
-            if (isTokenCleanupFeatureEnabled && oldAccessTokenId != null) {
-                oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
-            }
             IdentityDatabaseUtil.commitTransaction(connection);
             tokenUpdateSuccessful = true;
         } catch (SQLException e) {
@@ -2056,13 +2054,39 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         } finally {
             IdentityDatabaseUtil.closeConnection(connection);
         }
+
         if (tokenUpdateSuccessful) {
-            // Post refresh access token event
-            if (StringUtils.equals(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) ||
-                    StringUtils.equals(grantType, OAuthConstants.GrantTypes.PASSWORD)) {
-                OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState, false);
-            } else {
-                OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState, true);
+            try {
+                // Post refresh access token event
+                if (StringUtils.equals(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) ||
+                        StringUtils.equals(grantType, OAuthConstants.GrantTypes.PASSWORD)) {
+                    OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState,
+                            false);
+                } else {
+                    OAuth2TokenUtil.postRefreshAccessToken(oldAccessTokenId, accessTokenDO.getTokenId(), tokenState,
+                            true);
+                }
+            } catch (IdentityOAuth2Exception e) {
+                cleanupOldAccessToken(oldAccessTokenId);
+                throw e;
+            }
+
+            cleanupOldAccessToken(oldAccessTokenId);
+        }
+    }
+
+    private void cleanupOldAccessToken(String oldAccessTokenId) throws IdentityOAuth2Exception {
+
+        if (isTokenCleanupFeatureEnabled && oldAccessTokenId != null) {
+            Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+            try {
+                oldTokenCleanupObject.cleanupTokenByTokenId(oldAccessTokenId, connection);
+                IdentityDatabaseUtil.commitTransaction(connection);
+            } catch (SQLException e) {
+                IdentityDatabaseUtil.rollbackTransaction(connection);
+                throw new IdentityOAuth2Exception("Error while cleaning up old access token", e);
+            } finally {
+                IdentityDatabaseUtil.closeConnection(connection);
             }
         }
     }
@@ -3233,5 +3257,31 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
         OAuth2TokenUtil.postUpdateAccessTokens(tokens, OAuthConstants.TokenStates.
                 TOKEN_STATE_REVOKED);
+    }
+
+    private static int getAppTenantId() throws IdentityOAuth2Exception {
+
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
+         tenant domain of the organization to get the application tenant id.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieving application tenant id for organization id: " + applicationResidentOrgId);
+                }
+                String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                appTenantId = OAuth2Util.getTenantId(tenantDomain);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        return appTenantId;
     }
 }

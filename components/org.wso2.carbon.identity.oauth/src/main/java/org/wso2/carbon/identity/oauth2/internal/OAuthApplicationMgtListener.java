@@ -477,7 +477,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             AppInfoCache appInfoCache = AppInfoCache.getInstance();
             for (String oauthKey : consumerKeys) {
                 accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
+                        .getAccessTokenDAOImpl(oauthKey)
+                        .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
                 authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
                         .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
                 // Remove client credential from AppInfoCache
@@ -527,7 +528,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
 
             Set<String> accessTokens = OAuthTokenPersistenceFactory.getInstance()
-                    .getAccessTokenDAO().getActiveTokensByConsumerKey(consumerKey);
+                    .getAccessTokenDAOImpl(consumerKey).getActiveTokensByConsumerKey(consumerKey);
             for (String accessToken : accessTokens) {
                 // Remove access token from AuthorizationGrantCache
                 AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
@@ -758,7 +759,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 Set<AccessTokenDO> activeDetailedTokens;
                 try {
                     activeDetailedTokens = OAuthTokenPersistenceFactory
-                            .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(oauthKey);
+                            .getInstance().getAccessTokenDAOImpl(oauthKey)
+                            .getActiveAcessTokenDataByConsumerKey(oauthKey);
                     String[] accessTokens = new String[activeDetailedTokens.size()];
                     for (AccessTokenDO detailToken : activeDetailedTokens) {
                         String token = detailToken.getAccessToken();

@@ -22,10 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
-import org.wso2.carbon.identity.oauth.extension.engine.impl.JSEngineImpl;
+import org.wso2.carbon.identity.oauth.extension.engine.impl.GraalVMJSEngineImpl;
 import org.wso2.carbon.identity.oauth.extension.engine.impl.OpenJdkJSEngineImpl;
 
-import static org.wso2.carbon.identity.oauth.extension.utils.Constants.JDK_SCRIPT_CLASS_NAME;
+import static org.wso2.carbon.identity.oauth.extension.utils.Constants.GRAALJS_SCRIPTER_CLASS_NAME;
 import static org.wso2.carbon.identity.oauth.extension.utils.Constants.OPENJDK_SCRIPT_CLASS_NAME;
 
 /**
@@ -42,7 +42,10 @@ public class EngineUtils {
 
         String scriptEngineName = IdentityUtil.getProperty(FrameworkConstants.SCRIPT_ENGINE_CONFIG);
         if (scriptEngineName != null) {
-            if (StringUtils.equalsIgnoreCase(FrameworkConstants.OPENJDK_NASHORN, scriptEngineName)) {
+            if (StringUtils.equalsIgnoreCase(FrameworkConstants.GRAAL_JS, scriptEngineName)) {
+                // Ensure GraalVM JS is used when specified in config, instead of OpenJDK Nashorn.
+                return GraalVMJSEngineImpl.getInstance();
+            } else if (StringUtils.equalsIgnoreCase(FrameworkConstants.OPENJDK_NASHORN, scriptEngineName)) {
                 return OpenJdkJSEngineImpl.getInstance();
             }
         }
@@ -52,13 +55,13 @@ public class EngineUtils {
     private static JSEngine getEngineBasedOnAvailability() {
 
         try {
-            Class.forName(OPENJDK_SCRIPT_CLASS_NAME);
-            return OpenJdkJSEngineImpl.getInstance();
-        } catch (ClassNotFoundException e) {
+            Class.forName(GRAALJS_SCRIPTER_CLASS_NAME);
+            return new GraalVMJSEngineImpl();
+        } catch (ClassNotFoundException graalEx) {
             try {
-                Class.forName(JDK_SCRIPT_CLASS_NAME);
-                return JSEngineImpl.getInstance();
-            } catch (ClassNotFoundException classNotFoundException) {
+                Class.forName(OPENJDK_SCRIPT_CLASS_NAME);
+                return OpenJdkJSEngineImpl.getInstance();
+            } catch (ClassNotFoundException e) {
                 return null;
             }
         }

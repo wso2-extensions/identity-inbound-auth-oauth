@@ -215,7 +215,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
-            addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
+            getRefreshTokenGrantProcessor().addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         }
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
@@ -313,7 +313,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String sessionId = getSessionContextIdentifier(validationBean.getAccessToken());
         if (sessionId == null) {
             String oldTokenId = validationBean.getTokenId();
-            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId())
                     .getSessionIdentifierByTokenId(oldTokenId);
         }
         if (sessionId != null) {
@@ -816,7 +817,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             refreshToken = tokenReq.getRefreshToken();
             refreshTokenIssuedTime = validationBean.getIssuedTime();
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
-        } else if (!OAuthServerConfiguration.getInstance().isExtendRenewedTokenExpiryTimeEnabled()) {
+        } else if (!oAuthAppDO.isExtendRenewedRefreshTokenExpiryTime()) {
             // If refresh token renewal enabled and extend token expiry disabled, set the old token issued and validity.
             refreshTokenIssuedTime = validationBean.getIssuedTime();
             refreshTokenValidityPeriod = validationBean.getValidityPeriodInMillis();
@@ -864,67 +865,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return refreshTokenValidityPeriod;
-    }
-
-    private static void addUserAttributesToCache(AccessTokenDO accessTokenBean,
-                                                 OAuthTokenReqMessageContext msgCtx) {
-
-        RefreshTokenValidationDataDO oldAccessToken =
-                (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
-        if (oldAccessToken.getAccessToken() == null) {
-            return;
-        }
-        AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
-                .getAccessToken());
-        if (log.isDebugEnabled()) {
-            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
-        }
-        AuthorizationGrantCacheEntry grantCacheEntry =
-                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
-                        oldAccessToken.getTokenId());
-
-        /*
-         * When multiple concurrent refresh token requests occur using the same refresh token,
-         * other nodes in the cluster may revoke the cache entries associated with the previous token.
-         * However, since the current node is unaware of these deletions, it may fail to retrieve the
-         * cache entry for the token. This block ensures that the cache is fetched using the given token ID,
-         * even if the cache entry related to the token is marked as deleted.
-         * This is done for JWT tokens and federated users only.
-         */
-        if (grantCacheEntry == null) {
-            if (msgCtx.getAuthorizedUser() != null && msgCtx.getAuthorizedUser().isFederatedUser()) {
-                OAuthAppDO oAuthAppDO = (OAuthAppDO) msgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
-                if (oAuthAppDO != null && OAuth2Util.JWT.equals(oAuthAppDO.getTokenType())) {
-                    grantCacheEntry = AuthorizationGrantCache.getInstance()
-                            .getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey, oldAccessToken.getTokenId(),
-                                    OAuth2Constants.STORE_OPERATION);
-                }
-            }
-        }
-
-        if (grantCacheEntry != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Getting user attributes cached against the previous access token with access token id: " +
-                        oldAccessToken.getTokenId());
-            }
-            AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
-                    .getAccessToken());
-
-            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
-                grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
-            } else {
-                grantCacheEntry.setTokenId(null);
-            }
-
-            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
-            grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
-
-            // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
-            AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
-                    oldAccessToken.getTokenId());
-            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
-        }
     }
 
     private ActionExecutionStatus<?> executePreIssueAccessTokenActions(
@@ -1058,7 +998,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
+            String tenantDomain = tokenReqDTO.getTenantDomain();
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId(), tenantDomain)
+                    : OAuth2Util.getAppInformationByClientId(tokenReqDTO.getClientId());
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(
                     "Failed load the application with client id: " + tokenReqDTO.getClientId());

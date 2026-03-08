@@ -52,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -104,7 +105,7 @@ public class RequestParamRequestObjectBuilderTest {
                     .thenReturn(oauthServerConfigurationMock);
 
             try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, CALLS_REAL_METHODS);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
                          mockStatic(CentralLogMgtServiceComponentHolder.class);
