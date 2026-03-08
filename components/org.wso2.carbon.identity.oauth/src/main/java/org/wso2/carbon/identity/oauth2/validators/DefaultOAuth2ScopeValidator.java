@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
-import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
@@ -517,6 +516,10 @@ public class DefaultOAuth2ScopeValidator {
     private Set<String> getValidatedRequestedOIDCScopes(String appId, List<String> requestedScopes,
                                                         String tenantDomain) throws IdentityOAuth2Exception {
 
+        if (!requestedScopes.contains(OAuthConstants.Scope.OPENID)) {
+            return Collections.emptySet();
+        }
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         try {
             ServiceProvider serviceProvider = applicationMgtService.getApplicationByResourceId(appId, tenantDomain);
@@ -536,46 +539,43 @@ public class DefaultOAuth2ScopeValidator {
             return Collections.emptySet();
         }
 
-        Set<String> claimURIList = new HashSet<>();
-        for (ClaimMapping mapping : claimConfig.getClaimMappings()) {
-            if (mapping.isRequested() && mapping.getLocalClaim() != null) {
-                claimURIList.add(mapping.getLocalClaim().getClaimUri());
-            }
-        }
-
-        return claimURIList;
+        return Arrays.stream(claimConfig.getClaimMappings())
+                .filter(mapping -> mapping.isRequested() && mapping.getLocalClaim() != null)
+                .map(mapping -> mapping.getLocalClaim().getClaimUri())
+                .collect(Collectors.toSet());
     }
 
     private Set<String> getOIDCScopesForRequestedClaims(Set<String> requestedClaimUris, List<String> requestedScopes,
                                                         String tenantDomain)
             throws ClaimMetadataException, IdentityOAuth2Exception {
 
-        if (!requestedScopes.contains(OAuthConstants.Scope.OPENID)) {
-            return Collections.emptySet();
+        Set<String> validatedOIDCScopes = new HashSet<>();
+        if (requestedScopes.contains(OAuthConstants.Scope.OPENID)) {
+            validatedOIDCScopes.add(OAuthConstants.Scope.OPENID);
         }
 
-        Set<String> validatedOIDCScopes = new HashSet<>();
-        validatedOIDCScopes.add(OAuthConstants.Scope.OPENID);
+        if (CollectionUtils.isEmpty(requestedClaimUris)) {
+            return validatedOIDCScopes;
+        }
+
         // Retrieve OIDC to Local Claim Mappings.
         Map<String, String> oidcToLocalClaimMappings = getLocalClaimUriToOIDCClaimMap(tenantDomain);
         // Retrieve OIDC Claim to Scopes Mappings.
         Map<String, String> oidcClaimToScopeMap = getOIDCClaimsToScopesMap(tenantDomain);
 
-        if (CollectionUtils.isNotEmpty(requestedClaimUris)) {
-            for (String localClaim : requestedClaimUris) {
-                String oidcClaim = oidcToLocalClaimMappings.get(localClaim);
-                if (oidcClaim != null) {
-                    String scope = oidcClaimToScopeMap.get(oidcClaim);
-                    if (scope != null) {
-                        validatedOIDCScopes.add(scope);
-                    } else if (LOG.isDebugEnabled()) {
-                        LOG.debug("No OIDC scope found for the OIDC claim: " + oidcClaim +
-                                " mapped to local claim: " + localClaim + " in tenant domain: " + tenantDomain);
-                    }
+        for (String localClaim : requestedClaimUris) {
+            String oidcClaim = oidcToLocalClaimMappings.get(localClaim);
+            if (oidcClaim != null) {
+                String scope = oidcClaimToScopeMap.get(oidcClaim);
+                if (scope != null && requestedScopes.contains(scope)) {
+                    validatedOIDCScopes.add(scope);
                 } else if (LOG.isDebugEnabled()) {
-                    LOG.debug("No OIDC claim mapping found for the local claim: " + localClaim +
-                            " in tenant domain: " + tenantDomain);
+                    LOG.debug("No OIDC scope found for the OIDC claim: " + oidcClaim +
+                            " mapped to local claim: " + localClaim + " in tenant domain: " + tenantDomain);
                 }
+            } else if (LOG.isDebugEnabled()) {
+                LOG.debug("No OIDC claim mapping found for the local claim: " + localClaim +
+                        " in tenant domain: " + tenantDomain);
             }
         }
 
@@ -584,14 +584,10 @@ public class DefaultOAuth2ScopeValidator {
 
     private Map<String, String> getLocalClaimUriToOIDCClaimMap(String tenantDomain) throws ClaimMetadataException {
 
-        Map<String, String> oidcClaimToLocalClaimUriMap = ClaimMetadataHandler.getInstance()
-                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
-        Map<String, String> localClaimUriToOidcClaimMap = new HashMap<>(oidcClaimToLocalClaimUriMap.size());
-        for (Map.Entry<String, String> entry : oidcClaimToLocalClaimUriMap.entrySet()) {
-            localClaimUriToOidcClaimMap.put(entry.getValue(), entry.getKey());
-        }
-
-        return localClaimUriToOidcClaimMap;
+        return ClaimMetadataHandler.getInstance()
+                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false)
+                .entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
 
     private Map<String, String> getOIDCClaimsToScopesMap(String tenantDomain) throws IdentityOAuth2Exception {

@@ -6744,6 +6744,10 @@ public class OAuth2Util {
      */
     public static boolean shouldDropUnrequestedOIDCScopes() {
 
-        return Boolean.parseBoolean(IdentityUtil.getProperty(DROP_UNREGISTERED_OIDC_SCOPES));
+        String property = IdentityUtil.getProperty(DROP_UNREGISTERED_OIDC_SCOPES);
+        if (StringUtils.isBlank(property)) {
+            return true;
+        }
+        return Boolean.parseBoolean(property);
     }
 }
