@@ -40,7 +40,6 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "response_types_supported",
             "grant_types_supported",
             "response_modes_supported",
-            "userinfo_endpoint",
             "registration_endpoint",
             "token_endpoint_auth_methods_supported",
             "token_endpoint_auth_signing_alg_values_supported",
@@ -48,7 +47,12 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "revocation_endpoint_auth_methods_supported",
             "introspection_endpoint",
             "introspection_endpoint_auth_methods_supported",
-            "code_challenge_methods_supported"
+            "code_challenge_methods_supported",
+            "pushed_authorization_request_endpoint",
+            "device_authorization_endpoint",
+            "tls_client_certificate_bound_access_tokens",
+            "mtls_endpoint_aliases",
+            "authorization_details_types_supported"
     };
 
     public static String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {
@@ -64,4 +68,3 @@ public class AuthzServerMetadataJsonResponseBuilder {
         return new Gson().toJson(configs);
     }
 }
-

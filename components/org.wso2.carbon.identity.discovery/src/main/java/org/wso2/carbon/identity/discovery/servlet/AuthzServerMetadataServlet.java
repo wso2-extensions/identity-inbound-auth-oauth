@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.discovery.servlet;
 
 import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
@@ -41,10 +43,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+
 /**
- * Servlet to serve well-known discovery endpoints.
- * Delegates to registered WellKnownResponseHandler services keyed by the
- * servlet path matched by the whiteboard.
+ * Servlet to serve /.well-known/oauth-authorization-server endpoint.
  */
 @Component(
         service = Servlet.class,
@@ -58,6 +59,8 @@ import javax.servlet.http.HttpServletResponse;
 public class AuthzServerMetadataServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+
+    private static final Log log = LogFactory.getLog(AuthzServerMetadataServlet.class);
     private static final Pattern ALLOWED_PATH_PATTERN =
             Pattern.compile("^/(oauth2/token|t/[^/]+/oauth2/token)$");
     private static final String[] AUTHZ_SERVER_METADATA_FIELDS = {
@@ -69,7 +72,6 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             "response_types_supported",
             "grant_types_supported",
             "response_modes_supported",
-            "userinfo_endpoint",
             "registration_endpoint",
             "token_endpoint_auth_methods_supported",
             "token_endpoint_auth_signing_alg_values_supported",
@@ -77,7 +79,12 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             "revocation_endpoint_auth_methods_supported",
             "introspection_endpoint",
             "introspection_endpoint_auth_methods_supported",
-            "code_challenge_methods_supported"
+            "code_challenge_methods_supported",
+            "pushed_authorization_request_endpoint",
+            "device_authorization_endpoint",
+            "tls_client_certificate_bound_access_tokens",
+            "mtls_endpoint_aliases",
+            "authorization_details_types_supported"
     };
 
     @Override
@@ -108,7 +115,9 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             response.setStatus(oidcProcessor.handleError(e));
             response.getWriter().print(e.getMessage());
         } catch (ServerConfigurationException e) {
-            throw new RuntimeException(e);
+            log.error("Server Configuration error occurred.", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().print("Error in reading configuration.");
         }
     }
 
@@ -121,4 +130,3 @@ public class AuthzServerMetadataServlet extends HttpServlet {
         return AuthzServerMetadataServlet.ALLOWED_PATH_PATTERN.matcher(pathInfo).matches();
     }
 }
-
