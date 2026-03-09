@@ -1066,7 +1066,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (JWTUtils.isJWT(refreshToken)) {
             log.debug("Refresh token is JWT, should be with non persistent access token. " +
-                    "Hence, validating using hybrid persistent token provider.");
+                    "Hence, validating using hybrid refresh token grant processor.");
             return new HybridRefreshTokenGrantProcessor();
         }
 

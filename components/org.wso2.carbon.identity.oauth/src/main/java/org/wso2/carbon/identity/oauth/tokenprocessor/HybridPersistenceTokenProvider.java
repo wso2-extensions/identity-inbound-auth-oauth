@@ -525,7 +525,7 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             validationDataDO.setAuthorizedOrganizationId(accessOrgObj.toString());
         } else {
             validationDataDO.setAuthorizedOrganizationId(OAuthConstants.AuthorizedOrganization.NONE);
-            LOG.debug("Accessing organization claim is missing in the non persistent access token.");
+            LOG.debug("Accessing organization claim is missing in the non persistent refresh token.");
         }
     }
 }
