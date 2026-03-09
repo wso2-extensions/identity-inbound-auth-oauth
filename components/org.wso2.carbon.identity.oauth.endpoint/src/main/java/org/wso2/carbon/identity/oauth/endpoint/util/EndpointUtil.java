@@ -591,7 +591,6 @@ public class EndpointUtil {
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
 
         int tenantId = OAuth2Util.getClientTenatId();
-        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
 
         //Build the authentication request context.
         String commonAuthCallerPath =
@@ -602,7 +601,6 @@ public class EndpointUtil {
         authenticationRequest.setRelyingParty(clientId);
         authenticationRequest.setTenantDomain(OAuth2Util.getTenantDomain(tenantId));
         authenticationRequest.setRequestQueryParams(reqParams);
-        authenticationRequest.setAccessingOrgId(accessingOrgId);
 
         //Build an AuthenticationRequestCacheEntry which wraps AuthenticationRequestContext
         return new AuthenticationRequestCacheEntry(authenticationRequest);
