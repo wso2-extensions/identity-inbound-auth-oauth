@@ -42,13 +42,13 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import java.lang.reflect.Field;
 import java.text.ParseException;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 
 /**
  * Unit tests for AuthorizationGrantCacheTest class.
@@ -150,7 +150,7 @@ public class AuthorizationGrantCacheTest {
 
             // Verify the token ID returned from the DAO is as expected.
             if (!isFailedTokenRetrieval && !isInvalidJWTToken) {
-                assertEquals(tokenId, result.getTokenId());
+                assertEquals(result.getTokenId(), tokenId);
             }
 
             // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT.
@@ -211,7 +211,7 @@ public class AuthorizationGrantCacheTest {
 
             AuthorizationGrantCacheEntry result = cache.getValueFromCacheByCode(key);
 
-            assertEquals(expectedEntry, result);
+            assertEquals(result, expectedEntry);
         }
     }
 }
