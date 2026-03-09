@@ -64,6 +64,7 @@ public class HybridPersistenceTokenProviderTest {
     private static final String TEST_ENTITY_ID = "test-entity-id";
     private static final String TEST_TENANT_DOMAIN = "carbon.super";
     private static final String TEST_SUBJECT = "testUser";
+    private static final String TEST_ACCESSING_ORG = "test-org-001";
     private static final int TEST_TENANT_ID = -1234;
 
     private HybridPersistenceTokenProvider hybridPersistenceTokenProvider;
@@ -173,6 +174,7 @@ public class HybridPersistenceTokenProviderTest {
             assertEquals(result.getAccessToken(), TEST_JTI);
             assertEquals(result.getConsumerKey(), TEST_CONSUMER_KEY);
             assertEquals(result.getTokenState(), OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            assertEquals(result.getAuthorizedOrganizationId(), OAuthConstants.AuthorizedOrganization.NONE);
 
             // Verify isTokenRevokedDirectly was called since checkIndirectRevocation is true.
             tokenMgtUtilMockedStatic.verify(() ->
@@ -253,6 +255,7 @@ public class HybridPersistenceTokenProviderTest {
 
             assertNotNull(result);
             assertEquals(result.getAccessToken(), TEST_JTI);
+            assertEquals(result.getAuthorizedOrganizationId(), OAuthConstants.AuthorizedOrganization.NONE);
 
             // Verify isTokenRevokedDirectly was NOT called since checkIndirectRevocation is false.
             tokenMgtUtilMockedStatic.verify(() ->

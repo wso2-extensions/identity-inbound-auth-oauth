@@ -105,7 +105,7 @@ public class AuthorizationGrantCache extends
                 log.debug("Getting cache entry from session store using tokenId: " + tokenId);
             }
             cacheEntry = getFromSessionStore(tokenId);
-            if (cacheEntry != null) {
+            if (cacheEntry != null && key != null) {
                 super.addToCache(key, cacheEntry);
             }
         }
