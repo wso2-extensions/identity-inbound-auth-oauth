@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -73,7 +74,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
@@ -118,7 +121,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         super.validateGrant(tokReqMsgCtx);
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
-        RefreshTokenValidationDataDO validationBean = getRefreshTokenGrantProcessor()
+        RefreshTokenValidationDataDO validationBean = getRefreshTokenGrantProcessor(tokenReq.getRefreshToken())
                 .validateRefreshToken(tokReqMsgCtx);
 
         validateRefreshTokenInRequest(tokenReq, validationBean);
@@ -157,7 +160,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // context property.
         RefreshTokenValidationDataDO validationBean = (RefreshTokenValidationDataDO) tokReqMsgCtx
                 .getProperty(PREV_ACCESS_TOKEN);
-        if (isRefreshTokenExpired(validationBean)) {
+        if (validationBean == null || isRefreshTokenExpired(validationBean)) {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
@@ -177,7 +180,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         AccessTokenDO accessTokenBean;
         try {
-            accessTokenBean = getRefreshTokenGrantProcessor()
+            accessTokenBean = getRefreshTokenGrantProcessor(tokenReq.getRefreshToken())
                     .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType(tokReqMsgCtx));
         } catch (IllegalArgumentException e) {
             if (StringUtils.equals(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE, e.getMessage())) {
@@ -215,7 +218,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
-            getRefreshTokenGrantProcessor().addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
+            getRefreshTokenGrantProcessor(tokenReq.getRefreshToken())
+                    .addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         }
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
@@ -370,7 +374,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
-        if (getRefreshTokenGrantProcessor().isLatestRefreshToken(tokenReq,
+        if (getRefreshTokenGrantProcessor(tokenReq.getRefreshToken()).isLatestRefreshToken(tokenReq,
                 validationBean, getUserStoreDomain(validationBean.getAuthorizedUser()))) {
             return true;
         } else {
@@ -519,7 +523,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug("Previous access token (hashed): " + DigestUtils.sha256Hex(oldAccessToken.getAccessToken()));
             }
         }
-        getRefreshTokenGrantProcessor().persistNewToken(tokReqMsgCtx,
+        getRefreshTokenGrantProcessor(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken())
+                .persistNewToken(tokReqMsgCtx,
                 accessTokenBean, userStoreDomain, clientId);
         updateCacheIfEnabled(tokReqMsgCtx, accessTokenBean, clientId, oldAccessToken);
     }
@@ -1047,7 +1052,23 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
      *
      * @return RefreshTokenGrantProcessor
      */
-    private RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
+    private RefreshTokenGrantProcessor getRefreshTokenGrantProcessor(String refreshToken) {
+
+        // If token persistence is enabled, then the refresh token grant processor will
+        // always be the one which supports persisted tokens.
+        if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
+            return OAuth2ServiceComponentHolder.getInstance().getRefreshTokenGrantProcessor();
+        }
+
+        if (TokenMgtUtil.isHybridPersistedToken(refreshToken)) {
+            return new HybridRefreshTokenGrantProcessor();
+        }
+
+        if (JWTUtils.isJWT(refreshToken)) {
+            log.debug("Refresh token is JWT, should be with non persistent access token. " +
+                    "Hence, validating using hybrid persistent token provider.");
+            return new HybridRefreshTokenGrantProcessor();
+        }
 
         return OAuth2ServiceComponentHolder.getInstance().getRefreshTokenGrantProcessor();
     }

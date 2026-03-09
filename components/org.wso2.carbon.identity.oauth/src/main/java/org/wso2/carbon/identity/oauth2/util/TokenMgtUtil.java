@@ -500,7 +500,7 @@ public class TokenMgtUtil {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Getting signing tenant domain from OAuth app.");
                 }
-                                /*
+               /*
                  Check if the OAuth application is a fragment application. Based on that we can define what
                  is the tenant that signed the JWT. In this case the signing tenant should be extracted from the
                  application OIDC configurations. If that is not available, then the root organization will be used as

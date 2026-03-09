@@ -207,6 +207,7 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
                 validationDataDO.setIsConsentedToken(false);
                 LOG.debug("Consented token claim is missing in the non persistent access token.");
             }
+            setAuthorizedOrganization(claimsSet, validationDataDO);
             RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
             try {
                 int tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
@@ -313,6 +314,7 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             validationDataDO.setConsented(false);
             LOG.debug("Consented token claim is missing in the non persistent access token.");
         }
+        setAuthorizedOrganization(claimsSet, validationDataDO);
 
         String state;
         if (isTokenRevoked) {
@@ -453,6 +455,7 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             validationDataDO.setIsConsentedToken(false);
             LOG.debug("Consented token claim is missing in the non persistent access token.");
         }
+        setAuthorizedOrganization(claimsSet, validationDataDO);
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         try {
             int tenantId = realmService.getTenantManager().getTenantId(authenticatedUser.getTenantDomain());
@@ -502,5 +505,27 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             throws IdentityOAuth2Exception {
 
         return defaultTokenProvider.getVerifiedAccessToken(accessTokenIdentifier, includeExpired);
+    }
+
+    private void setAuthorizedOrganization(JWTClaimsSet claimsSet, AccessTokenDO validationDataDO) {
+
+        Object accessOrgObj = claimsSet.getClaim(OAuth2Constants.ACCESSING_ORGANIZATION);
+        if (accessOrgObj != null) {
+            validationDataDO.setAuthorizedOrganizationId(accessOrgObj.toString());
+        } else {
+            validationDataDO.setAuthorizedOrganizationId(OAuthConstants.AuthorizedOrganization.NONE);
+            LOG.debug("Accessing organization claim is missing in the non persistent access token.");
+        }
+    }
+
+    private void setAuthorizedOrganization(JWTClaimsSet claimsSet, RefreshTokenValidationDataDO validationDataDO) {
+
+        Object accessOrgObj = claimsSet.getClaim(OAuth2Constants.ACCESSING_ORGANIZATION);
+        if (accessOrgObj != null) {
+            validationDataDO.setAuthorizedOrganizationId(accessOrgObj.toString());
+        } else {
+            validationDataDO.setAuthorizedOrganizationId(OAuthConstants.AuthorizedOrganization.NONE);
+            LOG.debug("Accessing organization claim is missing in the non persistent access token.");
+        }
     }
 }
