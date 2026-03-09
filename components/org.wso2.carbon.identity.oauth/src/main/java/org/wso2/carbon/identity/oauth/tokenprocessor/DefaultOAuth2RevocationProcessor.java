@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -34,19 +36,25 @@ import org.wso2.carbon.user.core.UserStoreManager;
  */
 public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcessor {
 
+    private static final Log log = LogFactory.getLog(DefaultOAuth2RevocationProcessor.class);
+
     @Override
     public void revokeAccessToken(OAuthRevocationRequestDTO revokeRequestDTO, AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception {
-
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking access token for client: " + revokeRequestDTO.getConsumerKey());
+        }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(revokeRequestDTO.getConsumerKey())
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
     }
 
     @Override
     public void revokeRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO,
                                    RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception {
-
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking refresh token for client: " + revokeRequestDTO.getConsumerKey());
+        }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(revokeRequestDTO.getConsumerKey())
                 .revokeAccessTokens(new String[]{refreshTokenDO.getAccessToken()});
     }
 

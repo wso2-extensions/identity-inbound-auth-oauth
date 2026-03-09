@@ -360,12 +360,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                 DUMMY_CLIENT_ID
         );
         assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
-        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
-        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
         if (tokenReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
-            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), false);
-            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), false);
+            assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
+            assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
         }
         if (authzReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);

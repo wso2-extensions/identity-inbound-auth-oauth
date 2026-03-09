@@ -105,6 +105,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String TOKEN_BINDING_TYPE = "binding_type";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String CNF = "cnf";
+    private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
     private static final String CNF_CLAIM = "x5t#S256";
     private static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
     private static final String END_CERT = "-----END CERTIFICATE-----";
@@ -240,12 +241,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected String signJWT(JWTClaimsSet jwtClaimsSet,
+            OAuthTokenReqMessageContext tokenContext,
+            OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
+
+        return signJWT(jwtClaimsSet, tokenContext, authorizationContext, false);
+    }
+
+    /**
+     * Sign ghe JWT token according to the given signature signing algorithm.
+     *
+     * @param jwtClaimsSet         JWT claim set to be signed.
+     * @param tokenContext         Token context.
+     * @param authorizationContext Authorization context.
+     * @return Signed JWT.
+     * @throws IdentityOAuth2Exception
+     */
+    protected String signJWT(JWTClaimsSet jwtClaimsSet,
                              OAuthTokenReqMessageContext tokenContext,
-                             OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
+                             OAuthAuthzReqMessageContext authorizationContext, boolean isRefreshToken)
+            throws IdentityOAuth2Exception {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
-            return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext);
+            return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext, isRefreshToken);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
             return signJWTWithHMAC(jwtClaimsSet, tokenContext, authorizationContext);
@@ -343,7 +361,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws IdentityOAuth2Exception
      */
     protected String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenContext,
-                                    OAuthAuthzReqMessageContext authorizationContext) throws IdentityOAuth2Exception {
+                                    OAuthAuthzReqMessageContext authorizationContext, boolean isRefreshToken)
+            throws IdentityOAuth2Exception {
 
         try {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
@@ -358,8 +377,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
-            // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
-            headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
+            if (isRefreshToken) {
+                // Set the required "typ" header "rt+jwt" for refresh tokens issued by the issuer
+                headerBuilder.type(new JOSEObjectType(DEFAULT_JWT_RT_HEADER_VALUE));
+            } else {
+                // Set the required "typ" header "at+jwt" for access tokens issued by the issuer
+                headerBuilder.type(new JOSEObjectType(DEFAULT_TYP_HEADER_VALUE));
+            }
             headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -919,8 +943,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     isConsented = authAuthzReqMessageContext.isConsentedToken();
                 }
                 // when no persistence of tokens, there is no existing token to check the consented value for.
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
+                if (isConsented) {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
+                }
+                if (authenticatedUser.isFederatedUser()) {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
+                }
                 if (tokenReqMessageContext != null) {
                     jwtClaimsSetBuilder.claim(OAuth2Constants.USER_SESSION_ID,
                             tokenReqMessageContext.getProperty(OAuth2Constants.USER_SESSION_ID));
