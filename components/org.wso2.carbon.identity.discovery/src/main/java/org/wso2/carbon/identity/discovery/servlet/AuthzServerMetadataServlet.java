@@ -108,15 +108,27 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             Set<String> allowedKeys = new HashSet<>(Arrays.asList(AUTHZ_SERVER_METADATA_FIELDS));
             configs.keySet().retainAll(allowedKeys);
 
+            Object responseTypes = configs.get("response_types_supported");
+            if (responseTypes instanceof String[]) {
+                configs.put("response_types_supported",
+                        Arrays.stream((String[]) responseTypes)
+                                .filter(type -> !type.contains("id_token"))
+                                .toArray(String[]::new));
+            }
+
+            configs.put("scopes_supported", new String[0]);
+
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType("application/json");
             response.getWriter().print(new Gson().toJson(configs));
         } catch (OIDCDiscoveryEndPointException e) {
             response.setStatus(oidcProcessor.handleError(e));
+            response.setContentType("application/json");
             response.getWriter().print(e.getMessage());
         } catch (ServerConfigurationException e) {
             log.error("Server Configuration error occurred.", e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("application/json");
             response.getWriter().print("Error in reading configuration.");
         }
     }

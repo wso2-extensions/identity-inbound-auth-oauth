@@ -65,6 +65,16 @@ public class AuthzServerMetadataJsonResponseBuilder {
         Set<String> allowedKeys = new HashSet<>(Arrays.asList(AUTHZ_SERVER_METADATA_RESPONSE_ATTRIBUTES));
         configs.keySet().retainAll(allowedKeys);
 
+        Object responseTypes = configs.get("response_types_supported");
+        if (responseTypes instanceof String[]) {
+            configs.put("response_types_supported",
+                    Arrays.stream((String[]) responseTypes)
+                            .filter(type -> !type.contains("id_token"))
+                            .toArray(String[]::new));
+        }
+
+        configs.put("scopes_supported", new String[0]);
+
         return new Gson().toJson(configs);
     }
 }
