@@ -110,6 +110,7 @@ public class OAuth2OIDCConfigOrgUsageScopeUtils {
                         resolveTenantDomain(primaryOrganizationId);
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(primaryTenantDomain);
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(orgId);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(orgId);
                 IdentityUtil.threadLocalProperties.get().put(TENANT_NAME_FROM_CONTEXT, primaryTenantDomain);
                 IdentityUtil.threadLocalProperties.get().put(OrganizationManagementConstants.ROOT_TENANT_DOMAIN, null);
                 issuerLocation = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
