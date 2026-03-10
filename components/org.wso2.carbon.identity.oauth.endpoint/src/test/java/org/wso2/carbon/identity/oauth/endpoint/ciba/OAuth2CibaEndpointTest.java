@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import org.junit.Assert;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -26,6 +25,7 @@ import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -409,7 +409,7 @@ public class OAuth2CibaEndpointTest {
 
             Response response =
                     oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
-            Assert.assertEquals(200, response.getStatus());
+            Assert.assertEquals(response.getStatus(), 200);
 
         }
     }
@@ -517,9 +517,9 @@ public class OAuth2CibaEndpointTest {
                     paramMap);
 
 
-            Assert.assertEquals(200, response.getStatus());
+            Assert.assertEquals(response.getStatus(), 200);
             verify(authService).generateAuthCodeResponse(captor.capture());
-            Assert.assertEquals("sms", captor.getValue().getNotificationChannel());
+            Assert.assertEquals(captor.getValue().getNotificationChannel(), "sms");
         }
     }
 
@@ -557,7 +557,7 @@ public class OAuth2CibaEndpointTest {
             Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse,
                     paramMap);
             
-            Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
             Assert.assertTrue(response.getEntity().toString().contains("Requested notification channel is " +
                     "not allowed"));
         }
@@ -581,7 +581,7 @@ public class OAuth2CibaEndpointTest {
 
         Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
         
-        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         Assert.assertTrue(response.getEntity().toString().contains("Invalid characters present in (binding_message)"));
     }
 
@@ -623,7 +623,7 @@ public class OAuth2CibaEndpointTest {
 
             Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
-            Assert.assertEquals(HttpServletResponse.SC_OK, response.getStatus());
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
         }
     }
 
@@ -645,7 +645,7 @@ public class OAuth2CibaEndpointTest {
 
         Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
-        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         Assert.assertTrue(response.getEntity().toString().contains("Invalid characters present in (binding_message)"));
     }
 
@@ -688,7 +688,7 @@ public class OAuth2CibaEndpointTest {
 
             Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
-            Assert.assertEquals(HttpServletResponse.SC_OK, response.getStatus());
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
         }
     }
 
@@ -715,7 +715,7 @@ public class OAuth2CibaEndpointTest {
 
         Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
-        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         Assert.assertTrue(response.getEntity().toString().contains("Client has not configured grant_type properly"));
     }
 
@@ -737,7 +737,7 @@ public class OAuth2CibaEndpointTest {
 
         Response response = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
         
-        Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
+        Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         Assert.assertTrue(response.getEntity().toString().contains("Invalid value for (requested_expiry)"));
     }
 }

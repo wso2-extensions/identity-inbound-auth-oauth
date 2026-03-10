@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -671,7 +672,7 @@ public class OAuth2Service extends AbstractAdmin {
                     if (refreshTokenDO.getAccessToken() != null) {
                         OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
                     }
-                    getRevocationProcessor().revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
+                    getRevocationProcessor(refreshTokenDO).revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
                             revokeRequestDTO.getToken(),
@@ -746,7 +747,8 @@ public class OAuth2Service extends AbstractAdmin {
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
-                            getRevocationProcessor().revokeAccessToken(revokeRequestDTO, accessTokenDO);
+                            getRevocationProcessor(revokeRequestDTO.getConsumerKey(), tenantDomain)
+                                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),
@@ -850,13 +852,39 @@ public class OAuth2Service extends AbstractAdmin {
     }
 
     /**
+     * Get the revocation processor based on refresh token's persistence state.
+     *
+     * @param refreshTokenDO Refresh token validation data.
+     * @return OAuth2RevocationProcessor
+     */
+    private OAuth2RevocationProcessor getRevocationProcessor(RefreshTokenValidationDataDO refreshTokenDO) {
+
+        if (!OAuth2Util.isAccessTokenPersistenceEnabled() && refreshTokenDO.isWithNotPersistedAT()) {
+            return new HybridOAuth2RevocationProcessor();
+        }
+        return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+    }
+
+    /**
      * Get the revocation processor.
      *
      * @return OAuth2RevocationProcessor
      */
-    private OAuth2RevocationProcessor getRevocationProcessor() {
+    private OAuth2RevocationProcessor getRevocationProcessor(String clientId, String tenantDomain) {
 
-        return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+        try {
+            if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
+                return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+            } else {
+                OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+                return StringUtils.equals(appDO.getTokenType(), OAuth2Util.JWT) ?
+                        new HybridOAuth2RevocationProcessor() :
+                        OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+            }
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            log.error("Error while retrieving the application information for the consumer key: " + clientId, e);
+            return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+        }
     }
 
     private boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {

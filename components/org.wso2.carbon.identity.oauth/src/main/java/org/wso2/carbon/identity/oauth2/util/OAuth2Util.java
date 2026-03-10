@@ -5135,10 +5135,34 @@ public class OAuth2Util {
     public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+        return getAccessTokenDO(tokenResponse, true);
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @param checkIndirectRevocation   A boolean flag indicating whether to check for indirect revocation.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                           boolean checkIndirectRevocation)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getAccessTokenDO() != null) {
+            return Optional.ofNullable(tokenResponse.getAuthorizationContextToken().getAccessTokenDO());
+        }
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
                 AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
-                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                                false, checkIndirectRevocation);
                 return Optional.ofNullable(accessTokenDO);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -6735,6 +6759,25 @@ public class OAuth2Util {
     public static TokenProvider getTokenProvider() {
 
         return OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param serviceProviderProperties Service provider properties of the OAuth application.
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
     }
 
     /**

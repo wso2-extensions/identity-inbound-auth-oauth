@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 /**
@@ -105,10 +106,17 @@ public class OAuth2TokenValidationResponseDTO {
         String tokenType;
 
         String tokenString;
+        private AccessTokenDO accessTokenDO;
 
         public AuthorizationContextToken(String tokenType, String tokenString) {
             this.tokenType = tokenType;
             this.tokenString = tokenString;
+        }
+
+        public AuthorizationContextToken(String tokenType, String tokenString, AccessTokenDO accessTokenDO) {
+
+            this(tokenType, tokenString);
+            this.accessTokenDO = accessTokenDO;
         }
 
         public String getTokenType() {
@@ -117,6 +125,11 @@ public class OAuth2TokenValidationResponseDTO {
 
         public String getTokenString() {
             return tokenString;
+        }
+
+        public AccessTokenDO getAccessTokenDO() {
+
+            return accessTokenDO;
         }
     }
 }

@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.device;
 
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.junit.Assert;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -31,6 +30,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -70,7 +70,6 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -81,6 +80,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Use for unit tests in device end-point.
@@ -273,7 +273,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
             response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<>(),
                     httpServletResponse);
-            Assert.assertEquals(expectedStatus, response.getStatus());
+            Assert.assertEquals(response.getStatus(), expectedStatus);
         }
     }
 

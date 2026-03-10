@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -390,7 +391,12 @@ public class OAuth2ServiceComponent {
             }
 
             OAuth2ServiceComponentHolder.getInstance().addRevocationProcessor(new DefaultOAuth2RevocationProcessor());
-
+            if (!OAuth2Util.isAccessTokenPersistenceEnabled()) {
+                log.debug("Access token persistence is disabled. Hence adding HybridOAuth2RevocationProcessor " +
+                        "as a revocation processor to handle token revocations in a hybrid manner.");
+                OAuth2ServiceComponentHolder.getInstance()
+                        .addRevocationProcessor(new HybridOAuth2RevocationProcessor());
+            }
             // Register the default OpenIDConnect claim filter
             bundleContext.registerService(OpenIDConnectClaimFilter.class, new OpenIDConnectClaimFilterImpl(), null);
             if (log.isDebugEnabled()) {

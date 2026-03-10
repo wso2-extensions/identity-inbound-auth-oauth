@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidat
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridPersistenceTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -56,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetails
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
@@ -806,7 +808,8 @@ public class OAuth2ServiceComponentHolder {
     public TokenProvider getTokenProvider() {
 
         if (tokenProvider == null) {
-            tokenProvider = new DefaultTokenProvider();
+            tokenProvider = OAuth2Util.isAccessTokenPersistenceEnabled() ? new DefaultTokenProvider()
+                    : new HybridPersistenceTokenProvider();
         }
         return tokenProvider;
     }
