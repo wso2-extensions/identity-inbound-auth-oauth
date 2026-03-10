@@ -1092,6 +1092,38 @@ public class JWTTokenIssuerTest {
             tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
             tokenCtx.setTokenId(DUMMY_TOKEN_ID);
 
+            AuthenticatedUser localUser = buildLocalUser("testUser", DUMMY_TENANT_DOMAIN);
+            localUser.setUserId(DUMMY_USER_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx, localUser, appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID), DUMMY_USER_ID);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_ID);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.GRANT_TYPE), DUMMY_GRANT_TYPE);
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_LocalUser_UserIdNotFound() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
             issuer.setClaimsForNonPersistence(builder, null, tokenCtx,
                     buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
             JWTClaimsSet claims = builder.build();

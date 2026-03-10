@@ -563,6 +563,67 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         }
     }
 
+    @Test(description = "This method tests the handle custom claims in refresh flow when access token is null "
+            + "(non-persistent token scenario) and tokenId is used as fallback")
+    public void testHandleCustomClaimsInRefreshFlowWithNullAccessToken() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(null);
+            // Add the relevant oidc claims to scope resource.
+            Properties oidcProperties = new Properties();
+            String[] oidcScopeClaims = new String[]{USERNAME, EMAIL};
+            oidcProperties.setProperty(OIDC_SCOPE, StringUtils.join(oidcScopeClaims, ","));
+
+            Map<ClaimMapping, String> userAttributes = new HashMap<>();
+            userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(USERNAME), TestConstants.CLAIM_VALUE1);
+            userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(EMAIL), TestConstants.CLAIM_VALUE2);
+            userAttributes
+                    .put(SAML2BearerGrantHandlerTest.buildClaimMapping(PHONE_NUMBER_VERIFIED),
+                            TestConstants.CLAIM_VALUE2);
+
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry(userAttributes);
+            authorizationGrantCacheEntry.setSubjectClaim(requestMsgCtx.getAuthorizedUser().getUserName());
+
+            // Mock the authorization grant cache with tokenId-based lookup.
+            AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCache.when(AuthorizationGrantCache::getInstance)
+                    .thenReturn(mockAuthorizationGrantCache);
+            lenient().when(mockAuthorizationGrantCache.getValueFromCache(any(AuthorizationGrantCacheKey.class)))
+                    .thenReturn(authorizationGrantCacheEntry);
+            lenient().when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))
+                    .thenReturn(authorizationGrantCacheEntry);
+            lenient().when(mockAuthorizationGrantCache.getValueFromCacheByTokenId(any(), eq("test-token-id")))
+                    .thenReturn(authorizationGrantCacheEntry);
+
+            getUserClaimsMap(claimMetadataHandler);
+
+            // Mock refresh token validation data with null access token and valid tokenId.
+            RefreshTokenValidationDataDO refreshTokenValidationDataDO =
+                    Mockito.mock(RefreshTokenValidationDataDO.class);
+            Mockito.doReturn(null).when(refreshTokenValidationDataDO).getAccessToken();
+            Mockito.doReturn("test-token-id").when(refreshTokenValidationDataDO).getTokenId();
+            requestMsgCtx.addProperty(PREV_ACCESS_TOKEN, refreshTokenValidationDataDO);
+
+            UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
+            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+            JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                    oAuthServerConfiguration);
+
+            Assert.assertFalse(jwtClaimsSet.getClaims().isEmpty(),
+                    "JWT custom claim list is empty. Custom claim handling failed in refresh flow with null "
+                            + "access token");
+        }
+    }
+
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtEmptyUserClaims() throws Exception {
 

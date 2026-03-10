@@ -1633,8 +1633,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE,
                         OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_ID);
             } catch (UserIdNotFoundException e) {
-                log.error("User id cannot be found for user: " +
-                        authenticatedUser.getLoggableMaskedUserId() + " Using username as ENTITY_ID.");
+                if (log.isDebugEnabled()) {
+                    log.debug("User id cannot be found for user: " +
+                            authenticatedUser.getLoggableMaskedUserId() + " Using username as ENTITY_ID.");
+                }
                 jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_ID,
                         authenticatedUser.toFullQualifiedUsername());
                 jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE,
@@ -1645,9 +1647,20 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         // For local users, attempt to use user ID as ENTITY_ID, falling back to username if user ID is not available.
-        jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_ID,
-                authenticatedUser.toFullQualifiedUsername());
-        jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE,
-                OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_NAME);
+        try {
+            String userId = authenticatedUser.getUserId();
+            jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_ID, userId);
+            jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE,
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_ID);
+        } catch (UserIdNotFoundException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("User id cannot be found for user: " +
+                        authenticatedUser.getLoggableMaskedUserId() + " Using username as ENTITY_ID.");
+            }
+            jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_ID,
+                    authenticatedUser.toFullQualifiedUsername());
+            jwtClaimsSetBuilder.claim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE,
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_NAME);
+        }
     }
 }

@@ -117,7 +117,7 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
         }
 
         OAuth2TokenValidationResponseDTO.AuthorizationContextToken authorizationContextToken = response.
-                new AuthorizationContextToken(accessToken.getTokenType(), accessToken.getIdentifier());
+                new AuthorizationContextToken(accessToken.getTokenType(), accessToken.getIdentifier(), accessTokenDO);
         response.setAuthorizationContextToken(authorizationContextToken);
         return response;
     }
