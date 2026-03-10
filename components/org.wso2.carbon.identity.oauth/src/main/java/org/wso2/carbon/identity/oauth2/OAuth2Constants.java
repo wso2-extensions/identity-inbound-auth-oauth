@@ -63,6 +63,7 @@ public class OAuth2Constants {
     public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
     public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
     public static final String STORE_OPERATION = "STORE";
+    public static final String SKIP_REFRESH_TOKEN_PERSISTENT = "npr:skipRefreshTokenPersistent";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
     public static final String REFRESH_TOKEN_SCOPE_CLAIM_KEY = "rt_scope";
