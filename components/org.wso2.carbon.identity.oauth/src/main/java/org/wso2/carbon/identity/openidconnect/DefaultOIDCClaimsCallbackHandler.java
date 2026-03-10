@@ -825,8 +825,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         AuthorizationGrantCacheEntry cacheEntry;
         if (!OAuth2Util.isAccessTokenPersistenceEnabled()
                 && TokenMgtUtil.isNonPersistenceAccessToken(accessToken)) {
-            cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey,
-                    TokenMgtUtil.getTokenIDFromNonPersistenceAccessToken(accessToken));
+            String tokenId = TokenMgtUtil.getTokenIDFromNonPersistenceAccessToken(accessToken);
+             if (StringUtils.isBlank(tokenId)) {
+                 cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+             } else {
+                 cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey, tokenId);
+             }
         } else {
             cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
         }

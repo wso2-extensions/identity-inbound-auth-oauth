@@ -601,7 +601,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                     .thenReturn(authorizationGrantCacheEntry);
             lenient().when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))
                     .thenReturn(authorizationGrantCacheEntry);
-            lenient().when(mockAuthorizationGrantCache.getValueFromCacheByTokenId(isNull(), anyString()))
+            lenient().when(mockAuthorizationGrantCache.getValueFromCacheByTokenId(any(), eq("test-token-id")))
                     .thenReturn(authorizationGrantCacheEntry);
 
             getUserClaimsMap(claimMetadataHandler);
@@ -613,7 +613,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             Mockito.doReturn("test-token-id").when(refreshTokenValidationDataDO).getTokenId();
             requestMsgCtx.addProperty(PREV_ACCESS_TOKEN, refreshTokenValidationDataDO);
 
-            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+            UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
