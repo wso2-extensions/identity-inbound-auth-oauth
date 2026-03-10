@@ -40,7 +40,6 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "response_types_supported",
             "grant_types_supported",
             "response_modes_supported",
-            "userinfo_endpoint",
             "registration_endpoint",
             "token_endpoint_auth_methods_supported",
             "token_endpoint_auth_signing_alg_values_supported",
@@ -48,7 +47,12 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "revocation_endpoint_auth_methods_supported",
             "introspection_endpoint",
             "introspection_endpoint_auth_methods_supported",
-            "code_challenge_methods_supported"
+            "code_challenge_methods_supported",
+            "pushed_authorization_request_endpoint",
+            "device_authorization_endpoint",
+            "tls_client_certificate_bound_access_tokens",
+            "mtls_endpoint_aliases",
+            "authorization_details_types_supported"
     };
 
     public static String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {
@@ -61,7 +65,16 @@ public class AuthzServerMetadataJsonResponseBuilder {
         Set<String> allowedKeys = new HashSet<>(Arrays.asList(AUTHZ_SERVER_METADATA_RESPONSE_ATTRIBUTES));
         configs.keySet().retainAll(allowedKeys);
 
+        Object responseTypes = configs.get("response_types_supported");
+        if (responseTypes instanceof String[]) {
+            configs.put("response_types_supported",
+                    Arrays.stream((String[]) responseTypes)
+                            .filter(type -> !type.contains("id_token"))
+                            .toArray(String[]::new));
+        }
+
+        configs.put("scopes_supported", new String[0]);
+
         return new Gson().toJson(configs);
     }
 }
-
