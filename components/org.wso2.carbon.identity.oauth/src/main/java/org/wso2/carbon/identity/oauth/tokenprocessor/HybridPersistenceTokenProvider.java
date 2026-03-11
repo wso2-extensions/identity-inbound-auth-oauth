@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -258,8 +259,10 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             throws IdentityOAuth2Exception {
 
         SignedJWT signedJWT = TokenMgtUtil.parseJWT(token);
-        if (!StringUtils.equals(DEFAULT_JWT_RT_HEADER_VALUE, signedJWT.getHeader().getType().getType())) {
-            throw new IdentityOAuth2Exception("Invalid jwt refresh token provided for validation.");
+        JOSEObjectType tokenType = signedJWT.getHeader().getType();
+        if (tokenType == null || !StringUtils.equals(DEFAULT_JWT_RT_HEADER_VALUE, tokenType.getType())) {
+            LOG.debug("Invalid JWT refresh token type found.");
+            return null;
         }
         JWTClaimsSet claimsSet = TokenMgtUtil.getTokenJWTClaims(signedJWT);
         // get JTI of the token.
@@ -387,9 +390,10 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
     private AccessTokenDO validateJWTRefreshToken(String token)  throws IdentityOAuth2Exception {
 
         SignedJWT signedJWT = TokenMgtUtil.parseJWT(token);
-        if (!StringUtils.equals(DEFAULT_JWT_RT_HEADER_VALUE, signedJWT.getHeader().getType().getType())) {
-            LOG.debug("Invalid JWT refresh token type found.");
-            return null;
+        JOSEObjectType tokenType = signedJWT.getHeader().getType();
+        if (tokenType == null || !StringUtils.equals(DEFAULT_JWT_RT_HEADER_VALUE, tokenType.getType())) {
+                LOG.debug("Invalid JWT refresh token type found.");
+                return null;
         }
         JWTClaimsSet claimsSet = TokenMgtUtil.getTokenJWTClaims(signedJWT);
         // get JTI of the token.
