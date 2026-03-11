@@ -388,7 +388,8 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
 
         SignedJWT signedJWT = TokenMgtUtil.parseJWT(token);
         if (!StringUtils.equals(DEFAULT_JWT_RT_HEADER_VALUE, signedJWT.getHeader().getType().getType())) {
-            throw new IdentityOAuth2Exception("Invalid jwt refresh token provided for validation.");
+            LOG.debug("Invalid JWT refresh token type found.");
+            return null;
         }
         JWTClaimsSet claimsSet = TokenMgtUtil.getTokenJWTClaims(signedJWT);
         // get JTI of the token.
