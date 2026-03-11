@@ -481,7 +481,7 @@ public class ClaimUtilTest {
                     .thenReturn(mockedPermissionAndRoleConfig);
             lenient().when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
 
-            oidcClaimUtil.when(() -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(), anyString()))
+            oidcClaimUtil.when(() -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(), anyString(), any()))
                     .thenReturn(appAssociatedRoles);
 
             OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
