@@ -52,13 +52,13 @@ import java.util.Objects;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.expectThrows;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
@@ -208,7 +208,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             handleSessionImpersonation.setAccessible(true);
 
             if (rejectImpersonation) {
-                assertThrows(Exception.class, () -> {
+                expectThrows(Exception.class, () -> {
                     handleSessionImpersonation.invoke(null,
                             oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
                 });

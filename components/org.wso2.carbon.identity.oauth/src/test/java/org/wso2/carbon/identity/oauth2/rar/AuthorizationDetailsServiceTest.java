@@ -54,9 +54,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toSet;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anySet;
@@ -64,7 +61,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth2.TestConstants.ACESS_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.TestConstants.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_DOMAIN;
@@ -266,14 +266,14 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         final AuthorizationDetails authorizationDetails =
                 uut.getUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID, TENANT_ID);
 
-        assertEquals(1, authorizationDetails.getDetails().size());
-        authorizationDetails.stream().forEach(detail -> assertEquals(TEST_TYPE, detail.getType()));
+        assertEquals(authorizationDetails.getDetails().size(), 1);
+        authorizationDetails.stream().forEach(detail -> assertEquals(detail.getType(), TEST_TYPE));
 
         final AuthorizationDetails authorizationDetails1 =
                 uut.getUserConsentedAuthorizationDetails(authenticatedUser, oAuth2Parameters);
 
-        assertEquals(1, authorizationDetails1.getDetails().size());
-        authorizationDetails1.stream().forEach(detail -> assertEquals(TEST_TYPE, detail.getType()));
+        assertEquals(authorizationDetails1.getDetails().size(), 1);
+        authorizationDetails1.stream().forEach(detail -> assertEquals(detail.getType(), TEST_TYPE));
     }
 
     @Test
@@ -288,8 +288,8 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         AuthorizationDetails authorizationDetails = uut.getAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID);
 
-        assertEquals(1, authorizationDetails.getDetails().size());
-        authorizationDetails.stream().forEach(ad -> assertEquals(TEST_TYPE, ad.getType()));
+        assertEquals(authorizationDetails.getDetails().size(), 1);
+        authorizationDetails.stream().forEach(ad -> assertEquals(ad.getType(), TEST_TYPE));
     }
 
     @Test
@@ -404,7 +404,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters)
                 .stream()
-                .forEach(ad -> assertEquals(testTypeV2, ad.getType()));
+                .forEach(ad -> assertEquals(ad.getType(), testTypeV2));
     }
 
     @Test(groups = {"error-flow-tests"}, expectedExceptions = {OAuthSystemException.class})

@@ -162,6 +162,7 @@ public class HybridOAuth2RevocationProcessor implements OAuth2RevocationProcesso
      * @return true if the revocation was successful, false otherwise.
      * @throws UserStoreException if an error occurs while interacting with the user store.
      */
+    @Override
     public boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException {
 
         // If token persistence is enabled, this processor should not be used.
@@ -316,7 +317,6 @@ public class HybridOAuth2RevocationProcessor implements OAuth2RevocationProcesso
 
         // If token persistence is enabled, delegate to the default processor.
         if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
-            defaultOAuth2RevocationProcessor.revokeTokens(appId, apiId, removedScopes, tenantDomain);
             return;
         }
 

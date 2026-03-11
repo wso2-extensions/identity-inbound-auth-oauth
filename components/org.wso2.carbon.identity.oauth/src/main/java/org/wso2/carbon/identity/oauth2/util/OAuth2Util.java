@@ -123,6 +123,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -434,6 +435,7 @@ public class OAuth2Util {
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
+    private static final String DROP_UNREQUESTED_OIDC_SCOPES = "OAuth.DropUnrequestedOIDCScopes";
 
     private OAuth2Util() {
 
@@ -5261,10 +5263,34 @@ public class OAuth2Util {
     public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+        return getAccessTokenDO(tokenResponse, true);
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @param checkIndirectRevocation   A boolean flag indicating whether to check for indirect revocation.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                           boolean checkIndirectRevocation)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getAccessTokenDO() != null) {
+            return Optional.ofNullable(tokenResponse.getAuthorizationContextToken().getAccessTokenDO());
+        }
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
                 AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
-                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                                false, checkIndirectRevocation);
                 return Optional.ofNullable(accessTokenDO);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -5825,8 +5851,9 @@ public class OAuth2Util {
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             String requestedScopes = StringUtils.join(requestedScopesArr, " ");
+            boolean shouldIncludeOIDCScopes = !shouldDropUnrequestedOIDCScopes();
             Set<Scope> registeredScopeSet = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                    .getRequestedScopesOnly(tenantId, true, requestedScopes);
+                    .getRequestedScopesOnly(tenantId, shouldIncludeOIDCScopes, requestedScopes);
             List<String> filteredScopes = new ArrayList<>();
             registeredScopeSet.forEach(scope -> filteredScopes.add(scope.getName()));
 
@@ -6910,5 +6937,48 @@ public class OAuth2Util {
             log.error("Error while retrieving the application information for the consumer key: " + consumerKey, e);
             return false;
         }
+    }
+
+    /**
+     * Get token provider.
+     *
+     * @return TokenProvider
+     */
+    public static TokenProvider getTokenProvider() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param serviceProviderProperties Service provider properties of the OAuth application.
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
+    }
+
+    /**
+     * Check whether unrequested OIDC scopes from the application should be dropped in the token response.
+     *
+     * @return true if unrequested OIDC scopes should be dropped, false otherwise.
+     */
+    public static boolean shouldDropUnrequestedOIDCScopes() {
+
+        String property = IdentityUtil.getProperty(DROP_UNREQUESTED_OIDC_SCOPES);
+        if (StringUtils.isBlank(property)) {
+            return true;
+        }
+        return Boolean.parseBoolean(property);
     }
 }

@@ -74,9 +74,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -90,6 +87,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_ID;
@@ -263,11 +263,11 @@ public class RefreshGrantHandlerTest {
             }
         } catch (IdentityOAuth2Exception e) {
             if (federatedAssociationManagerException != null) {
-                assertEquals(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(), e.getErrorCode());
+                assertEquals(e.getErrorCode(), ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode());
             } else if (accountLockServiceException != null) {
-                assertEquals(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(), e.getErrorCode());
+                assertEquals(e.getErrorCode(), ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode());
             } else if (isUserLocked) {
-                assertEquals(UserCoreConstants.ErrorCode.USER_IS_LOCKED, e.getErrorCode());
+                assertEquals(e.getErrorCode(), UserCoreConstants.ErrorCode.USER_IS_LOCKED);
             } else {
                 fail("Unexpected exception is thrown.");
             }
@@ -491,7 +491,7 @@ public class RefreshGrantHandlerTest {
 
             doNothing().when(authorizationDetailsService)
                     .replaceAccessTokenAuthorizationDetails(anyString(), any(), any());
-            assertEquals("token", oAuth2AccessTokenRespDTO.getAccessToken());
+            assertEquals(oAuth2AccessTokenRespDTO.getAccessToken(), "token");
 
         }
     }

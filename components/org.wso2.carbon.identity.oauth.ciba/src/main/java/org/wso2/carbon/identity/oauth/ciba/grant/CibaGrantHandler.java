@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -296,8 +295,7 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  CibaAuthCodeDO cibaAuthCodeDO) {
 
-        tokReqMsgCtx.setAuthorizedUser(OAuth2Util.getUserFromUserName(cibaAuthCodeDO.getAuthenticatedUser().
-                getUserName()));
+        tokReqMsgCtx.setAuthorizedUser(cibaAuthCodeDO.getAuthenticatedUser());
         tokReqMsgCtx.setScope(cibaAuthCodeDO.getScopes());
     }
 
