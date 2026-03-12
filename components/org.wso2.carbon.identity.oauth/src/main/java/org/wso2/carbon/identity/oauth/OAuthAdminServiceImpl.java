@@ -590,6 +590,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setCibaNotificationChannels(application.getCibaNotificationChannels());
                         app.setCibaAuthReqExpiryTime(application.getCibaAuthReqExpiryTime());
+                        app.setCibaSkipUserValidation(application.isCibaSkipUserValidation());
                         if (isCibaGrantTypeEnabled(app) && app.getCibaAuthReqExpiryTime() <= 0) {
                             throw handleClientError(INVALID_REQUEST,
                                     "CIBA authentication request expiry time must be greater than 0");
@@ -1109,6 +1110,7 @@ public class OAuthAdminServiceImpl {
             }
             oAuthAppDO.setCibaNotificationChannels(consumerAppDTO.getCibaNotificationChannels());
             oAuthAppDO.setCibaAuthReqExpiryTime(consumerAppDTO.getCibaAuthReqExpiryTime());
+            oAuthAppDO.setCibaSkipUserValidation(consumerAppDTO.isCibaSkipUserValidation());
             if (isCibaGrantTypeEnabled(oAuthAppDO) && oAuthAppDO.getCibaAuthReqExpiryTime() <= 0) {
                 throw handleClientError(INVALID_REQUEST,
                         "CIBA authentication request expiry time must be greater than 0");

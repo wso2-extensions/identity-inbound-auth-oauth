@@ -106,6 +106,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
     }
 
+    private boolean cibaSkipUserValidation;
+
+    public boolean isCibaSkipUserValidation() {
+        return cibaSkipUserValidation;
+    }
+
+    public void setCibaSkipUserValidation(boolean cibaSkipUserValidation) {
+        this.cibaSkipUserValidation = cibaSkipUserValidation;
+    }
+
     private IssuerDetails issuerDetails;
 
     // Fragment app flag. This will be used to identify whether the app is a fragment app or not.

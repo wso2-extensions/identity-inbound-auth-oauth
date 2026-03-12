@@ -121,6 +121,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     // CIBA related properties.
     private String cibaNotificationChannels;
     private long cibaAuthReqExpiryTime;
+    private boolean cibaSkipUserValidation;
     private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
@@ -609,6 +610,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
 
         this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    public boolean isCibaSkipUserValidation() {
+
+        return cibaSkipUserValidation;
+    }
+
+    public void setCibaSkipUserValidation(boolean cibaSkipUserValidation) {
+
+        this.cibaSkipUserValidation = cibaSkipUserValidation;
     }
 
     public IssuerDetails getIssuerDetails() {

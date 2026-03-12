@@ -21,17 +21,24 @@ package org.wso2.carbon.identity.oauth.ciba.grant;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -64,11 +71,11 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         OAuth2AccessTokenRespDTO responseDTO = super.issue(tokReqMsgCtx);
         String authReqId = getAuthReqId(tokReqMsgCtx);
-        CibaAuthCodeDO cibaAuthCodeDO = retrieveCibaAuthCode(authReqId);
 
         try {
+            String authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authReqId);
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                    .updateStatus(cibaAuthCodeDO.getCibaAuthCodeKey(), AuthReqStatus.TOKEN_ISSUED);
+                    .updateStatus(authCodeKey, AuthReqStatus.TOKEN_ISSUED);
             if (log.isDebugEnabled()) {
                 log.debug("Successfully updated the status of authentication request made by client:" +
                         tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
@@ -331,11 +338,32 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 // Retrieve authenticated user.
                 AuthenticatedUser authenticatedUser = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                         .getAuthenticatedUser(cibaAuthCodeDO.getCibaAuthCodeKey());
+
+                // Resolve subject identifier and set it on the authenticated user.
+                String consumerKey = cibaAuthCodeDO.getConsumerKey();
+                String tenantDomain = authenticatedUser.getTenantDomain();
+                int tenantId = OAuth2Util.getTenantId(tenantDomain);
+                int idpId = cibaAuthCodeDO.getIdpId();
+                String userName = authenticatedUser.getUserName();
+                String userDomain = OAuth2Util.getUserStoreDomain(authenticatedUser);
+
+                String subjectIdentifier = UserSessionStore.getInstance()
+                        .getUserId(userName, tenantId, userDomain, idpId);
+
+                ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                        .getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
+                authenticatedUser.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
                 cibaAuthCodeDO.setAuthenticatedUser(authenticatedUser);
             }
             return cibaAuthCodeDO;
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception(INVALID_AUTH_REQ_ID, e);
+        } catch (UserSessionException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving subject identifier for " +
+                    "auth_req_id: " + authReqId, e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for " +
+                    "auth_req_id: " + authReqId, e);
         }
     }
 }
