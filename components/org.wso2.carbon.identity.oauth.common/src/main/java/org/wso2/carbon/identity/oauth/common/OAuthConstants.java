@@ -865,4 +865,30 @@ public final class OAuthConstants {
         public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
     }
 
+    /**
+     * Define constants for non-persistence access token related operations.
+     */
+    public static class NonPersistenceConstants {
+
+        // JWT Claim constants
+        public static final String ENTITY_ID = "entity_id";
+        public static final String ENTITY_TYPE = "entityType";
+        public static final String ENTITY_ID_TYPE_CLIENT_ID = "CLIENT_ID";
+        public static final String ENTITY_ID_TYPE_USER_ID = "USER_ID";
+        public static final String ENTITY_ID_TYPE_USER_NAME = "USER_NAME";
+        public static final String APP_DOMAIN = "app_td";
+        public static final String USER_TENANT_DOMAIN = "user_td";
+        public static final String REFRESH_TOKEN_PREFIX = "npr_";
+
+        // Event related constants
+        public static final String TENANT_ID = "tenantId";
+        public static final String USERNAME = "username";
+        public static final String REVOCATION_TIME = "revocationTime";
+        public static final String TENANT_DOMAIN = "tenantDomain";
+        public static final String CLIENT_ID = "client_id";
+        public static final String SCOPE = "scope";
+        public static final String GRANT_TYPE = "grantType";
+        public static final String AUTHORIZATION_PARTY = "azp";
+    }
+
 }

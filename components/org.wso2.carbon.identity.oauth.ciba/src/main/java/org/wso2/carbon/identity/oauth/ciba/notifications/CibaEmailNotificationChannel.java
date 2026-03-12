@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.ciba.common.CibaUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -82,12 +83,12 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             String email = resolvedUser.getEmail();
             boolean hasEmail = StringUtils.isNotBlank(email);
             if (log.isDebugEnabled()) {
-                log.debug("EmailCibaNotificationChannel.canHandle: User " + resolvedUser.getUsername() +
+                log.debug("EmailCibaNotificationChannel.canHandle: User " + resolvedUser.getUserId() +
                         " has email: " + hasEmail);
             }
             return hasEmail;
         } catch (Exception e) {
-            log.warn("Error checking email for user: " + resolvedUser.getUsername(), e);
+            log.warn("Error checking email for user: " + resolvedUser.getUserId(), e);
             return false;
         }
     }
@@ -110,12 +111,15 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             if (StringUtils.isBlank(email)) {
                 throw new CibaCoreException("User does not have an email address configured.");
             }
-
             Map<String, Object> properties = new HashMap<>();
             properties.put(SEND_TO, email);
             properties.put(NOTIFICATION_CHANNEL, NotificationChannels.EMAIL_CHANNEL.getChannelType());
             properties.put(TEMPLATE_TYPE, CIBA_AUTH_EMAIL_TEMPLATE);
-            properties.put(USER_NAME, resolvedUser.getUsername());
+            String username = resolvedUser.getUsername();
+            if (username.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+                username = username.split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
+            }
+            properties.put(USER_NAME, username);
             properties.put(AUTH_URL, authUrl);
             properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN,
                     cibaNotificationContext.getTenantDomain());

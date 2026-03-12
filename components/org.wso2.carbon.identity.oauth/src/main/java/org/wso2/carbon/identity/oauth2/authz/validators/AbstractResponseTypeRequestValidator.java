@@ -106,7 +106,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
-            validateRequestTenantDomain(appTenantDomain);
+            validateRequestTenantDomain(appTenantDomain, clientId);
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(OAUTH_INBOUND_SERVICE,

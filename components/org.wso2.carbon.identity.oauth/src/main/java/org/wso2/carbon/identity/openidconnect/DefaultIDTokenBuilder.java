@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -193,7 +194,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 if (OAuthConstants.GrantTypes.REFRESH_TOKEN.equalsIgnoreCase(
                         tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
                     AuthorizationGrantCacheEntry authorizationGrantCacheEntryFromToken =
-                            getAuthorizationGrantCacheEntryFromToken(tokenRespDTO.getAccessToken());
+                            getAuthorizationGrantCacheEntryFromToken(tokenRespDTO.getAccessToken(),
+                                    tokenRespDTO.getTokenId());
                     if (authorizationGrantCacheEntryFromToken != null) {
                         if (isAuthTimeRequired(authorizationGrantCacheEntryFromToken)) {
                             authTime = authorizationGrantCacheEntryFromToken.getAuthTime();
@@ -202,7 +204,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 }
                 if (!OAuthConstants.GrantTypes.PASSWORD.equalsIgnoreCase(
                         tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
-                    idpSessionKey = getIdpSessionKey(accessToken);
+                    idpSessionKey = getIdpSessionKey(accessToken, tokenRespDTO.getTokenId());
                     if (idpSessionKey == null && tokenReqMsgCtxt.getProperty(SESSION_IDENTIFIER) != null) {
                         idpSessionKey = tokenReqMsgCtxt.getProperty(SESSION_IDENTIFIER).toString();
                     }
@@ -259,7 +261,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             // Execute the Pre-Issue ID Token Action if configured. The changes done by the action are reflected in the
             // IDTokenDTO.
             if (checkExecutePreIssueIdTokensActions(tokenReqMsgCtxt)) {
-                ActionExecutionStatus<?> executionStatus = executePreIssueIdTokenActions(tokenReqMsgCtxt, idTokenDTO);
+                ActionExecutionStatus<?> executionStatus = executePreIssueIdTokenActions(tokenReqMsgCtxt, idTokenDTO,
+                        oAuthAppDO);
                 if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
                         executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
                     handleFailureOrError(executionStatus);
@@ -505,17 +508,17 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is
-         registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
+         If accessingOrgId is not empty, then the request may come for an application which is
+         registered directly in the organization of the accessingOrgId. In this case, the tenant domain
          that needs to be signing the token should be extracted from the application OIDC configurations. If that
          is not available then the root organization will be selected as the signing tenant domain.
         */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
             return OAuth2Util.getTenantDomainByApplicationTokenIssuer(
-                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), applicationResidentOrgId);
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), accessingOrgId);
         } else if (isJWTSignedWithSPKey) {
             return (String) tokReqMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         } else {
@@ -643,10 +646,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * @param accessToken   Access token.
      * @return              AuthorizationGrantCacheEntry containing user attributes and nonce value.
      */
-    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken) {
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken, String tokenId) {
 
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-        return AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey, tokenId);
     }
 
     /**
@@ -965,13 +968,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * will be involved in the said flow.
      *
      * @param accessToken   Access Token.
+     * @param tokenId       Token ID.
      * @return              IDP Session Key.
      */
-    private String getIdpSessionKey(String accessToken) {
+    private String getIdpSessionKey(String accessToken, String tokenId) {
 
         String idpSessionKey = null;
 
-        AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromToken(accessToken);
+        AuthorizationGrantCacheEntry authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromToken(accessToken,
+                tokenId);
         if (authzGrantCacheEntry != null) {
             idpSessionKey = authzGrantCacheEntry.getSessionContextIdentifier();
         }
@@ -1093,7 +1098,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception if an error occurs
      */
     private ActionExecutionStatus<?> executePreIssueIdTokenActions(OAuthTokenReqMessageContext tokenReqMessageContext,
-                                                                   IDTokenDTO idTokenDTO)
+                                                                   IDTokenDTO idTokenDTO, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
         ActionExecutionStatus<?> executionStatus = null;
@@ -1104,9 +1109,17 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         try {
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            // Selecting the action execution tenant domain based on the application's issuer organization.
+            if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getApplicationResidentOrganizationId())) {
+                if (StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
+                    tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(oAuthAppDO.getIssuerOrg());
+                }
+            }
             executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                    .execute(ActionType.PRE_ISSUE_ID_TOKEN, flowContext,
-                            IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                    .execute(ActionType.PRE_ISSUE_ID_TOKEN, flowContext, tenantDomain);
 
             if (log.isDebugEnabled()) {
                 log.debug(String.format(
@@ -1120,6 +1133,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     + tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
             throw new IdentityOAuth2Exception(errorMsg, e);
 
+        } catch (OrganizationManagementException e) {
+            String errorMsg = "Error occurred while resolving tenant domain from organization id while executing " +
+                    "pre issue ID token actions for client_id: "
+                    + tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+            throw new IdentityOAuth2Exception(errorMsg, e);
         }
         return executionStatus;
     }

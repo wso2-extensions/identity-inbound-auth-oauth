@@ -72,11 +72,6 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             throw new CibaCoreException("Error fetching app information for client: " + clientID, e);
         }
 
-        if (appDO.isBypassClientCredentials()) {
-            throw new CibaClientException("CIBA cannot be used with public clients. Client: " + clientID + " " +
-                    "is configured as a public client.");
-        }
-
         // Generate and persist the auth code
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest, appDO);
 
@@ -150,7 +145,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
      */
     private String sendUserNotification(CibaUserResolver.ResolvedUser resolvedUser, CibaAuthCodeDO cibaAuthCodeDO,
                                       String bindingMessage, OAuthAppDO oAuthAppDO, String notificationChannel,
-                                      String authUrl) {
+                                      String authUrl) throws CibaClientException {
 
         try {
             CibaUserNotificationHandler notificationHandler = new CibaUserNotificationHandler();
@@ -169,6 +164,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
                 log.debug("User notification sent for CIBA auth_req_id: " + cibaAuthCodeDO.getAuthReqId());
             }
             return usedChannel;
+        } catch (CibaClientException e) {
+            throw e; // Passing to the top layer to return as ciba client exception.
         } catch (CibaCoreException e) {
             log.error("Failed to send CIBA user notification: " + e.getMessage(), e);
         } catch (Exception e) {

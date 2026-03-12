@@ -89,7 +89,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -111,6 +110,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth2.TestConstants.CARBON_TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
 import static org.wso2.carbon.identity.oauth2.TestConstants.MANAGED_ORG_CLAIM_URI;
@@ -355,7 +355,7 @@ public class OAuthUtilTest {
         OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
         when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
         AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
         Set<AccessTokenDO> accessTokens = new HashSet<>();
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAccessToken(accessToken);
@@ -437,7 +437,7 @@ public class OAuthUtilTest {
         OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
         when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
         AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
         Set<AccessTokenDO> accessTokens = new HashSet<>();
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAccessToken(accessToken);

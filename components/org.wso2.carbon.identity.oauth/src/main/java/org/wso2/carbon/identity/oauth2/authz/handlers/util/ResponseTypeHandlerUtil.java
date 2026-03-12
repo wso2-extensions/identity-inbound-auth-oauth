@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
@@ -73,6 +74,7 @@ import java.util.concurrent.TimeUnit;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.ISSUE_AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.SKIP_REFRESH_TOKEN_PERSISTENT;
 
 /**
  * ResponseTypeHandlerUtil contains all the common methods in tokenResponseTypeHandler and IDTokenResponseTypeHandler.
@@ -595,7 +597,7 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         AuthenticatedUser authorizedUser = authorizationReqDTO.getUser();
 
-        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        AccessTokenDO existingToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                 .getLatestAccessToken(consumerKey, authorizedUser, getUserStoreDomain(authorizedUser), scope, false);
         if (existingToken != null) {
             if (log.isDebugEnabled()) {
@@ -661,12 +663,17 @@ public class ResponseTypeHandlerUtil {
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
 
         AccessTokenDO newTokenBean = new AccessTokenDO();
+        AccessTokenDO nonPersistentRefreshTokenBean = getNonPersistentRefreshTokenBean(oauthAuthzMsgCtx,
+                newTokenBean);
         newTokenBean.setTokenState(TOKEN_STATE_ACTIVE);
         newTokenBean.setConsumerKey(authorizationReqDTO.getConsumerKey());
         newTokenBean.setAuthzUser(authorizationReqDTO.getUser());
         newTokenBean.setTenantID(OAuth2Util.getTenantId(authorizationReqDTO.getTenantDomain()));
         newTokenBean.setScope(oauthAuthzMsgCtx.getApprovedScope());
-        newTokenBean.setTokenId(UUID.randomUUID().toString());
+        String tokenId = nonPersistentRefreshTokenBean != null ? nonPersistentRefreshTokenBean.getTokenId() :
+                UUID.randomUUID().toString();
+        newTokenBean.setTokenId(tokenId);
+        oauthAuthzMsgCtx.setTokenId(tokenId);
         newTokenBean.setTokenType(OAuthConstants.UserType.APPLICATION_USER);
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
@@ -685,9 +692,12 @@ public class ResponseTypeHandlerUtil {
             }
             oauthAuthzMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
+        if (OAuth2Util.isNonPersistentTokenEnabled(authorizationReqDTO.getConsumerKey())) {
+            newTokenBean.setNotPersisted(true);
+        }
         newTokenBean.setAccessToken(getNewAccessToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         setRefreshTokenDetails(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean, newTokenBean, oauthIssuerImpl,
-                timestamp);
+                timestamp, nonPersistentRefreshTokenBean);
         return newTokenBean;
     }
 
@@ -723,17 +733,105 @@ public class ResponseTypeHandlerUtil {
 
     private static void setRefreshTokenDetails(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, OAuthAppDO oAuthAppBean,
                                                AccessTokenDO existingTokenBean, AccessTokenDO newTokenBean,
-                                               OauthTokenIssuer oauthIssuerImpl, Timestamp timestamp) throws
+                                               OauthTokenIssuer oauthIssuerImpl, Timestamp timestamp,
+                                               AccessTokenDO nonPersistentRefreshTokenBean) throws
             IdentityOAuth2Exception {
 
+        String clientId = oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey();
         if (isRefreshTokenValid(existingTokenBean)) {
             setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean);
+            if (newTokenBean.isNotPersisted()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("NPR: Using existing refresh token from cache for client ID: " + clientId +
+                            ". No new refresh token will be issued.");
+                }
+                oauthAuthzMsgCtx.addProperty(SKIP_REFRESH_TOKEN_PERSISTENT, true);
+            }
+        } else if (newTokenBean.isNotPersisted()) {
+            if (nonPersistentRefreshTokenBean == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("NPR: No valid refresh token found for client ID: " + clientId +
+                            ". Issuing a new refresh token.");
+                }
+                // no valid refresh token found in existing Token or latest refresh token
+                issueNewRefreshToken(oauthAuthzMsgCtx, oAuthAppBean, newTokenBean, oauthIssuerImpl, timestamp);
+            } else {
+                setRefreshTokenDetailsFromExistingToken(nonPersistentRefreshTokenBean, newTokenBean);
+                oauthAuthzMsgCtx.addProperty(SKIP_REFRESH_TOKEN_PERSISTENT, true);
+            }
         } else {
-            newTokenBean.setRefreshTokenIssuedTime(timestamp);
-            newTokenBean.setRefreshTokenValidityPeriodInMillis(getConfiguredRefreshTokenValidityPeriodInMillis
-                    (oAuthAppBean, oauthAuthzMsgCtx));
-            newTokenBean.setRefreshToken(getNewRefreshToken(oauthAuthzMsgCtx, oauthIssuerImpl));
+            issueNewRefreshToken(oauthAuthzMsgCtx, oAuthAppBean, newTokenBean, oauthIssuerImpl, timestamp);
         }
+    }
+
+    private static void issueNewRefreshToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                             OAuthAppDO oAuthAppBean,
+                                             AccessTokenDO newTokenBean,
+                                             OauthTokenIssuer oauthIssuerImpl,
+                                             Timestamp timestamp) throws IdentityOAuth2Exception {
+
+        newTokenBean.setRefreshTokenIssuedTime(timestamp);
+        newTokenBean.setRefreshTokenValidityPeriodInMillis(
+                getConfiguredRefreshTokenValidityPeriodInMillis(oAuthAppBean, oauthAuthzMsgCtx));
+        newTokenBean.setRefreshToken(getNewRefreshToken(oauthAuthzMsgCtx, oauthIssuerImpl));
+    }
+
+    private static AccessTokenDO getLatestRefreshToken(String clientId, AuthenticatedUser authorizedUser,
+                                                       String[] scope)
+            throws IdentityOAuth2Exception {
+
+        return new RefreshTokenDAOImpl().getActiveRefreshToken(clientId, authorizedUser,
+                authorizedUser.getUserStoreDomain(), OAuth2Util.buildScopeString(scope));
+    }
+
+    private static AccessTokenDO getNonPersistentRefreshTokenBean(OAuthAuthzReqMessageContext oauthAuthzMsgCtx,
+                                                                  AccessTokenDO newTokenBean)
+            throws IdentityOAuth2Exception {
+
+        OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+
+        // Check if non-persistent token feature is enabled for this client
+        if (!OAuth2Util.isNonPersistentTokenEnabled(authorizationReqDTO.getConsumerKey())) {
+            return null;
+        }
+
+        // Mark new token as non-persistent
+        newTokenBean.setNotPersisted(true);
+
+        // Check if refresh tokens are allowed for this grant type otherwise skip db call and return null.
+        if (!OAuthServerConfiguration.getInstance().getValueForIsRefreshTokenAllowed(OAuth2Util.getGrantType(
+                authorizationReqDTO.getResponseType()))) {
+            return null;
+        }
+
+        // Retrieve the latest refresh token from DB/cache
+        AccessTokenDO nonPersistentRefreshTokenBean = getLatestRefreshToken(
+                authorizationReqDTO.getConsumerKey(),
+                authorizationReqDTO.getUser(),
+                oauthAuthzMsgCtx.getApprovedScope());
+
+        if (nonPersistentRefreshTokenBean == null) {
+            return null; // No existing token found
+        }
+
+        // Set token state to ACTIVE
+        nonPersistentRefreshTokenBean.setTokenState(TOKEN_STATE_ACTIVE);
+
+        // Validate the existing refresh token
+        if (isRefreshTokenValid(nonPersistentRefreshTokenBean)) {
+            if (log.isDebugEnabled()) {
+                log.debug("NPR: Using existing valid refresh token for client ID: " +
+                        authorizationReqDTO.getConsumerKey());
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("NPR: Existing refresh token is not valid for client ID: " +
+                        authorizationReqDTO.getConsumerKey() + ". A new refresh token will be issued.");
+            }
+            nonPersistentRefreshTokenBean = null; // Invalidate existing token
+        }
+
+        return nonPersistentRefreshTokenBean;
     }
 
     private static void setRefreshTokenDetailsFromExistingToken(AccessTokenDO existingTokenBean, AccessTokenDO
@@ -767,6 +865,12 @@ public class ResponseTypeHandlerUtil {
     private static void persistAccessTokenInDB(OAuthAuthzReqMessageContext oauthAuthzMsgCtx, AccessTokenDO
             existingTokenBean, AccessTokenDO newTokenBean) throws IdentityOAuth2Exception {
 
+        if (oauthAuthzMsgCtx.getProperty(SKIP_REFRESH_TOKEN_PERSISTENT) != null &&
+                (Boolean) oauthAuthzMsgCtx.getProperty(SKIP_REFRESH_TOKEN_PERSISTENT)) {
+            // If the skipRefreshTokenPersistent property is set, we do not store the refresh token.
+            return;
+        }
+
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         storeAccessToken(authorizationReqDTO, getUserStoreDomain(authorizationReqDTO.getUser()), existingTokenBean,
                 newTokenBean);
@@ -784,9 +888,9 @@ public class ResponseTypeHandlerUtil {
             IdentityOAuth2Exception {
 
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().insertAccessToken(newTokenBean
-                    .getAccessToken(), authorizationReqDTO.getConsumerKey(), newTokenBean, existingTokenBean,
-                    userStoreDomain);
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(authorizationReqDTO.getConsumerKey())
+                    .insertAccessToken(newTokenBean.getAccessToken(), authorizationReqDTO.getConsumerKey(),
+                            newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
             String errorMsg;
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

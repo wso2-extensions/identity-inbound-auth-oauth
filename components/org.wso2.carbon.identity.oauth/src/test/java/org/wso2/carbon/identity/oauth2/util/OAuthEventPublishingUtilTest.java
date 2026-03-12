@@ -50,14 +50,14 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
 
 @Listeners(MockitoTestNGListener.class)
 @WithCarbonHome
@@ -174,39 +174,39 @@ public class OAuthEventPublishingUtilTest {
             verify(identityEventService).handleEvent(eventCaptor.capture());
 
             Event event = eventCaptor.getValue();
-            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
+            assertEquals(event.getEventName(), IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2);
 
             Map<String, Object> properties = event.getEventProperties();
 
             // Test existing properties
-            assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));
-            assertEquals("john", properties.get(IdentityEventConstants.EventProperty.USER_NAME));
-            assertEquals("PRIMARY", properties.get(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN));
-            assertEquals("Opaque", properties.get(IdentityEventConstants.EventProperty.TOKEN_TYPE));
-            assertEquals("TestApp", properties.get(IdentityEventConstants.EventProperty.APPLICATION_NAME));
-            assertEquals("carbon.super", properties.get(IdentityEventConstants.EventProperty.TENANT_DOMAIN));
-            assertEquals(-1234, properties.get(IdentityEventConstants.EventProperty.TENANT_ID));
-            assertEquals("authorization_code", properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE));
-            assertEquals("test-client-id", properties.get(OAuthConstants.EventProperty.CLIENT_ID));
-            assertEquals(123, properties.get(IdentityEventConstants.EventProperty.APPLICATION_ID));
-            assertEquals("test-client-id", properties.get(IdentityEventConstants.EventProperty.CONSUMER_KEY));
-            assertEquals("jti-123", properties.get(IdentityEventConstants.EventProperty.JTI));
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_ID), "user-id");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_NAME), "john");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN), "PRIMARY");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.TOKEN_TYPE), "Opaque");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.APPLICATION_NAME), "TestApp");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.TENANT_DOMAIN), "carbon.super");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.TENANT_ID), -1234);
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE), "authorization_code");
+            assertEquals(properties.get(OAuthConstants.EventProperty.CLIENT_ID), "test-client-id");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.APPLICATION_ID), 123);
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.CONSUMER_KEY), "test-client-id");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.JTI), "jti-123");
 
             // Test newly added properties
-            assertEquals(true, properties.get(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER));
-            assertEquals("resident-org-id",
-                    properties.get(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID));
-            assertEquals("issuer-org-id",
-                    properties.get(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID));
-            assertEquals("accessing-org-id",
-                    properties.get(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID));
-            assertEquals("APPLICATION_USER", properties.get(OAuthConstants.EventProperty.USER_TYPE));
-            assertEquals("token-id-123", properties.get(OAuthConstants.EventProperty.TOKEN_ID));
-            assertEquals(1, properties.get(OAuthConstants.EventProperty.APP_RESIDENT_TENANT_ID));
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER), true);
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID),
+                    "resident-org-id");
+            assertEquals(properties.get(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID),
+                    "issuer-org-id");
+            assertEquals(properties.get(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID),
+                    "accessing-org-id");
+            assertEquals(properties.get(OAuthConstants.EventProperty.USER_TYPE), "APPLICATION_USER");
+            assertEquals(properties.get(OAuthConstants.EventProperty.TOKEN_ID), "token-id-123");
+            assertEquals(properties.get(OAuthConstants.EventProperty.APP_RESIDENT_TENANT_ID), 1);
             assertFalse((Boolean) properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
-            assertEquals("carbon.super",
-                    properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
-            assertEquals("TestApp", properties.get(OAuthConstants.EventProperty.SERVICE_PROVIDER));
+            assertEquals(properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN),
+                    "carbon.super");
+            assertEquals(properties.get(OAuthConstants.EventProperty.SERVICE_PROVIDER), "TestApp");
         }
     }
 
@@ -267,17 +267,17 @@ public class OAuthEventPublishingUtilTest {
             verify(identityEventService).handleEvent(eventCaptor.capture());
 
             Event event = eventCaptor.getValue();
-            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
+            assertEquals(event.getEventName(), IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2);
 
             Map<String, Object> properties = event.getEventProperties();
 
             // Verify EXISTING_TOKEN_USED is true
-            assertEquals(true, properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
+            assertEquals(properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED), true);
 
             // Verify other properties are still correctly set
-            assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));
-            assertEquals("authorization_code", properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE));
-            assertEquals("test-client-id", properties.get(OAuthConstants.EventProperty.CLIENT_ID));
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_ID), "user-id");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE), "authorization_code");
+            assertEquals(properties.get(OAuthConstants.EventProperty.CLIENT_ID), "test-client-id");
         }
     }
 
@@ -337,7 +337,7 @@ public class OAuthEventPublishingUtilTest {
             verify(identityEventService).handleEvent(eventCaptor.capture());
 
             Event event = eventCaptor.getValue();
-            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
+            assertEquals(event.getEventName(), IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2);
 
             Map<String, Object> properties = event.getEventProperties();
 
@@ -345,13 +345,13 @@ public class OAuthEventPublishingUtilTest {
             assertNull(properties.get(IdentityEventConstants.EventProperty.USER_NAME));
 
             // Verify other user-related properties are still set
-            assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));
-            assertEquals("PRIMARY", properties.get(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN));
-            assertEquals(true, properties.get(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER));
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_ID), "user-id");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN), "PRIMARY");
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER), true);
 
             // Verify non-user properties are correctly set
-            assertEquals("authorization_code", properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE));
-            assertEquals("test-client-id", properties.get(OAuthConstants.EventProperty.CLIENT_ID));
+            assertEquals(properties.get(IdentityEventConstants.EventProperty.GRANT_TYPE), "authorization_code");
+            assertEquals(properties.get(OAuthConstants.EventProperty.CLIENT_ID), "test-client-id");
             assertFalse((Boolean) properties.get(OAuthConstants.EventProperty.EXISTING_TOKEN_USED));
         }
     }
@@ -417,10 +417,10 @@ public class OAuthEventPublishingUtilTest {
             Map<String, Object> properties = event.getEventProperties();
 
             // The root org tenant domain must be resolved via getRootOrgTenantDomainBySubOrgTenantDomain
-            assertEquals("root.example.com",
-                    properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
-            assertEquals("sub-org-id",
-                    properties.get(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID));
+            assertEquals(properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN),
+                    "root.example.com");
+            assertEquals(properties.get(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID),
+                    "sub-org-id");
         }
     }
 
@@ -473,7 +473,7 @@ public class OAuthEventPublishingUtilTest {
             Map<String, Object> properties = event.getEventProperties();
 
             // When tenant domain is null the inner if block is skipped; rootOrgTenantDomain stays empty
-            assertEquals("", properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
+            assertEquals(properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN), "");
 
             // getRootOrgTenantDomainBySubOrgTenantDomain must never be called
             mockedOrgManagementUtil.verify(
@@ -544,7 +544,7 @@ public class OAuthEventPublishingUtilTest {
             Map<String, Object> properties = event.getEventProperties();
 
             // rootOrgTenantDomain stays empty because the exception was caught
-            assertEquals("", properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN));
+            assertEquals(properties.get(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN), "");
         }
     }
 }

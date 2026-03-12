@@ -924,7 +924,7 @@ public final class OAuthUtil {
                                 + " authorized by user: " + username + "/" + userStoreDomain);
                     }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
-                    accessTokenDOs.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    accessTokenDOs.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                             .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1197,7 +1197,7 @@ public final class OAuthUtil {
             // Revoking token from database.
             for (AccessTokenDO accessToken : accessTokens) {
                 OAuthUtil.invokePreRevocationBySystemListeners(accessToken, Collections.emptyMap());
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(accessToken.getConsumerKey())
                         .revokeAccessTokens(new String[]{accessToken.getAccessToken()}, OAuth2Util.isHashEnabled());
                 OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
@@ -1216,7 +1216,7 @@ public final class OAuthUtil {
             try {
                 // Retrieve latest access token for particular client, user and scope combination
                 // if its ACTIVE or EXPIRED.
-                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                         .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
                                 scope, true);
             } catch (IdentityOAuth2Exception e) {

@@ -178,20 +178,6 @@ public class CibaAuthServiceImplTest {
         cibaAuthService.generateAuthCodeResponse(request);
     }
 
-    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp = ".*public client.*")
-    public void testGenerateAuthCodeResponse_PublicClient() throws Exception {
-
-        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
-        request.setIssuer("public-client");
-
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setBypassClientCredentials(true);
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("public-client", "carbon.super"))
-                .thenReturn(appDO);
-
-        cibaAuthService.generateAuthCodeResponse(request);
-    }
-
     @Test(expectedExceptions = CibaCoreException.class)
     public void testGenerateAuthCodeResponse_UserResolutionFail() throws Exception {
 
@@ -244,5 +230,35 @@ public class CibaAuthServiceImplTest {
         Assert.assertNotNull(response);
         // Persist should still happen.
         verify(cibaAuthMgtDAO).persistCibaAuthCode(any(CibaAuthCodeDO.class));
+    }
+
+    @Test(expectedExceptions = CibaClientException.class,
+            expectedExceptionsMessageRegExp = ".*No notification channels configured.*")
+    public void testGenerateAuthCodeResponse_NoNotificationChannelsConfigured() throws Exception {
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
+        request.setIssuer("test-client");
+        request.setUserHint("test-user-hint");
+
+        // App with no notification channels configured.
+        OAuthAppDO appDO = new OAuthAppDO();
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("test-client", "carbon.super"))
+                .thenReturn(appDO);
+
+        CibaUserResolver.ResolvedUser resolvedUser = new CibaUserResolver.ResolvedUser();
+        resolvedUser.setTenantDomain("carbon.super");
+        when(cibaUserResolver.resolveUser("test-user-hint", "carbon.super")).thenReturn(resolvedUser);
+
+        // Mock URL builder.
+        ServiceURLBuilder mockBuilder = mock(ServiceURLBuilder.class);
+        serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockBuilder);
+        when(mockBuilder.addPath(anyString())).thenReturn(mockBuilder);
+        when(mockBuilder.addParameter(anyString(), anyString())).thenReturn(mockBuilder);
+        ServiceURL mockServiceURL = mock(ServiceURL.class);
+        when(mockBuilder.build()).thenReturn(mockServiceURL);
+        when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
+
+        // Should throw CibaClientException since no channels are configured for the app.
+        cibaAuthService.generateAuthCodeResponse(request);
     }
 }

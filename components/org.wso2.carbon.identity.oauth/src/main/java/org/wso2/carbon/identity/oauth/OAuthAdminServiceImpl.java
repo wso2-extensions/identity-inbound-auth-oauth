@@ -83,6 +83,7 @@ import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
 import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -120,6 +121,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
@@ -1557,9 +1559,13 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-            handleInternalTokenRevocation(consumerKey, properties);
+            try {
+                handleNonPersistentTokenRevocation(consumerKey);
+                handleInternalTokenRevocation(consumerKey, properties);
+            } finally {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            }
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -1639,6 +1645,7 @@ public class OAuthAdminServiceImpl {
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
+        handleNonPersistentTokenRevocation(consumerKey);
         // This API is invoked when regenerating client secret and when activating the app.
         Optional<String> initiatorId = getInitiatorId();
         if (initiatorId.isPresent()) {
@@ -1665,7 +1672,7 @@ public class OAuthAdminServiceImpl {
         int countToken = 0;
         try {
             Set<AccessTokenDO> activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
             String[] accessTokens = new String[activeDetailedTokens.size()];
 
             for (AccessTokenDO detailToken : activeDetailedTokens) {
@@ -1731,11 +1738,13 @@ public class OAuthAdminServiceImpl {
         Set<AccessTokenDO> activeDetailedTokens;
         try {
             activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }
+        handleNonPersistentTokenRevocation(consumerKey);
+        handleInternalTokenRevocation(consumerKey, properties);
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -1776,7 +1785,6 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: "
                     + consumerKey);
         }
-        handleInternalTokenRevocation(consumerKey, properties);
         if (enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
@@ -1854,7 +1862,7 @@ public class OAuthAdminServiceImpl {
             Set<AccessTokenDO> accessTokenDOs;
             try {
                 accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getAccessTokens(
+                        .getAccessTokenDAOImpl(clientId).getAccessTokens(
                                 clientId, loggedInUser, userStoreDomain, true);
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1880,12 +1888,12 @@ public class OAuthAdminServiceImpl {
                         }
                         if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, tokenBindingReference, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, tokenBindingReference, true);
                         } else {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, true);
                         }
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
@@ -1963,7 +1971,7 @@ public class OAuthAdminServiceImpl {
                             // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this
                             // user
                             accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                                    .getAccessTokenDAO().getAccessTokens(
+                                    .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey()).getAccessTokens(
                                             appDTO.getOauthConsumerKey(), user, userStoreDomain, true);
                         } catch (IdentityOAuth2Exception e) {
                             String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1995,7 +2003,8 @@ public class OAuthAdminServiceImpl {
                             AccessTokenDO scopedToken;
                             try {
                                 if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -2008,7 +2017,8 @@ public class OAuthAdminServiceImpl {
                                      Retrieve latest access token for particular client, user and scope combination if
                                      its ACTIVE or EXPIRED.
                                     */
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -2027,7 +2037,8 @@ public class OAuthAdminServiceImpl {
                             if (scopedToken != null) {
                                 //Revoking token from database
                                 try {
-                                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .revokeAccessTokens(new String[]{scopedToken
                                                     .getAccessToken()});
                                 } catch (IdentityOAuth2Exception e) {
@@ -2108,6 +2119,7 @@ public class OAuthAdminServiceImpl {
             revokeAccessTokens(accessTokens, consumerKey, tenantDomain);
             revokeOAuthConsentsForApplication(applicationName, tenantDomain);
         }
+        handleNonPersistentTokenRevocation(consumerKey);
         AccessTokenEventUtil.publishTokenRevokeEvent(application.getApplicationResourceId(), applicationName,
                 consumerKey, tenantDomain);
         triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
@@ -2283,7 +2295,8 @@ public class OAuthAdminServiceImpl {
         List<AccessTokenDO> accessTokenDOs;
         try {
             accessTokenDOs = new ArrayList<>(OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey));
+                    .getInstance().getAccessTokenDAOImpl(consumerKey)
+                    .getActiveAcessTokenDataByConsumerKey(consumerKey));
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while retrieving access tokens issued for OAuth " +
                     "app with consumer key: %s.", consumerKey);
@@ -2296,7 +2309,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                     .revokeAccessTokens(accessTokens, OAuth2Util.isHashEnabled());
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while revoking access tokens for OAuth app in " +
@@ -3222,5 +3235,30 @@ public class OAuthAdminServiceImpl {
     private boolean isCibaGrantTypeEnabled(OAuthAppDO app) {
 
         return app.getGrantTypes().contains("urn:openid:params:grant-type:ciba");
+    }
+
+    /**
+     * Handle revocation of non-persistent tokens when an OAuth application is updated.
+     *
+     * @param consumerKey The consumer key of the OAuth application.
+     * @throws IdentityOAuthAdminException If an error occurs while revoking tokens.
+     */
+    private void handleNonPersistentTokenRevocation(String consumerKey) throws IdentityOAuthAdminException {
+
+        if (OAuth2Util.isNonPersistentTokenEnabled(consumerKey)) {
+            long revocationTime = System.currentTimeMillis();
+            try {
+                String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                OAuthTokenPersistenceFactory.getInstance().getRevokedTokenPersistenceDAO().
+                        revokeTokensBySubjectEvent(consumerKey, ENTITY_ID_TYPE_CLIENT_ID, revocationTime, tenantId);
+                new RefreshTokenDAOImpl().revokeTokensForApp(consumerKey);
+
+            } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+                throw new IdentityOAuthAdminException(
+                        "Error while recording non-persistent token revocation event for consumer key: "
+                                + consumerKey, e);
+            }
+        }
     }
 }

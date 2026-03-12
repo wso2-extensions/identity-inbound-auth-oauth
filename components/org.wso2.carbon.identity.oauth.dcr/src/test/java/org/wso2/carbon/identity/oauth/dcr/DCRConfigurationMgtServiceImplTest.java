@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
@@ -76,9 +75,9 @@ public class DCRConfigurationMgtServiceImplTest {
 
                 dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
 
-                assertEquals(true, dcrConfiguration.getEnableFapiEnforcement());
-                assertEquals(true, dcrConfiguration.getAuthenticationRequired());
-                assertEquals(dummySSAJwks, dcrConfiguration.getSsaJwks());
+                Assert.assertEquals(dcrConfiguration.getEnableFapiEnforcement(), true);
+                Assert.assertEquals(dcrConfiguration.getAuthenticationRequired(), true);
+                Assert.assertEquals(dcrConfiguration.getSsaJwks(), dummySSAJwks);
 
             } catch (Exception e) {
                 Assert.assertTrue(e instanceof DCRMException);
@@ -96,8 +95,8 @@ public class DCRConfigurationMgtServiceImplTest {
 
         } catch (Exception e) {
             Assert.assertTrue(e instanceof DCRMException);
-            Assert.assertEquals(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_NOT_MANDATED.getCode(),
-                    ((DCRMException) e).getErrorCode());
+            Assert.assertEquals(((DCRMException) e).getErrorCode(),
+                    DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_NOT_MANDATED.getCode());
         }
     }
 
@@ -116,7 +115,7 @@ public class DCRConfigurationMgtServiceImplTest {
 
         dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
 
-        assertEquals(false, dcrConfiguration.getEnableFapiEnforcement());
-        assertEquals(true, dcrConfiguration.getAuthenticationRequired());
+        Assert.assertEquals(dcrConfiguration.getEnableFapiEnforcement(), false);
+        Assert.assertEquals(dcrConfiguration.getAuthenticationRequired(), true);
     }
 }

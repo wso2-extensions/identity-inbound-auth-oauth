@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.util.Collections;
@@ -116,6 +117,14 @@ public class RequestObjectService {
         List<RequestedClaim> essentialClaims;
         if (log.isDebugEnabled()) {
             log.debug("Invoking the RequestObjectPersistenceFactory to retrieve essential claims list.");
+        }
+        if (TokenMgtUtil.isNonPersistenceAccessToken(token)) {
+            // If token persistence is not enabled, we cannot retrieve the request object.
+            // Hence, return an empty list.
+            if (log.isDebugEnabled()) {
+                log.debug("Token persistence is not enabled. Returning an empty list of essential claims.");
+            }
+            return Collections.emptyList();
         }
 
         try {
