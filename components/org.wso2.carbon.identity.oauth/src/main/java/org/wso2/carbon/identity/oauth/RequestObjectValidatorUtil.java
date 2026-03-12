@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -85,13 +84,21 @@ public class RequestObjectValidatorUtil {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getTenantDomain());
             String algorithm = oAuthAppDO.getRequestObjectSignatureAlgorithm();
-            if (StringUtils.isNotEmpty(algorithm)) {
+            if (StringUtils.isNotBlank(algorithm)) {
+                String mappedAlgorithm = StringUtils.EMPTY;
+                try {
+                    mappedAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm).getName();
+                } catch (IdentityOAuth2Exception e) {
+                    // Ignore the exception.
+                }
                 if (SHA256_WITH_RSA.equals(algorithm)) {
-                    algorithm = JWSAlgorithm.RS256.getName();
+                    algorithm = mappedAlgorithm;
                 }
 
                 String jwtAlgorithm = jwt.getHeader().getAlgorithm().getName();
-                if (!algorithm.equals(jwtAlgorithm)) {
+                boolean isAlgorithmMatches = StringUtils.equals(algorithm, jwtAlgorithm) ||
+                        StringUtils.equals(mappedAlgorithm, jwtAlgorithm);
+                if (!isAlgorithmMatches) {
                     throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
                             "Request Object signature verification failed due to an invalid signature algorithm.");
                 }
