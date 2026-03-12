@@ -4979,20 +4979,18 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is
-         registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
+         If accessingOrgId is not empty, then the request may come for an application which is
+         registered directly in the organization of the accessingOrgId. spTenantDomain is used
          to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
          used as the issuer should be extracted from the application OIDC configurations. If that
          is not available then the root organization's issuer will be selected as the issuer.
         */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
             try {
-                String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
                 String issuerOrg = oAuthAppDO.getIssuerOrg();
                 if (StringUtils.isNotEmpty(issuerOrg)) {
                     String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
@@ -5007,7 +5005,7 @@ public class OAuth2Util {
                         clientId, e);
             }
         }
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(accessingOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -6886,18 +6884,16 @@ public class OAuth2Util {
      * organization configuration is only allowed in sub organization OAuth2 applications.
      *
      * @param clientID Client ID of the OAuth application.
-     * @param applicationResidentOrgId Resident organization ID of the OAuth application.
+     * @param accessingOrgId Accessing organization ID of the OAuth application.
      * @return Tenant domain based on the application's configured issuer organization.
      * @throws IdentityOAuth2Exception When an error occurred while retrieving the tenant domain.
      */
-    public static String getTenantDomainByApplicationTokenIssuer(String clientID, String applicationResidentOrgId)
+    public static String getTenantDomainByApplicationTokenIssuer(String clientID, String accessingOrgId)
             throws IdentityOAuth2Exception {
 
         String tenantDomain;
         try {
-            String appTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                    resolveTenantDomain(applicationResidentOrgId);
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID, appTenant);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientID, accessingOrgId);
             String issuerOrg = oAuthAppDO.getIssuerOrg();
             if (StringUtils.isNotEmpty(issuerOrg)) {
                 tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
