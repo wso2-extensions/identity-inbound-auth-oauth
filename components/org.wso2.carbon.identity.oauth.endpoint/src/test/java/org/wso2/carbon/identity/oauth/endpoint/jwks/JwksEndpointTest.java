@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.util.Base64URL;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -50,6 +52,8 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -65,6 +69,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -963,5 +968,185 @@ public class JwksEndpointTest {
             }
         }
     }
-}
 
+    @Test
+    public void testGetJWKWithTenantAwareKIDUsesCurrentKIDForTenantDomain() throws Exception {
+
+        X509Certificate certificate = (X509Certificate) getKeyStoreFromFile("wso2carbon.jks", "wso2carbon")
+                .getCertificate("wso2carbon");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), eq("tenant-a"))).thenReturn("tenantAwareKid");
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), eq("wso2carbon")))
+                    .thenReturn(X5T_ARRAY.getString(1));
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("false");
+
+            JWK jwk = invokeGetJWKWithTenantAwareKID(JWSAlgorithm.RS256, new java.util.ArrayList<>(), certificate,
+                    OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM, "wso2carbon", "tenant-a");
+
+            assertEquals(jwk.getKeyID(), "tenantAwareKid", "Should use tenant-aware current KID");
+            assertEquals(jwk.getAlgorithm().getName(), "RS256", "Incorrect algorithm");
+            oAuth2Util.verify(() -> OAuth2Util.getKID(any(), any(), eq("tenant-a")));
+            oAuth2Util.verify(() -> OAuth2Util.getPreviousKID(any(), any(), anyString()), never());
+        }
+    }
+
+    @Test
+    public void testGetJWKWithTenantAwareKIDUsesPreviousKIDAndAddsX5tAndX5c() throws Exception {
+
+        KeyStore ecKeyStore = getKeyStoreFromFile("ec-p256-test.jks", "wso2carbon");
+        String ecAlias = resolveAliasByPublicKeyType(ecKeyStore, java.security.interfaces.ECPublicKey.class);
+        X509Certificate certificate = (X509Certificate) ecKeyStore.getCertificate(ecAlias);
+        assertTrue(certificate != null, "Expected an EC certificate in ec-p256-test.jks");
+        java.util.List<com.nimbusds.jose.util.Base64> encodedCertList = new java.util.ArrayList<>();
+        encodedCertList.add(com.nimbusds.jose.util.Base64.encode(certificate.getEncoded()));
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getPreviousKID(any(), any(), eq("tenant-b"))).thenReturn("oldKid");
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), eq(ecAlias)))
+                    .thenReturn(X5T_ARRAY.getString(1));
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), eq(true)))
+                    .thenReturn(X5T_ARRAY.getString(4));
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn("true");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("true");
+
+            JWK jwk = invokeGetJWKWithTenantAwareKID(JWSAlgorithm.ES256, encodedCertList, certificate,
+                    "legacy-kid-algorithm", ecAlias, "tenant-b");
+
+            assertEquals(jwk.getKeyID(), "oldKid", "Should use previous KID for non-default kid algorithm");
+            assertEquals(jwk.getAlgorithm().getName(), "ES256", "Incorrect algorithm");
+            assertTrue(jwk.getX509CertChain() != null && !jwk.getX509CertChain().isEmpty(),
+                    "x5c should be added when enabled and cert chain is provided");
+            assertTrue(jwk.getX509CertThumbprint() != null, "x5t should be added when required");
+            oAuth2Util.verify(() -> OAuth2Util.getPreviousKID(any(), any(), eq("tenant-b")));
+            oAuth2Util.verify(() -> OAuth2Util.getKID(any(), any(), anyString()), never());
+        }
+    }
+
+    @Test
+    public void testGetJWKWithTenantAwareKIDBuildsEdDSAJwk() throws Exception {
+
+        KeyStore edKeyStore = getKeyStoreFromFile("ed25519-test.jks", "wso2carbon");
+        String edAlias = resolveAliasByPublicKeyType(edKeyStore, java.security.interfaces.EdECPublicKey.class);
+        X509Certificate certificate = (X509Certificate) edKeyStore.getCertificate(edAlias);
+        assertTrue(certificate != null, "Expected an EdDSA certificate in ed25519-test.jks");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), eq("carbon.super"))).thenReturn("edKid");
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), eq(edAlias)))
+                    .thenReturn(X5T_ARRAY.getString(1));
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("false");
+
+            JWK jwk = invokeGetJWKWithTenantAwareKID(JWSAlgorithm.EdDSA, new java.util.ArrayList<>(), certificate,
+                    OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM, edAlias, "carbon.super");
+
+            assertEquals(jwk.getKeyType().getValue(), "OKP", "Expected OKP key type for EdDSA key");
+            assertEquals(jwk.getAlgorithm().getName(), "EdDSA", "Incorrect algorithm");
+            assertEquals(jwk.getKeyID(), "edKid", "Incorrect key id");
+            assertEquals(jwk.getX509CertSHA256Thumbprint(), new Base64URL(X5T_ARRAY.getString(1)),
+                    "Unexpected x5t#S256 value");
+        }
+    }
+
+    @Test
+    public void testGetJWKWithTenantAwareKIDReturnsNullForUnsupportedPublicKey() throws Exception {
+
+        X509Certificate certificate = mock(X509Certificate.class);
+        java.security.PublicKey unsupportedKey = mock(java.security.PublicKey.class);
+        when(unsupportedKey.getAlgorithm()).thenReturn("DSA");
+        when(certificate.getPublicKey()).thenReturn(unsupportedKey);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), eq("tenant-c"))).thenReturn("unsupportedKid");
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), eq("dsaAlias")))
+                    .thenReturn(X5T_ARRAY.getString(3));
+
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))
+                    .thenReturn("true");
+            identityUtil.when(() -> IdentityUtil.getProperty(JWKS_IS_X5T_REQUIRED)).thenReturn("false");
+
+            JWK jwk = invokeGetJWKWithTenantAwareKID(JWSAlgorithm.RS256, new java.util.ArrayList<>(), certificate,
+                    OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM, "dsaAlias", "tenant-c");
+
+            assertEquals(jwk, null, "Unsupported public key types should return null");
+        }
+    }
+
+    /**
+     * Helper method to invoke the private getJWKWithTenantAwareKID method via reflection.
+     *
+     * @param algorithm       JWS algorithm
+     * @param encodedCertList Encoded certificate list
+     * @param certificate     X509 certificate
+     * @param kidAlgorithm    KID algorithm
+     * @param alias           Certificate alias
+     * @param tenantDomain    Tenant domain
+     * @return JWK object
+     * @throws Exception if invocation fails
+     */
+    private JWK invokeGetJWKWithTenantAwareKID(JWSAlgorithm algorithm,
+                                               java.util.List<com.nimbusds.jose.util.Base64> encodedCertList,
+                                               X509Certificate certificate,
+                                               String kidAlgorithm,
+                                               String alias,
+                                               String tenantDomain) throws Exception {
+
+        Method method = JwksEndpoint.class.getDeclaredMethod("getJWKWithTenantAwareKID", JWSAlgorithm.class,
+                java.util.List.class, X509Certificate.class, String.class, String.class, String.class);
+        method.setAccessible(true);
+        try {
+            return (JWK) method.invoke(jwksEndpoint, algorithm, encodedCertList, certificate, kidAlgorithm,
+                    alias, tenantDomain);
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof Exception) {
+                throw (Exception) e.getCause();
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Helper method to resolve keystore alias by public key type.
+     *
+     * @param keyStore KeyStore to search
+     * @param keyType  Expected public key type class
+     * @return Alias of the first matching key entry
+     * @throws Exception if no matching key is found
+     */
+    private String resolveAliasByPublicKeyType(KeyStore keyStore, Class<?> keyType) throws Exception {
+
+        java.util.Enumeration<String> aliases = keyStore.aliases();
+        while (aliases.hasMoreElements()) {
+            String alias = aliases.nextElement();
+            if (!keyStore.isKeyEntry(alias)) {
+                continue;
+            }
+            Certificate certificate = keyStore.getCertificate(alias);
+            if (certificate instanceof X509Certificate
+                    && keyType.isInstance(certificate.getPublicKey())) {
+                return alias;
+            }
+        }
+        throw new IllegalStateException("No key entry found for key type: " + keyType.getSimpleName());
+    }
+}
