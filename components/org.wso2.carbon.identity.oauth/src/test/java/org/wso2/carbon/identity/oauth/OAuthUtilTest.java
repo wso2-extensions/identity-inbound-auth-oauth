@@ -819,10 +819,6 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.emptyList());
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-
             AccessTokenDO accessTokenDO = new AccessTokenDO();
             accessTokenDO.setAccessToken("testAccessToken");
             OAuthRevocationRequestDTO revokeRequestDTO = mock(OAuthRevocationRequestDTO.class);
@@ -830,7 +826,7 @@ public class OAuthUtilTest {
             OAuthUtil.clearOAuthCacheUsingPersistedScopes("tokenBindingRef",
              accessTokenDO, revokeRequestDTO);
 
-            verify(mockAccessTokenDAO, never()).getAccessToken(anyString(), anyBoolean());
+            oAuth2Util.verify(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean()), never());
         }
     }
 
@@ -843,10 +839,6 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("openid"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-
             // Access token is not set — defaults to null (blank).
             AccessTokenDO accessTokenDO = new AccessTokenDO();
             OAuthRevocationRequestDTO revokeRequestDTO = mock(OAuthRevocationRequestDTO.class);
@@ -854,7 +846,7 @@ public class OAuthUtilTest {
             OAuthUtil.clearOAuthCacheUsingPersistedScopes("tokenBindingRef",
              accessTokenDO, revokeRequestDTO);
 
-            verify(mockAccessTokenDAO, never()).getAccessToken(anyString(), anyBoolean());
+            oAuth2Util.verify(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean()), never());
         }
     }
 
@@ -868,11 +860,7 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("openid"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
-            when(mockAccessTokenDAO.getAccessToken("testAccessToken", true)).thenReturn(null);
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(eq("testAccessToken"), eq(true))).thenReturn(null);
 
             mockedOAuthUtil.when(() -> OAuthUtil.clearOAuthCacheUsingPersistedScopes(
                     anyString(), any(AccessTokenDO.class), any(OAuthRevocationRequestDTO.class)))
@@ -901,15 +889,9 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("openid"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
-
             AccessTokenDO dbTokenDO = new AccessTokenDO();
             dbTokenDO.setScope(null);
-            when(mockAccessTokenDAO.getAccessToken("testAccessToken",
-             true)).thenReturn(dbTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(eq("testAccessToken"), eq(true))).thenReturn(dbTokenDO);
 
             mockedOAuthUtil.when(() -> OAuthUtil.clearOAuthCacheUsingPersistedScopes(
                     anyString(), any(AccessTokenDO.class), any(OAuthRevocationRequestDTO.class)))
@@ -939,15 +921,9 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("openid"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
-
             AccessTokenDO dbTokenDO = new AccessTokenDO();
             dbTokenDO.setScope(new String[0]);
-            when(mockAccessTokenDAO.getAccessToken("testAccessToken",
-             true)).thenReturn(dbTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(eq("testAccessToken"), eq(true))).thenReturn(dbTokenDO);
 
             mockedOAuthUtil.when(() -> OAuthUtil.clearOAuthCacheUsingPersistedScopes(
                     anyString(), any(AccessTokenDO.class), any(OAuthRevocationRequestDTO.class)))
@@ -983,14 +959,9 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("scope1"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
-
             AccessTokenDO dbTokenDO = new AccessTokenDO();
             dbTokenDO.setScope(dbScopes);
-            when(mockAccessTokenDAO.getAccessToken(accessToken, true)).thenReturn(dbTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(eq(accessToken), eq(true))).thenReturn(dbTokenDO);
 
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(dbScopes)).thenReturn(dbScopeString);
 
@@ -1025,11 +996,7 @@ public class OAuthUtilTest {
             oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
             when(mockServerConfig.getAllowedScopes()).thenReturn(Collections.singletonList("openid"));
 
-            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
-            oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
-            when(mockAccessTokenDAO.getAccessToken(anyString(), anyBoolean()))
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean()))
                     .thenThrow(new IdentityOAuth2Exception("DAO error"));
 
             mockedOAuthUtil.when(() -> OAuthUtil.clearOAuthCacheUsingPersistedScopes(
