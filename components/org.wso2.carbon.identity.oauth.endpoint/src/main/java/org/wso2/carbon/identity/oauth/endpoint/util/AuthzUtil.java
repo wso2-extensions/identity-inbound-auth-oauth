@@ -2867,8 +2867,13 @@ public class AuthzUtil {
         String loginTenantDomain =
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
-            return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId(),
-                    IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+            try {
+                return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId(),
+                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+            } catch (OAuthSystemException e) {
+                throw new InvalidRequestException("Error resolving tenant domain for client id: " + clientId,
+                        OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);
+            }
         }
         return loginTenantDomain;
     }

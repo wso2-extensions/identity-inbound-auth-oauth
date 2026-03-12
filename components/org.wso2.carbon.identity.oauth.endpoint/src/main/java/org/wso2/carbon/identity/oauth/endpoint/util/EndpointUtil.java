@@ -1551,7 +1551,8 @@ public class EndpointUtil {
      * @param tenantDomain Login tenant domain.
      * @return tenantDomain domain of the service provider.
      */
-    public static String getSPTenantDomainFromClientId(String clientId, String tenantDomain) {
+    public static String getSPTenantDomainFromClientId(String clientId, String tenantDomain)
+            throws OAuthSystemException {
 
         try {
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
@@ -1562,14 +1563,8 @@ public class EndpointUtil {
                 oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
             }
             return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error while getting oauth app for client Id: " + clientId, e);
-            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while getting oauth app for client Id: " + clientId, e);
-            }
-            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException("Error while getting oauth app for client Id: " + clientId, e);
         }
     }
 
