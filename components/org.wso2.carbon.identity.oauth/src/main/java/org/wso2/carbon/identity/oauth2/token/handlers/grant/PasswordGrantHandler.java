@@ -379,8 +379,24 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             String username = tokenReq.getResourceOwnerUsername();
             if (!IdentityUtil.isEmailUsernameValidationDisabled()) {
                 FrameworkUtils.validateUsername(username);
-                username = FrameworkUtils.preprocessUsername(username, tokenReq.getTenantDomain(),
-                        serviceProvider.isSaasApp());
+                String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getAccessingOrganizationId();
+                if (StringUtils.isNotBlank(accessingOrgId) &&
+                        serviceProvider.isEnhancedOrganizationAuthenticationEnabled()) {
+                    String userTenantDomain;
+                    try {
+                        userTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                                .resolveTenantDomain(accessingOrgId);
+                    } catch (OrganizationManagementException e) {
+                        throw new IdentityOAuth2Exception("Error while resolving tenant domain from the " +
+                                "organization id: " + accessingOrgId, e);
+                    }
+                    username = FrameworkUtils.preprocessUsername(username, userTenantDomain,
+                            serviceProvider.isSaasApp());
+                } else {
+                    username = FrameworkUtils.preprocessUsername(username, tokenReq.getTenantDomain(),
+                            serviceProvider.isSaasApp());
+                }
             }
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);

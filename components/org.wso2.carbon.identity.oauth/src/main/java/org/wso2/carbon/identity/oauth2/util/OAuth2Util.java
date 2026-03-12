@@ -5663,15 +5663,17 @@ public class OAuth2Util {
                     if (StringUtils.equals(tenantDomainOfApp, accessingOrgTenantDomain)) {
                         return;
                     }
-                    OrganizationDiscoveryInput orgDiscoveryInput = new OrganizationDiscoveryInput.Builder()
-                            .orgId(accessingOrgId)
-                            .build();
-                    OrganizationDiscoveryResult organizationDiscoveryResult = OAuth2ServiceComponentHolder
-                            .getInstance().getOrganizationDiscoveryHandler()
-                            .discoverOrganization(
-                                    orgDiscoveryInput, serviceProvider.getApplicationResourceId(), tenantDomainOfApp);
-                    if (organizationDiscoveryResult.isSuccessful()) {
-                        return;
+                    if (serviceProvider.isEnhancedOrganizationAuthenticationEnabled()) {
+                        OrganizationDiscoveryInput orgDiscoveryInput = new OrganizationDiscoveryInput.Builder()
+                                .orgId(accessingOrgId)
+                                .build();
+                        OrganizationDiscoveryResult organizationDiscoveryResult = OAuth2ServiceComponentHolder
+                                .getInstance().getOrganizationDiscoveryHandler()
+                                .discoverOrganization(orgDiscoveryInput, serviceProvider.getApplicationResourceId(),
+                                        tenantDomainOfApp);
+                        if (organizationDiscoveryResult.isSuccessful()) {
+                            return;
+                        }
                     }
                 } catch (FrameworkException e) {
                     throw new IdentityOAuth2Exception("Error while discovering organization for id: "

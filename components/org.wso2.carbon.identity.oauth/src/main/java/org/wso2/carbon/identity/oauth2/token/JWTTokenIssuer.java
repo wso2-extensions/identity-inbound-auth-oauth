@@ -788,24 +788,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // loading the stored application data
         OAuthAppDO oAuthAppDO;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         try {
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, the tenant domain should be
-             extracted from the organization id to get the information of the application.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                try {
-                    tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(applicationResidentOrgId);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                            + applicationResidentOrgId, e);
-                }
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             }
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
         }
@@ -843,7 +833,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         */
 
         String issuer;
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
             String issuerOrg = oAuthAppDO.getIssuerOrg();
             if (StringUtils.isNotEmpty(issuerOrg)) {
                 issuer = getIssuerForApplication(consumerKey, issuerOrg);
