@@ -1606,9 +1606,7 @@ public final class OAuthUtil {
             // The in-memory scopes may be mutated during validation. To avoid cache-key
             // mismatches, retrieve the original scopes from the database before clearing
             // the OAuth cache.
-            AccessTokenDO dbTokenDO = OAuthTokenPersistenceFactory.getInstance()
-                    .getAccessTokenDAO()
-                    .getAccessToken(accessToken, true);
+            AccessTokenDO dbTokenDO = OAuth2Util.findAccessToken(accessToken, true);
             if (dbTokenDO == null || dbTokenDO.getScope() == null || dbTokenDO.getScope().length == 0) {
                 return;
             }
