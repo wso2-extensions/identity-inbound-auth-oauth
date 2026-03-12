@@ -66,7 +66,6 @@ import org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -221,7 +220,7 @@ public class OAuth2Service extends AbstractAdmin {
 
         try {
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
-            validateRequestTenantDomain(appTenantDomain);
+            validateRequestTenantDomain(appTenantDomain, clientId);
 
             if (StringUtils.isBlank(clientId)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -1038,23 +1037,14 @@ public class OAuth2Service extends AbstractAdmin {
 
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
-            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If appOrgId is not empty, then the request comes for an application which is registered directly in the
-             organization of the appOrgId. Therefore, we need to resolve the tenant domain of the organization.
-            */
-            if (StringUtils.isNotEmpty(appOrgId)) {
-                try {
-                    tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(appOrgId);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
-                            appOrgId, e);
-                }
+            OAuthAppDO appDO;
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                appDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             }
-            // Getting the application information by consumer key and tenant domain.
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             return appDO.getState();
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while finding application state for application with client_id: " + consumerKey, e);

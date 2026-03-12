@@ -44,6 +44,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -2436,7 +2437,13 @@ public class AuthzUtil {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+            OAuthAppDO appDO;
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
+            }
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {
@@ -2861,7 +2868,8 @@ public class AuthzUtil {
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
             try {
-                return EndpointUtil.verifyAndRetrieveTenantDomain(clientId);
+                return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId(),
+                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
             } catch (OAuthSystemException e) {
                 throw new InvalidRequestException("Error resolving tenant domain for client id: " + clientId,
                         OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);

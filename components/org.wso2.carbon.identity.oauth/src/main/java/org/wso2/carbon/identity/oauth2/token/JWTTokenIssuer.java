@@ -578,16 +578,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             throws IdentityOAuth2Exception {
 
         String tenantDomain;
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
         /*
-         If applicationResidentOrgId is not empty, then the request comes for an application which is
-         registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
+         If accessingOrgId is not empty, then the request may come for an application which is
+         registered directly in the organization of the accessingOrgId. In this case, the tenant domain
          that needs to be signing the token should be extracted from the application OIDC configurations. If that
          is not available then the root organization will be selected as the signing tenant domain.
         */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            tenantDomain = OAuth2Util.getTenantDomainByApplicationTokenIssuer(clientID, applicationResidentOrgId);
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            tenantDomain = OAuth2Util.getTenantDomainByApplicationTokenIssuer(clientID, accessingOrgId);
         } else if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
             if (log.isDebugEnabled()) {
                 log.debug("Using the tenant domain of the SP to sign the token");

@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
+import org.wso2.carbon.identity.application.authentication.framework.handler.orgdiscovery.OrganizationDiscoveryHandler;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
@@ -145,6 +146,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
     private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
+    private OrganizationDiscoveryHandler organizationDiscoveryHandler;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1141,6 +1143,26 @@ public class OAuth2ServiceComponentHolder {
             OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService) {
 
         this.oAuth2OIDCConfigOrgUsageScopeMgtService = oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
+
+    /**
+     * Get the Organization Discovery Handler.
+     *
+     * @return OrganizationDiscoveryHandler instance.
+     */
+    public OrganizationDiscoveryHandler getOrganizationDiscoveryHandler() {
+
+        return organizationDiscoveryHandler;
+    }
+
+    /**
+     * Set the Organization Discovery Handler.
+     *
+     * @param organizationDiscoveryHandler OrganizationDiscoveryHandler instance.
+     */
+    public void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
+
+        this.organizationDiscoveryHandler = organizationDiscoveryHandler;
     }
 }
 
