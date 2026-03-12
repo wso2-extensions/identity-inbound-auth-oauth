@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -47,9 +48,16 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
+import org.wso2.carbon.identity.oauth.util.ClaimCache;
+import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
@@ -1014,6 +1022,331 @@ public class OAuthUtilTest {
 
             mockedOAuthUtil.verify(() -> OAuthUtil.clearOAuthCache(
                     anyString(), any(AuthenticatedUser.class), anyString(), anyString()), never());
+        }
+    }
+
+    @Test
+    public void testGetRandomNumberSecure_WithSHA1() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))
+                    .thenReturn("false");
+            String result = OAuthUtil.getRandomNumberSecure();
+            assertTrue(StringUtils.isNotBlank(result), "Generated secure random string should not be blank.");
+        }
+    }
+
+    @Test
+    public void testGetRandomNumberSecure_WithSHA256() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))
+                    .thenReturn("true");
+            String result = OAuthUtil.getRandomNumberSecure();
+            assertTrue(StringUtils.isNotBlank(result), "Generated secure random string should not be blank.");
+        }
+    }
+
+    @Test
+    public void testHandleError_WithNullException() {
+
+        IdentityOAuthAdminException exception = OAuthUtil.handleError("test error message", null);
+        assertNotNull(exception);
+        assertEquals(exception.getMessage(), "test error message");
+    }
+
+    @Test
+    public void testHandleError_WithException() {
+
+        Exception cause = new RuntimeException("cause");
+        IdentityOAuthAdminException exception = OAuthUtil.handleError("test error message", cause);
+        assertNotNull(exception);
+        assertEquals(exception.getMessage(), "test error message");
+        assertEquals(exception.getCause(), cause);
+    }
+
+    @Test
+    public void testHandleErrorWithExceptionType_WithNullException() {
+
+        IdentityOAuthAdminException exception = OAuthUtil.handleErrorWithExceptionType("test message", null);
+        assertNotNull(exception);
+        assertEquals(exception.getMessage(), "test message");
+    }
+
+    @Test
+    public void testHandleErrorWithExceptionType_WithClientException() {
+
+        IdentityOAuth2ClientException cause = new IdentityOAuth2ClientException("CLIENT_ERROR_CODE", "client error");
+        IdentityOAuthAdminException exception = OAuthUtil.handleErrorWithExceptionType("test message", cause);
+        assertNotNull(exception);
+        assertTrue(exception instanceof IdentityOAuthClientException,
+                "Should return IdentityOAuthClientException for IdentityOAuth2ClientException.");
+        assertEquals(exception.getErrorCode(), "CLIENT_ERROR_CODE");
+    }
+
+    @Test
+    public void testHandleErrorWithExceptionType_WithServerException() {
+
+        IdentityOAuth2ServerException cause = new IdentityOAuth2ServerException("SERVER_ERROR_CODE", "server error");
+        IdentityOAuthAdminException exception = OAuthUtil.handleErrorWithExceptionType("test message", cause);
+        assertNotNull(exception);
+        assertTrue(exception instanceof IdentityOAuthServerException,
+                "Should return IdentityOAuthServerException for IdentityOAuth2ServerException.");
+        assertEquals(exception.getErrorCode(), "SERVER_ERROR_CODE");
+    }
+
+    @Test
+    public void testHandleErrorWithExceptionType_WithGenericOAuth2Exception() {
+
+        IdentityOAuth2Exception cause = new IdentityOAuth2Exception("GENERIC_ERROR_CODE", "generic error");
+        IdentityOAuthAdminException exception = OAuthUtil.handleErrorWithExceptionType("test message", cause);
+        assertNotNull(exception);
+        assertEquals(exception.getErrorCode(), "GENERIC_ERROR_CODE");
+    }
+
+    @Test
+    public void testHandleErrorWithExceptionType_WithBlankErrorCode() {
+
+        IdentityOAuth2Exception cause = new IdentityOAuth2Exception("generic error");
+        IdentityOAuthAdminException exception = OAuthUtil.handleErrorWithExceptionType("test message", cause);
+        assertNotNull(exception);
+    }
+
+    @Test
+    public void testBuildConsumerAppDTO() {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setApplicationName("TestApp");
+        appDO.setCallbackUrl("https://example.com/callback");
+        appDO.setOauthConsumerKey("test-consumer-key");
+        appDO.setOauthConsumerSecret("test-consumer-secret");
+        appDO.setOauthVersion("OAuth-2.0");
+        appDO.setGrantTypes("authorization_code implicit");
+        appDO.setScopeValidators(new String[]{"validator1"});
+        appDO.setState("ACTIVE");
+        appDO.setPkceMandatory(true);
+        appDO.setPkceSupportPlain(false);
+        appDO.setHybridFlowEnabled(false);
+        appDO.setUserAccessTokenExpiryTime(3600L);
+        appDO.setApplicationAccessTokenExpiryTime(7200L);
+        appDO.setRefreshTokenExpiryTime(86400L);
+        appDO.setIdTokenExpiryTime(3600L);
+        appDO.setTokenType("JWT");
+
+        org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser user =
+                new org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser();
+        user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+        appDO.setUser(user);
+
+        OAuthConsumerAppDTO dto = OAuthUtil.buildConsumerAppDTO(appDO);
+
+        assertNotNull(dto);
+        assertEquals(dto.getApplicationName(), "TestApp");
+        assertEquals(dto.getCallbackUrl(), "https://example.com/callback");
+        assertEquals(dto.getOauthConsumerKey(), "test-consumer-key");
+        assertEquals(dto.getOauthConsumerSecret(), "test-consumer-secret");
+        assertEquals(dto.getOAuthVersion(), "OAuth-2.0");
+        assertEquals(dto.getGrantTypes(), "authorization_code implicit");
+        assertEquals(dto.getState(), "ACTIVE");
+        assertTrue(dto.getPkceMandatory());
+        assertEquals(dto.getUserAccessTokenExpiryTime(), 3600L);
+        assertEquals(dto.getApplicationAccessTokenExpiryTime(), 7200L);
+        assertEquals(dto.getRefreshTokenExpiryTime(), 86400L);
+        assertEquals(dto.getIdTokenExpiryTime(), 3600L);
+        assertEquals(dto.getTokenType(), "JWT");
+    }
+
+    @Test
+    public void testClearOAuthCache_WithAccessTokenDO() {
+
+        String accessToken = "test-access-token-do";
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(accessToken);
+        OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
+
+        assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey),
+                "Should have cached value before clearing.");
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAccessToken(accessToken);
+        AuthenticatedUser authzUser = new AuthenticatedUser();
+        authzUser.setTenantDomain("carbon.super");
+        accessTokenDO.setAuthzUser(authzUser);
+
+        OAuthUtil.clearOAuthCache(accessTokenDO);
+
+        assertNull(oAuthCache.getValueFromCache(oAuthCacheKey),
+                "Cache entry should be cleared after calling clearOAuthCache with AccessTokenDO.");
+        oAuthCache.clear(-1234);
+    }
+
+    @Test
+    public void testClearOAuthCacheByTenant() {
+
+        String cacheKey = "tenant-specific-cache-key";
+        String tenantDomain = "carbon.super";
+        OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKey);
+        OAuthCache oAuthCache = getOAuthCache(oAuthCacheKey);
+
+        assertNotNull(oAuthCache.getValueFromCache(oAuthCacheKey),
+                "Should have cached value before clearing.");
+
+        OAuthUtil.clearOAuthCacheByTenant(cacheKey, tenantDomain);
+
+        assertNull(oAuthCache.getValueFromCache(oAuthCacheKey),
+                "Cache entry should be cleared by tenant-specific cache clearing.");
+        oAuthCache.clear(-1234);
+    }
+
+    @Test
+    public void testBuildCacheKeyStringForToken() {
+
+        String clientId = "client-id";
+        String scope = "openid";
+        String userId = "user-id";
+        String idp = "LOCAL";
+        String tokenBindingRef = "binding-ref";
+        String expectedKey = "expectedCacheKey";
+
+        oAuth2Util.when(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserId(
+                clientId, scope, userId, idp, tokenBindingRef)).thenReturn(expectedKey);
+
+        String result = OAuthUtil.buildCacheKeyStringForToken(clientId, scope, userId, idp, tokenBindingRef);
+
+        assertEquals(result, expectedKey);
+        oAuth2Util.verify(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserId(
+                clientId, scope, userId, idp, tokenBindingRef), times(1));
+    }
+
+    @Test
+    public void testInvokePreRevocationBySystemListeners_AccessTokenDO_WhenInterceptorEnabled() throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Map<String, Object> params = new HashMap<>();
+
+        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, params);
+
+        verify(interceptor, times(1)).onPreTokenRevocationBySystem(accessTokenDO, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testInvokePreRevocationBySystemListeners_AccessTokenDO_WhenInterceptorNull() throws Exception {
+
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Map<String, Object> params = new HashMap<>();
+
+        // Should complete without exception when interceptor is null.
+        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, params);
+    }
+
+    @Test
+    public void testInvokePreRevocationBySystemListeners_AccessTokenDO_WhenInterceptorThrowsException()
+            throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        Mockito.doThrow(new IdentityOAuth2Exception("interceptor error"))
+                .when(interceptor).onPreTokenRevocationBySystem(any(AccessTokenDO.class), any());
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Map<String, Object> params = new HashMap<>();
+
+        // Exception should be swallowed and logged, not propagated.
+        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testInvokePostRevocationBySystemListeners_AccessTokenDO_WhenInterceptorEnabled() throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Map<String, Object> params = new HashMap<>();
+
+        OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, params);
+
+        verify(interceptor, times(1)).onPostTokenRevocationBySystem(accessTokenDO, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testInvokePostRevocationBySystemListeners_AccessTokenDO_WhenInterceptorThrowsException()
+            throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        Mockito.doThrow(new IdentityOAuth2Exception("interceptor error"))
+                .when(interceptor).onPostTokenRevocationBySystem(any(AccessTokenDO.class), any());
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        Map<String, Object> params = new HashMap<>();
+
+        // Exception should be swallowed and logged, not propagated.
+        OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testInvokePreRevocationBySystemListeners_UserUUID_WhenInterceptorEnabled() throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        String userUUID = "test-user-uuid";
+        Map<String, Object> params = new HashMap<>();
+
+        OAuthUtil.invokePreRevocationBySystemListeners(userUUID, params);
+
+        verify(interceptor, times(1)).onPreTokenRevocationBySystem(userUUID, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testInvokePostRevocationBySystemListeners_UserUUID_WhenInterceptorEnabled() throws Exception {
+
+        OAuthEventInterceptor interceptor = mock(OAuthEventInterceptor.class);
+        when(interceptor.isEnabled()).thenReturn(true);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+
+        String userUUID = "test-user-uuid";
+        Map<String, Object> params = new HashMap<>();
+
+        OAuthUtil.invokePostRevocationBySystemListeners(userUUID, params);
+
+        verify(interceptor, times(1)).onPostTokenRevocationBySystem(userUUID, params);
+        OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Test
+    public void testRemoveUserClaimsFromCache() throws Exception {
+
+        String userName = "testUser";
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        when(userStoreManager.getTenantId()).thenReturn(-1234);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(mock(RealmConfiguration.class));
+
+        try (MockedStatic<ClaimCache> claimCacheStatic = mockStatic(ClaimCache.class)) {
+            ClaimCache claimCache = mock(ClaimCache.class);
+            claimCacheStatic.when(ClaimCache::getInstance).thenReturn(claimCache);
+
+            boolean result = OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
+
+            assertTrue(result, "removeUserClaimsFromCache should return true.");
+            verify(claimCache, times(1)).clearCacheEntry(any(ClaimCacheKey.class), anyInt());
         }
     }
 
