@@ -18,6 +18,33 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -64,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -84,33 +112,6 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_TYPE_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PREVENT_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
 
 /**
  * OAuth utility functionality.
@@ -1606,7 +1607,8 @@ public final class OAuthUtil {
             // The in-memory scopes may be mutated during validation. To avoid cache-key
             // mismatches, retrieve the original scopes from the database before clearing
             // the OAuth cache.
-            AccessTokenDO dbTokenDO = OAuth2Util.findAccessToken(accessToken, true);
+            AccessTokenDO dbTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
+                    .getVerifiedAccessToken(accessToken, true);
             if (dbTokenDO == null || dbTokenDO.getScope() == null || dbTokenDO.getScope().length == 0) {
                 return;
             }
