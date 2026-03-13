@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -273,6 +274,26 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                         OAuthConstants.LOOPBACK_IP_PORT_REGEX, "");
             }
         }
-        return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+        if (regexp == null) {
+            return registeredCallbackUrl.equals(callbackURI);
+        }
+        if (isLiteralCharactersEnforcedInCallback()) {
+            /*
+            Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
+            but don't touch .* or .+ or .{n} .
+            */
+            String escapedSpecialCharRegexp = regexp
+                    .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                    .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                    .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+            return callbackURI.matches(escapedSpecialCharRegexp);
+        }
+        return callbackURI.matches(regexp);
+    }
+
+    private boolean isLiteralCharactersEnforcedInCallback() {
+        String enforceLiteralCharactersInCallbackValue = IdentityUtil.getProperty(
+                OAuthConstants.CALLBACK_ENFORCE_LITERAL_CHARACTERS);
+        return Boolean.parseBoolean(enforceLiteralCharactersInCallbackValue);
     }
 }
