@@ -430,7 +430,7 @@ public class JWTUtils {
                  application OIDC configurations. If that is not available, then the root organization will be used as
                  the signing tenant domain.
                 */
-                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getAppResidentTenantId());
                 ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
                         accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
                 if (OrganizationManagementUtil.isOrganization(appTenantDomain) &&
