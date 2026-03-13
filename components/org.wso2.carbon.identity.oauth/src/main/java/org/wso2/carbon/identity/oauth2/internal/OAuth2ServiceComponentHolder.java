@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
+import org.wso2.carbon.identity.application.authentication.framework.handler.orgdiscovery.OrganizationDiscoveryHandler;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidat
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridPersistenceTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -56,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetails
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.role.management.service.RoleManager;
@@ -143,6 +146,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
     private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
+    private OrganizationDiscoveryHandler organizationDiscoveryHandler;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -806,7 +810,8 @@ public class OAuth2ServiceComponentHolder {
     public TokenProvider getTokenProvider() {
 
         if (tokenProvider == null) {
-            tokenProvider = new DefaultTokenProvider();
+            tokenProvider = OAuth2Util.isAccessTokenPersistenceEnabled() ? new DefaultTokenProvider()
+                    : new HybridPersistenceTokenProvider();
         }
         return tokenProvider;
     }
@@ -1138,6 +1143,26 @@ public class OAuth2ServiceComponentHolder {
             OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService) {
 
         this.oAuth2OIDCConfigOrgUsageScopeMgtService = oAuth2OIDCConfigOrgUsageScopeMgtService;
+    }
+
+    /**
+     * Get the Organization Discovery Handler.
+     *
+     * @return OrganizationDiscoveryHandler instance.
+     */
+    public OrganizationDiscoveryHandler getOrganizationDiscoveryHandler() {
+
+        return organizationDiscoveryHandler;
+    }
+
+    /**
+     * Set the Organization Discovery Handler.
+     *
+     * @param organizationDiscoveryHandler OrganizationDiscoveryHandler instance.
+     */
+    public void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
+
+        this.organizationDiscoveryHandler = organizationDiscoveryHandler;
     }
 }
 

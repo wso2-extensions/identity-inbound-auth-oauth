@@ -21,12 +21,12 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationContext;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -56,17 +56,7 @@ public class CibaUserNotificationHandler {
             throw new CibaCoreException("Resolved user cannot be null");
         }
 
-        OAuthAppDO authAppDO = notificationContext.getAuthAppDO();
-
-        List<String> allowedChannels = new ArrayList<>();
-        if (authAppDO != null && StringUtils.isNotBlank(authAppDO.getCibaNotificationChannels())) {
-            String[] channelArr = authAppDO.getCibaNotificationChannels().split(",");
-            for (String ch : channelArr) {
-                allowedChannels.add(ch.trim().toLowerCase());
-            }
-        }
-
-        if (allowedChannels.isEmpty()) {
+        if (notificationContext.getAppAllowedChannels().isEmpty()) {
             throw new CibaClientException(
                     "No notification channels configured for the application.");
         }
@@ -83,14 +73,14 @@ public class CibaUserNotificationHandler {
 
         // 1. If a specific channel is requested, validate it against the supported list and send.
         if (StringUtils.isNotEmpty(requestedChannel)) {
-            if (isChannelDisallowed(allowedChannels, requestedChannel)) {
+            if (isChannelDisallowed(notificationContext.getAppAllowedChannels(), requestedChannel)) {
                 throw new CibaClientException("Requested notification channel is not allowed for this application.");
             }
             return sendToTargetChannel(channels, notificationContext, requestedChannel);
         }
 
         // 2. Fallback: Send notification via supported channels in priority order.
-        return sendToAllAllowedChannels(channels, notificationContext, allowedChannels, resolvedUser);
+        return sendToAllAllowedChannels(channels, notificationContext, resolvedUser);
     }
 
     private String sendToTargetChannel(List<CibaNotificationChannel> channels,
@@ -116,7 +106,6 @@ public class CibaUserNotificationHandler {
 
     private String sendToAllAllowedChannels(List<CibaNotificationChannel> channels,
                                             CibaNotificationContext notificationContext,
-                                            List<String> allowedChannels,
                                             CibaUserResolver.ResolvedUser resolvedUser)
             throws CibaCoreException {
 
@@ -124,7 +113,7 @@ public class CibaUserNotificationHandler {
 
         String lastSuccessfulChannel = null;
         for (CibaNotificationChannel channel : channels) {
-            if (isChannelDisallowed(allowedChannels, channel.getName())) {
+            if (isChannelDisallowed(notificationContext.getAppAllowedChannels(), channel.getName())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Skipping channel '" + channel.getName()
                             + "' as it is not in the allowed list.");
@@ -146,8 +135,8 @@ public class CibaUserNotificationHandler {
         }
 
         if (lastSuccessfulChannel == null) {
-            log.warn("Could not send CIBA notification to user: " + resolvedUser.getUsername()
-                    + ". No suitable channel found or all channels failed.");
+            log.warn("Could not send CIBA notification to user: " + LoggerUtils.getMaskedContent(
+                    resolvedUser.getUsername()) + ". No suitable channel found or all channels failed.");
         }
         return lastSuccessfulChannel;
     }

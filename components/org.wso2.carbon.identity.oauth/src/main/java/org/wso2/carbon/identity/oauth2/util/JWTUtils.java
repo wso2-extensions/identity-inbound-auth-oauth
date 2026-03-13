@@ -60,15 +60,14 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isFragmentApp;
 import static org.wso2.carbon.identity.organization.management.service.constant
         .OrganizationManagementConstants.DEFAULT_SUB_ORG_LEVEL;
 import static org.wso2.carbon.identity.organization.management.service.constant
@@ -475,17 +474,6 @@ public class JWTUtils {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
-    }
-
-    private static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
-
-        if (serviceProviderProperties == null) {
-            return false;
-        }
-
-        return Arrays.stream(serviceProviderProperties).
-                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
-                            Boolean.parseBoolean(property.getValue()));
     }
 
     /**

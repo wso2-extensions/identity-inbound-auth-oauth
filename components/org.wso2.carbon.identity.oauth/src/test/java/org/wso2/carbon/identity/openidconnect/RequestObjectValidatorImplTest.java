@@ -281,6 +281,8 @@ public class RequestObjectValidatorImplTest {
                 appDO.setRequestObjectSignatureAlgorithm("RS256");
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(appDO);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.RS256);
 
                 RequestObject requestObject =
                         requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);

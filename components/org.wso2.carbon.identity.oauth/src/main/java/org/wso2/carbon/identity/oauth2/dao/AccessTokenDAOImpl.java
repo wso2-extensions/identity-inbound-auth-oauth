@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
@@ -248,7 +249,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
-            int appTenantId = getAppTenantId();
+            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (isNotBlank(accessingOrgId)) {
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+                String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                appTenantId = OAuth2Util.getTenantId(appTenantDomain);
+            }
 
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));

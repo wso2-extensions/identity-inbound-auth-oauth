@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.ciba.notifications;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
@@ -120,6 +121,56 @@ public class CibaEmailNotificationChannelTest {
         emailChannel.sendNotification(context);
 
         verify(identityEventService).handleEvent(any(Event.class));
+    }
+
+    @Test
+    public void testSendNotificationStripsDomainSeparatorFromUsername() throws Exception {
+
+        ResolvedUser resolvedUser = new ResolvedUser();
+        resolvedUser.setUsername("PRIMARY/testUser");
+        resolvedUser.setTenantDomain("carbon.super");
+        resolvedUser.setEmail("test@example.com");
+
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+
+        emailChannel.sendNotification(context);
+
+        ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(identityEventService).handleEvent(eventCaptor.capture());
+        Event capturedEvent = eventCaptor.getValue();
+        Assert.assertEquals(capturedEvent.getEventProperties().get("user-name"), "testUser",
+                "Domain separator should be stripped from username.");
+    }
+
+    @Test
+    public void testSendNotificationUsernameWithoutDomainSeparator() throws Exception {
+
+        ResolvedUser resolvedUser = new ResolvedUser();
+        resolvedUser.setUsername("testUser");
+        resolvedUser.setTenantDomain("carbon.super");
+        resolvedUser.setEmail("test@example.com");
+
+        CibaNotificationContext context = new CibaNotificationContext.Builder()
+                .setResolvedUser(resolvedUser)
+                .setExpiryTime(3600L)
+                .setAuthUrl("http://auth.url")
+                .setBindingMessage("message")
+                .setTenantDomain("carbon.super")
+                .build();
+
+        emailChannel.sendNotification(context);
+
+        ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(identityEventService).handleEvent(eventCaptor.capture());
+        Event capturedEvent = eventCaptor.getValue();
+        Assert.assertEquals(capturedEvent.getEventProperties().get("user-name"), "testUser",
+                "Username without domain separator should remain unchanged.");
     }
 
     @Test(expectedExceptions = CibaCoreException.class)

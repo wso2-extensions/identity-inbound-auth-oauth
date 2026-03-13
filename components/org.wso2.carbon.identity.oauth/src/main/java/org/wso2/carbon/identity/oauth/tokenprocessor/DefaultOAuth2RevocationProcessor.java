@@ -58,7 +58,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     public void revokeAccessToken(OAuthRevocationRequestDTO revokeRequestDTO, AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception {
 
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(accessTokenDO.getConsumerKey())
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
         AccessTokenEventUtil.publishTokenRevokeEvent(accessTokenDO);
     }
@@ -67,7 +67,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     public void revokeRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO,
                                    RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception {
 
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(revokeRequestDTO.getConsumerKey())
                 .revokeAccessTokens(new String[]{refreshTokenDO.getAccessToken()});
     }
 
@@ -129,7 +129,8 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
 
             // Retrieve active access tokens for the given client ID and removed scopes.
             Set<AccessTokenDO> accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance()
-                    .getAccessTokenDAO().getActiveTokenSetWithTokenIdByConsumerKeyAndScope(clientId, removedScopes);
+                    .getAccessTokenDAOImpl(clientId).getActiveTokenSetWithTokenIdByConsumerKeyAndScope(clientId,
+                            removedScopes);
 
             // Iterate through the retrieved access tokens and revoke them.
             for (AccessTokenDO accessTokenDO: accessTokenDOSet) {

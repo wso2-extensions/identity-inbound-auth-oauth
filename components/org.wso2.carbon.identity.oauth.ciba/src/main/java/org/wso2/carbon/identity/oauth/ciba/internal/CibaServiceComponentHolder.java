@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.ciba.internal;
 
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.handlers.DefaultCibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
@@ -41,6 +42,7 @@ public class CibaServiceComponentHolder {
     
     private IdentityEventService identityEventService;
     private RealmService realmService;
+    private MultiAttributeLoginService multiAttributeLoginService;
     private CibaUserResolver cibaUserResolver;
     private final List<CibaNotificationChannel> notificationChannels = new ArrayList<>();
 
@@ -88,6 +90,16 @@ public class CibaServiceComponentHolder {
     public void setRealmService(RealmService realmService) {
 
         this.realmService = realmService;
+    }
+
+    public MultiAttributeLoginService getMultiAttributeLoginService() {
+
+        return multiAttributeLoginService;
+    }
+
+    public void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
+
+        this.multiAttributeLoginService = multiAttributeLoginService;
     }
 
     /**

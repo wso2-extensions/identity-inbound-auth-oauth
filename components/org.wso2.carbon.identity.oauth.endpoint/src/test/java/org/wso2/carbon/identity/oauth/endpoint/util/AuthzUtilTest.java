@@ -1864,8 +1864,9 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
 
                 if (isTenantedSessionsEnabled) {
                     identityTenantUtil.when(IdentityTenantUtil::isTenantedSessionsEnabled).thenReturn(true);
-                    endpointUtil.when(() -> EndpointUtil.verifyAndRetrieveTenantDomain(anyString())).thenReturn(
-                            MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                    when(oAuthMessage.getClientId()).thenReturn(CLIENT_ID_VALUE);
+                    endpointUtil.when(() -> EndpointUtil.getSPTenantDomainFromClientId(anyString(), anyString()))
+                            .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
                 } else {
                     identityTenantUtil.when(IdentityTenantUtil::isTenantedSessionsEnabled).thenReturn(false);
                     when(oAuthMessage.getClientId()).thenReturn(CLIENT_ID_VALUE);

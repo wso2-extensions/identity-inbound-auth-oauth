@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
@@ -124,6 +125,9 @@ public class OAuth2CibaEndpoint {
                             "Missing required parameters. Either 'request' JWT or (scope, login_hint) " +
                                     "are required.");
                 }
+
+                // Validate that the client has CIBA grant type enabled.
+                validateCibaGrantType(oAuthClientAuthnContext.getClientId(), tenantDomain);
                 
                 // Validate binding_message.
                 if (params.containsKey(CibaConstants.BINDING_MESSAGE)) {
@@ -438,5 +442,35 @@ public class OAuth2CibaEndpoint {
 
         CibaNotificationChannelValidator.validateChannelForClient(
                 notificationChannel, clientId, tenantDomain);
+    }
+
+    /**
+     * Validates that the client has the CIBA grant type configured.
+     *
+     * @param clientId     Client ID.
+     * @param tenantDomain Tenant domain.
+     * @throws CibaAuthFailureException If the client does not have CIBA grant type enabled.
+     */
+    private void validateCibaGrantType(String clientId, String tenantDomain) throws CibaAuthFailureException {
+
+        OAuthAppDO appDO;
+        try {
+            appDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        } catch (InvalidOAuthClientException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Unknown client: " + clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error validating grant type for client.", e);
+        }
+
+        String grantTypes = appDO.getGrantTypes();
+        if (StringUtils.isBlank(grantTypes) || !grantTypes.contains(CibaConstants.OAUTH_CIBA_GRANT_TYPE)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Client: " + clientId + " has not configured grant_type: " +
+                        CibaConstants.OAUTH_CIBA_GRANT_TYPE);
+            }
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.UNAUTHORIZED_CLIENT,
+                    "Client has not configured grant_type properly.");
+        }
     }
 }

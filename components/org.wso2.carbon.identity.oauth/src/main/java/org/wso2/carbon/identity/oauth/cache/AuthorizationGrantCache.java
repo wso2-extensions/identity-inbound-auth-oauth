@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.text.ParseException;
@@ -104,7 +105,7 @@ public class AuthorizationGrantCache extends
                 log.debug("Getting cache entry from session store using tokenId: " + tokenId);
             }
             cacheEntry = getFromSessionStore(tokenId);
-            if (cacheEntry != null) {
+            if (cacheEntry != null && key != null) {
                 super.addToCache(key, cacheEntry);
             }
         }
@@ -176,7 +177,15 @@ public class AuthorizationGrantCache extends
      * @param key Key to clear cache.
      */
     public void clearCacheEntryByTokenId(AuthorizationGrantCacheKey key, String tokenId) {
-        super.clearCacheEntry(key);
+
+        if (key != null) {
+            super.clearCacheEntry(key);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Key is null, skipping clearing from cache. Clearing from session store " +
+                        "by tokenId: " + tokenId);
+            }
+        }
         clearFromSessionStore(tokenId);
     }
 
@@ -305,6 +314,16 @@ public class AuthorizationGrantCache extends
      * @return TOKEN_ID from the database
      */
     private String replaceFromTokenId(String keyValue) {
+
+        // Check if the access token is a non-persistent access token, and if so, retrieve the token ID
+        // from the non-persistent access token.
+        if (TokenMgtUtil.isNonPersistenceAccessToken(keyValue)) {
+            try {
+                return TokenMgtUtil.getTokenIDFromNonPersistenceAccessToken(keyValue);
+            } catch (IdentityOAuth2Exception e) {
+                log.error("Failed to retrieve token id by token from store.", e);
+            }
+        }
         if (OAuth2Util.isJWT(keyValue)) {
             try {
                 JWT parsedJwtToken = JWTParser.parse(keyValue);

@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HybridOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -65,7 +66,6 @@ import org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -220,7 +220,7 @@ public class OAuth2Service extends AbstractAdmin {
 
         try {
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
-            validateRequestTenantDomain(appTenantDomain);
+            validateRequestTenantDomain(appTenantDomain, clientId);
 
             if (StringUtils.isBlank(clientId)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -671,7 +671,7 @@ public class OAuth2Service extends AbstractAdmin {
                     if (refreshTokenDO.getAccessToken() != null) {
                         OAuthUtil.clearOAuthCache(refreshTokenDO.getAccessToken());
                     }
-                    getRevocationProcessor().revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
+                    getRevocationProcessor(refreshTokenDO).revokeRefreshToken(revokeRequestDTO, refreshTokenDO);
                     addRevokeResponseHeaders(revokeResponseDTO,
                             refreshTokenDO.getAccessToken(),
                             revokeRequestDTO.getToken(),
@@ -746,7 +746,8 @@ public class OAuth2Service extends AbstractAdmin {
                         String scope = OAuth2Util.buildScopeString(accessTokenDO.getScope());
                         synchronized ((revokeRequestDTO.getConsumerKey() + ":" + userId + ":" + scope + ":"
                                 + tokenBindingReference).intern()) {
-                            getRevocationProcessor().revokeAccessToken(revokeRequestDTO, accessTokenDO);
+                            getRevocationProcessor(revokeRequestDTO.getConsumerKey(), tenantDomain)
+                                    .revokeAccessToken(revokeRequestDTO, accessTokenDO);
                         }
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),
@@ -850,13 +851,39 @@ public class OAuth2Service extends AbstractAdmin {
     }
 
     /**
+     * Get the revocation processor based on refresh token's persistence state.
+     *
+     * @param refreshTokenDO Refresh token validation data.
+     * @return OAuth2RevocationProcessor
+     */
+    private OAuth2RevocationProcessor getRevocationProcessor(RefreshTokenValidationDataDO refreshTokenDO) {
+
+        if (!OAuth2Util.isAccessTokenPersistenceEnabled() && refreshTokenDO.isWithNotPersistedAT()) {
+            return new HybridOAuth2RevocationProcessor();
+        }
+        return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+    }
+
+    /**
      * Get the revocation processor.
      *
      * @return OAuth2RevocationProcessor
      */
-    private OAuth2RevocationProcessor getRevocationProcessor() {
+    private OAuth2RevocationProcessor getRevocationProcessor(String clientId, String tenantDomain) {
 
-        return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+        try {
+            if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
+                return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+            } else {
+                OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+                return StringUtils.equals(appDO.getTokenType(), OAuth2Util.JWT) ?
+                        new HybridOAuth2RevocationProcessor() :
+                        OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+            }
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            log.error("Error while retrieving the application information for the consumer key: " + clientId, e);
+            return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor();
+        }
     }
 
     private boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {
@@ -1010,23 +1037,14 @@ public class OAuth2Service extends AbstractAdmin {
 
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
-            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
-            /*
-             If appOrgId is not empty, then the request comes for an application which is registered directly in the
-             organization of the appOrgId. Therefore, we need to resolve the tenant domain of the organization.
-            */
-            if (StringUtils.isNotEmpty(appOrgId)) {
-                try {
-                    tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(appOrgId);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
-                            appOrgId, e);
-                }
+            OAuthAppDO appDO;
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                appDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             }
-            // Getting the application information by consumer key and tenant domain.
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             return appDO.getState();
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while finding application state for application with client_id: " + consumerKey, e);
