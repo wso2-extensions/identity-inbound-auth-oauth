@@ -573,6 +573,7 @@ public final class OAuthUtil {
         dto.setCibaNotificationChannels(appDO.getCibaNotificationChannels());
         dto.setCibaAuthReqExpiryTime(appDO.getCibaAuthReqExpiryTime());
         dto.setCibaSkipUserValidation(appDO.isCibaSkipUserValidation());
+        dto.setCibaAllowFederatedUsers(appDO.isCibaAllowFederatedUsers());
         dto.setIssuerDetails(appDO.getIssuerDetails());
         return dto;
     }

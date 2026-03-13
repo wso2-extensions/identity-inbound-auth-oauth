@@ -122,6 +122,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String cibaNotificationChannels;
     private long cibaAuthReqExpiryTime;
     private boolean cibaSkipUserValidation;
+    private boolean cibaAllowFederatedUsers;
     private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
@@ -620,6 +621,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setCibaSkipUserValidation(boolean cibaSkipUserValidation) {
 
         this.cibaSkipUserValidation = cibaSkipUserValidation;
+    }
+
+    public boolean isCibaAllowFederatedUsers() {
+
+        return cibaAllowFederatedUsers;
+    }
+
+    public void setCibaAllowFederatedUsers(boolean cibaAllowFederatedUsers) {
+
+        this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
     }
 
     public IssuerDetails getIssuerDetails() {

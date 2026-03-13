@@ -116,6 +116,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         this.cibaSkipUserValidation = cibaSkipUserValidation;
     }
 
+    private boolean cibaAllowFederatedUsers;
+
+    public boolean isCibaAllowFederatedUsers() {
+        return cibaAllowFederatedUsers;
+    }
+
+    public void setCibaAllowFederatedUsers(boolean cibaAllowFederatedUsers) {
+        this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
+    }
+
     private IssuerDetails issuerDetails;
 
     // Fragment app flag. This will be used to identify whether the app is a fragment app or not.

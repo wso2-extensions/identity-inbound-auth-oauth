@@ -68,6 +68,8 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authRequestId);
 
             OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
+            log.info("Validating the authenticated user for auth_req_id: " + authRequestId + " with user: " +
+                    cibaAuthenticatedUser.getUserId());
             if (!oAuthAppDO.isCibaSkipUserValidation()) {
                 // Get the resolved user and check if the resolved user is the same as the authenticated user.
                 String authenticatedUserId = cibaAuthenticatedUser.getUserId();

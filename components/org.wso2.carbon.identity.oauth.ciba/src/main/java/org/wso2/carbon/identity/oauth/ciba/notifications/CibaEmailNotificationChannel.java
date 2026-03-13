@@ -83,12 +83,16 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             String email = resolvedUser.getEmail();
             boolean hasEmail = StringUtils.isNotBlank(email);
             if (log.isDebugEnabled()) {
-                log.debug("EmailCibaNotificationChannel.canHandle: User " + resolvedUser.getUserId() +
+                String userIdentifier = resolvedUser.getUserId() != null ?
+                        resolvedUser.getUserId() : resolvedUser.getUsername();
+                log.debug("EmailCibaNotificationChannel.canHandle: User " + userIdentifier +
                         " has email: " + hasEmail);
             }
             return hasEmail;
         } catch (Exception e) {
-            log.warn("Error checking email for user: " + resolvedUser.getUserId(), e);
+            String userIdentifier = resolvedUser.getUserId() != null ?
+                    resolvedUser.getUserId() : resolvedUser.getUsername();
+            log.warn("Error checking email for user: " + userIdentifier, e);
             return false;
         }
     }
@@ -116,7 +120,7 @@ public class CibaEmailNotificationChannel implements CibaNotificationChannel {
             properties.put(NOTIFICATION_CHANNEL, NotificationChannels.EMAIL_CHANNEL.getChannelType());
             properties.put(TEMPLATE_TYPE, CIBA_AUTH_EMAIL_TEMPLATE);
             String username = resolvedUser.getUsername();
-            if (username.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            if (username != null && username.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
                 username = username.split(UserCoreConstants.DOMAIN_SEPARATOR)[1];
             }
             properties.put(USER_NAME, username);

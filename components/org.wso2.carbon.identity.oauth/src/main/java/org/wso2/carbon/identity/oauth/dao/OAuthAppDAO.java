@@ -81,6 +81,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_ALLOW_FEDERATED_USERS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_AUTH_REQ_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_NOTIFICATION_CHANNELS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_SKIP_USER_VALIDATION;
@@ -1149,6 +1150,10 @@ public class OAuthAppDAO {
                 CIBA_SKIP_USER_VALIDATION, String.valueOf(oauthAppDO.isCibaSkipUserValidation()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_ALLOW_FEDERATED_USERS, String.valueOf(oauthAppDO.isCibaAllowFederatedUsers()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                     ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
@@ -1903,6 +1908,11 @@ public class OAuthAppDAO {
                     CIBA_SKIP_USER_VALIDATION,
                     String.valueOf(consumerAppDO.isCibaSkipUserValidation()));
 
+            // CIBA Allow Federated Users Configuration.
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_ALLOW_FEDERATED_USERS,
+                    String.valueOf(consumerAppDO.isCibaAllowFederatedUsers()));
+
             if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
@@ -2146,6 +2156,12 @@ public class OAuthAppDAO {
         String cibaSkipUserValidation = getFirstPropertyValue(spOIDCProperties, CIBA_SKIP_USER_VALIDATION);
         if (cibaSkipUserValidation != null) {
             oauthApp.setCibaSkipUserValidation(Boolean.parseBoolean(cibaSkipUserValidation));
+        }
+
+        // CIBA Allow Federated Users Configuration.
+        String cibaAllowFederatedUsers = getFirstPropertyValue(spOIDCProperties, CIBA_ALLOW_FEDERATED_USERS);
+        if (cibaAllowFederatedUsers != null) {
+            oauthApp.setCibaAllowFederatedUsers(Boolean.parseBoolean(cibaAllowFederatedUsers));
         }
 
         // Set issuer details if the issuer organization is available in the OIDC properties
