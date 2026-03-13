@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2023-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -106,6 +107,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
+        String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+        accessTokenDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
+                ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
+                : IdentityTenantUtil.getLoginTenantId());
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
