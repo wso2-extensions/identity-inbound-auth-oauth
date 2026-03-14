@@ -57,6 +57,7 @@
             <class name="org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.RoleBasedScopeValidationHandlerTest"/>
         </classes>
     </test>
     <test name="oauth.tests.with.debug.disabled" preserve-order="true" parallel="false">
