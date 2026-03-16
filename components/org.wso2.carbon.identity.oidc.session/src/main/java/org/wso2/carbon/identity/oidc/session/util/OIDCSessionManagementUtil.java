@@ -236,8 +236,18 @@ public class OIDCSessionManagementUtil {
                     if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
                         // check whether the opbs cookie has a tenanted path.
                         if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
-                            String tenantDomain = resolveTenantDomain(request);
-                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                            String tenantDomain;
+                            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                                tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+                            } else {
+                                tenantDomain = resolveTenantDomain(request);
+                            }
+                            if (!IdentityTenantUtil.isSuperTenantRequiredInUrl() &&
+                                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                                servletCookie.setPath("/");
+                            } else {
+                                servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                            }
                         } else {
                             servletCookie.setPath("/");
                         }

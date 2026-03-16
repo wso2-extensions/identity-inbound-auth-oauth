@@ -25,6 +25,7 @@ import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -107,7 +108,12 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             removeOPBrowserStateCookiesInRoot(request, response);
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
-            cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            if (!IdentityTenantUtil.isSuperTenantRequiredInUrl() &&
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
+                cookie.setPath("/");
+            } else {
+                cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+            }
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             cookie.setPath("/");
