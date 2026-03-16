@@ -46,8 +46,8 @@ import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.reset;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
@@ -340,6 +340,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
     public void testRegisterScope(Response.Status expectation, Throwable throwable) throws Exception {
 
         ScopeDTO scopeDTO = new ScopeDTO();
+        scopeDTO.setName("someScopeName");
         scopeDTO.setDescription("some description");
         scopeDTO.setBindings(Collections.<String>emptyList());
         mockServiceURLBuilder(SERVER_API_PATH_COMPONENT + scopeDTO.getName());

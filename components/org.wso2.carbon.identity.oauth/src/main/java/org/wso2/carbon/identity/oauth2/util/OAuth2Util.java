@@ -4810,10 +4810,17 @@ public class OAuth2Util {
     }
 
     /**
-     * Resolve tenant domain from the httpServlet request.
-     *
-     * @param request HttpServlet Request.
-     * @return Tenant Domain.
+     * Resolve the tenant domain for the current context.
+      * <p>
+      * When tenanted sessions are disabled this method always returns the super tenant domain.
+      * When tenanted sessions are enabled it delegates to
+      * {@link IdentityTenantUtil#resolveTenantDomain()} and derives the tenant from the current
+      * Carbon context/session rather than from the {@code request} parameter.
+      * </p>
+      * 
+      * @param request HttpServletRequest associated with the call. Currently not used but retained for
+      *                API compatibility.
+      * @return Resolved tenant domain for the current context.
      */
     public static String resolveTenantDomain(HttpServletRequest request) {
 

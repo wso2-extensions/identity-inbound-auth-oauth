@@ -294,6 +294,9 @@ public class ScopesApiServiceImpl extends ScopesApiService {
         String context = IdentityTenantUtil.isTenantQualifiedUrlsEnabled() ? SERVER_API_PATH_COMPONENT + scopeName :
                 String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT
                         + scopeName;
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Building URI for scope: " + scopeName + " with context: " + context);
+        }                
         try {
             String url = ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
             location = URI.create(url);
