@@ -89,6 +89,9 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -121,6 +124,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
@@ -153,6 +157,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.interfaces.RSAPrivateKey;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -1960,6 +1965,284 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 //PKCE mandoatory should be false when we set PKCE_UNSUPPORTED_FLOW attribute
                 assertEquals(validationResponseDTO.isPkceMandatory(), false);
             }
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with valid federated tokens and auth_req_id")
+    public void testCacheFederatedTokensForCibaFlowWithValidData() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("testIdp", "testAccessToken"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+            AuthenticatedUser loggedInUser = new AuthenticatedUser();
+            loggedInUser.setUserName(USERNAME);
+            Map<ClaimMapping, String> userAttributes = new HashMap<>();
+            userAttributes.put(ClaimMapping.build("http://test.claim", null, null, false), "testValue");
+            loggedInUser.setUserAttributes(userAttributes);
+            sessionDataCacheEntry.setLoggedInUser(loggedInUser);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            String authReqId = "test-auth-req-id-12345";
+            oauth2Params.setNonce(authReqId);
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            ArgumentCaptor<AuthorizationGrantCacheKey> keyCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheKey.class);
+            ArgumentCaptor<AuthorizationGrantCacheEntry> entryCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheEntry.class);
+            verify(mockGrantCache).addToCache(keyCaptor.capture(), entryCaptor.capture());
+
+            assertEquals(keyCaptor.getValue().getUserAttributesId(), authReqId);
+            assertNotNull(entryCaptor.getValue().getFederatedTokens());
+            assertEquals(entryCaptor.getValue().getFederatedTokens().size(), 1);
+            assertEquals(entryCaptor.getValue().getFederatedTokens().get(0).getIdp(), "testIdp");
+            assertEquals(entryCaptor.getValue().getFederatedTokens().get(0).getAccessToken(), "testAccessToken");
+            // Verify federated tokens are cleared from session data cache entry.
+            Assert.assertNull(sessionDataCacheEntry.getFederatedTokens());
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with multiple federated tokens")
+    public void testCacheFederatedTokensForCibaFlowWithMultipleTokens() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("idp1", "accessToken1"));
+            federatedTokens.add(new FederatedTokenDO("idp2", "accessToken2"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+            AuthenticatedUser loggedInUser = new AuthenticatedUser();
+            loggedInUser.setUserName(USERNAME);
+            sessionDataCacheEntry.setLoggedInUser(loggedInUser);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("multi-token-auth-req-id");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            ArgumentCaptor<AuthorizationGrantCacheEntry> entryCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheEntry.class);
+            verify(mockGrantCache).addToCache(any(AuthorizationGrantCacheKey.class), entryCaptor.capture());
+
+            assertEquals(entryCaptor.getValue().getFederatedTokens().size(), 2);
+            assertEquals(entryCaptor.getValue().getFederatedTokens().get(0).getIdp(), "idp1");
+            assertEquals(entryCaptor.getValue().getFederatedTokens().get(1).getIdp(), "idp2");
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with null logged-in user uses empty user attributes")
+    public void testCacheFederatedTokensForCibaFlowWithNullLoggedInUser() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("testIdp", "testAccessToken"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+            // Logged-in user is null.
+            sessionDataCacheEntry.setLoggedInUser(null);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("auth-req-id-null-user");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            ArgumentCaptor<AuthorizationGrantCacheEntry> entryCaptor =
+                    ArgumentCaptor.forClass(AuthorizationGrantCacheEntry.class);
+            verify(mockGrantCache).addToCache(any(AuthorizationGrantCacheKey.class), entryCaptor.capture());
+
+            // When logged-in user is null, user attributes should be an empty HashMap.
+            assertNotNull(entryCaptor.getValue());
+            assertNotNull(entryCaptor.getValue().getFederatedTokens());
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with null session data cache entry - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithNullSessionDataCacheEntry() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(null);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("some-auth-req-id");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            // Verify that addToCache was never called.
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with null federated tokens - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithNullFederatedTokens() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            sessionDataCacheEntry.setFederatedTokens(null);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("some-auth-req-id");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with empty federated tokens list - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithEmptyFederatedTokens() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            sessionDataCacheEntry.setFederatedTokens(new ArrayList<>());
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("some-auth-req-id");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with null nonce (auth_req_id) - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithNullNonce() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("testIdp", "testAccessToken"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            // Nonce is not set, defaults to null.
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with empty string nonce - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithEmptyNonce() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("testIdp", "testAccessToken"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
+        }
+    }
+
+    @Test(description = "Test cacheFederatedTokensForCibaFlow with blank (whitespace) nonce - should return early")
+    public void testCacheFederatedTokensForCibaFlowWithBlankNonce() throws Exception {
+
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCacheMockedStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+            AuthorizationGrantCache mockGrantCache = mock(AuthorizationGrantCache.class);
+            authorizationGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockGrantCache);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            List<FederatedTokenDO> federatedTokens = new ArrayList<>();
+            federatedTokens.add(new FederatedTokenDO("testIdp", "testAccessToken"));
+            sessionDataCacheEntry.setFederatedTokens(federatedTokens);
+
+            when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+
+            OAuth2Parameters oauth2Params = new OAuth2Parameters();
+            oauth2Params.setNonce("   ");
+
+            Method method = authzUtilObject.getClass().getDeclaredMethod("cacheFederatedTokensForCibaFlow",
+                    OAuthMessage.class, OAuth2Parameters.class);
+            method.setAccessible(true);
+            method.invoke(authzUtilObject, oAuthMessage, oauth2Params);
+
+            verify(mockGrantCache, Mockito.never()).addToCache(
+                    any(AuthorizationGrantCacheKey.class), any(AuthorizationGrantCacheEntry.class));
         }
     }
 

@@ -39,6 +39,7 @@ public class CibaAuthCodeDO {
     private String[] scopes;
     private AuthenticatedUser authenticatedUser;
     private String resolvedUserId;
+    private int idpId;
 
     public String getCibaAuthCodeKey() {
 
@@ -150,5 +151,15 @@ public class CibaAuthCodeDO {
     public void setResolvedUserId(String resolvedUserId) {
 
         this.resolvedUserId = resolvedUserId;
+    }
+
+    public void setIdpId(int idpId) {
+
+        this.idpId = idpId;
+    }
+
+    public int getIdpId() {
+
+        return this.idpId;
     }
 }

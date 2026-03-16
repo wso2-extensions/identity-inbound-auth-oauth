@@ -27,14 +27,21 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -71,6 +78,8 @@ public class CibaGrantHandlerTest {
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<CibaDAOFactory> cibaDAOFactory;
     private MockedStatic<OAuth2Util> oAuth2Util;
+    private MockedStatic<UserSessionStore> userSessionStore;
+    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -85,6 +94,8 @@ public class CibaGrantHandlerTest {
         Mockito.lenient().when(mockCibaDAOFactory.getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
 
         oAuth2Util = mockStatic(OAuth2Util.class);
+        userSessionStore = mockStatic(UserSessionStore.class);
+        oAuth2ServiceComponentHolder = mockStatic(OAuth2ServiceComponentHolder.class);
     }
 
     @AfterMethod
@@ -97,6 +108,12 @@ public class CibaGrantHandlerTest {
         }
         if (oAuth2Util != null) {
             oAuth2Util.close();
+        }
+        if (userSessionStore != null) {
+            userSessionStore.close();
+        }
+        if (oAuth2ServiceComponentHolder != null) {
+            oAuth2ServiceComponentHolder.close();
         }
     }
 
@@ -242,9 +259,12 @@ public class CibaGrantHandlerTest {
         cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
         cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
         cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setIdpId(1);
 
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
         cibaAuthCodeDO.setAuthenticatedUser(user);
 
         List<String> scopes = new ArrayList<>();
@@ -254,7 +274,170 @@ public class CibaGrantHandlerTest {
 
         when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
 
+        // Mock OAuth2Util static methods used in retrieveCibaAuthCode.
+        oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
+
+        // Mock UserSessionStore for subject identifier resolution.
+        UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
+        userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
+        when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+                .thenReturn("test-subject-id");
+
+        // Mock OAuth2ServiceComponentHolder for ServiceProvider retrieval.
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenReturn(serviceProvider);
+
         Assert.assertTrue(handler.validateGrant(tokReqMsgCtx));
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = "Error occurred while retrieving subject identifier for auth_req_id:.*")
+    public void testValidateGrantThrowsWhenUserSessionStoreFails() throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO reqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(reqDTO);
+
+        RequestParameter[] parameters = new RequestParameter[1];
+        parameters[0] = new RequestParameter(AUTH_REQ_ID, new String[]{"auth-req-id"});
+        when(reqDTO.getRequestParameters()).thenReturn(parameters);
+        when(reqDTO.getClientId()).thenReturn("client-id");
+
+        when(cibaMgtDAO.getCibaAuthCodeKey("auth-req-id")).thenReturn("auth-code-key");
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setCibaAuthCodeKey("auth-code-key");
+        cibaAuthCodeDO.setConsumerKey("client-id");
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDO.setExpiresIn(3600);
+        cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+        cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
+        cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setIdpId(1);
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        when(cibaMgtDAO.getScopes("auth-code-key")).thenReturn(scopes);
+        when(cibaMgtDAO.getAuthenticatedUser("auth-code-key")).thenReturn(user);
+        when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
+
+        // Mock UserSessionStore to throw UserSessionException.
+        UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
+        userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
+        when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+                .thenThrow(new UserSessionException("User session store error"));
+
+        handler.validateGrant(tokReqMsgCtx);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp =
+                    "Error occurred while retrieving OAuth2 application data for auth_req_id:.*")
+    public void testValidateGrantThrowsWhenAppMgtServiceFails() throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO reqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(reqDTO);
+
+        RequestParameter[] parameters = new RequestParameter[1];
+        parameters[0] = new RequestParameter(AUTH_REQ_ID, new String[]{"auth-req-id"});
+        when(reqDTO.getRequestParameters()).thenReturn(parameters);
+        when(reqDTO.getClientId()).thenReturn("client-id");
+
+        when(cibaMgtDAO.getCibaAuthCodeKey("auth-req-id")).thenReturn("auth-code-key");
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setCibaAuthCodeKey("auth-code-key");
+        cibaAuthCodeDO.setConsumerKey("client-id");
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDO.setExpiresIn(3600);
+        cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+        cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
+        cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setIdpId(1);
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        when(cibaMgtDAO.getScopes("auth-code-key")).thenReturn(scopes);
+        when(cibaMgtDAO.getAuthenticatedUser("auth-code-key")).thenReturn(user);
+        when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
+
+        // Mock UserSessionStore to return a valid user ID.
+        UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
+        userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
+        when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+                .thenReturn("test-subject-id");
+
+        // Mock ApplicationManagementService to throw exception.
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenThrow(new IdentityApplicationManagementException("Application management error"));
+
+        handler.validateGrant(tokReqMsgCtx);
+    }
+
+    @Test
+    public void testValidateGrantWithNonAuthenticatedStatus() throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO reqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(reqDTO);
+
+        RequestParameter[] parameters = new RequestParameter[1];
+        parameters[0] = new RequestParameter(AUTH_REQ_ID, new String[]{"auth-req-id"});
+        when(reqDTO.getRequestParameters()).thenReturn(parameters);
+        when(reqDTO.getClientId()).thenReturn("client-id");
+
+        when(cibaMgtDAO.getCibaAuthCodeKey("auth-req-id")).thenReturn("auth-code-key");
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setCibaAuthCodeKey("auth-code-key");
+        cibaAuthCodeDO.setConsumerKey("client-id");
+        // CONSENT_DENIED status — should not attempt subject resolution.
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.CONSENT_DENIED);
+        cibaAuthCodeDO.setExpiresIn(3600);
+        cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+        cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
+        cibaAuthCodeDO.setInterval(2);
+
+        when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
+
+        try {
+            handler.validateGrant(tokReqMsgCtx);
+            Assert.fail("Expected IdentityOAuth2Exception for denied consent");
+        } catch (IdentityOAuth2Exception e) {
+            // Expected: access_denied because consent was denied.
+            Assert.assertTrue(e.getMessage().contains("access_denied")
+                    || e.getMessage().contains("User denied authentication"));
+        }
     }
 
     @Test(enabled = false, description = "Skipping due to complex dependencies in super.issue()")

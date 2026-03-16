@@ -215,6 +215,10 @@ public class CibaMgtDAOImplTest {
                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
             prepareConnection(identityDatabaseUtil);
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(-1234)).thenReturn("super.wso2");
+            oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                    .thenReturn(new AuthenticatedUser());
 
             AuthenticatedUser user = cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY);
             // We haven't persisted the authenticated user in this test specifically, but it
@@ -241,6 +245,7 @@ public class CibaMgtDAOImplTest {
 
             oAuth2Util.when(() -> OAuth2Util.getAuthenticatedIDP(user)).thenReturn("LOCAL");
             oAuth2Util.when(() -> OAuth2Util.getTenantId("super.wso2")).thenReturn(-1234);
+            oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
 
             cibaMgtDAO.persistAuthenticationSuccess(AUTH_CODE_KEY, user);
         }
@@ -249,6 +254,13 @@ public class CibaMgtDAOImplTest {
                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
             prepareConnection(identityDatabaseUtil);
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(-1234)).thenReturn("super.wso2");
+
+            AuthenticatedUser expectedUser = new AuthenticatedUser();
+            expectedUser.setUserName(USER_NAME);
+            expectedUser.setUserStoreDomain("PRIMARY");
+            expectedUser.setTenantDomain("super.wso2");
+            oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(USER_NAME, "PRIMARY", "super.wso2", "LOCAL"))
+                    .thenReturn(expectedUser);
 
             AuthenticatedUser retrievedUser = cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY);
             assertEquals(retrievedUser.getUserName(), USER_NAME);
@@ -268,7 +280,7 @@ public class CibaMgtDAOImplTest {
     protected void storeIDP() throws Exception {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (1234, 'LOCAL', 5678)";
+            String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (-1234, 'LOCAL', 5678)";
             PreparedStatement statement = connection1.prepareStatement(sql);
             statement.execute();
         }
