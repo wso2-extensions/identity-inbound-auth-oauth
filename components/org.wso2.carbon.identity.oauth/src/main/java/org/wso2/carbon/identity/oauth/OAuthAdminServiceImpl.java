@@ -419,7 +419,10 @@ public class OAuthAdminServiceImpl {
         consumerSecret.setSecretId(UUID.randomUUID().toString());
         consumerSecret.setDescription(consumerSecretDTO.getDescription());
         consumerSecret.setClientId(consumerKey);
-        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+        String providedSecret = consumerSecretDTO.getClientSecret();
+        consumerSecret.setSecretValue(StringUtils.isNotBlank(providedSecret)
+                ? providedSecret
+                : OAuthUtil.getRandomNumberSecure());
         consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         // Persist the new secret and update the IDN_OAUTH_CONSUMER_APPS table with the new secret.
