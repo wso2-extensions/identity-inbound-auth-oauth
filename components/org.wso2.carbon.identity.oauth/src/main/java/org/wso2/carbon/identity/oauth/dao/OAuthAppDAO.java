@@ -1429,6 +1429,11 @@ public class OAuthAppDAO {
         try {
             String consumerKey = consumerSecretDO.getClientId();
             connection = IdentityDatabaseUtil.getDBConnection(true);
+            if (hasClientSecretLimitReached(consumerKey, appTableClientSecret, connection)) {
+                throw new IdentityOAuthAdminException(
+                        "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
+                                "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
+            }
             // Check if any secrets are present for the given consumer key in IDN_OAUTH_CONSUMER_SECRETS table. If not,
             // copy the existing secret from IDN_OAUTH_CONSUMER_APPS table to IDN_OAUTH_CONSUMER_SECRETS table.
             // This step is done to migrate the existing secret to the new table which happens on-demand. If secrets
@@ -1442,24 +1447,6 @@ public class OAuthAppDAO {
                 existingSecretDO.setClientId(consumerKey);
                 existingSecretDO.setSecretValue(appTableClientSecret);
                 addOAuthConsumerSecret(connection, existingSecretDO, processedCopyingClientSecret);
-            }
-            // Re-fetch after potential seeding to include the seeded entry.
-            List<OAuthConsumerSecretDO> currentSecrets = getOAuthConsumerSecrets(consumerKey, connection);
-            String hashedNewSecret = hashingPersistenceProcessor
-                    .getProcessedClientSecret(consumerSecretDO.getSecretValue());
-            for (OAuthConsumerSecretDO existing : currentSecrets) {
-                if (hashedNewSecret.equals(existing.getSecretHash())) {
-                    // Secret already exists — update metadata only, no new secret created.
-                    updateOAuthConsumerSecretMetadata(connection, consumerKey, hashedNewSecret,
-                            consumerSecretDO.getDescription(), consumerSecretDO.getExpiresAt());
-                    IdentityDatabaseUtil.commitTransaction(connection);
-                    return;
-                }
-            }
-            if (hasClientSecretLimitReached(consumerKey, appTableClientSecret, connection)) {
-                throw new IdentityOAuthAdminException(
-                        "Maximum number of secrets reached for client ID: " + consumerKey + ". " +
-                                "Clients cannot have more than " + OAuth2Util.getClientSecretCount() + " secrets.");
             }
             // Add the new secret to IDN_OAUTH_CONSUMER_SECRETS table.
             String processedClientSecret =
@@ -1551,33 +1538,6 @@ public class OAuthAppDAO {
             prepStmt.setString(1, processedClientSecret);
             prepStmt.setString(2, consumerKey);
             prepStmt.execute();
-        }
-    }
-
-    /**
-     * Update description and expiry time of an existing OAuth consumer secret identified by its hash.
-     *
-     * @param connection  DB connection to be used.
-     * @param consumerKey Consumer key (client ID).
-     * @param secretHash  Hash of the secret whose metadata is to be updated.
-     * @param description New description value (may be null).
-     * @param expiresAt   New expiry epoch seconds (may be null for no expiry).
-     */
-    private void updateOAuthConsumerSecretMetadata(Connection connection, String consumerKey,
-                                                   String secretHash, String description, Long expiresAt)
-            throws SQLException {
-
-        try (PreparedStatement prepStmt = connection.prepareStatement(
-                SQLQueries.OAuthAppDAOSQLQueries.UPDATE_OAUTH_CONSUMER_SECRET_METADATA)) {
-            prepStmt.setString(1, description);
-            if (expiresAt != null) {
-                prepStmt.setLong(2, expiresAt);
-            } else {
-                prepStmt.setNull(2, java.sql.Types.BIGINT);
-            }
-            prepStmt.setString(3, consumerKey);
-            prepStmt.setString(4, secretHash);
-            prepStmt.executeUpdate();
         }
     }
 
