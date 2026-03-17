@@ -391,7 +391,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Create a new OAuth consumer secret for the given client Id.
      *
-     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, description and expiry time
+     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, provided clientSecret,
+     *                                                        description and expiry time
      * @return {@link OAuthConsumerSecretDTO} containing the created consumer secret information
      * @throws IdentityOAuthAdminException Error when persisting the consumer secret information to the persistence
      * store or if the operation is not supported.
