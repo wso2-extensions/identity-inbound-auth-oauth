@@ -391,7 +391,8 @@ public class OAuthAdminServiceImpl {
     /**
      * Create a new OAuth consumer secret for the given client Id.
      *
-     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, description and expiry time
+     * @param consumerSecretDTO {@link OAuthConsumerSecretDTO} containing client Id, provided clientSecret,
+     *                                                        description and expiry time
      * @return {@link OAuthConsumerSecretDTO} containing the created consumer secret information
      * @throws IdentityOAuthAdminException Error when persisting the consumer secret information to the persistence
      * store or if the operation is not supported.
@@ -419,7 +420,10 @@ public class OAuthAdminServiceImpl {
         consumerSecret.setSecretId(UUID.randomUUID().toString());
         consumerSecret.setDescription(consumerSecretDTO.getDescription());
         consumerSecret.setClientId(consumerKey);
-        consumerSecret.setSecretValue(OAuthUtil.getRandomNumberSecure());
+        String providedSecret = consumerSecretDTO.getClientSecret();
+        consumerSecret.setSecretValue(StringUtils.isNotBlank(providedSecret)
+                ? providedSecret
+                : OAuthUtil.getRandomNumberSecure());
         consumerSecret.setExpiresAt(consumerSecretDTO.getExpiresAt());
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         // Persist the new secret and update the IDN_OAUTH_CONSUMER_APPS table with the new secret.
