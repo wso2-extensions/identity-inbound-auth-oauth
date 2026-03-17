@@ -132,7 +132,7 @@ public class CibaAuthServiceImplTest {
         CibaAuthCodeRequest request = new CibaAuthCodeRequest();
         request.setIssuer("test-client");
         request.setUserHint("test-user-hint");
-        request.setScopes(new String[] { "openid" });
+        request.setScopes(new String[]{"openid"});
         request.setBindingMessage("test-message");
 
         OAuthAppDO appDO = new OAuthAppDO();
@@ -260,5 +260,20 @@ public class CibaAuthServiceImplTest {
 
         // Should throw CibaClientException since no channels are configured for the app.
         cibaAuthService.generateAuthCodeResponse(request);
+    }
+
+    @Test(expectedExceptions = CibaClientException.class, expectedExceptionsMessageRegExp = ".*public client.*")
+    public void testGenerateAuthCodeResponse_PublicClient() throws Exception {
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
+        request.setIssuer("public-client");
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setBypassClientCredentials(true);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("public-client", "carbon.super"))
+                .thenReturn(appDO);
+
+        cibaAuthService.generateAuthCodeResponse(request);
+
     }
 }
