@@ -4646,6 +4646,9 @@ public class OAuth2Util {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
                 if (StringUtils.isBlank(tenantDomainFromContext)) {
                     tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                    if (log.isDebugEnabled()) {
+                        log.debug("Context tenant domain was blank, resolved to: " + tenantDomainFromContext);
+                        }
                 }
 
                 if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
