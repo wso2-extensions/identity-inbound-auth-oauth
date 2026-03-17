@@ -164,7 +164,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
-        tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
+        if (validationBean.isWithNotPersistedAT()) {
+            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
+                    getTenantDomain());
+            tokReqMsgCtx.setValidityPeriod(getValidityPeriodInMillis(tokReqMsgCtx, oAuthAppDO));
+        } else {
+            tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
+        }
 
         if (checkExecutePreIssueAccessTokensActions(validationBean, tokReqMsgCtx) ||
                 checkExecutePreIssueIdTokensActions(tokReqMsgCtx)) {
