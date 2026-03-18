@@ -274,6 +274,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.setLong(7, cibaAuthCodeDO.getExpiresIn());
                 prepStmt.setString(8, cibaAuthCodeDO.getAuthReqStatus().toString());
                 prepStmt.setString(9, cibaAuthCodeDO.getResolvedUserId());
+                prepStmt.setString(10, cibaAuthCodeDO.getRequestedActor());
                 prepStmt.execute();
 
                 if (log.isDebugEnabled()) {
@@ -341,6 +342,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                         cibaAuthCodeDO.setIssuedTime(resultSet.getTimestamp(8,
                                         Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
                         cibaAuthCodeDO.setIdpId(resultSet.getInt(9));
+                        cibaAuthCodeDO.setRequestedActor(resultSet.getString(10));
                     } else {
                         return null;
                     }

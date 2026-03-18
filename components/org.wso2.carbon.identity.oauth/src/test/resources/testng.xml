@@ -152,6 +152,8 @@
             <class name="org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ActorTokenValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.AgentAccessTokenClaimProviderTest"/>
         </classes>
     </test>
 

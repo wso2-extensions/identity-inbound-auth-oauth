@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.ciba.api;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -274,6 +275,81 @@ public class CibaAuthServiceImplTest {
                 .thenReturn(appDO);
 
         cibaAuthService.generateAuthCodeResponse(request);
+    }
 
+    @Test
+    public void testGenerateAuthCodeResponse_withRequestedActor_propagatesToAuthCodeDO() throws Exception {
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
+        request.setIssuer("test-client");
+        request.setUserHint("test-user-hint");
+        request.setScopes(new String[]{"openid"});
+        request.setRequestedActor("actor-subject-999");
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setCallbackUrl("http://callback.com");
+        appDO.setCibaNotificationChannels("test-channel");
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("test-client", "carbon.super"))
+                .thenReturn(appDO);
+
+        CibaUserResolver.ResolvedUser resolvedUser = new CibaUserResolver.ResolvedUser();
+        resolvedUser.setUserId("resolved-user-id");
+        resolvedUser.setTenantDomain("carbon.super");
+        resolvedUser.setUsername("test-user");
+        when(cibaUserResolver.resolveUser("test-user-hint", "carbon.super")).thenReturn(resolvedUser);
+
+        ServiceURLBuilder mockBuilder = mock(ServiceURLBuilder.class);
+        serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockBuilder);
+        when(mockBuilder.addPath(anyString())).thenReturn(mockBuilder);
+        when(mockBuilder.addParameter(anyString(), anyString())).thenReturn(mockBuilder);
+        ServiceURL mockServiceURL = mock(ServiceURL.class);
+        when(mockBuilder.build()).thenReturn(mockServiceURL);
+        when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
+
+        when(cibaNotificationChannel.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
+
+        cibaAuthService.generateAuthCodeResponse(request);
+
+        ArgumentCaptor<CibaAuthCodeDO> captor = ArgumentCaptor.forClass(CibaAuthCodeDO.class);
+        verify(cibaAuthMgtDAO).persistCibaAuthCode(captor.capture());
+        Assert.assertEquals(captor.getValue().getRequestedActor(), "actor-subject-999");
+    }
+
+    @Test
+    public void testGenerateAuthCodeResponse_withNullRequestedActor_persistsNull() throws Exception {
+
+        CibaAuthCodeRequest request = new CibaAuthCodeRequest();
+        request.setIssuer("test-client");
+        request.setUserHint("test-user-hint");
+        request.setScopes(new String[]{"openid"});
+        // requestedActor intentionally not set → null
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setCallbackUrl("http://callback.com");
+        appDO.setCibaNotificationChannels("test-channel");
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId("test-client", "carbon.super"))
+                .thenReturn(appDO);
+
+        CibaUserResolver.ResolvedUser resolvedUser = new CibaUserResolver.ResolvedUser();
+        resolvedUser.setUserId("resolved-user-id");
+        resolvedUser.setTenantDomain("carbon.super");
+        resolvedUser.setUsername("test-user");
+        when(cibaUserResolver.resolveUser("test-user-hint", "carbon.super")).thenReturn(resolvedUser);
+
+        ServiceURLBuilder mockBuilder = mock(ServiceURLBuilder.class);
+        serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockBuilder);
+        when(mockBuilder.addPath(anyString())).thenReturn(mockBuilder);
+        when(mockBuilder.addParameter(anyString(), anyString())).thenReturn(mockBuilder);
+        ServiceURL mockServiceURL = mock(ServiceURL.class);
+        when(mockBuilder.build()).thenReturn(mockServiceURL);
+        when(mockServiceURL.getAbsolutePublicURL()).thenReturn("http://auth-endpoint");
+
+        when(cibaNotificationChannel.canHandle(any(CibaNotificationContext.class))).thenReturn(true);
+
+        cibaAuthService.generateAuthCodeResponse(request);
+
+        ArgumentCaptor<CibaAuthCodeDO> captor = ArgumentCaptor.forClass(CibaAuthCodeDO.class);
+        verify(cibaAuthMgtDAO).persistCibaAuthCode(captor.capture());
+        Assert.assertNull(captor.getValue().getRequestedActor());
     }
 }
