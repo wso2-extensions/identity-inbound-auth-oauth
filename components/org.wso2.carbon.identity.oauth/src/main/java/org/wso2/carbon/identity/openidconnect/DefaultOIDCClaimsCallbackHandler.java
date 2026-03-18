@@ -155,7 +155,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Get any user attributes that were cached against the access token
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
-        if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
+        if (userAttributes != null &&
+                (userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser()))) {

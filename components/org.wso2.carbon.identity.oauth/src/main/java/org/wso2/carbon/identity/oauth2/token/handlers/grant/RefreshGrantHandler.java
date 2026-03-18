@@ -164,7 +164,18 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
-        tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
+        if (validationBean.isWithNotPersistedAT()) {
+            // If the refresh token is issued with an access token which is not persisted,
+            // then we need to calculate the validity period for the new access token based
+            // on the app configuration. since we cannot retrieve the issued time and validity period of the previous
+            // access token from the database.
+            // Setting this value used for pre issue access token actions.
+            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
+                    getTenantDomain());
+            tokReqMsgCtx.setValidityPeriod(getValidityPeriodInMillis(tokReqMsgCtx, oAuthAppDO));
+        } else {
+            tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
+        }
 
         if (checkExecutePreIssueAccessTokensActions(validationBean, tokReqMsgCtx) ||
                 checkExecutePreIssueIdTokensActions(tokReqMsgCtx)) {
