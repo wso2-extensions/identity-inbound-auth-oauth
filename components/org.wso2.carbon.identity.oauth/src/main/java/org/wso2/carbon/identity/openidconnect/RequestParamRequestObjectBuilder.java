@@ -130,10 +130,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
             JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
-            // TO-DO: support ECDH Key pair introduction.
             PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
-            JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm,
-                    privateKey);
+            JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);
@@ -182,17 +180,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
     private JWEDecrypter validateDecryptorMode(JWEAlgorithm encryptionAlgorithm, PrivateKey privateKey)
             throws JOSEException {
 
-        if (JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm)) {
-            return new RSADecrypter(privateKey);
-        }
         if (encryptionAlgorithm == null) {
             log.debug("Request Object Encryption Algorithm is not found.");
         }
-        // To-Do: support for ECDH algorithms
         return new RSADecrypter(privateKey);
     }
 

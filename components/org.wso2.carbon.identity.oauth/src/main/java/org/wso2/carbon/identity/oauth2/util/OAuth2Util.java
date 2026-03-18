@@ -3500,18 +3500,15 @@ public class OAuth2Util {
     private static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
             throws JOSEException {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Validating encrypter mode for algorithm: " + encryptionAlgorithm);
+        }
         // Use built-in Nimbus Encryptor for supported algorithms
-        if (JWEAlgorithm.RSA_OAEP.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA1_5.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_256.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_384.equals(encryptionAlgorithm) ||
-                JWEAlgorithm.RSA_OAEP_512.equals(encryptionAlgorithm)) {
-            return new RSAEncrypter((RSAPublicKey) publicKey);
-        } else if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+         if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
                 JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
                 JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
             return new ECDHEncrypter((ECPublicKey) publicKey);
-        }
+         }
         return new RSAEncrypter((RSAPublicKey) publicKey);
     }
 
