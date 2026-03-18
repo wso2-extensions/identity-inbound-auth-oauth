@@ -1328,6 +1328,11 @@ public class AccessTokenIssuer {
                                     OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
             tokReqMsgCtx.setTokenBinding(null);
             return;
@@ -1338,11 +1343,6 @@ public class AccessTokenIssuer {
         if (!tokenBinderOptional.isPresent()) {
             throw new IdentityOAuth2Exception(
                     "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
-        }
-
-        if (REFRESH_TOKEN.equals(grantType)) {
-            // Token binding values are already set to the OAuthTokenReqMessageContext.
-            return;
         }
 
         tokReqMsgCtx.setTokenBinding(null);
