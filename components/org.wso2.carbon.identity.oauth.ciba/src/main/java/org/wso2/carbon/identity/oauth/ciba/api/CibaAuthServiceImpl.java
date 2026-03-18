@@ -311,6 +311,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScopes(scopes);
+        cibaAuthCodeDO.setRequestedActor(cibaAuthCodeRequest.getRequestedActor());
         return cibaAuthCodeDO;
     }
 

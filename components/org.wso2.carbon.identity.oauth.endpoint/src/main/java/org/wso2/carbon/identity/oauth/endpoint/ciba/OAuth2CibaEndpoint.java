@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.ActorTokenValidator;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -147,6 +149,18 @@ public class OAuth2CibaEndpoint {
 
                 // Build CibaAuthCodeRequest from individual parameters
                 cibaAuthCodeRequest = getCibaAuthCodeRequestFromParams(params, oAuthClientAuthnContext.getClientId());
+            }
+
+            // Validate actor_token and store actor subject for OBO delegation.
+            String actorToken = request.getParameter(OAuthConstants.ACTOR_TOKEN);
+            if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(actorToken)) {
+                try {
+                    String actorSub = ActorTokenValidator.validateAndGetSubject(actorToken, tenantDomain);
+                    cibaAuthCodeRequest.setRequestedActor(actorSub);
+                } catch (IdentityOAuth2Exception e) {
+                    throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid actor_token: " + e.getMessage(), e);
+                }
             }
 
             // Obtain Response from service layer of CIBA.
