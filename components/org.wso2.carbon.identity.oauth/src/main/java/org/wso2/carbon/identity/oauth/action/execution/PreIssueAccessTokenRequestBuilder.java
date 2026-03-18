@@ -135,7 +135,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         if (isRefreshTokenAllowed(oAuthAppDO)) {
             eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
-        eventBuilder.request(getRequest(tokenReqDTO));
+        eventBuilder.request(getRequest(tokenMessageContext));
 
         return eventBuilder.build();
     }
@@ -218,8 +218,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO) {
+    private Request getRequest(OAuthTokenReqMessageContext tokenMessageContext) {
 
+        OAuth2AccessTokenReqDTO tokenRequestDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
         TokenRequest.Builder tokenRequestBuilder = new TokenRequest.Builder();
         tokenRequestBuilder.clientId(tokenRequestDTO.getClientId());
         tokenRequestBuilder.grantType(tokenRequestDTO.getGrantType());
@@ -237,6 +238,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             for (RequestParameter parameter : requestParameters) {
                 tokenRequestBuilder.addAdditionalParam(parameter.getKey(), parameter.getValue());
             }
+        }
+
+        String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
+                OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        if (StringUtils.isNotEmpty(sessionDataKeyConsent)) {
+            tokenRequestBuilder.addAdditionalParam(
+                    OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{sessionDataKeyConsent});
         }
 
         return tokenRequestBuilder.build();

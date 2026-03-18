@@ -2300,6 +2300,7 @@ public class AuthzUtil {
         authorizationGrantCacheEntry.setMaxAge(sessionDataCacheEntry.getoAuth2Parameters().getMaxAge());
         authorizationGrantCacheEntry.setTokenBindingValue(tokenBindingValue);
         authorizationGrantCacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
+        authorizationGrantCacheEntry.setSessionDataKeyConsent(oAuthMessage.getSessionDataKeyFromConsent());
         authorizationGrantCacheEntry.setAccessTokenExtensionDO(tokenExtendedAttributes);
         if (isApiBasedAuthenticationFlow(oAuthMessage)) {
             authorizationGrantCacheEntry.setApiBasedAuthRequest(true);
