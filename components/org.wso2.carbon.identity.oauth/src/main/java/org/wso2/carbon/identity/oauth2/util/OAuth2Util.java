@@ -4614,8 +4614,8 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+            String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {
@@ -4644,8 +4644,13 @@ public class OAuth2Util {
             String tenantDomainFromContext;
             if (contextTenantDomainFromTokenReqDTO.isPresent()) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+                if (StringUtils.isBlank(tenantDomainFromContext)) {
+                    tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                    if (log.isDebugEnabled()) {
+                        log.debug("Context tenant domain was blank, resolved to: " + tenantDomainFromContext);
+                        }
+                }
 
-                // In tenant qualified URL mode we would always have the tenant domain in the context.
                 if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                     // This means the tenant domain sent in the request and app's tenant domain do not match.
                     throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
@@ -4808,10 +4813,17 @@ public class OAuth2Util {
     }
 
     /**
-     * Resolve tenant domain from the httpServlet request.
-     *
-     * @param request HttpServlet Request.
-     * @return Tenant Domain.
+     * Resolve the tenant domain for the current context.
+      * <p>
+      * When tenanted sessions are disabled this method always returns the super tenant domain.
+      * When tenanted sessions are enabled it delegates to
+      * {@link IdentityTenantUtil#resolveTenantDomain()} and derives the tenant from the current
+      * Carbon context/session rather than from the {@code request} parameter.
+      * </p>
+      * 
+      * @param request HttpServletRequest associated with the call. Currently not used but retained for
+      *                API compatibility.
+      * @return Resolved tenant domain for the current context.
      */
     public static String resolveTenantDomain(HttpServletRequest request) {
 
@@ -4819,13 +4831,7 @@ public class OAuth2Util {
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
 
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
+        return IdentityTenantUtil.resolveTenantDomain();
     }
 
     /**
