@@ -1101,7 +1101,7 @@
         <!--Swagger Dependency Version-->
         <jackson-databind.version>2.16.1</jackson-databind.version>
         <com.fasterxml.jackson.version>2.16.1</com.fasterxml.jackson.version>
-        <spring-web.version>4.3.29.RELEASE</spring-web.version>
+        <spring-web.version>6.1.21</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <com.fasterxml.jackson.databind.version.range>[2.13.0, 3.0.0)</com.fasterxml.jackson.databind.version.range>
 
