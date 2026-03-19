@@ -625,7 +625,7 @@ public class AccessTokenIssuer {
                     diagnosticLogBuilder.inputParam(IMPERSONATOR, impersonatorId);
                 }
                 diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
-            }  else if (tokReqMsgCtx.isDelegationRequest()) {          // ADD THIS BLOCK
+            }  else if (tokReqMsgCtx.isDelegationRequest()) {
                 if (tokReqMsgCtx.getProperty(DELEGATING_ACTOR) != null) {
                     diagnosticLogBuilder.inputParam("delegating_actor",
                             tokReqMsgCtx.getProperty(DELEGATING_ACTOR).toString());
