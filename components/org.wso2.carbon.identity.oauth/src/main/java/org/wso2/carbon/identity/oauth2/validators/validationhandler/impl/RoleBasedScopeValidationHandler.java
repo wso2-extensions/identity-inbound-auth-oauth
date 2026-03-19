@@ -47,7 +47,6 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
@@ -98,8 +97,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
-            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds,
-                    scopeValidationContext.getAppTenantDomain());
+            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds, tenantDomain);
             /*
             TODO: Refactor this to drop internal_ scopes when getting associated scopes for roles.
             When user is not accessing the resident organization, retain only the internal_org_ scopes
@@ -140,35 +138,44 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
     /**
      * Get the filtered role ids.
      *
-     * @param roleIds             Role id list.
-     * @param appId               App id.
-     * @param appTenantDomain     Application tenant domain.
-     * @param userOrgTenantDomain User organization tenant domain.
+     * @param roleIds         Role id list.
+     * @param appId           App id.
+     * @param appTenantDomain Application tenant domain.
+     * @param tenantDomain    User organization tenant domain.
      * @return Filtered role ids.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
      */
     private List<String> getFilteredRoleIds(List<String> roleIds, String appId, String appTenantDomain,
-                                            String userOrgTenantDomain)
+                                            String tenantDomain)
             throws ScopeValidationHandlerException, IdentityOAuth2Exception, IdentityRoleManagementException {
 
         List<String> rolesAssociatedWithApp;
-        String allowedAudience = getApplicationAllowedAudience(appId, appTenantDomain);
-
-        if (!StringUtils.equals(appTenantDomain, userOrgTenantDomain)) {
-            // Resolve the main application roles from the shared organization roles.
-            Map<String, String> mainRoleIdMap = OAuthComponentServiceHolder.getInstance()
-                    .getRoleV2ManagementService().getSharedRoleToMainRoleMappingsBySubOrg(roleIds, userOrgTenantDomain);
-            roleIds = mainRoleIdMap.values().stream()
-                    .distinct()
-                    .collect(Collectors.toList());
+        if (!StringUtils.equals(appTenantDomain, tenantDomain)) {
+            try {
+                String appOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(appTenantDomain);
+                String userOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                String sharedAppId = OAuthComponentServiceHolder.getInstance().getApplicationManagementService()
+                        .getSharedAppId(appId, appOrgId, userOrgId);
+                if (StringUtils.isNotBlank(sharedAppId)) {
+                    appId = sharedAppId;
+                }
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving the organization ID of the tenant domain.", e);
+            } catch (IdentityApplicationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while retrieving the shared app ID for app: " + appId, e);
+            }
         }
+
+        String allowedAudience = getApplicationAllowedAudience(appId, tenantDomain);
 
         if (RoleConstants.APPLICATION.equalsIgnoreCase(allowedAudience)) {
             rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId);
         } else {
              /*If the application allowed audience is organization, associate all organization roles with the
              application*/
-            rolesAssociatedWithApp = getAllOrganizationRoles(appTenantDomain).stream()
+            rolesAssociatedWithApp = getAllOrganizationRoles(tenantDomain).stream()
                     .map(RoleBasicInfo::getId)
                     .collect(Collectors.toList());
         }

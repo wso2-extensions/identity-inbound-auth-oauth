@@ -22,6 +22,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizationDetailsType;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -273,6 +274,13 @@ public class DefaultAuthorizationDetailsValidator implements AuthorizationDetail
             BiFunction<AuthorizationDetail, AuthorizationDetailsType, AuthorizationDetailsContext> contextProvider)
             throws AuthorizationDetailsProcessingException, IdentityOAuth2ServerException {
 
+        if (!AuthorizationDetailsTypesUtil.isRichAuthorizationRequestsEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Rich Authorization Requests feature is disabled. " +
+                        "Skipping authorization details validation.");
+            }
+            return new AuthorizationDetails();
+        }
         final Map<String, AuthorizationDetailsType> authorizedDetailsTypes =
                 this.getAuthorizedAuthorizationDetailsTypes(clientId, tenantDomain);
 

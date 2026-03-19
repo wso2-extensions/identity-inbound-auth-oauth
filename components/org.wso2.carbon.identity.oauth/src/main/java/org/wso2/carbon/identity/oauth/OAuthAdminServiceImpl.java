@@ -590,9 +590,15 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setCibaNotificationChannels(application.getCibaNotificationChannels());
                         app.setCibaAuthReqExpiryTime(application.getCibaAuthReqExpiryTime());
+                        app.setCibaSkipUserValidation(application.isCibaSkipUserValidation());
+                        app.setCibaAllowFederatedUsers(application.isCibaAllowFederatedUsers());
                         if (isCibaGrantTypeEnabled(app) && app.getCibaAuthReqExpiryTime() <= 0) {
                             throw handleClientError(INVALID_REQUEST,
                                     "CIBA authentication request expiry time must be greater than 0");
+                        }
+                        if (app.isCibaAllowFederatedUsers() && !app.isCibaSkipUserValidation()) {
+                            throw handleClientError(INVALID_REQUEST,
+                                    "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
                         }
 
                         String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
@@ -1109,9 +1115,15 @@ public class OAuthAdminServiceImpl {
             }
             oAuthAppDO.setCibaNotificationChannels(consumerAppDTO.getCibaNotificationChannels());
             oAuthAppDO.setCibaAuthReqExpiryTime(consumerAppDTO.getCibaAuthReqExpiryTime());
+            oAuthAppDO.setCibaSkipUserValidation(consumerAppDTO.isCibaSkipUserValidation());
+            oAuthAppDO.setCibaAllowFederatedUsers(consumerAppDTO.isCibaAllowFederatedUsers());
             if (isCibaGrantTypeEnabled(oAuthAppDO) && oAuthAppDO.getCibaAuthReqExpiryTime() <= 0) {
                 throw handleClientError(INVALID_REQUEST,
                         "CIBA authentication request expiry time must be greater than 0");
+            }
+            if (oAuthAppDO.isCibaAllowFederatedUsers() && !oAuthAppDO.isCibaSkipUserValidation()) {
+                throw handleClientError(INVALID_REQUEST,
+                        "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
             }
 
             try {

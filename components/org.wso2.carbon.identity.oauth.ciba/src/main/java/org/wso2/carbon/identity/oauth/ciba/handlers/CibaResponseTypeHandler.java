@@ -66,21 +66,23 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
             authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authRequestId);
-            String authenticatedUserId = cibaAuthenticatedUser.getUserId();
 
-            // Get the resolved user and check if the resolved user is the same as the authenticated user.
-            boolean isValidUser = validateResolvedUser(authCodeKey, authenticatedUserId);
-            if  (!isValidUser) {
-                throw new IdentityOAuth2ClientException("The authenticated user: " + authenticatedUserId
-                        + " is not the same as the resolved user for the auth_req_id: " + authRequestId);
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
+            log.info("Validating the authenticated user for auth_req_id: " + authRequestId + " with user: " +
+                    cibaAuthenticatedUser.getUserId());
+            if (!oAuthAppDO.isCibaSkipUserValidation()) {
+                // Get the resolved user and check if the resolved user is the same as the authenticated user.
+                String authenticatedUserId = cibaAuthenticatedUser.getUserId();
+                boolean isValidUser = validateResolvedUser(authCodeKey, authenticatedUserId);
+                if (!isValidUser) {
+                    throw new IdentityOAuth2ClientException("The authenticated user: " + authenticatedUserId
+                            + " is not the same as the resolved user for the auth_req_id: " + authRequestId);
+                }
             }
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                     .persistAuthenticationSuccess(authCodeKey, cibaAuthenticatedUser);
-
-            // Building custom CallBack URL.
-            OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
             String redirectionURI = getCibaFlowCompletionPageURI(oAuthAppDO.getApplicationName(),
                     oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
             respDTO.setCallbackURI(redirectionURI);

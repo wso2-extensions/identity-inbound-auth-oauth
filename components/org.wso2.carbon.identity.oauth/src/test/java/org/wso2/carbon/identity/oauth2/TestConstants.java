@@ -56,6 +56,7 @@ public class TestConstants {
 
     //Authorized Client
     public static final String CLIENT_ID = "ca19a540f544777860e44e75f605d927";
+    public static final String EC_CLIENT_ID = "ca19a540f544777860e44e75f605d928";
     public static final String ACESS_TOKEN_ID = "2sa9a678f890877856y66e75f605d456";
     public static final String SECRET = "87n9a540f544777860e44e75f605d435";
     public static final String APP_NAME = "myApp";

@@ -72,16 +72,32 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             throw new CibaCoreException("Error fetching app information for client: " + clientID, e);
         }
 
+        if (appDO.isBypassClientCredentials()) {
+            throw new CibaClientException("CIBA cannot be used with public clients. Client: " + clientID + " " +
+                    "is configured as a public client.");
+        }
+
         // Generate and persist the auth code
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest, appDO);
 
         // Resolve user and send notification.
-        CibaUserResolver.ResolvedUser resolvedUser = resolveUser(cibaAuthCodeRequest, tenantDomain);
+        CibaUserResolver.ResolvedUser resolvedUser;
+        try {
+            resolvedUser = resolveUser(cibaAuthCodeRequest, tenantDomain);
+        } catch (CibaClientException e) {
+            if (appDO.isCibaAllowFederatedUsers()) {
+                resolvedUser = buildFederatedResolvedUser(cibaAuthCodeRequest, tenantDomain);
+            } else {
+                throw e;
+            }
+        }
         if (resolvedUser == null) {
             throw new CibaCoreException("Failed to resolve user for CIBA request from client: " +
                     cibaAuthCodeRequest.getIssuer());
         }
-        cibaAuthCodeDO.setResolvedUserId(resolvedUser.getUserId());
+        if (resolvedUser.getUserId() != null) {
+            cibaAuthCodeDO.setResolvedUserId(resolvedUser.getUserId());
+        }
         // Persist the auth code after resolving the user.
         CibaDAOFactory.getInstance().getCibaAuthMgtDAO().persistCibaAuthCode(cibaAuthCodeDO);
 
@@ -128,6 +144,50 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         CibaUserResolver.ResolvedUser resolvedUser = userResolver.resolveUser(userHint, tenantDomain);
         if (log.isDebugEnabled()) {
             log.debug("Successfully resolved user for CIBA request from client: " + clientId);
+        }
+        return resolvedUser;
+    }
+
+    /**
+     * Builds a minimal ResolvedUser for federated users not found in the local user store.
+     * The notification_channel parameter is required to determine how to route the notification.
+     *
+     * @param cibaAuthCodeRequest The CIBA auth code request containing user hint and notification channel
+     * @param tenantDomain        The tenant domain
+     * @return ResolvedUser with email or mobile set based on the notification channel
+     * @throws CibaClientException If notification_channel is missing, external, or unsupported
+     */
+    private CibaUserResolver.ResolvedUser buildFederatedResolvedUser(CibaAuthCodeRequest cibaAuthCodeRequest,
+                                                                      String tenantDomain) throws CibaClientException {
+
+        String notificationChannel = cibaAuthCodeRequest.getNotificationChannel();
+        if (StringUtils.isBlank(notificationChannel)) {
+            throw new CibaClientException(
+                    "notification_channel is required when sending notifications to federated users.");
+        }
+
+        String channelLower = notificationChannel.toLowerCase(Locale.ROOT);
+        if (CibaConstants.CibaNotificationChannel.EXTERNAL.equals(channelLower)) {
+            throw new CibaClientException(
+                    "external notification channel is not supported for federated users.");
+        }
+
+        String loginHint = cibaAuthCodeRequest.getUserHint();
+        CibaUserResolver.ResolvedUser resolvedUser = new CibaUserResolver.ResolvedUser();
+        resolvedUser.setUsername(loginHint);
+        resolvedUser.setTenantDomain(tenantDomain);
+
+        if (CibaConstants.CibaNotificationChannel.EMAIL.equals(channelLower)) {
+            resolvedUser.setEmail(loginHint);
+        } else if (CibaConstants.CibaNotificationChannel.SMS.equals(channelLower)) {
+            resolvedUser.setMobile(loginHint);
+        } else {
+            throw new CibaClientException("Unsupported notification channel: " + notificationChannel);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Built federated resolved user for CIBA request with notification channel: " +
+                    channelLower);
         }
         return resolvedUser;
     }
@@ -251,6 +311,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScopes(scopes);
+        cibaAuthCodeDO.setRequestedActor(cibaAuthCodeRequest.getRequestedActor());
         return cibaAuthCodeDO;
     }
 

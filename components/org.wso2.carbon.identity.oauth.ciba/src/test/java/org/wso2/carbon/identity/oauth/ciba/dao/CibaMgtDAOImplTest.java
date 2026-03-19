@@ -46,6 +46,7 @@ import java.util.TimeZone;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 @WithH2Database(files = { "dbScripts/h2.sql", "dbScripts/identity.sql" })
 public class CibaMgtDAOImplTest {
@@ -69,6 +70,9 @@ public class CibaMgtDAOImplTest {
     private static final String DB_NAME = "testCibaAuthCode";
     private static final String BACKCHANNELLOGOUT_URL = "http://localhost:8080/backChannelLogout";
     private static final String RESOLVED_USER_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    private static final String ACTOR_AUTH_CODE_KEY = "1a2b3c4d-5e6f-7890-abcd-ef1234567890";
+    private static final String ACTOR_AUTH_REQ_ID = "aabbccdd-1122-3344-5566-778899001122";
+    private static final String REQUESTED_ACTOR = "agent-sub-from-db";
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
@@ -215,6 +219,10 @@ public class CibaMgtDAOImplTest {
                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
             prepareConnection(identityDatabaseUtil);
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(-1234)).thenReturn("super.wso2");
+            oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString()))
+                    .thenReturn(new AuthenticatedUser());
 
             AuthenticatedUser user = cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY);
             // We haven't persisted the authenticated user in this test specifically, but it
@@ -241,6 +249,7 @@ public class CibaMgtDAOImplTest {
 
             oAuth2Util.when(() -> OAuth2Util.getAuthenticatedIDP(user)).thenReturn("LOCAL");
             oAuth2Util.when(() -> OAuth2Util.getTenantId("super.wso2")).thenReturn(-1234);
+            oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
 
             cibaMgtDAO.persistAuthenticationSuccess(AUTH_CODE_KEY, user);
         }
@@ -249,6 +258,13 @@ public class CibaMgtDAOImplTest {
                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
             prepareConnection(identityDatabaseUtil);
             oAuth2Util.when(() -> OAuth2Util.getTenantDomain(-1234)).thenReturn("super.wso2");
+
+            AuthenticatedUser expectedUser = new AuthenticatedUser();
+            expectedUser.setUserName(USER_NAME);
+            expectedUser.setUserStoreDomain("PRIMARY");
+            expectedUser.setTenantDomain("super.wso2");
+            oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(USER_NAME, "PRIMARY", "super.wso2", "LOCAL"))
+                    .thenReturn(expectedUser);
 
             AuthenticatedUser retrievedUser = cibaMgtDAO.getAuthenticatedUser(AUTH_CODE_KEY);
             assertEquals(retrievedUser.getUserName(), USER_NAME);
@@ -268,7 +284,7 @@ public class CibaMgtDAOImplTest {
     protected void storeIDP() throws Exception {
 
         try (Connection connection1 = getConnection(DB_NAME)) {
-            String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (1234, 'LOCAL', 5678)";
+            String sql = "INSERT INTO IDP (TENANT_ID, NAME, UUID) VALUES (-1234, 'LOCAL', 5678)";
             PreparedStatement statement = connection1.prepareStatement(sql);
             statement.execute();
         }
@@ -337,6 +353,48 @@ public class CibaMgtDAOImplTest {
                     .toString();
         }
         throw new IllegalArgumentException("DB Script file name cannot be empty.");
+    }
+
+    @Test
+    public void testPersistAndRetrieveCibaAuthCode_withRequestedActor() throws Exception {
+
+        long issuedTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC)).getTimeInMillis();
+        Timestamp issuedTime = new Timestamp(issuedTimeInMillis);
+
+        CibaAuthCodeDO doWithActor = new CibaAuthCodeDO();
+        doWithActor.setCibaAuthCodeKey(ACTOR_AUTH_CODE_KEY);
+        doWithActor.setAuthReqId(ACTOR_AUTH_REQ_ID);
+        doWithActor.setConsumerKey(CONSUMER_KEY);
+        doWithActor.setAuthReqStatus(AuthReqStatus.REQUESTED);
+        doWithActor.setIssuedTime(issuedTime);
+        doWithActor.setLastPolledTime(issuedTime);
+        doWithActor.setInterval(2L);
+        doWithActor.setExpiresIn(3600L);
+        doWithActor.setScopes(new String[]{"openid"});
+        doWithActor.setResolvedUserId(RESOLVED_USER_ID);
+        doWithActor.setRequestedActor(REQUESTED_ACTOR);
+
+        try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(identityDatabaseUtil);
+            cibaMgtDAO.persistCibaAuthCode(doWithActor);
+        }
+
+        try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(identityDatabaseUtil);
+            CibaAuthCodeDO retrieved = cibaMgtDAO.getCibaAuthCode(ACTOR_AUTH_CODE_KEY);
+            assertEquals(retrieved.getRequestedActor(), REQUESTED_ACTOR);
+        }
+    }
+
+    @Test
+    public void testPersistAndRetrieveCibaAuthCode_withNullRequestedActor() throws Exception {
+
+        // The setUp() row was persisted without requestedActor set — it should round-trip as null.
+        try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(identityDatabaseUtil);
+            CibaAuthCodeDO retrieved = cibaMgtDAO.getCibaAuthCode(AUTH_CODE_KEY);
+            assertNull(retrieved.getRequestedActor());
+        }
     }
 
 }

@@ -20,7 +20,7 @@
     <parent>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-        <version>7.4.55-SNAPSHOT</version>
+        <version>7.4.65-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -160,7 +160,13 @@
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.util.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.common.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.multi.attribute.login.mgt.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.store.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.mgt.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.governance.service.notification.*;
                             version ="${carbon.identity.governance.imp.pkg.version.range}",

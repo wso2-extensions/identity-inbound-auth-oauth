@@ -83,12 +83,16 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
             String mobile = resolvedUser.getMobile();
             boolean hasMobile = StringUtils.isNotBlank(mobile);
             if (log.isDebugEnabled()) {
-                log.debug("SmsCibaNotificationChannel.canHandle: User " + resolvedUser.getUserId() +
+                String userIdentifier = resolvedUser.getUserId() != null ?
+                        resolvedUser.getUserId() : resolvedUser.getUsername();
+                log.debug("SmsCibaNotificationChannel.canHandle: User " + userIdentifier +
                         " has mobile: " + hasMobile);
             }
             return hasMobile;
         } catch (Exception e) {
-            log.warn("Error checking mobile for user: " + resolvedUser.getUserId(), e);
+            String userIdentifier = resolvedUser.getUserId() != null ?
+                    resolvedUser.getUserId() : resolvedUser.getUsername();
+            log.warn("Error checking mobile for user: " + userIdentifier, e);
             return false;
         }
     }
@@ -99,8 +103,10 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
         CibaUserResolver.ResolvedUser resolvedUser = cibaNotificationContext.getResolvedUser();
         String authUrl = cibaNotificationContext.getAuthUrl();
         String bindingMessage = cibaNotificationContext.getBindingMessage();
+        String userIdentifier = resolvedUser.getUserId() != null ?
+                resolvedUser.getUserId() : resolvedUser.getUsername();
         if (log.isDebugEnabled()) {
-            log.debug("Sending CIBA authentication SMS to user: " + resolvedUser.getUserId() +
+            log.debug("Sending CIBA authentication SMS to user: " + userIdentifier +
                     " with auth URL: " + authUrl);
         }
 
@@ -132,11 +138,11 @@ public class CibaSmsNotificationChannel implements CibaNotificationChannel {
             CibaServiceComponentHolder.getInstance().getIdentityEventService().handleEvent(identityEvent);
 
             if (log.isDebugEnabled()) {
-                log.debug("Successfully triggered CIBA SMS notification for user: " + resolvedUser.getUserId());
+                log.debug("Successfully triggered CIBA SMS notification for user: " + userIdentifier);
             }
         } catch (IdentityEventException e) {
-            throw new CibaCoreException("Error sending CIBA SMS notification to user: " + 
-                    resolvedUser.getUserId(), e);
+            throw new CibaCoreException("Error sending CIBA SMS notification to user: " +
+                    userIdentifier, e);
         }
     }
 
