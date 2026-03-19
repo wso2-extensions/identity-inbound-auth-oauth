@@ -89,7 +89,8 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         removeClaimCacheEntry(username, userStoreManager);
 
         return OAuth2ServiceComponentHolder.getInstance().getRevocationProcessor()
-                .revokeTokens(username, userStoreManager) && OAuthUtil.revokeTokens(username, userStoreManager);
+                .revokeTokens(username, userStoreManager) && OAuthUtil.revokeTokens(username, userStoreManager) &&
+                OAuthUtil.revokeAuthzCodes(username, userStoreManager);
 
     }
 
