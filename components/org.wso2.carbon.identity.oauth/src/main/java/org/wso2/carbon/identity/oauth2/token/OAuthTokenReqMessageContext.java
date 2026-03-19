@@ -222,7 +222,7 @@ public class OAuthTokenReqMessageContext {
 
     public void setDelegationRequest(boolean delegationRequest) {
 
-        isImpersonationRequest = delegationRequest;
+        isDelegationRequest = delegationRequest;
     }
 
     public boolean isPreIssueAccessTokenActionsExecuted() {
