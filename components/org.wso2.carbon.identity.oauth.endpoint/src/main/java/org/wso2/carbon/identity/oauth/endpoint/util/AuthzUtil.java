@@ -2342,6 +2342,10 @@ public class AuthzUtil {
         authorizationGrantCacheEntry.setTokenBindingValue(tokenBindingValue);
         authorizationGrantCacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authorizationGrantCacheEntry.setSessionDataKeyConsent(oAuthMessage.getSessionDataKeyFromConsent());
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Retrieved sessionDataKeyConsent: %s from oAuthMessage and set to " +
+                    "authorizationGrantCacheEntry.", oAuthMessage.getSessionDataKeyFromConsent()));
+        }
         authorizationGrantCacheEntry.setAccessTokenExtensionDO(tokenExtendedAttributes);
         if (isApiBasedAuthenticationFlow(oAuthMessage)) {
             authorizationGrantCacheEntry.setApiBasedAuthRequest(true);

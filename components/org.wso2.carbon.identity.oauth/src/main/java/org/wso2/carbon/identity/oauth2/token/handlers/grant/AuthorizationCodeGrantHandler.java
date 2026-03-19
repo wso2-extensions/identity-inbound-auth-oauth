@@ -699,6 +699,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (grantCacheEntry != null && StringUtils.isNotEmpty(grantCacheEntry.getSessionDataKeyConsent())) {
             tokReqMsgCtx.addProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT,
                     grantCacheEntry.getSessionDataKeyConsent());
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Retrieved sessionDataKeyConsent: %s from AuthorizationGrantCacheEntry " +
+                        "and set to OAuthTokenReqMessageContext.", grantCacheEntry.getSessionDataKeyConsent()));
+            }
         }
     }
 

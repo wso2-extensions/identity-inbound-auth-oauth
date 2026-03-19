@@ -243,6 +243,10 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
                 OAuthConstants.SESSION_DATA_KEY_CONSENT);
         if (StringUtils.isNotEmpty(sessionDataKeyConsent)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Retrieve sessionDataKeyConsent: %s from tokenMessageContext and add to " +
+                        "additionalParams of the token request in preIssueAccessToken action", sessionDataKeyConsent));
+            }
             tokenRequestBuilder.addAdditionalParam(
                     OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{sessionDataKeyConsent});
         }
