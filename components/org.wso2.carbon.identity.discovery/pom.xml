@@ -56,6 +56,11 @@
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.ciba</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!--Test Dependencies-->
         <dependency>
             <groupId>org.testng</groupId>
