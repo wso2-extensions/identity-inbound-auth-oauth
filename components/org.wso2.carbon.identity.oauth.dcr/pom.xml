@@ -189,6 +189,7 @@
                             org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth.dcr.handler.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
+                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>
