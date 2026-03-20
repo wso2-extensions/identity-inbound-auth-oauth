@@ -4249,6 +4249,18 @@ public class AuthzUtil {
                 // Marking the initial request as additional validation will be done from the auth service.
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+                try {
+                    String accessingOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                            getAccessingOrganizationId();
+                    if (StringUtils.isNotEmpty(accessingOrganizationId)) {
+                        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(
+                                oAuthMessage.getClientId(), accessingOrganizationId);
+                        requestWrapper.setAttribute("appTenantDomain", oAuthAppDO.getAppOwner().
+                                getTenantDomain());
+                    }
+                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                    throw new AuthServiceException(e.getMessage());
+                }
 
                 AuthenticationService authenticationService = new AuthenticationService();
                 AuthServiceResponse authServiceResponse = authenticationService.
