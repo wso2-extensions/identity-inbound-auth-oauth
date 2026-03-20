@@ -43,7 +43,12 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,6 +60,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -313,6 +319,104 @@ public class AuthorizationCodeGrantHandlerTest {
             assertTrue(authorizationCodeGrantHandler.issueRefreshToken());
 
             assertFalse(authorizationCodeGrantHandler.issueRefreshToken());
+        }
+    }
+
+    /**
+     * Verifies that setSessionDataKeyConsentProperty() sets SESSION_DATA_KEY_CONSENT on the message context
+     * when the cache entry exists and sessionDataKeyConsent is populated.
+     */
+    @Test
+    public void testSetSessionDataKeyConsentProperty_withValidConsent() throws Exception {
+
+        String authzCode = "test-authz-code";
+        String sessionDataKeyConsent = "test-session-data-key-consent";
+        AuthorizationCodeGrantHandler handler = new AuthorizationCodeGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(
+                new OAuth2AccessTokenReqDTO());
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+
+            AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
+            cacheEntry.setSessionDataKeyConsent(sessionDataKeyConsent);
+            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+                    any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+
+            Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
+                    "setSessionDataKeyConsentProperty",
+                    OAuthTokenReqMessageContext.class, String.class);
+            method.setAccessible(true);
+            method.invoke(handler, tokReqMsgCtx, authzCode);
+
+            assertEquals(tokReqMsgCtx.getProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT),
+                    sessionDataKeyConsent);
+        }
+    }
+
+    /**
+     * Verifies that setSessionDataKeyConsentProperty() does not set any property
+     * when the cache entry is null (e.g. cache and session store both miss).
+     */
+    @Test
+    public void testSetSessionDataKeyConsentProperty_withNullCacheEntry() throws Exception {
+
+        String authzCode = "test-authz-code-null";
+        AuthorizationCodeGrantHandler handler = new AuthorizationCodeGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(
+                new OAuth2AccessTokenReqDTO());
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+                    any(AuthorizationGrantCacheKey.class))).thenReturn(null);
+
+            Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
+                    "setSessionDataKeyConsentProperty",
+                    OAuthTokenReqMessageContext.class, String.class);
+            method.setAccessible(true);
+            method.invoke(handler, tokReqMsgCtx, authzCode);
+
+            assertNull(tokReqMsgCtx.getProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT));
+        }
+    }
+
+    /**
+     * Verifies that setSessionDataKeyConsentProperty() does not set any property
+     * when the cache entry exists but sessionDataKeyConsent is empty.
+     */
+    @Test
+    public void testSetSessionDataKeyConsentProperty_withEmptyConsent() throws Exception {
+
+        String authzCode = "test-authz-code-empty";
+        AuthorizationCodeGrantHandler handler = new AuthorizationCodeGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(
+                new OAuth2AccessTokenReqDTO());
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic =
+                     mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+
+            AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
+            cacheEntry.setSessionDataKeyConsent("");
+            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+                    any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+
+            Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
+                    "setSessionDataKeyConsentProperty",
+                    OAuthTokenReqMessageContext.class, String.class);
+            method.setAccessible(true);
+            method.invoke(handler, tokReqMsgCtx, authzCode);
+
+            assertNull(tokReqMsgCtx.getProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT));
         }
     }
 
