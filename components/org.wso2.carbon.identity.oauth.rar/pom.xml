@@ -192,6 +192,7 @@
                             org.wso2.carbon.identity.oauth.rar.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
+                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>
