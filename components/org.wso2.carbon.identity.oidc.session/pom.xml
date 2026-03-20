@@ -227,6 +227,7 @@
                             org.wso2.carbon.identity.oidc.session.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
+                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>

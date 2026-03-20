@@ -65,6 +65,7 @@
                         <Export-Package>
                             org.wso2.carbon.identity.oauth.extension.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
+                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>

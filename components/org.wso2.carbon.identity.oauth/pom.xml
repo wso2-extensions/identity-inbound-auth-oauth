@@ -495,6 +495,7 @@
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
+                        <_contract>!JavaServlet</_contract>
                         <ListenerManager-RequiredServices>
                             org.wso2.carbon.identity.oauth2.OAuth2Service,
                             org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
