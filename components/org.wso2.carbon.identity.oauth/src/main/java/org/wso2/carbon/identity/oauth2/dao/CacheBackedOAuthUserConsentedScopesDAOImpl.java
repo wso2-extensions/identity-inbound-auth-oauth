@@ -42,7 +42,7 @@ public class CacheBackedOAuthUserConsentedScopesDAOImpl implements OAuthUserCons
             return entry.getUserApplicationScopeConsentDO();
         }
         UserApplicationScopeConsentDO userConsent = dao.getUserConsentForApplication(userId, appId, tenantId);
-        cache.addToCache(userId, new OAuthUserConsentedScopeCacheEntry(appId, userConsent), tenantId);
+        cache.addToCacheOnRead(userId, new OAuthUserConsentedScopeCacheEntry(appId, userConsent), tenantId);
         return userConsent;
     }
 
