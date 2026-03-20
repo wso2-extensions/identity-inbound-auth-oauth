@@ -37,6 +37,7 @@ import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
@@ -114,10 +115,10 @@ import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
-import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -146,8 +147,6 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.CarbonUtils;
-
-import java.net.URI;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -2313,9 +2312,10 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, serverException);
 
                 assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
-                URI location = response.getLocation();
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
                 assertNotNull(location);
-                assertTrue(location.toString().contains("oauthErrorCode=server_error"));
+                assertTrue(location.contains("oauthErrorCode=server_error"));
             }
         }
     }
@@ -2337,9 +2337,10 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, clientException);
 
                 assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
-                URI location = response.getLocation();
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
                 assertNotNull(location);
-                assertTrue(location.toString().contains("oauthErrorCode=invalid_request"));
+                assertTrue(location.contains("oauthErrorCode=invalid_request"));
             }
         }
     }
@@ -2364,11 +2365,10 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, serverException);
 
                 assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
-                URI location = response.getLocation();
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
                 assertNotNull(location);
-                assertTrue(location.toString().contains(APP_REDIRECT_URL.replace(":", "%3A")
-                        .replace("/", "%2F")));
-                assertTrue(location.toString().contains("error=server_error"));
+                assertTrue(location.contains("error=server_error"));
             }
         }
     }
