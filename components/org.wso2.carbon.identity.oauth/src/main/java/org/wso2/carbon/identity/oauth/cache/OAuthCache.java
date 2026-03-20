@@ -18,6 +18,11 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,9 +31,6 @@ import org.wso2.carbon.identity.core.cache.AbstractCacheListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthCacheRemoveListener;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.utils.CarbonUtils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * OAuth cache.
@@ -73,6 +75,22 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
             super.addToCache(key, entry, tenantDomain);
         } else {
             super.addToCache(key, entry);
+        }
+    }
+
+    @Override
+    public void addToCacheOnRead(OAuthCacheKey key, CacheEntry entry) {
+
+        if (entry instanceof AccessTokenDO) {
+            AccessTokenDO tokenDO = (AccessTokenDO) entry;
+            String tenantDomain = tokenDO.getAuthzUser().getTenantDomain();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("[AddToCacheOnRead] AccessTokenDO was added for the given token identifier: " +
+                                "%s in the tenant: %s.", ((AccessTokenDO) entry).getTokenId(), tenantDomain));
+            }
+            super.addToCacheOnRead(key, entry, tenantDomain);
+        } else {
+            super.addToCacheOnRead(key, entry);
         }
     }
 
