@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -27,9 +28,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -42,6 +45,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 @Listeners(MockitoTestNGListener.class)
 @WithCarbonHome
@@ -143,6 +147,94 @@ public class SSOSessionBasedTokenBinderTest {
 
             assertEquals(ssoSessionBasedTokenBinder.isValidTokenBinding(httpServletRequest, BINDING_REFERENCE),
                     expectedResult);
+        }
+    }
+
+    @Test
+    public void testGetTokenBindingValueWithApiBasedLogoutWithoutCookies() throws OAuthSystemException {
+
+        String expectedSessionId = "test-session-id";
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(true);
+        when(httpServletRequest.getParameter(FrameworkConstants.RequestParams.SESSION_ID))
+                .thenReturn(expectedSessionId);
+
+        assertEquals(ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest), expectedSessionId);
+    }
+
+    @Test
+    public void testGetOrGenerateTokenBindingValueWithApiBasedLogoutWithoutCookies() throws OAuthSystemException {
+
+        String expectedSessionId = "test-session-id";
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(true);
+        when(httpServletRequest.getParameter(FrameworkConstants.RequestParams.SESSION_ID))
+                .thenReturn(expectedSessionId);
+
+        assertEquals(ssoSessionBasedTokenBinder.getOrGenerateTokenBindingValue(httpServletRequest), expectedSessionId);
+    }
+
+    @Test
+    public void testGetTokenBindingValueWithCommonAuthCookie() throws OAuthSystemException {
+
+        Cookie commonAuthCookie = new Cookie(COMMONAUTH_COOKIE, COMMONAUTH_COOKIE_VALUE);
+        when(httpServletRequest.getCookies()).thenReturn(new Cookie[]{commonAuthCookie});
+
+        assertEquals(ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest), SESSION_IDENTIFIER);
+    }
+
+    @Test
+    public void testGetTokenBindingValueWithCommonAuthCookieFromRequestAttribute() throws OAuthSystemException {
+
+        when(httpServletRequest.getCookies()).thenReturn(null);
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(null);
+        when(httpServletRequest.getAttribute(COMMONAUTH_COOKIE)).thenReturn(COMMONAUTH_COOKIE_VALUE);
+
+        assertEquals(ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest), SESSION_IDENTIFIER);
+    }
+
+    @Test(expectedExceptions = OAuthSystemClientException.class)
+    public void testGetTokenBindingValueThrowsClientExceptionWhenNoCookieOrAttribute() throws OAuthSystemException {
+
+        when(httpServletRequest.getCookies()).thenReturn(null);
+        when(httpServletRequest.getAttribute(COMMONAUTH_COOKIE)).thenReturn(null);
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(null);
+
+        ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest);
+    }
+
+    @Test(expectedExceptions = OAuthSystemClientException.class)
+    public void testGetOrGenerateTokenBindingValueThrowsClientExceptionWhenNoCookieOrAttribute()
+            throws OAuthSystemException {
+
+        when(httpServletRequest.getCookies()).thenReturn(null);
+        when(httpServletRequest.getAttribute(COMMONAUTH_COOKIE)).thenReturn(null);
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(null);
+
+        ssoSessionBasedTokenBinder.getOrGenerateTokenBindingValue(httpServletRequest);
+    }
+
+    @Test(expectedExceptions = OAuthSystemClientException.class)
+    public void testGetTokenBindingValueThrowsClientExceptionWhenEmptyCookiesArray() throws OAuthSystemException {
+
+        when(httpServletRequest.getCookies()).thenReturn(new Cookie[]{});
+        when(httpServletRequest.getAttribute(COMMONAUTH_COOKIE)).thenReturn(null);
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(null);
+
+        ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest);
+    }
+
+    @Test
+    public void testGetTokenBindingValueThrowsCorrectExceptionType() {
+
+        when(httpServletRequest.getCookies()).thenReturn(null);
+        when(httpServletRequest.getAttribute(COMMONAUTH_COOKIE)).thenReturn(null);
+        when(httpServletRequest.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES)).thenReturn(null);
+
+        try {
+            ssoSessionBasedTokenBinder.getTokenBindingValue(httpServletRequest);
+            assertTrue(false, "Expected OAuthSystemClientException to be thrown");
+        } catch (OAuthSystemException e) {
+            assertTrue(e instanceof OAuthSystemClientException,
+                    "Expected OAuthSystemClientException but got: " + e.getClass().getName());
         }
     }
 }

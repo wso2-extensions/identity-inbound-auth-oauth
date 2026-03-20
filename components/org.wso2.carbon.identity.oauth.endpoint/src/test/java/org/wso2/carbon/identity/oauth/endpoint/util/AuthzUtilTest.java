@@ -37,6 +37,7 @@ import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
@@ -117,6 +118,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -2291,6 +2293,84 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
 
         OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
         OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
+    }
+
+    @Test
+    public void testHandleOAuthSystemExceptionWithServerException() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class)) {
+                when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+                when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(null);
+                when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
+                oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+                OAuthSystemException serverException = new OAuthSystemException(
+                        "Server error occurred while performing authorization");
+                Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, serverException);
+
+                assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
+                assertNotNull(location);
+                assertTrue(location.contains("oauthErrorCode=server_error"));
+            }
+        }
+    }
+
+    @Test
+    public void testHandleOAuthSystemExceptionWithClientException() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class)) {
+                when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+                when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(null);
+                when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
+                oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+                OAuthSystemClientException clientException = new OAuthSystemClientException(
+                        "Failed to retrieve token binding value");
+                Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, clientException);
+
+                assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
+                assertNotNull(location);
+                assertTrue(location.contains("oauthErrorCode=invalid_request"));
+            }
+        }
+    }
+
+    @Test
+    public void testHandleOAuthSystemExceptionWithSessionDataCacheEntry() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            try (MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class)) {
+                OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+                oAuth2Parameters.setRedirectURI(APP_REDIRECT_URL);
+
+                when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+                when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(loginCacheEntry);
+                when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Parameters);
+                when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(true);
+                oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
+
+                OAuthSystemException serverException = new OAuthSystemException("Server error");
+                Response response = AuthzUtil.handleOAuthSystemException(oAuthMessage, serverException);
+
+                assertEquals(response.getStatus(), HttpServletResponse.SC_FOUND);
+                String location = String.valueOf(
+                        response.getMetadata().get(HTTPConstants.HEADER_LOCATION).get(0));
+                assertNotNull(location);
+                assertTrue(location.contains("error=server_error"));
+            }
+        }
     }
 
     private void mockSSOConsentService(boolean isConsentMgtEnabled) throws SSOConsentServiceException {
