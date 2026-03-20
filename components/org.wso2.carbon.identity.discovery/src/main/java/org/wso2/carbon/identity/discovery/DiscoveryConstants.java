@@ -398,4 +398,11 @@ public class DiscoveryConstants {
      * @see <a href='https://datatracker.ietf.org/doc/html/rfc9396.txt#name-metadata'>rfc9396</a>
      */
     public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
+
+    /**
+     * backchannel_authentication_endpoint
+     * REQUIRED. URL of the OP's Backchannel Authentication Endpoint as defined in the OpenID Connect
+     * Client Initiated Backchannel Authentication Flow - Core 1.0 specification.
+     */
+    public static final String BACKCHANNEL_AUTHENTICATION_ENDPOINT = "backchannel_authentication_endpoint";
 }
