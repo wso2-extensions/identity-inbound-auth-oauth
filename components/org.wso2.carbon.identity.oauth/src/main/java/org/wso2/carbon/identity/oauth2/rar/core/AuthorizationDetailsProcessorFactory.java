@@ -109,6 +109,9 @@ public class AuthorizationDetailsProcessorFactory {
      */
     public boolean isSupportedAuthorizationDetailsType(final String type) {
 
+        if (StringUtils.isBlank(type)) {
+            return false;
+        }
         return this.getSupportedAuthorizationDetailTypes().contains(type);
     }
 
