@@ -125,6 +125,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -482,9 +483,15 @@ public class AuthzUtil {
         if (oAuthMessage.getSessionDataCacheEntry() != null) {
             params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         }
-        log.error("Server error occurred while performing authorization", e);
-        OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
-                "Server error occurred while performing authorization");
+        OAuthProblemException ex;
+        if (e instanceof OAuthSystemClientException) {
+            ex = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                    e.getMessage());
+        } else {
+            log.error("Server error occurred while performing authorization", e);
+            ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Server error occurred while performing authorization");
+        }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                 EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), ex, params))).build();
     }
