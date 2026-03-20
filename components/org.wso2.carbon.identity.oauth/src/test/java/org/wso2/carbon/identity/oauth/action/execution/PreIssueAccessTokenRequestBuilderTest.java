@@ -454,7 +454,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     /**
      * Verifies that when SESSION_DATA_KEY_CONSENT is set on the token message context,
-     * it is included as an additionalParam in the PreIssueAccessToken action request payload.
+     * it is populated on event.session.sessionDataKeyConsent in the PreIssueAccessToken action request payload.
      */
     @Test
     public void testBuildActionExecutionRequestWithSessionDataKeyConsent()
@@ -482,11 +482,9 @@ public class PreIssueAccessTokenRequestBuilderTest {
                     .buildActionExecutionRequest(
                             FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
 
-            TokenRequest tokenRequest = (TokenRequest) actionExecutionRequest.getEvent().getRequest();
-            boolean found = tokenRequest.getAdditionalParams().stream()
-                    .anyMatch(p -> OAuthConstants.SESSION_DATA_KEY_CONSENT.equals(p.getName())
-                            && sessionDataKeyConsent.equals(p.getValue()[0]));
-            Assert.assertTrue(found, "sessionDataKeyConsent should be present in additionalParams");
+            PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+            Assert.assertNotNull(event.getSession());
+            Assert.assertEquals(event.getSession().getSessionDataKeyConsent(), sessionDataKeyConsent);
         }
     }
 
