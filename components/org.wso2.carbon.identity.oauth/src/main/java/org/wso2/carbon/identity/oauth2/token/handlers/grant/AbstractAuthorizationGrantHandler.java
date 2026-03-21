@@ -1051,6 +1051,23 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
+    private void addTokenToCacheOnRead(OAuthCacheKey cacheKey, AccessTokenDO existingAccessTokenDO) {
+        if (isHashDisabled && cacheEnabled) {
+            oauthCache.addToCacheOnRead(cacheKey, existingAccessTokenDO);
+            // Adding AccessTokenDO to improve validation performance
+            OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(existingAccessTokenDO.getAccessToken());
+            oauthCache.addToCacheOnRead(accessTokenCacheKey, existingAccessTokenDO);
+            if (log.isDebugEnabled()) {
+                log.debug("Access Token info was added to the cache for the cache key : " +
+                        cacheKey.getCacheKeyString());
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Access token was added to OAuthCache for cache key : " + accessTokenCacheKey
+                            .getCacheKeyString());
+                }
+            }
+        }
+    }
+
     private OAuth2AccessTokenRespDTO createResponseWithTokenBean(OAuthTokenReqMessageContext tokenReqMessageContext,
                                                                  AccessTokenDO existingAccessTokenDO,
                                                                  long expireTimeMillis, String scope)
@@ -1313,7 +1330,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) &&
                     expireTime != 0) {
                 // Active token retrieved from db, adding to cache if cacheEnabled
-                addTokenToCache(cacheKey, existingToken);
+                addTokenToCacheOnRead(cacheKey, existingToken);
             }
         }
         return existingToken;

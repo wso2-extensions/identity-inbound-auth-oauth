@@ -1368,7 +1368,7 @@ public class AuthzUtil {
             } else {
                 oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
             }
-            AppInfoCache.getInstance().addToCache(authzReqDTO.getConsumerKey(), oAuthAppDO);
+            AppInfoCache.getInstance().addToCacheOnRead(authzReqDTO.getConsumerKey(), oAuthAppDO);
             return oAuthAppDO;
         }
     }
