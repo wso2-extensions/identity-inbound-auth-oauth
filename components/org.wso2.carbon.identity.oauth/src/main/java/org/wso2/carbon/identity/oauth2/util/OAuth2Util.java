@@ -840,7 +840,7 @@ public class OAuth2Util {
                  */
                 if (isUsernameCaseSensitive) {
                     OAuthCache.getInstance()
-                            .addToCache(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
+                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
                 } else {
                     OAuthCache.getInstance().addToCacheOnRead(
                             new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
@@ -2632,10 +2632,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 }
             }
         }
@@ -2665,7 +2665,7 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException(message);
             }
             oAuthAppDO = appList[0];
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
         }
         return oAuthAppDO;
     }
@@ -2726,7 +2726,7 @@ public class OAuth2Util {
         try {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 return Optional.of(oAuthAppDO);
             }
             return Optional.empty();
@@ -2758,10 +2758,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
                 }
             }
         }
