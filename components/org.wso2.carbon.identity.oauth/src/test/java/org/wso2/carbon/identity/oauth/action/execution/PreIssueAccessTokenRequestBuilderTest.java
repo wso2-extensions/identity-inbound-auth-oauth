@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -452,12 +453,41 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     /**
-     * Encode the client ID and client secret as a Base64 encoded string.
-     *
-     * @param clientId     The client ID.
-     * @param clientSecret The client secret.
-     * @return Base64 encoded string representing client ID and secret.
+     * Verifies that when SESSION_DATA_KEY_CONSENT is set on the token message context,
+     * it is populated on event.session.sessionDataKeyConsent in the PreIssueAccessToken action request payload.
      */
+    @Test
+    public void testBuildActionExecutionRequestWithSessionDataKeyConsent()
+            throws ActionExecutionRequestBuilderException, OrganizationManagementException {
+
+        String sessionDataKeyConsent = "test-session-data-key-consent";
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+            tokenMessageContext.addProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT, sessionDataKeyConsent);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
+                    .buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+
+            PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+            Assert.assertNotNull(event.getSession());
+            Assert.assertEquals(event.getSession().getSessionDataKeyConsent(), sessionDataKeyConsent);
+        }
+    }
+
     private String getBase64EncodedString(String clientId, String clientSecret) {
 
         return new String(Base64.encodeBase64((clientId + ":" + clientSecret).getBytes()));

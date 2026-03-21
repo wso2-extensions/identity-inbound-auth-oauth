@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
+import org.wso2.carbon.identity.oauth.action.model.Session;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -135,7 +136,19 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         if (isRefreshTokenAllowed(oAuthAppDO)) {
             eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
-        eventBuilder.request(getRequest(tokenReqDTO));
+        eventBuilder.request(getRequest(tokenMessageContext));
+
+        String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
+                OAuthConstants.SESSION_DATA_KEY_CONSENT);
+        if (StringUtils.isNotEmpty(sessionDataKeyConsent)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Retrieve sessionDataKeyConsent: %s from tokenMessageContext and pass to " +
+                        "preIssueAccessToken event", sessionDataKeyConsent));
+            }
+            eventBuilder.session(new Session.Builder()
+                    .sessionDataKeyConsent(sessionDataKeyConsent)
+                    .build());
+        }
 
         return eventBuilder.build();
     }
@@ -218,8 +231,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO) {
+    private Request getRequest(OAuthTokenReqMessageContext tokenMessageContext) {
 
+        OAuth2AccessTokenReqDTO tokenRequestDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
         TokenRequest.Builder tokenRequestBuilder = new TokenRequest.Builder();
         tokenRequestBuilder.clientId(tokenRequestDTO.getClientId());
         tokenRequestBuilder.grantType(tokenRequestDTO.getGrantType());
