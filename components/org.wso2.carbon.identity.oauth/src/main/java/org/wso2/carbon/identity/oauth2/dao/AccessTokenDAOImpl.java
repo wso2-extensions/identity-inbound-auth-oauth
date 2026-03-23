@@ -28,6 +28,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
@@ -247,7 +249,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
-            int appTenantId = getAppTenantId();
+            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (isNotBlank(accessingOrgId)) {
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+                String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                appTenantId = OAuth2Util.getTenantId(appTenantDomain);
+            }
 
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
@@ -547,6 +556,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getString(12);
                     }
                     // data loss at dividing the validity period but can be neglected
+                    if (StringUtils.equalsIgnoreCase(grantType, OAuthConstants.GrantTypes.CLIENT_CREDENTIALS)) {
+                        try {
+                            authzUser.getUserId();
+                        } catch (UserIdNotFoundException e) {
+                            authzUser.setUserId(StringUtils.EMPTY);
+                            if (log.isDebugEnabled()) {
+                                log.debug("User ID is not available for user: " +
+                                        authzUser.getLoggableMaskedUserId() + ". Setting user ID as empty since " +
+                                        "the flow is a client credentials grant flow.");
+                            }
+                        }
+                    }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
                             tenantDomain, authenticatedIDP);
 
@@ -1902,7 +1923,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         Map<String, AccessTokenDO> tokenMap = new HashMap<>();
 
         try {
-            String sqlQuery = SQLQueries.GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME;
+            String sqlQuery = SQLQueries.
+                    GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME_WITH_TIME_CREATED_AND_VALIDITY_PERIOD;
             sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(sqlQuery, userStoreDomain);
 
             ps = connection.prepareStatement(sqlQuery);
@@ -1929,6 +1951,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String authenticatedIDP = null;
                     authenticatedIDP = rs.getString(6);
                     authorizedOrganizationId = rs.getString(8);
+                    Timestamp timeCreated = rs.getTimestamp(9, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                    long validityPeriod = rs.getLong(10);
 
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
@@ -1941,6 +1965,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
                     aTokenDetail.setAuthorizedOrganizationId(authorizedOrganizationId);
+                    aTokenDetail.setIssuedTime(timeCreated);
+                    aTokenDetail.setValidityPeriod(validityPeriod);
                     tokenMap.put(token, aTokenDetail);
                 }
             }

@@ -170,12 +170,18 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
         }
-        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                userTenantDomain, userStoreManager, true);
-        if (log.isDebugEnabled()) {
-            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
-        }
         if (authenticated) {
+            /* The event should be triggered only when the user is authenticated, with the authenticated parameter
+             in the event set to true.
+             */
+            String userStoreQualifiedTenantAwareUserName = authenticationResult.getAuthenticatedUser().isPresent() ?
+                    authenticationResult.getAuthenticatedUser().get().getDomainQualifiedUsername()
+                    : tenantAwareUserName;
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT,
+                    userStoreQualifiedTenantAwareUserName, userTenantDomain, userStoreManager, true);
+            if (log.isDebugEnabled()) {
+                log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+            }
             AuthenticatedUser authenticatedUser =
                     new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
             if (isPublishPasswordGrantLoginEnabled) {
@@ -211,7 +217,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.error(String.format("Invalid client of application : %s , " +
                                 "trying to authenticate for the user: %s ", serviceProvider.getApplicationName(),
                         tokenReq.getResourceOwnerUsername()));
-                throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
+                throw new IdentityOAuth2Exception(
+                        "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
             }
 
             AuthenticationRequest authenticationRequest = new AuthenticationRequest();
@@ -356,7 +363,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
         boolean isShowAuthFailureReason =
                 OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant();
-        String genericErrorUserName = tokenReq.getResourceOwnerUsername();
         try {
             // Get the user store preference order supplier.
             UserStorePreferenceOrderSupplier<List<String>> userStorePreferenceOrderSupplier =
@@ -373,8 +379,24 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             String username = tokenReq.getResourceOwnerUsername();
             if (!IdentityUtil.isEmailUsernameValidationDisabled()) {
                 FrameworkUtils.validateUsername(username);
-                username = FrameworkUtils.preprocessUsername(username, tokenReq.getTenantDomain(),
-                        serviceProvider.isSaasApp());
+                String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getAccessingOrganizationId();
+                if (StringUtils.isNotBlank(accessingOrgId) &&
+                        serviceProvider.isEnhancedOrganizationAuthenticationEnabled()) {
+                    String userTenantDomain;
+                    try {
+                        userTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                                .resolveTenantDomain(accessingOrgId);
+                    } catch (OrganizationManagementException e) {
+                        throw new IdentityOAuth2Exception("Error while resolving tenant domain from the " +
+                                "organization id: " + accessingOrgId, e);
+                    }
+                    username = FrameworkUtils.preprocessUsername(username, userTenantDomain,
+                            serviceProvider.isSaasApp());
+                } else {
+                    username = FrameworkUtils.preprocessUsername(username, tokenReq.getTenantDomain(),
+                            serviceProvider.isSaasApp());
+                }
             }
 
             String tenantAwareUserName = MultitenantUtils.getTenantAwareUsername(username);
@@ -389,11 +411,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
 
-            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
-                    (tokenReq.getResourceOwnerUsername())) || IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                genericErrorUserName = tenantAwareUserName;
-            }
-
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             Optional<AuthenticatedUser> authenticatedUser;
             ServiceProviderProperty[] spProps = serviceProvider.getSpProperties();
@@ -406,8 +423,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
                         tenantAwareUserName, isPublishPasswordGrantLoginEnabled, userTenantDomain, serviceProvider);
             }
-            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                    userTenantDomain, userStoreManager, false);
+            String userStoreQualifiedTenantAwareUserName = authenticatedUser.isPresent() ?
+                    MultitenantUtils.getTenantAwareUsername(authenticatedUser.get().toFullQualifiedUsername())
+                    : tenantAwareUserName;
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT,
+                    userStoreQualifiedTenantAwareUserName, userTenantDomain, userStoreManager, false);
             if (log.isDebugEnabled()) {
                 log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
             }
@@ -430,14 +450,16 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                     (tokenReq.getResourceOwnerUsername()))) {
-                throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
+                throw new IdentityOAuth2Exception(
+                        "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
             }
             username = tokenReq.getResourceOwnerUsername();
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 // For tenant qualified urls, no need to send fully qualified username in response.
                 username = tenantAwareUserName;
             }
-            throw new IdentityOAuth2Exception("Authentication failed for " + username);
+            throw new IdentityOAuth2Exception(
+                    "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
@@ -446,7 +468,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (StringUtils.isNotBlank(e.getErrorCode())) {
                 message = e.getErrorCode() + " " + e.getMessage();
             }
-            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
+            message = isShowAuthFailureReason ?
+                    message : "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq);
             throw new IdentityOAuth2Exception(message, e);
         } catch (UserStoreException e) {
             if (isPublishPasswordGrantLoginEnabled) {
@@ -472,10 +495,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     message = errorCode + " " + identityException.getMessage();
                 }
             }
-            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
+            message = isShowAuthFailureReason ? message : "Authentication failed for " +
+                    OAuth2Util.getUserIdentifierFromRequest(tokenReq);
             throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
-            String message = "Authentication failed for the user: " + tokenReq.getResourceOwnerUsername();
+            String message = "Authentication failed for the user: " + OAuth2Util.getUserIdentifierFromRequest(tokenReq);
             if (log.isDebugEnabled()) {
                 log.debug(message, e);
             }

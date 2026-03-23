@@ -78,6 +78,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
         // Obtain authenticated identity provider's identifier.
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authenticatedUser);
+        String userStoreDomain = OAuth2Util.getUserStoreDomain(authenticatedUser);
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.CibaSQLQueries.
@@ -85,7 +86,7 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
                 int authenticatedTenant = OAuth2Util.getTenantId(authenticatedUser.getTenantDomain());
                 prepStmt.setString(1, authenticatedUser.getUserName());
-                prepStmt.setString(2, authenticatedUser.getUserStoreDomain());
+                prepStmt.setString(2, userStoreDomain);
                 prepStmt.setInt(3, authenticatedTenant);
                 prepStmt.setString(4, authenticatedIDP);
                 prepStmt.setInt(5, authenticatedTenant);
@@ -194,9 +195,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_AUTHENTICATED_USER)) {
+                         connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_AUTHENTICATED_USER_WITH_IDP)) {
 
-                AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                 prepStmt.setString(1, authCodeKey);
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
                     if (resultSet.next()) {
@@ -204,10 +204,14 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                             log.debug("Successfully obtained authenticatedUser of TokenRequest  with " +
                                     "authCodeKey : " + authCodeKey);
                         }
-                        authenticatedUser.setUserName(resultSet.getString(1));
-                        authenticatedUser.setUserStoreDomain(resultSet.getString(2));
-                        authenticatedUser.setTenantDomain(OAuth2Util.getTenantDomain(resultSet.getInt(3)));
-                        return authenticatedUser;
+                        String userName = resultSet.getString(1);
+                        String userStoreDomain = resultSet.getString(2);
+                        int tenantId = resultSet.getInt(3);
+                        String idpName = resultSet.getString(4);
+
+                        String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
+                        return OAuth2Util.createAuthenticatedUser(userName, userStoreDomain, tenantDomain,
+                                idpName);
                     } else {
                         throw new CibaCoreException(
                                 "No record found for authenticatedUser of TokenRequest identified by " +
@@ -225,11 +229,39 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     }
 
     @Override
+    public String getResolvedUserId(String authCodeKey) throws CibaCoreException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.CibaSQLQueries.RETRIEVE_RESOLVED_USER)) {
+
+                prepStmt.setString(1, authCodeKey);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Successfully obtained resolvedUserId of TokenRequest  with " +
+                                    "authCodeKey : " + authCodeKey);
+                        }
+                        return resultSet.getString(1);
+                    } else {
+                        throw new CibaCoreException(
+                                "No record found for resolvedUserId of TokenRequest identified by " +
+                                        "authCodeKey: " + authCodeKey);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new CibaCoreException("Error occurred in obtaining resolvedUserId of TokenRequest identified by " +
+                    "authCodeKey: " + authCodeKey, e);
+        }
+    }
+
+    @Override
     public void persistCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
-                    CibaSQLQueries.STORE_CIBA_AUTH_CODE)) {
+                    CibaSQLQueries.STORE_CIBA_AUTH_CODE_WITH_RESOLVED_USER)) {
 
                 prepStmt.setString(1, cibaAuthCodeDO.getCibaAuthCodeKey());
                 prepStmt.setString(2, cibaAuthCodeDO.getAuthReqId());
@@ -241,6 +273,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                 prepStmt.setLong(6, cibaAuthCodeDO.getInterval());
                 prepStmt.setLong(7, cibaAuthCodeDO.getExpiresIn());
                 prepStmt.setString(8, cibaAuthCodeDO.getAuthReqStatus().toString());
+                prepStmt.setString(9, cibaAuthCodeDO.getResolvedUserId());
+                prepStmt.setString(10, cibaAuthCodeDO.getRequestedActor());
                 prepStmt.execute();
 
                 if (log.isDebugEnabled()) {
@@ -288,9 +322,10 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
     public CibaAuthCodeDO getCibaAuthCode(String authCodeKey) throws CibaCoreException {
 
         CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        int tenantId;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.
-                    CibaSQLQueries.RETRIEVE_AUTH_CODE)) {
+                    CibaSQLQueries.RETRIEVE_AUTH_CODE_WITH_IDP_ID)) {
 
                 prepStmt.setString(1, authCodeKey);
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
@@ -306,6 +341,8 @@ public class CibaMgtDAOImpl implements CibaMgtDAO {
                         cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.valueOf(resultSet.getString(7)));
                         cibaAuthCodeDO.setIssuedTime(resultSet.getTimestamp(8,
                                         Calendar.getInstance(TimeZone.getTimeZone(CibaConstants.UTC))));
+                        cibaAuthCodeDO.setIdpId(resultSet.getInt(9));
+                        cibaAuthCodeDO.setRequestedActor(resultSet.getString(10));
                     } else {
                         return null;
                     }

@@ -25,6 +25,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.joda.time.Duration;
 import org.jose4j.jwt.consumer.InvalidJwtException;
 import org.jose4j.jwt.consumer.JwtConsumer;
@@ -84,12 +85,12 @@ import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequestWrapper;
 
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.reset;
@@ -98,6 +99,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
@@ -145,6 +147,10 @@ public class JWTTokenIssuerTest {
     public static final String AUTHZ_FLOW_CUSTOM_CLAIM_VALUE = "authz_flow_custom_claim_value";
     public static final String TOKEN_FLOW_CUSTOM_CLAIM = "token_flow_custom_claim";
     public static final String TOKEN_FLOW_CUSTOM_CLAIM_VALUE = "token_flow_custom_claim_value";
+
+    private static final String DUMMY_GRANT_TYPE = "password";
+    private static final String DUMMY_TENANT_DOMAIN = "carbon.super";
+    private static final String DUMMY_TOKEN_ID = "dummy-token-id-1234";
 
     @Mock
     private OAuthServerConfiguration mockOAuthServerConfiguration;
@@ -537,25 +543,24 @@ public class JWTTokenIssuerTest {
             assertNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
             assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
             assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
-            // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
-            OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(true);
-            oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(false);
+            // The entity_id claim is set in the JWT when non-persistent tokens are enabled.
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
             jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                     (OAuthAuthzReqMessageContext) authzReqMessageContext,
                     (OAuthTokenReqMessageContext) tokenReqMessageContext,
                     DUMMY_CLIENT_ID
                                                           );
             assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
-            assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
-            assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
             if (tokenReqMessageContext != null) {
+                // APPLICATION type: entity_id = consumerKey; IS_CONSENTED and IS_FEDERATED not set
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
-                assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), false);
-                assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), false);
+                assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
+                assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
             }
             if (authzReqMessageContext != null) {
+                // APPLICATION_USER + federated user: entity_id = userId, IS_FEDERATED = true
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
-                assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), true);
+                assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), true);
             }
         }
@@ -1045,6 +1050,588 @@ public class JWTTokenIssuerTest {
         }
     }
 
+    // ============================================================
+    // Group 1: refreshToken(OAuthAuthzReqMessageContext) tests
+    // ============================================================
+
+    @DataProvider(name = "nonPersistenceDisabledContextProvider")
+    public Object[][] provideNonPersistenceDisabledContexts() {
+        return new Object[][]{
+                {true},   // authz context
+                {false}   // token context
+        };
+    }
+
+    @Test(dataProvider = "nonPersistenceDisabledContextProvider")
+    public void testRefreshToken_NonPersistenceDisabled(boolean isAuthzContext) throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(true);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = isAuthzContext
+                    ? issuer.refreshToken(buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN))
+                    : issuer.refreshToken(buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE));
+
+            assertNotNull(result);
+            assertTrue(result.length() > 0, "Expected non-empty opaque refresh token when non-persistence is disabled");
+        }
+    }
+
+    @Test
+    public void testRefreshTokenFromAuthzContext_WithPersistenceEnabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN));
+
+            assertNotNull(result);
+            assertTrue(result.startsWith(OAuthConstants.NonPersistenceConstants.REFRESH_TOKEN_PREFIX),
+                    "Token should start with non-persistence prefix");
+        }
+    }
+
+    @Test
+    public void testRefreshTokenFromAuthzContext_WithPersistenceDisabled() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            authzCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(authzCtx);
+
+            assertNotNull(result);
+            PlainJWT jwt = PlainJWT.parse(result);
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            assertNotNull(claims);
+            assertEquals(claims.getIssuer(), ID_TOKEN_ISSUER);
+            assertNotNull(claims.getSubject());
+            assertNotNull(claims.getExpirationTime());
+        }
+    }
+
+    // ============================================================
+    // Group 2: refreshToken(OAuthTokenReqMessageContext) tests
+    // ============================================================
+
+    @Test
+    public void testRefreshTokenFromTokenContext_RefreshAllowed_PersistenceEnabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(true);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE));
+
+            assertNotNull(result);
+            assertTrue(result.startsWith(OAuthConstants.NonPersistenceConstants.REFRESH_TOKEN_PREFIX),
+                    "Token should start with non-persistence prefix");
+        }
+    }
+
+    @Test
+    public void testRefreshTokenFromTokenContext_RefreshAllowed_PersistenceDisabled() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenReturn("openid profile");
+            oAuth2Util.when(() -> OAuth2Util.isMtlsRequest(anyString())).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(true);
+
+            OAuthTokenReqMessageContext tokenCtx = buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setScope(new String[]{"openid", "profile"});
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(tokenCtx);
+
+            assertNotNull(result);
+            PlainJWT jwt = PlainJWT.parse(result);
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            assertNotNull(claims);
+            assertEquals(claims.getIssuer(), ID_TOKEN_ISSUER);
+            assertNotNull(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY));
+        }
+    }
+
+    @Test
+    public void testRefreshTokenFromTokenContext_RefreshNotAllowed_NonPersistenceEnabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(false);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE));
+
+            assertEquals(result, "", "Expected empty string when refresh not allowed and non-persistence enabled");
+        }
+    }
+
+    // ============================================================
+    // Group 3: setClaimsForNonPersistence() direct tests
+    // ============================================================
+
+    @Test
+    public void testSetClaimsForNonPersistence_FeatureDisabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            issuer.setClaimsForNonPersistence(builder, buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN),
+                    null, buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+
+            assertTrue(builder.build().getClaims().isEmpty(), "No claims should be added when feature is disabled");
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_LocalUser_TokenContext() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            AuthenticatedUser localUser = buildLocalUser("testUser", DUMMY_TENANT_DOMAIN);
+            localUser.setUserId(DUMMY_USER_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx, localUser, appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID), DUMMY_USER_ID);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_ID);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.GRANT_TYPE), DUMMY_GRANT_TYPE);
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_LocalUser_UserIdNotFound() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertNotNull(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID));
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_NAME);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.GRANT_TYPE), DUMMY_GRANT_TYPE);
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_ConsentedToken() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setConsentedToken(true);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+
+            assertEquals(builder.build().getClaim(OAuth2Constants.IS_CONSENTED), true);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_AuthzContext() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            authzCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, authzCtx, null,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+            assertNull(claims.getClaim(OAuthConstants.NonPersistenceConstants.GRANT_TYPE));
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_FederatedUser() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            AuthenticatedUser federatedUser = new AuthenticatedUser();
+            federatedUser.setFederatedUser(true);
+            federatedUser.setUserId(DUMMY_USER_ID);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx, federatedUser, appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID), DUMMY_USER_ID);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_USER_ID);
+            assertEquals(claims.getClaim(OAuth2Constants.IS_FEDERATED), true);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_ApplicationUser_WithAccessingOrganization() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            AuthenticatedUser user = buildLocalUser("testUser", DUMMY_TENANT_DOMAIN);
+            user.setAccessingOrganization("some-org");
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx, user, appDO);
+
+            assertEquals(builder.build().getClaim(OAuth2Constants.ACCESSING_ORGANIZATION), "some-org");
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_Application_TokenContext() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(DUMMY_GRANT_TYPE);
+            OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, null, tokenCtx,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID), DUMMY_CONSUMER_KEY);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID);
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+        }
+    }
+
+    @Test
+    public void testSetClaimsForNonPersistence_Application_AuthzContext() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+            authzCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            issuer.setClaimsForNonPersistence(builder, authzCtx, null,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+            JWTClaimsSet claims = builder.build();
+
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_ID), DUMMY_CONSUMER_KEY);
+            assertEquals(claims.getClaim(OAuthConstants.NonPersistenceConstants.ENTITY_TYPE),
+                    OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID);
+            assertEquals(claims.getClaim(OAuth2Constants.TOKEN_ID), DUMMY_TOKEN_ID);
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testSetClaimsForNonPersistence_InvalidUserType_ThrowsException() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            JWTTokenIssuer issuer = new JWTTokenIssuer();
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, "INVALID_TYPE");
+
+            issuer.setClaimsForNonPersistence(builder, authzCtx, null,
+                    buildLocalUser("testUser", DUMMY_TENANT_DOMAIN), appDO);
+        }
+    }
+
+    // ============================================================
+    // Group 4: createRefreshTokenJWTClaimSet indirectly via refreshToken()
+    // ============================================================
+
+    @Test
+    public void testCreateRefreshTokenJWTClaimSet_ViaAuthzContext_VerifyClaims() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            authzCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(authzCtx);
+
+            PlainJWT jwt = PlainJWT.parse(result);
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            assertEquals(claims.getIssuer(), ID_TOKEN_ISSUER);
+            assertNotNull(claims.getSubject());
+            assertEquals(claims.getClaim("azp"), DUMMY_CONSUMER_KEY);
+            assertEquals(claims.getClaim("client_id"), DUMMY_CONSUMER_KEY);
+            assertNotNull(claims.getAudience());
+            assertTrue(claims.getAudience().contains(ID_TOKEN_ISSUER),
+                    "Issuer should be audience for refresh tokens");
+            assertNotNull(claims.getExpirationTime());
+            assertNotNull(claims.getClaim(OAuthConstants.AUTHORIZED_USER_TYPE));
+            assertNull(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY));
+        }
+    }
+
+    @Test
+    public void testCreateRefreshTokenJWTClaimSet_ViaTokenContext_WithScope() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenReturn("openid profile");
+            oAuth2Util.when(() -> OAuth2Util.isMtlsRequest(anyString())).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(true);
+
+            OAuthTokenReqMessageContext tokenCtx = buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setScope(new String[]{"openid", "profile"});
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(tokenCtx);
+
+            PlainJWT jwt = PlainJWT.parse(result);
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            assertNotNull(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY),
+                    "Scope claim should be present");
+            assertEquals(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY), "openid profile");
+        }
+    }
+
+    @Test
+    public void testCreateRefreshTokenJWTClaimSet_WithTenantDomainClaims() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.isAddTenantDomainToAccessTokenEnabled()).thenReturn(true);
+
+            OAuthAuthzReqMessageContext authzCtx = buildAuthzCtx(DUMMY_CONSUMER_KEY, DUMMY_TENANT_DOMAIN);
+            authzCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            authzCtx.setTokenId(DUMMY_TOKEN_ID);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            String result = issuer.refreshToken(authzCtx);
+
+            PlainJWT jwt = PlainJWT.parse(result);
+            JWTClaimsSet claims = jwt.getJWTClaimsSet();
+            assertNotNull(claims.getClaim("app_td"), "app_tenant_domain claim should be present");
+            assertNotNull(claims.getClaim("user_td"), "user_tenant_domain claim should be present");
+        }
+    }
+
+    // ============================================================
+    // Helper methods for refresh token / non-persistence tests
+    // ============================================================
+
+    /**
+     * Creates a JWTTokenIssuer with a mocked OAuthIssuer token generator so that
+     * super.refreshToken() does not throw a NullPointerException.
+     * Must be called after getSignatureAlgorithm() is already stubbed.
+     */
+    private JWTTokenIssuer createJWTTokenIssuer() throws Exception {
+
+        OAuthIssuer tokenGenerator = mock(OAuthIssuer.class);
+        doReturn(UUID.randomUUID().toString()).when(tokenGenerator).refreshToken();
+        doReturn(UUID.randomUUID().toString()).when(tokenGenerator).accessToken();
+        when(mockOAuthServerConfiguration.getOAuthTokenGenerator()).thenReturn(tokenGenerator);
+        return new JWTTokenIssuer();
+    }
+
+    private OAuthAuthzReqMessageContext buildAuthzCtx(String consumerKey, String tenantDomain) {
+
+        OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        authorizeReqDTO.setConsumerKey(consumerKey);
+        authorizeReqDTO.setTenantDomain(tenantDomain);
+        AuthenticatedUser user = buildLocalUser("dummyUser", tenantDomain);
+        user.setAuthenticatedSubjectIdentifier("dummyUser");
+        authorizeReqDTO.setUser(user);
+        return new OAuthAuthzReqMessageContext(authorizeReqDTO);
+    }
+
+    private OAuthTokenReqMessageContext buildTokenReqCtx(String clientId, String grantType) {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(clientId);
+        tokenReqDTO.setGrantType(grantType);
+        tokenReqDTO.setTenantDomain(DUMMY_TENANT_DOMAIN);
+        HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+        when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+        tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+        OAuthTokenReqMessageContext tokenCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+        AuthenticatedUser user = buildLocalUser("dummyUser", DUMMY_TENANT_DOMAIN);
+        user.setAuthenticatedSubjectIdentifier("dummyUser");
+        tokenCtx.setAuthorizedUser(user);
+        return tokenCtx;
+    }
+
+    private AuthenticatedUser buildLocalUser(String username, String tenantDomain) {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName(username);
+        user.setTenantDomain(tenantDomain);
+        user.setUserStoreDomain("PRIMARY");
+        user.setFederatedUser(false);
+        return user;
+    }
+
     @Test
     public void testIssueSubjectToken() throws Exception {
 
@@ -1077,6 +1664,8 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience("dummyConsumerKey", appDO))
                     .thenReturn(Collections.singletonList("dummyConsumerKey"));
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class))).thenReturn("scope1 scope2");
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class), anyString()))
+                    .thenReturn(false);
 
             oAuth2Util.when(() -> OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
@@ -1115,6 +1704,82 @@ public class JWTTokenIssuerTest {
             assertNotNull(map);
             assertNotNull(map.get("sub"));
             assertEquals(map.get("sub"), "dummyUserId");
+        }
+    }
+
+    @DataProvider(name = "scopeFormatProvider")
+    public Object[][] provideScopeFormatConfig() {
+        return new Object[][]{
+                {false, String.class, "openid profile email"},
+                {true, List.class, Arrays.asList("openid", "profile", "email")}
+        };
+    }
+
+    @Test(dataProvider = "scopeFormatProvider")
+    public void testBuildJWTTokenWithScopeFormat(boolean jwtScopeAsArrayEnabled, 
+                                                  Class<?> expectedScopeType,
+                                                  Object expectedScopeValue) throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            
+            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+            accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
+            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+            
+            OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+            reqMessageContext.setScope(new String[]{"openid", "profile", "email"});
+            reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("DUMMY_USERNAME");
+            authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
+            authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+            authenticatedUser.setUserId(DUMMY_USER_ID);
+            reqMessageContext.setAuthorizedUser(authenticatedUser);
+
+            prepareForBuildJWTToken(oAuth2Util);
+            mockGrantHandlers();
+            mockCustomClaimsCallbackHandler();
+            
+            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any(String[].class)))
+                    .thenReturn("openid profile email");
+            oAuth2Util.when(() -> OAuth2Util.buildScopeArray(any(String.class)))
+                    .thenReturn(new String[]{"openid", "profile", "email"});
+            oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
+                    .thenReturn(Collections.singletonList(DUMMY_CLIENT_ID));
+            oAuth2Util.when(() -> OAuth2Util.isJwtScopeAsArrayEnabled(any(OAuthAppDO.class), anyString()))
+                    .thenReturn(jwtScopeAsArrayEnabled);
+            
+            when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
+            when(mockOAuthServerConfiguration.getApplicationAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
+            
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
+            String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
+
+            PlainJWT plainJWT = PlainJWT.parse(jwtToken);
+            assertNotNull(plainJWT);
+            assertNotNull(plainJWT.getJWTClaimsSet());
+            
+            // Verify scope format based on configuration
+            Object scopeClaim = plainJWT.getJWTClaimsSet().getClaim("scope");
+            assertNotNull(scopeClaim, "Scope claim should be present in JWT");
+            assertTrue(expectedScopeType.isInstance(scopeClaim), 
+                    "Scope should be " + expectedScopeType.getSimpleName() + 
+                    " when jwtScopeAsArrayEnabled=" + jwtScopeAsArrayEnabled);
+            assertEquals(scopeClaim, expectedScopeValue, 
+                    "Scope value should match expected format");
         }
     }
 }

@@ -510,7 +510,7 @@ public class OIDCClaimUtil {
 
         if (roleClaimRequested || appRoleClaimRequested) {
             String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
-                    serviceProvider.getApplicationResourceId());
+                    serviceProvider.getApplicationResourceId(), serviceProvider.getTenantDomain());
             if (roleClaimRequested) {
                 setRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
             }
@@ -590,6 +590,27 @@ public class OIDCClaimUtil {
             return new String[0];
         }
         return appRolesResolver.getRoles(authenticatedUser, applicationId);
+    }
+
+    /**
+     * Get app associated roles of the user.
+     *
+     * @param authenticatedUser Authenticated user.
+     * @param applicationId     Application id.
+     * @param appTenantDomain   Tenant domain of the application.
+     * @return App associated roles of the user.
+     * @throws ApplicationRolesException If an error occurred while getting app associated roles.
+     */
+    public static String[] getAppAssociatedRolesOfUser(AuthenticatedUser authenticatedUser, String applicationId,
+                                                       String appTenantDomain) throws ApplicationRolesException {
+
+        ApplicationRolesResolver appRolesResolver =
+                OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityApplicationRolesResolver();
+        if (appRolesResolver == null) {
+            log.debug("No application roles resolver found. So not adding application roles claim to the id_token.");
+            return new String[0];
+        }
+        return appRolesResolver.getAppAssociatedRolesOfLocalUser(authenticatedUser, applicationId, appTenantDomain);
     }
 
     /**

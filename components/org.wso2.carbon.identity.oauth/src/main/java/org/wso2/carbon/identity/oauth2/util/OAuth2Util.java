@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,6 +30,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDHEncrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -68,6 +69,8 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.OrganizationDiscoveryInput;
+import org.wso2.carbon.identity.application.authentication.framework.model.OrganizationDiscoveryResult;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -75,6 +78,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -100,6 +104,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -119,6 +124,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -133,6 +139,8 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -158,6 +166,8 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -191,6 +201,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -224,6 +235,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_I
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.CIBA_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.DEVICE_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_CONSENT_EP_URL;
@@ -245,6 +257,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -631,6 +644,57 @@ public class OAuth2Util {
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+        if (appDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
+            }
+            return false;
+        }
+
+        if (StringUtils.isNotEmpty(appTenant) && !isTenantActive(appTenant)) {
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + appTenant);
+        }
+
+        // Cache miss
+        boolean isHashDisabled = isHashDisabled();
+        String appClientSecret = appDO.getOauthConsumerSecret();
+        if (isHashDisabled) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        } else {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully authenticated the client with client id : " + clientId);
+        }
+
+        return true;
+    }
+
+    public static boolean authenticateClientFromOrgHierarchy(String clientId, String clientSecretProvided,
+                                                             String accessingOrgId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO appDO;
+        appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        String appTenant = getTenantDomainOfOauthApp(appDO);
         if (appDO == null) {
             if (log.isDebugEnabled()) {
                 log.debug("Cannot find a valid application with the provided client_id: " + clientId);
@@ -1693,6 +1757,11 @@ public class OAuth2Util {
             return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl,
                     OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrlV2);
         }
+
+        public static String getCibaEPUrl() {
+
+            return buildUrl(CIBA_EP_URL, null, null);
+        }
     }
 
     /**
@@ -2481,8 +2550,14 @@ public class OAuth2Util {
 
         OAuthAppDO appDO;
         try {
-            String tenantDomain = getTenantDomain();
-            appDO = getAppInformationByClientId(clientId, tenantDomain);
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getAccessingOrganizationId();
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                appDO = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+                appDO = getAppInformationByClientId(clientId, tenantDomain);
+            }
         } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
         }
@@ -2601,6 +2676,75 @@ public class OAuth2Util {
     }
 
     /**
+     * Get Oauth application information from organization hierarchy.
+     *
+     * @param clientId        Client id of the application.
+     * @param accessingOrgId  Organization Id of the accessing organization.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception     Error while retrieving the application.
+     * @throws InvalidOAuthClientException If an application not found for the given client ID in org hierarchy.
+     */
+    public static OAuthAppDO getAppInformationFromOrgHierarchy(String clientId, String accessingOrgId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        try {
+            OAuthAppDO oauthAppDO = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
+                    .getResourcesFromOrgHierarchy(accessingOrgId,
+                            LambdaExceptionUtils.rethrowFunction(
+                                    orgId -> getAppInformation(clientId, orgId)),
+                            new FirstFoundAggregationStrategy<>());
+            if (oauthAppDO == null) {
+                throw new InvalidOAuthClientException("Application not found for clientId: " + clientId +
+                        " in the organization hierarchy of organization ID: " + accessingOrgId);
+            }
+            return oauthAppDO;
+        } catch (OrgResourceHierarchyTraverseException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving application info for clientId: " + clientId +
+                    " from organization hierarchy of organization ID: " + accessingOrgId, e);
+        }
+    }
+
+    /**
+     * Get Oauth application information.
+     *
+     * @param clientId       Client id of the application.
+     * @param organizationId Organization Id of the application.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception Error while retrieving the application.
+     */
+    public static Optional<OAuthAppDO> getAppInformation(String clientId, String organizationId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        try {
+            tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                    organizationId, e);
+        }
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId, tenantDomain);
+        if (oAuthAppDO != null) {
+            return Optional.of(oAuthAppDO);
+        }
+        try {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                return Optional.of(oAuthAppDO);
+            }
+            return Optional.empty();
+        } catch (InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application not found for clientId: " + clientId + " in tenantDomain: " +
+                        tenantDomain, e);
+            }
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Get Oauth application information given an access token DO.
      *
      * @param accessTokenDO Access token data object.
@@ -2672,17 +2816,13 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
-        if (StringUtils.isNotEmpty(appOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(appOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
-                        appOrgId, e);
-            }
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+        OAuthAppDO oAuthAppDO;
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            oAuthAppDO = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        } else {
+            oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         }
-        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
@@ -3001,13 +3141,16 @@ public class OAuth2Util {
                                  String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
-        if (isRSAAlgorithm(encryptionAlgorithm)) {
+        if (isSupportedAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
                         , signatureAlgorithm));
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
-            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Encrypting JWT using encryption algorithm: %s .", encryptionAlgorithm));
+            }
+            return encryptWithSPCertificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
         } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
@@ -3023,7 +3166,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
+     * @deprecated replaced by {@link #encryptWithSPCertificate(
+     *                                  SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -3065,13 +3209,14 @@ public class OAuth2Util {
      * Encrypt JWT id token using RSA algorithm.
      *
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption method
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
-    private static JWT encryptWithRSA(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+    private static JWT encryptWithSPCertificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
                                       EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
@@ -3306,11 +3451,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt the JWT token with with given public key.
+     * Encrypt the JWT token with given public key.
      *
      * @param publicKey           public key used to encrypt
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
+     **@param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption Method
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
      * @param kid                 value used as 'kid'
@@ -3332,8 +3478,8 @@ public class OAuth2Util {
             JWEHeader header = headerBuilder.build();
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
-            // Encrypt with the recipient's public key.
-            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+            // Encrypt with the recipient's public key validating the encrypter type
+            jweObject.encrypt(validateEncrypterMode(encryptionAlgorithm, publicKey));
 
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
 
@@ -3347,6 +3493,29 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
+    }
+
+    /**
+     * Validate and get the Encrypter type.
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param publicKey           public key
+     * @return JWEEncrypter       encrypter type
+     * @throws JOSEException
+     */
+    private static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
+            throws JOSEException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Validating encrypter mode for algorithm: " + encryptionAlgorithm);
+        }
+        // Use built-in Nimbus Encryptor for supported algorithms
+         if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
+            return new ECDHEncrypter((ECPublicKey) publicKey);
+         }
+        return new RSAEncrypter((RSAPublicKey) publicKey);
     }
 
     /**
@@ -3638,6 +3807,14 @@ public class OAuth2Util {
                 JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
+    private static boolean isSupportedAlgorithm(JWEAlgorithm algorithm) {
+
+        return (JWEAlgorithm.ECDH_ES_A128KW.equals(algorithm) || JWEAlgorithm.ECDH_ES_A192KW.equals(algorithm) ||
+                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) || JWEAlgorithm.RSA_OAEP.equals(algorithm) ||
+                JWEAlgorithm.RSA1_5.equals(algorithm) || JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
+                JWEAlgorithm.RSA_OAEP_384.equals(algorithm) || JWEAlgorithm.RSA_OAEP_512.equals(algorithm));
+    }
+
     /**
      * Method to obtain the public certificate for the tenant domain.
      * This could be the primary keystore public cert, tenant keystore public cert,
@@ -3658,10 +3835,10 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obatin Default Signing certificate for the tenant.
+     * Method to obtain Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
-     * @param tenantId     Tenan ID as an integer.
+     * @param tenantId     Tenant ID as an integer.
      * @return Default Signing Certificate of the tenant domain.
      * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
      */
@@ -4846,22 +5023,33 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is
-             registered directly in the organization of the applicationResidentOrgId. spTenantDomain is used
-             to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
-             used as the issuer is the root tenant.
-            */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Application resident organization id is found in the carbon context. " +
-                        "Using the root tenant domain to build the id token issuer.");
+        /*
+         If accessingOrgId is not empty, then the request may come for an application which is
+         registered directly in the organization of the accessingOrgId. spTenantDomain is used
+         to get the idTokenIssuer for the token. In this scenario, the tenant domain that needs to be
+         used as the issuer should be extracted from the application OIDC configurations. If that
+         is not available then the root organization's issuer will be selected as the issuer.
+        */
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            try {
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+                String issuerOrg = oAuthAppDO.getIssuerOrg();
+                if (StringUtils.isNotEmpty(issuerOrg)) {
+                    String issuerTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveTenantDomain(issuerOrg);
+                    return OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(issuerTenantDomain);
+                } else {
+                    tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                }
+            } catch (OrganizationManagementException | OAuth2OIDCConfigOrgUsageScopeMgtServerException |
+                     InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving issuer for clientId: " +
+                        clientId, e);
             }
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }
-        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(applicationResidentOrgId)) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isBlank(accessingOrgId)) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5117,10 +5305,34 @@ public class OAuth2Util {
     public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+        return getAccessTokenDO(tokenResponse, true);
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @param checkIndirectRevocation   A boolean flag indicating whether to check for indirect revocation.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse,
+                                                           boolean checkIndirectRevocation)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getAccessTokenDO() != null) {
+            return Optional.ofNullable(tokenResponse.getAuthorizationContextToken().getAccessTokenDO());
+        }
+
+        if (tokenResponse.getAuthorizationContextToken() != null &&
+                tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
                 AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
-                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                                false, checkIndirectRevocation);
                 return Optional.ofNullable(accessTokenDO);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -5450,16 +5662,72 @@ public class OAuth2Util {
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
 
             String tenantDomainFromContext = getTenantDomain();
-            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                    getApplicationResidentOrganizationId();
-            if (StringUtils.isNotBlank(appOrgId)) {
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getAccessingOrganizationId();
+            if (StringUtils.isNotBlank(accessingOrgId)) {
                 try {
                     tenantDomainFromContext = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(appOrgId);
+                            .resolveTenantDomain(accessingOrgId);
                 } catch (OrganizationManagementException e) {
                     throw new InvalidOAuthClientException("Error while resolving tenant domain from organization id: "
-                            + appOrgId, e);
+                            + accessingOrgId, e);
                 }
+            }
+            if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                // This means the tenant domain sent in the request and app's tenant domain do not match.
+                if (log.isDebugEnabled()) {
+                    log.debug("A valid client with the given client_id cannot be found in " +
+                            "tenantDomain: " + tenantDomainFromContext);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
+            }
+        }
+    }
+
+    /**
+     * Validate the request tenant domain with application tenant domain.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @param clientId          Client Id.
+     * @throws InvalidOAuthClientException If a valid client with the given client_id cannot be found in the tenant.
+     * @throws IdentityOAuth2Exception   If an error occurs while validating the request tenant domain.
+     */
+    public static void validateRequestTenantDomain(String tenantDomainOfApp, String clientId)
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+
+            String tenantDomainFromContext = getTenantDomain();
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, tenantDomainOfApp);
+                try {
+                    String accessingOrgTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(accessingOrgId);
+                    if (StringUtils.equals(tenantDomainOfApp, accessingOrgTenantDomain)) {
+                        return;
+                    }
+                    if (serviceProvider.isEnhancedOrganizationAuthenticationEnabled()) {
+                        OrganizationDiscoveryInput orgDiscoveryInput = new OrganizationDiscoveryInput.Builder()
+                                .orgId(accessingOrgId)
+                                .build();
+                        OrganizationDiscoveryResult organizationDiscoveryResult = OAuth2ServiceComponentHolder
+                                .getInstance().getOrganizationDiscoveryHandler()
+                                .discoverOrganization(orgDiscoveryInput, serviceProvider.getApplicationResourceId(),
+                                        tenantDomainOfApp);
+                        if (organizationDiscoveryResult.isSuccessful()) {
+                            return;
+                        }
+                    }
+                } catch (FrameworkException e) {
+                    throw new IdentityOAuth2Exception("Error while discovering organization for id: "
+                            + accessingOrgId, e);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from organization id: "
+                            + accessingOrgId, e);
+                }
+                throw new InvalidOAuthClientException("no.valid.client.in.tenant");
             }
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
@@ -5500,6 +5768,40 @@ public class OAuth2Util {
                 }
             } else {
                 validateRequestTenantDomain(tenantDomainOfApp);
+            }
+        }
+    }
+
+    /**
+     * Validates whether the tenant domain set in context matches with the app's tenant domain in tenant qualified
+     * URL mode and in org aware paths.
+     *
+     * @param tenantDomainOfApp Tenant domain of the app.
+     * @param tokenReqDTO       Access token request DTO object that contains request parameters.
+     * @throws InvalidOAuthClientException If a valid client with the given client_id cannot be found in the tenant.
+     * @throws IdentityOAuth2Exception   If an error occurs while validating the request tenant domain.
+     */
+    public static void validateRequestTenantDomainWithOrgHierarchy(String tenantDomainOfApp,
+                                                                   OAuth2AccessTokenReqDTO tokenReqDTO)
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+
+            Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
+            String tenantDomainFromContext;
+            if (contextTenantDomainFromTokenReqDTO.isPresent()) {
+                tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+                if (StringUtils.isBlank(tenantDomainFromContext)) {
+                    tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                }
+
+                if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
+                    // This means the tenant domain sent in the request and app's tenant domain do not match.
+                    throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
+                            + "tenantDomain: " + tenantDomainFromContext);
+                }
+            } else {
+                validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO.getClientId());
             }
         }
     }
@@ -5807,8 +6109,14 @@ public class OAuth2Util {
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
             return false;
         }
-        String tenantDomain = getTenantDomain();
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+        OAuthAppDO oAuthAppDO;
+        if (StringUtils.isNotBlank(accessingOrgId)) {
+            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+        } else {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        }
         return oAuthAppDO.isFapiConformanceEnabled();
     }
 
@@ -6232,19 +6540,44 @@ public class OAuth2Util {
 
     /**
      * Get the X509 certificate of the Identity Provider.
+     * Use {@link #resolveSignerCertificate(IdentityProvider, String)} instead and provide the tenant domain explicitly.
      *
      * @param identityProvider Identity Provider.
      * @return X509Certificate.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
+    @Deprecated
     public static X509Certificate resolverSignerCertificate(IdentityProvider identityProvider)
             throws IdentityOAuth2Exception {
 
-        X509Certificate x509Certificate;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return resolveSignerCertificate(identityProvider, tenantDomain);
+    }
+
+    /**
+     * Retrieves the X509 certificate of the Identity Provider for signature verification.
+     *
+     * <p>If the identity provider is a resident IDP, the certificate is retrieved from the tenant's
+     * keystore. For federated IDPs, the certificate is decoded from the IDP configuration.
+     *
+     * @param identityProvider Identity Provider.
+     * @param tenantDomain     Tenant domain of the IdP to get the certificate.
+     * @return X509Certificate.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static X509Certificate resolveSignerCertificate(IdentityProvider identityProvider, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Resolving signer certificate for Identity Provider: " +
+                    identityProvider.getIdentityProviderName() + " in tenant domain: " + tenantDomain);
+        }
+
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
+
+        X509Certificate x509Certificate;
         try {
             if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
                     identityProvider.getIdentityProviderName())) {
@@ -6500,6 +6833,207 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error while checking whether the application is a fragment app. " +
                     "Client ID: " + clientId + ", Tenant Domain: " + tenantDomain, e);
         }
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
+    }
+
+    /**
+     * Checks if JWT scope should be represented as an array in JWT access tokens.
+     * Configuration priority:
+     * 1. Application-level configuration (highest priority)
+     * 2. Tenant-level configuration from resident IDP OIDC properties
+     * 3. Default value (false) - maintains RFC 9068 compliance with space-delimited string
+     *
+     * @param oAuthAppDO   OAuth application data object.
+     * @param tenantDomain Tenant domain to retrieve the tenant-level configuration from.
+     * @return true if JWT scope should be an array, false for space-delimited string.
+     */
+    public static boolean isJwtScopeAsArrayEnabled(OAuthAppDO oAuthAppDO, String tenantDomain) {
+
+        // 1. App-Level Check (Highest Priority).
+        if (oAuthAppDO != null && oAuthAppDO.isJwtScopeAsArrayEnabled() != null) {
+            return oAuthAppDO.isJwtScopeAsArrayEnabled();
+        }
+
+        // 2. Tenant-Level Check.
+        return getTenantLevelJwtScopeAsArrayConfig(tenantDomain);
+    }
+
+    /**
+     * Retrieves JWT scope as array configuration from resident Identity Provider OIDC configuration.
+     * If no configuration is found, the default value is false.
+     *
+     * @param tenantDomain Tenant domain to retrieve the resident IDP configuration from.
+     * @return true if JWT scope as array is enabled in resident IDP configuration, false otherwise.
+     */
+    private static boolean getTenantLevelJwtScopeAsArrayConfig(String tenantDomain) {
+    
+        try {
+
+            IdentityProvider residentIdp = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            
+            if (residentIdp == null) {
+                return false;
+            }
+
+            FederatedAuthenticatorConfig oidcFederatedAuthConfig =
+                    IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                            residentIdp.getFederatedAuthenticatorConfigs(),
+                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
+
+            if (oidcFederatedAuthConfig == null) {
+                return false;
+            }
+
+            Property enableJwtScopeAsArrayProperty = IdentityApplicationManagementUtil.getProperty(
+                    oidcFederatedAuthConfig.getProperties(),
+                    OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+
+            if (enableJwtScopeAsArrayProperty != null &&
+                    StringUtils.isNotBlank(enableJwtScopeAsArrayProperty.getValue())) {
+                log.debug("Using tenant level config for JWT scope as array: " + 
+                        enableJwtScopeAsArrayProperty.getValue());
+                return Boolean.parseBoolean(enableJwtScopeAsArrayProperty.getValue());
+            }
+
+        } catch (IdentityProviderManagementException e) {
+            log.warn("Error while retrieving tenant-level JWT scope as array configuration.", e);
+        }
+        
+        return false;
+    }
+
+    /**
+     * Check if access token persistence is enabled.
+     *
+     * @return True if access token persistence is enabled.
+     */
+    public static boolean isAccessTokenPersistenceEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isAccessTokenPersistenceEnabled();
+    }
+
+    /**
+     * Check if revoked access token list is enabled.
+     *
+     * @return True if revoked access token list is enabled.
+     */
+    public static boolean isKeepRevokedAccessTokenEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isKeepRevokedTokenEnabled();
+    }
+
+    /**
+     * Check if refresh token persistence is enabled.
+     *
+     * @return True if access token persistence is enabled.
+     */
+    public static boolean isRefreshTokenPersistenceEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isRefreshTokenPersistenceEnabled();
+    }
+
+    /**
+     * Extracts the user identifier (username) from the token request parameters.
+     *
+     * @param tokenReq OAuth2AccessTokenReqDTO containing the token request parameters.
+     * @return The user identifier if present, otherwise null.
+     */
+    public static String getUserIdentifierFromRequest(OAuth2AccessTokenReqDTO tokenReq) {
+
+        if (tokenReq == null || tokenReq.getRequestParameters() == null
+                || tokenReq.getRequestParameters().length == 0) {
+            return null;
+        }
+        return Arrays.stream(tokenReq.getRequestParameters())
+                .filter(parameter -> "username".equals(parameter.getKey()))
+                .map(parameter -> parameter.getValue()[0])
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Retrieve the tenant domain based on the application's configured issuer organization. If the application does
+     * not have an issuer organization configured, it will fall back to the root tenant domain. The issuer
+     * organization configuration is only allowed in sub organization OAuth2 applications.
+     *
+     * @param clientID Client ID of the OAuth application.
+     * @param accessingOrgId Accessing organization ID of the OAuth application.
+     * @return Tenant domain based on the application's configured issuer organization.
+     * @throws IdentityOAuth2Exception When an error occurred while retrieving the tenant domain.
+     */
+    public static String getTenantDomainByApplicationTokenIssuer(String clientID, String accessingOrgId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain;
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientID, accessingOrgId);
+            String issuerOrg = oAuthAppDO.getIssuerOrg();
+            if (StringUtils.isNotEmpty(issuerOrg)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(issuerOrg);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Application issuer configuration is null or empty. Falling back to root " +
+                            "tenant domain token");
+                }
+                tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            }
+        } catch (OrganizationManagementException | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while getting the tenant domain for client id: "
+                    + clientID, e);
+        }
+        return tenantDomain;
+    }
+
+    /**
+     * Check if the token type is non-persistent token type.
+     *
+     * @param consumerKey Consumer key of the application.
+     * @return True if the token type is non-persistent token type, false otherwise.
+     */
+    public static boolean isNonPersistentTokenEnabled(String consumerKey) {
+
+        try {
+            // Skip App DO call if token persistence is enabled (no need to check further)
+            if (isAccessTokenPersistenceEnabled() || StringUtils.isBlank(consumerKey)) {
+                return false;
+            }
+
+            OAuthAppDO appDO = getAppInformationByClientId(consumerKey);
+            return StringUtils.equals(appDO.getTokenType(), JWT);
+
+        } catch (IdentityException e) {
+            log.error("Error while retrieving the application information for the consumer key: " + consumerKey, e);
+            return false;
+        }
+    }
+
+    /**
+     * Get token provider.
+     *
+     * @return TokenProvider
+     */
+    public static TokenProvider getTokenProvider() {
+
+        return OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
+    }
+
+    /**
+     * Check whether the OAuth application is a fragment app.
+     * Fragment app is an instance of a parent application in a sub-organization.
+     * Fragment app acts as a federated IdP for the parent org to authenticate sub-org users into shared applications.
+     *
+     * @param serviceProviderProperties Service provider properties of the OAuth application.
+     * @return true if the OAuth application is a fragment app
+     */
+    public static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+
         if (serviceProviderProperties == null) {
             return false;
         }

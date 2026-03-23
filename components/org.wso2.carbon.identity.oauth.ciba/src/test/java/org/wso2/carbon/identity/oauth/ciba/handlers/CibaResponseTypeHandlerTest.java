@@ -27,21 +27,29 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = { "dbScripts/h2.sql", "dbScripts/identity.sql" })
 @Listeners(MockitoTestNGListener.class)
 public class CibaResponseTypeHandlerTest {
 
@@ -84,10 +92,9 @@ public class CibaResponseTypeHandlerTest {
         authenticatedUser.setUserStoreDomain("PRIMARY");
         authorizationReqDTO.setUser(authenticatedUser);
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
+        authAuthzReqMessageContext = new OAuthAuthzReqMessageContext(authorizationReqDTO);
         authAuthzReqMessageContext
-                = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-        authAuthzReqMessageContext
-                .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
+                .setApprovedScope(new String[] { "scope1", "scope2", OAuthConstants.Scope.OPENID });
     }
 
     @AfterMethod
@@ -99,20 +106,168 @@ public class CibaResponseTypeHandlerTest {
     @Test
     public void testIssue() throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic = mockStatic(ServiceURLBuilder.class)) {
             CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
 
             when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString())).thenReturn("authCodeKey");
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString())).thenReturn("testUser");
 
             oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
 
             AuthenticatedUser user = new AuthenticatedUser();
             user.setUserStoreDomain("PRIMARY");
             user.setUserName("testUser");
             user.setFederatedIdPName("LOCAL");
+            user.setTenantDomain("carbon.super");
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
 
             Assert.assertEquals(cibaResponseTypeHandler.issue(authAuthzReqMessageContext).getCallbackURI(),
-                    TEST_CALLBACK_URL + "?authenticationStatus=AUTHENTICATED");
+                    TEST_CALLBACK_URL + "?app_name=testApp");
+        }
+    }
+
+    @Test
+    public void testIssueWithSkipUserValidationEnabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util =
+                     mockStatic(OAuth2Util.class);
+                MockedStatic<IdentityTenantUtil> identityTenantUtil =
+                        mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils =
+                        mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> urlBuilderStatic =
+                        mockStatic(ServiceURLBuilder.class)) {
+            CibaResponseTypeHandler handler =
+                    new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO())
+                    .thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString()))
+                    .thenReturn("authCodeKey");
+
+            oAuth2Util.when(
+                    () -> OAuth2Util.getTenantId(anyString()))
+                    .thenReturn(1234);
+            identityTenantUtil.when(
+                    () -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(1234);
+            frameworkUtils.when(
+                    () -> FrameworkUtils.resolveUserIdFromUsername(
+                            anyInt(), anyString(), anyString()))
+                    .thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder =
+                    mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            urlBuilderStatic.when(ServiceURLBuilder::create)
+                    .thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString()))
+                    .thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL())
+                    .thenReturn(TEST_CALLBACK_URL);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(true);
+            authAuthzReqMessageContext.addProperty(
+                    "OAuthAppDO", oAuthAppDO);
+
+            // Should succeed without user validation.
+            Assert.assertEquals(
+                    handler.issue(authAuthzReqMessageContext)
+                            .getCallbackURI(),
+                    TEST_CALLBACK_URL + "?app_name=testApp");
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testIssueFailsWhenUserMismatchAndValidationEnabled()
+            throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil =
+                     mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils =
+                        mockStatic(FrameworkUtils.class)) {
+            CibaResponseTypeHandler cibaResponseTypeHandler =
+                    new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO())
+                    .thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString()))
+                    .thenReturn("authCodeKey");
+            // Resolved user is different from authenticated user.
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString()))
+                    .thenReturn("differentUser");
+
+            identityTenantUtil.when(
+                    () -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(1234);
+            frameworkUtils.when(() -> FrameworkUtils
+                    .resolveUserIdFromUsername(
+                            anyInt(), anyString(), anyString()))
+                    .thenReturn("testUser");
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(false);
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
+
+            // Should throw because users don't match.
+            cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+        }
+    }
+
+    @Test
+    public void testIssueSucceedsWhenUserMatchesAndValidationEnabled() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic = mockStatic(ServiceURLBuilder.class)) {
+            CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString())).thenReturn("authCodeKey");
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString())).thenReturn("testUser");
+
+            oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(false);
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
+
+            // Should succeed because resolved user matches authenticated user.
+            Assert.assertEquals(cibaResponseTypeHandler.issue(authAuthzReqMessageContext).getCallbackURI(),
+                    TEST_CALLBACK_URL + "?app_name=testApp");
         }
     }
 
@@ -122,8 +277,8 @@ public class CibaResponseTypeHandlerTest {
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setNonce(NONCE);
 
-        return new Object[][]{
-                {oAuth2Parameters, "Authentication failed."},
+        return new Object[][] {
+                { oAuth2Parameters, "Authentication failed." },
         };
     }
 
@@ -145,8 +300,8 @@ public class CibaResponseTypeHandlerTest {
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setNonce(NONCE);
 
-        return new Object[][]{
-                {oAuth2Parameters, "User denied the consent."},
+        return new Object[][] {
+                { oAuth2Parameters, "User denied the consent." },
         };
     }
 

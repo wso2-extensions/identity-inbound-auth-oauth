@@ -26,6 +26,11 @@ import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
 /**
  * Provides authentication services.
  */
+import java.util.List;
+
+/**
+ * Provides authentication services.
+ */
 public interface CibaAuthService {
 
     /**
@@ -38,4 +43,11 @@ public interface CibaAuthService {
      */
     CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException,
             CibaClientException;
+
+    /**
+     * Get supported notification channels.
+     *
+     * @return List of supported notification channels.
+     */
+    List<String> getSupportedNotificationChannels();
 }

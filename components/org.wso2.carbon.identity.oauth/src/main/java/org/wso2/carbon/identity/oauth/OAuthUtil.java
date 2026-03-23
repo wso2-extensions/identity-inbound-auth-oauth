@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -73,6 +73,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.util.IdPManagementUtil;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -98,7 +99,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
@@ -568,7 +568,13 @@ public final class OAuthUtil {
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
+        dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
+        dto.setCibaNotificationChannels(appDO.getCibaNotificationChannels());
+        dto.setCibaAuthReqExpiryTime(appDO.getCibaAuthReqExpiryTime());
+        dto.setCibaSkipUserValidation(appDO.isCibaSkipUserValidation());
+        dto.setCibaAllowFederatedUsers(appDO.isCibaAllowFederatedUsers());
+        dto.setIssuerDetails(appDO.getIssuerDetails());
         return dto;
     }
 
@@ -907,6 +913,8 @@ public final class OAuthUtil {
                                                   String userStoreDomain, String username) {
 
         boolean isErrorOnRevokingTokens = false;
+        boolean isTokenPreservingAtPasswordUpdateEnabled = IdPManagementUtil.
+                getPreserveCurrentSessionAtPasswordUpdate(authenticatedUser.getTenantDomain());
         for (String clientId : clientIds) {
             try {
                 Set<AccessTokenDO> accessTokenDOs = new HashSet<>();
@@ -916,7 +924,7 @@ public final class OAuthUtil {
                                 + " authorized by user: " + username + "/" + userStoreDomain);
                     }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
-                    accessTokenDOs.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    accessTokenDOs.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                             .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -929,8 +937,6 @@ public final class OAuthUtil {
                     LOG.debug("ACTIVE or EXPIRED access tokens found for the client: " + clientId + " for the user: "
                             + username);
                 }
-                boolean isTokenPreservingAtPasswordUpdateEnabled =
-                        Boolean.parseBoolean(IdentityUtil.getProperty(PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE));
                 String currentTokenBindingReference = "";
                 String currentTokenReference = "";
                 if (isTokenPreservingAtPasswordUpdateEnabled) {
@@ -1191,7 +1197,7 @@ public final class OAuthUtil {
             // Revoking token from database.
             for (AccessTokenDO accessToken : accessTokens) {
                 OAuthUtil.invokePreRevocationBySystemListeners(accessToken, Collections.emptyMap());
-                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(accessToken.getConsumerKey())
                         .revokeAccessTokens(new String[]{accessToken.getAccessToken()}, OAuth2Util.isHashEnabled());
                 OAuthUtil.invokePostRevocationBySystemListeners(accessToken, Collections.emptyMap());
             }
@@ -1210,7 +1216,7 @@ public final class OAuthUtil {
             try {
                 // Retrieve latest access token for particular client, user and scope combination
                 // if its ACTIVE or EXPIRED.
-                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                         .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
                                 scope, true);
             } catch (IdentityOAuth2Exception e) {
@@ -1274,28 +1280,60 @@ public final class OAuthUtil {
                 authorizationCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                         .getAuthorizationCodesByUserForOpenidScope(authenticatedUser));
             }
-            clearAuthzCodeGrantCachesForTokens(accessTokenDOSet);
-            clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet);
+            clearAuthzCodeGrantCachesForTokens(accessTokenDOSet, null);
+            clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet, null);
+
+            // Remove root organization federated user related caches if the user is an organization user.
+            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                /*
+                In organization SSO flow, the tokens are stored against the user id of the federated user.
+                Therefore, we need to get the user id and set it in authenticated user to remove the caches.
+                 */
+                String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, userName).getUserID();
+                authenticatedUser.setUserName(userId);
+                // Use federated domain to fetch tokens for the root org user.
+                authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
+                Set<AccessTokenDO> federatedAccessTokenDOSet = OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAO().getAccessTokensByUserForOpenidScope(authenticatedUser, true);
+                List<AuthzCodeDO> federatedAuthorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
+                        .getAuthorizationCodeDAO()
+                        .getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
+
+                // Switch authorization grant cache from sub org to root org cache.
+                String accessingOrg = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                String primaryOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .getPrimaryOrganizationId(accessingOrg);
+                String rootTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(primaryOrganizationId);
+                clearAuthzCodeGrantCachesForTokens(federatedAccessTokenDOSet, rootTenantDomain);
+                clearAuthzCodeGrantCachesForCodes(federatedAuthorizationCodeDOSet, rootTenantDomain);
+            }
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
                     LoggerUtils.getMaskedContent(userName);
             LOG.error(errorMsg, e);
+        } catch (OrganizationManagementException e) {
+            String errorMsg = "Error occurred while retrieving access tokens for user: " +
+                    LoggerUtils.getMaskedContent(userName) + " due to a failure in resolving the organization ID.";
+            LOG.error(errorMsg, e);
         }
     }
 
-    private static void clearAuthzCodeGrantCachesForCodes(List<AuthzCodeDO> authorizationCodeDOSet) {
+    private static void clearAuthzCodeGrantCachesForCodes(List<AuthzCodeDO> authorizationCodeDOSet,
+                                                          String tenantDomain) {
 
         if (CollectionUtils.isNotEmpty(authorizationCodeDOSet)) {
             for (AuthzCodeDO authorizationCodeDO : authorizationCodeDOSet) {
                 String authorizationCode = authorizationCodeDO.getAuthorizationCode();
                 String authzCodeId = authorizationCodeDO.getAuthzCodeId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId, tenantDomain);
             }
         }
     }
 
-    private static void clearAuthzCodeGrantCachesForTokens(Set<AccessTokenDO> accessTokenDOSet) {
+    private static void clearAuthzCodeGrantCachesForTokens(Set<AccessTokenDO> accessTokenDOSet, String tenantDomain) {
 
         if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
@@ -1306,7 +1344,7 @@ public final class OAuthUtil {
                 String accessToken = accessTokenDO.getAccessToken();
                 String tokenId = accessTokenDO.getTokenId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
-                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId, tenantDomain);
             }
         }
     }

@@ -17,8 +17,6 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
-import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,8 +35,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.List;
-import java.util.Map;
 
 /**
  * According to the OIDC spec requestObject is passed as a query param value of request/request_uri parameters. This is
@@ -205,48 +201,6 @@ public class OIDCRequestObjectUtil {
                     .resultMessage("Request Object signature verification is successful.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
-        }
-    }
-
-
-    public static JSONObject convertToJSONObject(Map<String, Object> map) {
-
-        JSONObject jsonObject = new JSONObject(map);
-        recursivelyConvertToJSONObject(jsonObject);
-        return jsonObject;
-    }
-
-    private static void recursivelyConvertToJSONObject(JSONObject jsonObject) {
-
-        for (String key : jsonObject.keySet()) {
-            Object value = jsonObject.get(key);
-            if (value instanceof Map) {
-                JSONObject child = new JSONObject((Map<String, Object>) value);
-                recursivelyConvertToJSONObject(child);
-                jsonObject.put(key, child);
-            } else if (value instanceof List) {
-                JSONArray jsonArray = new JSONArray();
-                jsonArray.addAll((List<?>) value);
-                recursivelyConvertToJSONArray(jsonArray);
-                jsonObject.put(key, jsonArray);
-            }
-        }
-    }
-
-    private static void recursivelyConvertToJSONArray(JSONArray jsonArray) {
-
-        for (int i = 0; i < jsonArray.size(); i++) {
-            Object element = jsonArray.get(i);
-            if (element instanceof Map) {
-                JSONObject child = new JSONObject((Map<String, Object>) element);
-                recursivelyConvertToJSONObject(child);
-                jsonArray.set(i, child);
-            } else if (element instanceof List) {
-                JSONArray childArray = new JSONArray();
-                childArray.addAll((List<?>) element);
-                recursivelyConvertToJSONArray(childArray);
-                jsonArray.set(i, childArray);
-            }
         }
     }
 

@@ -92,6 +92,8 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
+import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -100,6 +102,7 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnExc
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -112,6 +115,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -124,7 +128,6 @@ import org.wso2.carbon.utils.NetworkUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -186,6 +189,7 @@ public class OAuth2UtilTest {
     private String scopeString = "scope1 scope2 scope3";
     private final String clientId = "dummyClientId";
     private final String clientSecret = "dummyClientSecret";
+    private final String tenantDomain = "tenant.com";
     private final String base64EncodedClientIdSecret = "ZHVtbXlDbGllbnRJZDpkdW1teUNsaWVudFNlY3JldA==";
     private final String base64EncodedClientIdInvalid = "ZHVtbXlDbGllbnRJZA==";
     private String authorizationCode = "testAuthorizationCode";
@@ -3088,11 +3092,14 @@ public class OAuth2UtilTest {
         Field field = clazz.getDeclaredField(fieldName);
         field.setAccessible(true);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
 
-        field.set(null, value);
+        Object fieldBase = unsafe.staticFieldBase(field);
+        long fieldOffset = unsafe.staticFieldOffset(field);
+        unsafe.putObject(fieldBase, fieldOffset, value);
     }
 
     @DataProvider(name = "appResidentOrganizationIdProvider")
@@ -3685,11 +3692,495 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "fragmentAppPropertiesOnlyTestCases")
+    public Object[][] fragmentAppPropertiesOnlyTestCases() {
+
+        return new Object[][] {
+                {"null properties", null, false},
+                {"empty properties", new ServiceProviderProperty[0], false},
+                {"IS_FRAGMENT_APP is true", new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "true")},
+                        true},
+                {"IS_FRAGMENT_APP is false",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "false")}, false},
+                {"IS_FRAGMENT_APP value is invalid",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "invalid")}, false},
+                {"IS_FRAGMENT_APP property absent",
+                        new ServiceProviderProperty[]{createProperty("otherProperty", "true")}, false},
+                {"IS_FRAGMENT_APP is true among multiple properties",
+                        new ServiceProviderProperty[]{
+                                createProperty("otherProp", "value"),
+                                createProperty(IS_FRAGMENT_APP, "true"),
+                                createProperty("anotherProp", "value2")
+                        }, true},
+                {"IS_FRAGMENT_APP value is null",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, null)}, false},
+                {"IS_FRAGMENT_APP value is TRUE (case insensitive)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "TRUE")}, true},
+        };
+    }
+
+    @Test(dataProvider = "fragmentAppPropertiesOnlyTestCases")
+    public void testIsFragmentAppWithPropertiesArray(String description,
+                                                     ServiceProviderProperty[] properties,
+                                                     boolean expectedResult) {
+
+        assertEquals(OAuth2Util.isFragmentApp(properties), expectedResult, "Failed for case: " + description);
+    }
+
     private ServiceProviderProperty createProperty(String name, String value) {
 
         ServiceProviderProperty property = new ServiceProviderProperty();
         property.setName(name);
         property.setValue(value);
         return property;
+    }
+
+    @Test(dataProvider = "isJwtScopeAsArrayEnabledDataProvider")
+    public void testIsJwtScopeAsArrayEnabled(Boolean appLevelConfig, Boolean tenantConfig,
+                                              boolean expectedResult, String description) throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setJwtScopeAsArrayEnabled(appLevelConfig);
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            if (appLevelConfig == null) {
+                // Mock tenant-level configuration from resident IDP
+                IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+                lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                        .thenReturn(mockResidentIdp);
+                
+                FederatedAuthenticatorConfig mockOidcConfig = mock(FederatedAuthenticatorConfig.class);
+                FederatedAuthenticatorConfig[] configs = new FederatedAuthenticatorConfig[]{mockOidcConfig};
+                when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(configs);
+                
+                mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                        any(FederatedAuthenticatorConfig[].class), 
+                        eq("openidconnect")))
+                        .thenReturn(mockOidcConfig);
+                
+                if (tenantConfig != null) {
+                    Property enableJwtScopeProperty = new Property();
+                    enableJwtScopeProperty.setName(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+                    enableJwtScopeProperty.setValue(tenantConfig.toString());
+                    Property[] properties = new Property[]{enableJwtScopeProperty};
+                    when(mockOidcConfig.getProperties()).thenReturn(properties);
+                    
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(enableJwtScopeProperty);
+                } else {
+                    when(mockOidcConfig.getProperties()).thenReturn(new Property[]{});
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(null);
+                }
+            }
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, expectedResult, description);
+        }
+    }
+
+    @DataProvider(name = "isJwtScopeAsArrayEnabledDataProvider")
+    public Object[][] isJwtScopeAsArrayEnabledDataProvider() {
+
+        return new Object[][]{
+                // {appLevel, tenantLevel, expected, description}
+                {true, null, true, "App-level enabled should return true (priority 1)"},
+                {false, null, false, "App-level disabled should return false (priority 1)"},
+                {null, true, true, "Null app-level, tenant enabled should return true (priority 2)"},
+                {null, false, false, "Null app-level, tenant disabled should return false (priority 2)"},
+                {null, null, false, "All null should return default false"},
+                {true, false, true, "App-level should override tenant-level (priority 1 wins)"},
+                {false, true, false, "App-level false should override tenant-level true (priority 1 wins)"},
+        };
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_withNullOAuthAppDO() throws Exception {
+
+        // Return null resident IDP
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(null);
+
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(null, tenantDomain);
+        assertEquals(result, false, "Null OAuthAppDO with null resident IDP should return default false");
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenResidentIdpHasNoOidcConfig() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+            lenient().when(mockIdentityProviderManager.getResidentIdP(tenantDomain))
+                    .thenReturn(mockResidentIdp);
+            when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(new FederatedAuthenticatorConfig[]{});
+            
+            // OIDC config not found
+            mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                    any(FederatedAuthenticatorConfig[].class), 
+                    eq("openidconnect")))
+                    .thenReturn(null);
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, false, "OAuthAppDO with no OIDC config should return default false");
+        }
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenIdentityProviderManagementExceptionThrown() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                .thenThrow(new IdentityProviderManagementException(
+                        "Error reading resident IDP configuration"));
+
+        // Should return false on exception (fallback behavior)
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+        assertEquals(result, false, "Exception during tenant config retrieval should return default false");
+    }
+
+    @DataProvider(name = "accessTokenPersistenceEnabledProvider")
+    public Object[][] accessTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "accessTokenPersistenceEnabledProvider")
+    public void testIsAccessTokenPersistenceEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isAccessTokenPersistenceEnabled(), expected);
+    }
+
+    @DataProvider(name = "keepRevokedAccessTokenEnabledProvider")
+    public Object[][] keepRevokedAccessTokenEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "keepRevokedAccessTokenEnabledProvider")
+    public void testIsKeepRevokedAccessTokenEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isKeepRevokedTokenEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isKeepRevokedAccessTokenEnabled(), expected);
+    }
+
+    @DataProvider(name = "refreshTokenPersistenceEnabledProvider")
+    public Object[][] refreshTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "refreshTokenPersistenceEnabledProvider")
+    public void testIsRefreshTokenPersistenceEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isRefreshTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
+    }
+
+    // ======================== isNonPersistentTokenEnabled ========================
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenAccessTokenPersistenceEnabled() {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(true);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("test_consumer_key"));
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenConsumerKeyIsBlank() {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(""));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(null));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("   "));
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsJWT() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("JWT");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertTrue(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsNotJWT() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("Default");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenExceptionOccurs() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(anyString(), anyInt()))
+                                .thenThrow(new InvalidOAuthClientException("Client not found"));
+                    })) {
+
+                assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+            }
+        }
+    }
+
+    @Test
+    public void testGetTokenProvider() {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+
+            TokenProvider result = OAuth2Util.getTokenProvider();
+
+            Assert.assertNotNull(result);
+            Assert.assertEquals(result, mockTokenProvider);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithAccessTokenDOInContextToken() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+        expectedAccessTokenDO.setTokenId("test-token-id");
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string", expectedAccessTokenDO);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertTrue(result.isPresent());
+        assertEquals(result.get(), expectedAccessTokenDO);
+        assertEquals(result.get().getTokenId(), "test-token-id");
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithAccessTokenDOInContextTokenSkipsTokenProvider()
+            throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string", expectedAccessTokenDO);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, false);
+
+        assertTrue(result.isPresent());
+        assertEquals(result.get(), expectedAccessTokenDO);
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithTokenStringFallsBackToTokenProvider() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(true)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+            assertTrue(result.isPresent());
+            assertEquals(result.get(), expectedAccessTokenDO);
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithCheckIndirectRevocationFalse() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(false)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, false);
+
+            assertTrue(result.isPresent());
+            assertEquals(result.get(), expectedAccessTokenDO);
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, false);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenAuthContextTokenIsNull() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenTokenStringIsNull() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", null);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test(expectedExceptions = UserInfoEndpointException.class)
+    public void testGetAccessTokenDOThrowsExceptionOnTokenProviderError() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(anyString(), anyBoolean(), anyBoolean()))
+                    .thenThrow(new IdentityOAuth2Exception("Token validation failed"));
+
+            OAuth2Util.getAccessTokenDO(tokenResponse, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOSingleArgDelegatesToTwoArgWithTrue() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(true)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+            assertTrue(result.isPresent());
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenTokenProviderReturnsNull() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(anyString(), anyBoolean(), anyBoolean()))
+                    .thenReturn(null);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, true);
+
+            assertFalse(result.isPresent());
+        }
     }
 }

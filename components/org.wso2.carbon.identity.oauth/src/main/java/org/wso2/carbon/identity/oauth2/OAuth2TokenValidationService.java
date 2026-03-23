@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -38,6 +39,13 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospec
 /**
  * This is the SOAP version of the OAuth validation service which will be used by the resource server.
  */
+@Capability(
+        namespace = "osgi.service",
+        attribute = {
+                "objectClass=org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService",
+                "service.scope=singleton"
+        }
+)
 public class OAuth2TokenValidationService extends AbstractAdmin {
 
     private static final Log log = LogFactory.getLog(OAuth2TokenValidationService.class);

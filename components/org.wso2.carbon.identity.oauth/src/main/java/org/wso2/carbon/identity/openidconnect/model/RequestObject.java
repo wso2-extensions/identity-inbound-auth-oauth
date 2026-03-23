@@ -23,7 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
-import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 
 import java.io.Serializable;
 import java.text.ParseException;
@@ -87,7 +86,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = OIDCRequestObjectUtil.convertToJSONObject(this.claimsSet.toJSONObject());
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -121,7 +120,7 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = OIDCRequestObjectUtil.convertToJSONObject(this.claimsSet.toJSONObject());
+            JSONObject claims = IdentityUtil.convertToJSONObject(this.claimsSet.toJSONObject());
             processClaimObject(claims);
         }
     }
@@ -147,7 +146,7 @@ public class RequestObject implements Serializable {
             if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
                 JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
 
-                //To iterate the claims json object to fetch the claim requestor and all requested claims.
+                //To iterate the claims json object to fetch the claim requester and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
                     List<RequestedClaim> requestedClaimsList = new ArrayList();
                     if (jsonObjectClaim.get(requesterClaimsMap.getKey()) != null) {

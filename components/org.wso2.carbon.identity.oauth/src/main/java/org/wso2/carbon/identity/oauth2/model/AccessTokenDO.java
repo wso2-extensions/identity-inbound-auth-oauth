@@ -78,6 +78,7 @@ public class AccessTokenDO extends CacheEntry {
     private String authorizedOrganizationId;
 
     private int appResidentTenantId = MultitenantConstants.INVALID_TENANT_ID;
+    private boolean isNotPersisted;
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
@@ -147,6 +148,7 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
         newTokenDO.setAppResidentTenantId(tokenDO.getAppResidentTenantId());
         newTokenDO.setAccessTokenExtendedAttributes(tokenDO.getAccessTokenExtendedAttributes());
+        newTokenDO.setNotPersisted(tokenDO.isNotPersisted());
 
         return newTokenDO;
     }
@@ -358,5 +360,15 @@ public class AccessTokenDO extends CacheEntry {
     public void setAppResidentTenantId(int appResidentTenantId) {
 
         this.appResidentTenantId = appResidentTenantId;
+    }
+
+    public boolean isNotPersisted() {
+
+        return isNotPersisted;
+    }
+
+    public void setNotPersisted(boolean notPersisted) {
+
+        isNotPersisted = notPersisted;
     }
 }

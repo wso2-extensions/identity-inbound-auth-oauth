@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2023-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,18 +19,26 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
@@ -40,6 +48,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Default implementation of @RefreshTokenProcessor responsible for handling refresh token persistence logic.
@@ -74,7 +83,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
         }
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
                         OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, clientId,
                         UUID.randomUUID().toString(), accessTokenBean, userStoreDomain, oldAccessToken.getGrantType());
@@ -98,6 +107,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
+        String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+        accessTokenDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
+                ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
+                : IdentityTenantUtil.getLoginTenantId());
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
@@ -182,7 +195,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                                                     RefreshTokenValidationDataDO validationBean, String userStoreDomain)
             throws IdentityOAuth2Exception {
 
-        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        List<AccessTokenDO> accessTokenBeans = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(tokenReq.getClientId())
                 .getLatestAccessTokens(tokenReq.getClientId(), validationBean.getAuthorizedUser(), userStoreDomain,
                         OAuth2Util.buildScopeString(validationBean.getScope()),
                         validationBean.getTokenBindingReference(), true, LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT);
@@ -195,5 +209,81 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             throw new IdentityOAuth2Exception("No previous access tokens found");
         }
         return accessTokenBeans;
+    }
+
+    /**
+     * Add user attributes to cache against the new access token.
+     * @param accessTokenBean Access token data object.
+     * @param msgCtx Token request message context.
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public void addUserAttributesToCache(AccessTokenDO accessTokenBean, OAuthTokenReqMessageContext msgCtx)
+            throws IdentityOAuth2Exception {
+
+        RefreshTokenValidationDataDO oldAccessToken =
+                (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
+        if (oldAccessToken == null || StringUtils.isBlank(oldAccessToken.getAccessToken())) {
+            return;
+        }
+        AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
+                .getAccessToken());
+        if (log.isDebugEnabled()) {
+            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
+        }
+        AuthorizationGrantCacheEntry grantCacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
+                        oldAccessToken.getTokenId());
+
+        /*
+         * When multiple concurrent refresh token requests occur using the same refresh token,
+         * other nodes in the cluster may revoke the cache entries associated with the previous token.
+         * However, since the current node is unaware of these deletions, it may fail to retrieve the
+         * cache entry for the token. This block ensures that the cache is fetched using the given token ID,
+         * even if the cache entry related to the token is marked as deleted.
+         * This is done for JWT tokens and federated users only.
+         */
+        if (grantCacheEntry == null) {
+            if (msgCtx.getAuthorizedUser() != null && msgCtx.getAuthorizedUser().isFederatedUser()) {
+                OAuthAppDO oAuthAppDO = (OAuthAppDO) msgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+                if (oAuthAppDO != null && OAuth2Util.JWT.equals(oAuthAppDO.getTokenType())) {
+                    grantCacheEntry = AuthorizationGrantCache.getInstance()
+                            .getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey, oldAccessToken.getTokenId(),
+                                    OAuth2Constants.STORE_OPERATION);
+                }
+            }
+        }
+
+        if (grantCacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting user attributes cached against the previous access token with access token id: " +
+                        oldAccessToken.getTokenId());
+            }
+            AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
+                    .getAccessToken());
+
+            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
+                grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
+            } else {
+                grantCacheEntry.setTokenId(null);
+            }
+
+            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
+            grantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getRefreshTokenValidityPeriodInMillis()));
+
+            // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
+            AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
+                    oldAccessToken.getTokenId());
+            // If refresh token persistence is disabled and the user is not federated, do not store user attributes.
+            // When a user's profile is updated after the token is issued, the cache cannot be cleared because
+            // the Identity Server will not persist either the refresh token or the access token. As a result,
+            // outdated user attribute data would be returned on the next refresh grant.
+            // To mitigate this, user attributes are set to null.
+            if (!OAuth2Util.isRefreshTokenPersistenceEnabled() && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+                grantCacheEntry.setUserAttributes(null);
+            }
+            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
     }
 }

@@ -44,6 +44,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -94,6 +95,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -370,6 +372,42 @@ public class AuthzUtil {
         }).collect(Collectors.toList());
 
         return federatedTokenDOs;
+    }
+
+    /**
+     * Cache federated tokens for the CIBA flow using auth_req_id as the cache key.
+     * In the CIBA flow, there is no authorization code, so federated tokens from the session data cache
+     * are stored in the authorization grant cache keyed by auth_req_id (carried as the nonce).
+     * This allows {@code FederatedTokenResponseHandler} to retrieve them during the token request.
+     *
+     * @param oAuthMessage  The OAuthMessage containing the session data cache entry.
+     * @param oauth2Params  The OAuth2 parameters containing the nonce (auth_req_id).
+     */
+    private static void cacheFederatedTokensForCibaFlow(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params) {
+
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
+        if (sessionDataCacheEntry == null) {
+            return;
+        }
+        List<FederatedTokenDO> federatedTokens = sessionDataCacheEntry.getFederatedTokens();
+        if (CollectionUtils.isEmpty(federatedTokens)) {
+            return;
+        }
+        // In the CIBA flow, auth_req_id is stored as the nonce in OAuth2Parameters.
+        String authReqId = oauth2Params.getNonce();
+        if (StringUtils.isBlank(authReqId)) {
+            return;
+        }
+        AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry(
+                sessionDataCacheEntry.getLoggedInUser() != null
+                        ? sessionDataCacheEntry.getLoggedInUser().getUserAttributes() : new HashMap<>());
+        cacheEntry.setFederatedTokens(federatedTokens);
+        sessionDataCacheEntry.setFederatedTokens(null);
+        AuthorizationGrantCache.getInstance().addToCache(
+                new AuthorizationGrantCacheKey(authReqId), cacheEntry);
+        if (log.isDebugEnabled()) {
+            log.debug("Cached federated tokens for CIBA flow with auth_req_id: " + authReqId);
+        }
     }
 
     public static void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
@@ -2019,6 +2057,10 @@ public class AuthzUtil {
             setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params,
                     authorizationResponseDTO);
         }
+        // For CIBA flow, cache federated tokens using auth_req_id so they can be retrieved at the token endpoint.
+        if (CibaConstants.RESPONSE_TYPE_VALUE.equalsIgnoreCase(responseType)) {
+            cacheFederatedTokensForCibaFlow(oAuthMessage, oauth2Params);
+        }
         if (Constants.RESPONSE_TYPE_DEVICE.equalsIgnoreCase(responseType)) {
             cacheUserAttributesByDeviceCode(oAuthMessage);
         }
@@ -2436,7 +2478,13 @@ public class AuthzUtil {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+            OAuthAppDO appDO;
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(clientId, OAuth2Util.getLoginTenant());
+            }
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {
@@ -2861,7 +2909,8 @@ public class AuthzUtil {
                 oAuthMessage.getRequest().getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(loginTenantDomain)) {
             try {
-                return EndpointUtil.verifyAndRetrieveTenantDomain(clientId);
+                return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId(),
+                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
             } catch (OAuthSystemException e) {
                 throw new InvalidRequestException("Error resolving tenant domain for client id: " + clientId,
                         OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST);

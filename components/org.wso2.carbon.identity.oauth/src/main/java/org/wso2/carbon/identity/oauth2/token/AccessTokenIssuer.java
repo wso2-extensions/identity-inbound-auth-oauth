@@ -131,7 +131,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomainWithOrgHierarchy;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -332,7 +332,7 @@ public class AccessTokenIssuer {
         // Indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP.
         // This is done to avoid having to send the tenantDomain as a query param to the token endpoint
         String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
+        validateRequestTenantDomainWithOrgHierarchy(tenantDomainOfApp, tokenReqDTO);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
 
@@ -409,7 +409,7 @@ public class AccessTokenIssuer {
         }
 
         if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
-            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO, tokenRespDTO);
         }
 
         return tokenRespDTO;
@@ -456,7 +456,10 @@ public class AccessTokenIssuer {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
+                Exception sanitizedError = new Exception(LoggerUtils.getSanitizedErrorMessage(
+                        e.getMessage(), OAuth2Util.getUserIdentifierFromRequest(tokenReqDTO)));
+                sanitizedError.setStackTrace(e.getStackTrace());
+                log.debug("Error occurred while validating grant", sanitizedError);
             }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
@@ -1332,6 +1335,11 @@ public class AccessTokenIssuer {
                                     OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
             tokReqMsgCtx.setTokenBinding(null);
             return;
@@ -1342,11 +1350,6 @@ public class AccessTokenIssuer {
         if (!tokenBinderOptional.isPresent()) {
             throw new IdentityOAuth2Exception(
                     "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
-        }
-
-        if (REFRESH_TOKEN.equals(grantType)) {
-            // Token binding values are already set to the OAuthTokenReqMessageContext.
-            return;
         }
 
         tokReqMsgCtx.setTokenBinding(null);
@@ -1624,22 +1627,14 @@ public class AccessTokenIssuer {
             IdentityOAuth2Exception {
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-        /*
-         If the applicationResidentOrgId is not null, resolve the tenant domain from the organization id to get the
-         application information by passing the consumer key and the tenant domain.
-        */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                        + applicationResidentOrgId, e);
-            }
+        OAuthAppDO authAppDO;
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            authAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+        } else {
+            authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         }
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

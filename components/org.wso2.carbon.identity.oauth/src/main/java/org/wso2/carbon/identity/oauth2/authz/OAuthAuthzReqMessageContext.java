@@ -68,6 +68,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private boolean isPreIssueIDTokenActionExecuted;
 
     private IDTokenDTO preIssueIDTokenActionDTO;
+    private String tokenId;
 
     private List<String> audiences;
 
@@ -332,5 +333,15 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setAudiences(List<String> audiences) {
 
         this.audiences = audiences;
+    }
+
+    public String getTokenId() {
+
+        return tokenId;
+    }
+
+    public void setTokenId(String tokenId) {
+
+        this.tokenId = tokenId;
     }
 }

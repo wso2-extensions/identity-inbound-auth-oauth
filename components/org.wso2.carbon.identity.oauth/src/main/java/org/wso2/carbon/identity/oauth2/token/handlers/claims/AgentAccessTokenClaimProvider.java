@@ -23,6 +23,7 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
     private static final String AGENT = "AGENT";
     private static final String AUT = "aut";
     private static final String AZP = "azp";
+    private static final String CIBA_GRANT_TYPE = "urn:openid:params:grant-type:ciba";
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception {
@@ -40,6 +41,7 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
             agentMap.put(AUT, AGENT);
             return agentMap;
         } else if (GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
+                || CIBA_GRANT_TYPE.equals(context.getOauth2AccessTokenReqDTO().getGrantType())
             && context.getRequestedActor() != null) {
 
             Map<String, Object> actClaimMap = new HashMap<>();
