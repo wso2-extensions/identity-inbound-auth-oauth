@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -28,7 +26,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -55,15 +52,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
-import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
@@ -259,7 +252,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throws IdentityOAuth2Exception {
         try {
             newTokenBean.setAuthorizationCode(oAuth2AccessTokenReqDTO.getAuthorizationCode());
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(oAuth2AccessTokenReqDTO.getClientId())
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
                             newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
@@ -307,7 +300,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         tokenReqDTO.getAuthorizationCode());
         if (validationResult != null) {
             if (!validationResult.isActiveCode()) {
-                String tokenAlias = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                String tokenAlias = OAuthTokenPersistenceFactory.getInstance()
+                        .getAccessTokenDAOImpl(tokenReqDTO.getClientId())
                         .getAccessTokenByTokenId(validationResult.getTokenId());
                 //revoking access token issued for authorization code as per RFC 6749 Section 4.1.2
                 revokeExistingAccessTokens(validationResult.getTokenId(), validationResult.getAuthzCodeDO());
@@ -337,7 +331,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authzCodeDO.getAuthorizedUser().getLoggableMaskedUserId(), e);
         }
-        String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+        String accessToken = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(authzCodeDO.getConsumerKey())
                 .getAccessTokenByTokenId(tokenId);
         // Fetching AccessTokenDO from DB before revoking the token.
         AccessTokenDO accessTokenDO = null;
@@ -355,7 +350,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 }
             }
         }
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(authzCodeDO.getConsumerKey())
+                .revokeAccessToken(tokenId, userId);
         clearAccessTokenOAuthCache(accessTokenDO);
 
         if (log.isDebugEnabled()) {
@@ -628,7 +624,27 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             }
             throw new IdentityOAuth2Exception("Actor token is not provided in the request.");
         } else if (StringUtils.isNotBlank(requestedActor) && StringUtils.isNotBlank(actorToken)) {
-            validateActorToken(tokReqMsgCtx, requestedActor);
+            String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+            ActorTokenValidator.ActorTokenClaims claims =
+                    ActorTokenValidator.validateAndExtractClaims(actorToken, tenantDomain);
+            if (!StringUtils.equals(claims.getSubject(), requestedActor)) {
+                throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor.");
+            }
+            tokReqMsgCtx.setImpersonationRequest(false);
+            tokReqMsgCtx.addProperty("IS_DELEGATION_REQUEST", true);
+            tokReqMsgCtx.addProperty("ACTOR_SUBJECT", claims.getSubject());
+            if (claims.getAzp() != null) {
+                tokReqMsgCtx.addProperty("ACTOR_AZP", claims.getAzp());
+                if (log.isDebugEnabled()) {
+                    log.debug("Actor AZP extracted from actor token: " + claims.getAzp());
+                }
+            }
+            if (claims.getExistingActClaim() != null) {
+                tokReqMsgCtx.addProperty("EXISTING_ACT_CLAIM", claims.getExistingActClaim());
+                if (log.isDebugEnabled()) {
+                    log.debug("Found existing act claim in actor token - will nest in delegation chain");
+                }
+            }
             tokReqMsgCtx.setRequestedActor(requestedActor);
         }
     }
@@ -742,86 +758,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
         oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
                 .getTrimmedAuthorizationDetails(authorizationCodeAuthorizationDetails));
-    }
-
-    /**
-     * Validates the actor token in the authorization code request.
-     *
-     * @param tokReqMsgCtx      OAuthTokenReqMessageContext
-     * @param requestedActor    The actor for which the token is requested
-     * @throws IdentityOAuth2Exception if an error occurs during validation
-     */
-    private void validateActorToken(OAuthTokenReqMessageContext tokReqMsgCtx, String requestedActor)
-            throws IdentityOAuth2Exception {
-
-        // Retrieve the signed JWT object from the request parameters
-        SignedJWT signedJWT;
-        try {
-            signedJWT = JWTUtils.parseJWT(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getActorToken());
-        } catch (ParseException e) {
-            throw new IdentityOAuth2Exception("Error while parsing the JWT", e);
-        }
-
-        // Extract claims from the JWT
-        Optional<JWTClaimsSet> claimsSetOptional = JWTUtils.getJWTClaimSet(signedJWT);
-
-        JWTClaimsSet claimsSet = claimsSetOptional.orElseThrow(() ->
-                new IdentityOAuth2Exception("Claim values are empty in the given Actor Token"));
-
-
-        String actorTokenSubject = claimsSet.getSubject();
-        // Validate the actor token subject against the requested actor
-        if (!StringUtils.equals(actorTokenSubject, requestedActor)) {
-            throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor");
-        }
-
-        Object actorAzpClaim = claimsSet.getClaim("azp");
-        if (actorAzpClaim == null) {
-            // Fallback to client_id if azp not present
-            actorAzpClaim = claimsSet.getClaim("client_id");
-        }
-        // Check for existing act claim in actor token for delegation chain
-        Object existingActClaim = claimsSet.getClaim("act");
-        // Set delegation properties in context
-        tokReqMsgCtx.setImpersonationRequest(false);
-        tokReqMsgCtx.addProperty("IS_DELEGATION_REQUEST", true);
-        tokReqMsgCtx.addProperty("ACTOR_SUBJECT", actorTokenSubject);
-        if (actorAzpClaim != null) {
-            tokReqMsgCtx.addProperty("ACTOR_AZP", actorAzpClaim.toString());
-            if (log.isDebugEnabled()) {
-                log.debug("Actor AZP extracted from actor token: " + actorAzpClaim.toString());
-            }
-        }
-        // Preserve existing act claim for delegation chain nesting
-        if (existingActClaim != null) {
-            tokReqMsgCtx.addProperty("EXISTING_ACT_CLAIM", existingActClaim);
-            if (log.isDebugEnabled()) {
-                log.debug("Found existing act claim in actor token - will nest in delegation chain");
-            }
-        }
-
-        // Validate mandatory claims
-        JWTUtils.validateMandatoryClaims(claimsSet);
-        String jwtIssuer = claimsSet.getIssuer();
-        String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        IdentityProvider identityProvider = OAuth2Util.getIdentityProviderWithJWTIssuer(jwtIssuer, tenantDomain);
-
-        if (JWTSignatureValidationUtils.validateSignature(signedJWT, identityProvider, tenantDomain)) {
-            log.debug("Signature/MAC validated successfully for actor token.");
-        } else {
-            throw new IdentityOAuth2Exception("Signature or Message Authentication invalid for actor token.");
-        }
-
-        // Check the validity of the JWT
-        JWTUtils.checkExpirationTime(claimsSet.getExpirationTime());
-        JWTUtils.checkNotBeforeTime(claimsSet.getNotBeforeTime());
-
-        // Validate the issuer of the subject token
-        String expectedIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
-        if (!StringUtils.equals(expectedIssuer, jwtIssuer)) {
-            throw new IdentityOAuth2Exception("Invalid issuer in the JWT. Expected: " + expectedIssuer +
-                    ", Received: " + jwtIssuer);
-        }
     }
 
 
