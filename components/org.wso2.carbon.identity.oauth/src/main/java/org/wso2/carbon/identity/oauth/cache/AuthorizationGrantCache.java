@@ -257,6 +257,7 @@ public class AuthorizationGrantCache extends
      * @return Cached entry, or null if not found in either the local JVM cache or session store.
      */
     public AuthorizationGrantCacheEntry getValueFromCacheOrSessionStoreByCode(AuthorizationGrantCacheKey key) {
+
         AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
         if (cacheEntry == null) {
             if (log.isDebugEnabled()) {
