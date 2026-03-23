@@ -580,55 +580,26 @@ public class DefaultOAuth2ScopeValidator {
             return validatedOIDCScopes;
         }
 
-        // Retrieve Local Claim URI to OIDC Claim Mappings.
-        Map<String, String> localToOIDCClaimMappings = getLocalClaimUriToOIDCClaimMap(tenantDomain);
-        // Retrieve OIDC Claim to Scopes Mappings.
-        Map<String, String> oidcClaimToScopeMap = getOIDCClaimsToScopesMap(tenantDomain);
+        Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
+                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
+        List<ScopeDTO> oidcScopesList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO()
+                .getScopes(IdentityTenantUtil.getTenantId(tenantDomain));
 
-        for (String localClaim : requestedClaimUris) {
-            String oidcClaim = localToOIDCClaimMappings.get(localClaim);
-            if (oidcClaim != null) {
-                String scope = oidcClaimToScopeMap.get(oidcClaim);
-                if (scope != null && requestedScopes.contains(scope)) {
-                    validatedOIDCScopes.add(scope);
-                } else if (LOG.isDebugEnabled()) {
-                    LOG.debug("No OIDC scope found for the OIDC claim: " + oidcClaim +
-                            " mapped to local claim: " + localClaim + " in tenant domain: " + tenantDomain);
+        for (ScopeDTO scopeDTO : oidcScopesList) {
+            String scopeName = scopeDTO.getName();
+            if (!requestedScopes.contains(scopeName) || scopeDTO.getClaim() == null) {
+                continue;
+            }
+            for (String scopeClaim : scopeDTO.getClaim()) {
+                String localClaim = oidcToLocalClaimMappings.get(scopeClaim);
+                if (localClaim != null && requestedClaimUris.contains(localClaim)) {
+                    validatedOIDCScopes.add(scopeName);
+                    break;
                 }
-            } else if (LOG.isDebugEnabled()) {
-                LOG.debug("No OIDC claim mapping found for the local claim: " + localClaim +
-                        " in tenant domain: " + tenantDomain);
             }
         }
 
         return validatedOIDCScopes;
-    }
-
-    private Map<String, String> getLocalClaimUriToOIDCClaimMap(String tenantDomain) throws ClaimMetadataException {
-
-        return ClaimMetadataHandler.getInstance()
-                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false)
-                .entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey, (existing, replacement) -> existing));
-    }
-
-    private Map<String, String> getOIDCClaimsToScopesMap(String tenantDomain) throws IdentityOAuth2Exception {
-
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        List<ScopeDTO> oidcScopesList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO()
-                .getScopes(tenantId);
-
-        Map<String, String> oidcClaimToScopesMap = new HashMap<>();
-        for (ScopeDTO scopeDTO : oidcScopesList) {
-            if (scopeDTO.getClaim() == null) {
-                continue;
-            }
-            for (String claim : scopeDTO.getClaim()) {
-                oidcClaimToScopesMap.putIfAbsent(claim, scopeDTO.getName());
-            }
-        }
-
-        return oidcClaimToScopesMap;
     }
 
     /**
