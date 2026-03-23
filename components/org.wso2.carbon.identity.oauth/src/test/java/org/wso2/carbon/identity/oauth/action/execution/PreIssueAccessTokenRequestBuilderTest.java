@@ -488,6 +488,13 @@ public class PreIssueAccessTokenRequestBuilderTest {
         }
     }
 
+    /**
+     * Encode the client ID and client secret as a Base64 encoded string.
+     *
+     * @param clientId     The client ID.
+     * @param clientSecret The client secret.
+     * @return Base64 encoded string representing client ID and secret.
+     */
     private String getBase64EncodedString(String clientId, String clientSecret) {
 
         return new String(Base64.encodeBase64((clientId + ":" + clientSecret).getBytes()));
