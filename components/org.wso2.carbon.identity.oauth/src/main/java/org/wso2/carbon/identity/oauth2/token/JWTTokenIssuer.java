@@ -80,12 +80,12 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDI
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.PREV_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_AZP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_AZP;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 
 /**
  * Self contained access token builder.

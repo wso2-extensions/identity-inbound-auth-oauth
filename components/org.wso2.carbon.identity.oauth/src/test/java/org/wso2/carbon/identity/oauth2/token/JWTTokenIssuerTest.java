@@ -574,7 +574,8 @@ public class JWTTokenIssuerTest {
         existingActClaimMap.put("azp", "previous-azp");
 
         return new Object[][]{
-                // isDelegationRequest, actorSubject, actorAzp, existingActClaim, expectActClaim, expectAzp, expectNested
+                // isDelegationRequest, actorSubject, actorAzp, existingActClaim, expectActClaim, expectAzp, 
+                // expectNested
                 {true,  "actor-subject", "actor-azp", null,              true,  true,  false},
                 {true,  "actor-subject", null,         null,              true,  false, false},
                 {true,  "actor-subject", "actor-azp", existingActClaimMap, true, true,  true},

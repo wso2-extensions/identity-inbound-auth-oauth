@@ -86,11 +86,11 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.Map;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
@@ -346,7 +346,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return;
         }
 
-        Map<String, String> params = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes().getParameters();
+        Map<String, String> params = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+        .getAccessTokenExtendedAttributes().getParameters();
 
         String impersonator = params.get(OAuthConstants.IMPERSONATING_ACTOR);
         if (StringUtils.isNotBlank(impersonator)) {

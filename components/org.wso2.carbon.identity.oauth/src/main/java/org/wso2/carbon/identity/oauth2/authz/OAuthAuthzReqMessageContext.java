@@ -23,8 +23,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 
 import java.io.Serializable;
-import java.util.Properties;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * OAuth authorization request message context.
