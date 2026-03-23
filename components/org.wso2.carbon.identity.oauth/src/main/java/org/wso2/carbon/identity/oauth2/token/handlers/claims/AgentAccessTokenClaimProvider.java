@@ -39,9 +39,9 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
             return agentMap;
-        } else if (GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
-                || CIBA_GRANT_TYPE.equals(context.getOauth2AccessTokenReqDTO().getGrantType())
-            && context.getRequestedActor() != null) {
+        } else if ((GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
+                || CIBA_GRANT_TYPE.equals(context.getOauth2AccessTokenReqDTO().getGrantType()))
+                && context.getRequestedActor() != null) {
 
             Map<String, Object> actClaimMap = new HashMap<>();
             actClaimMap.put(SUB, context.getRequestedActor());
