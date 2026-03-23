@@ -631,16 +631,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor.");
             }
             tokReqMsgCtx.setImpersonationRequest(false);
-            tokReqMsgCtx.addProperty("IS_DELEGATION_REQUEST", true);
-            tokReqMsgCtx.addProperty("ACTOR_SUBJECT", claims.getSubject());
+            tokReqMsgCtx.addProperty(OAuthConstants.IS_DELEGATION_REQUEST, true);
+            tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_SUBJECT, claims.getSubject());
             if (claims.getAzp() != null) {
-                tokReqMsgCtx.addProperty("ACTOR_AZP", claims.getAzp());
+                tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_AZP, claims.getAzp());
                 if (log.isDebugEnabled()) {
                     log.debug("Actor AZP extracted from actor token: " + claims.getAzp());
                 }
             }
             if (claims.getExistingActClaim() != null) {
-                tokReqMsgCtx.addProperty("EXISTING_ACT_CLAIM", claims.getExistingActClaim());
+                tokReqMsgCtx.addProperty(OAuthConstants.EXISTING_ACT_CLAIM, claims.getExistingActClaim());
                 if (log.isDebugEnabled()) {
                     log.debug("Found existing act claim in actor token - will nest in delegation chain");
                 }

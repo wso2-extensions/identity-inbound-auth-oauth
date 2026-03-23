@@ -206,6 +206,7 @@ public final class OAuthConstants {
     public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";
     public static final String MAY_ACT = "may_act";
+    public static final String ACT = "act";
     public static final String SUB = "sub";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
@@ -605,6 +606,7 @@ public final class OAuthConstants {
         public static final String APP_ROLES = "application_roles";
         public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
+        public static final String CLIENT_ID = "client_id";
         public static final String AUTH_TIME = "auth_time";
         public static final String AT_HASH = "at_hash";
         public static final String NONCE = "nonce";

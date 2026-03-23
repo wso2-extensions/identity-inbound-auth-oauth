@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
@@ -137,12 +138,12 @@ public class ActorTokenValidator {
         }
 
         // Extract azp/client_id and existing act claim for delegation chain processing.
-        Object azpClaim = claimsSet.getClaim("azp");
+        Object azpClaim = claimsSet.getClaim(OAuthConstants.OIDCClaims.AZP);
         if (azpClaim == null) {
             // Fallback to client_id if azp not present.
-            azpClaim = claimsSet.getClaim("client_id");
+            azpClaim = claimsSet.getClaim(OAuthConstants.OIDCClaims.CLIENT_ID);
         }
-        Object existingActClaim = claimsSet.getClaim("act");
+        Object existingActClaim = claimsSet.getClaim(OAuthConstants.ACT);
 
         return new ActorTokenClaims(
                 claimsSet.getSubject(),
