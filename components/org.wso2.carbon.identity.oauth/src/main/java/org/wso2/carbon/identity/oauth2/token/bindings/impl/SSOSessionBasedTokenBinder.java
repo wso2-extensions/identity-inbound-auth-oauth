@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -109,7 +110,7 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
         if (StringUtils.isNotEmpty(commonAuthCookieValueFromRequestAttribute)) {
             return DigestUtils.sha256Hex(commonAuthCookieValueFromRequestAttribute);
         }
-        throw new OAuthSystemException("Failed to retrieve token binding value.");
+        throw new OAuthSystemClientException("Failed to retrieve token binding value");
     }
 
     @Override
