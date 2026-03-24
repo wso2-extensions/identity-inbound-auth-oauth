@@ -46,11 +46,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNull;
 
 /**
  * Unit tests for AuthorizationGrantCacheTest class.
@@ -186,75 +184,6 @@ public class AuthorizationGrantCacheTest {
                 {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, true, false, false},
                 {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true, false, false}
         };
-    }
-
-    /**
-     * Verifies that on a JVM cache miss the entry is retrieved from the session store (multi-node fallback),
-     * the debug log is emitted, and no write-back to the session store occurs (i.e. super.addToCache()
-     * is not called), which would risk a duplicate PK in IDN_AUTH_SESSION_STORE.
-     */
-    @Test
-    public void testGetValueFromCacheOrSessionStoreByCode_sessionStoreFallback() throws IdentityOAuth2Exception {
-
-        String authCode = "authCodeFallback";
-        String codeId = "codeIdFallback";
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(authCode);
-        AuthorizationGrantCacheEntry expectedEntry = new AuthorizationGrantCacheEntry();
-        expectedEntry.setCodeId(codeId);
-
-        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory =
-                     mockStatic(OAuthTokenPersistenceFactory.class);
-             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class)) {
-
-            when(mockLog.isDebugEnabled()).thenReturn(true);
-
-            OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory =
-                    mock(OAuthTokenPersistenceFactory.class);
-            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance)
-                    .thenReturn(mockedOAuthTokenPersistenceFactory);
-            when(mockedOAuthTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(authorizationCodeDAO);
-            when(authorizationCodeDAO.getCodeIdByAuthorizationCode(authCode)).thenReturn(codeId);
-
-            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
-            when(sessionDataStore.getSessionData(codeId, AUTHORIZATION_GRANT_CACHE_NAME)).thenReturn(expectedEntry);
-
-            AuthorizationGrantCacheEntry result = cache.getValueFromCacheOrSessionStoreByCode(key);
-
-            assertEquals(result, expectedEntry);
-            verify(mockLog).debug("Cache miss for authorization code. Falling back to session store.");
-            // Verify no re-store: super.addToCache() must NOT have been called.
-            verify(sessionDataStore, never()).storeSessionData(any(), any(), any());
-        }
-    }
-
-    /**
-     * Verifies that null is returned when the entry is absent from both the JVM cache and the session store.
-     */
-    @Test
-    public void testGetValueFromCacheOrSessionStoreByCode_bothMiss() throws IdentityOAuth2Exception {
-
-        String authCode = "noCacheCode";
-        String codeId = "noCacheCodeId";
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(authCode);
-
-        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory =
-                     mockStatic(OAuthTokenPersistenceFactory.class);
-             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class)) {
-
-            OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory =
-                    mock(OAuthTokenPersistenceFactory.class);
-            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance)
-                    .thenReturn(mockedOAuthTokenPersistenceFactory);
-            when(mockedOAuthTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(authorizationCodeDAO);
-            when(authorizationCodeDAO.getCodeIdByAuthorizationCode(authCode)).thenReturn(codeId);
-
-            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
-            when(sessionDataStore.getSessionData(codeId, AUTHORIZATION_GRANT_CACHE_NAME)).thenReturn(null);
-
-            AuthorizationGrantCacheEntry result = cache.getValueFromCacheOrSessionStoreByCode(key);
-
-            assertNull(result);
-        }
     }
 
     @Test

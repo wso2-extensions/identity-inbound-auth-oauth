@@ -695,7 +695,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void setSessionDataKeyConsentProperty(OAuthTokenReqMessageContext tokReqMsgCtx, String authzCode) {
 
         AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheOrSessionStoreByCode(new AuthorizationGrantCacheKey(authzCode));
+                .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
         if (grantCacheEntry != null && StringUtils.isNotEmpty(grantCacheEntry.getSessionDataKeyConsent())) {
             tokReqMsgCtx.addProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT,
                     grantCacheEntry.getSessionDataKeyConsent());

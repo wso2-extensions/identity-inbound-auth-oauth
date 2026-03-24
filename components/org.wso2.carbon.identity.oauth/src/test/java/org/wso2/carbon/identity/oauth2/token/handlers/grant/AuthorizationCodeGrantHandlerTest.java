@@ -55,7 +55,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -343,7 +342,7 @@ public class AuthorizationCodeGrantHandlerTest {
 
             AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
             cacheEntry.setSessionDataKeyConsent(sessionDataKeyConsent);
-            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+            when(mockCache.getValueFromCacheByCode(
                     any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
 
             Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
@@ -374,7 +373,7 @@ public class AuthorizationCodeGrantHandlerTest {
 
             AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
             mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
-            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+            when(mockCache.getValueFromCacheByCode(
                     any(AuthorizationGrantCacheKey.class))).thenReturn(null);
 
             Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
@@ -407,7 +406,7 @@ public class AuthorizationCodeGrantHandlerTest {
 
             AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
             cacheEntry.setSessionDataKeyConsent("");
-            when(mockCache.getValueFromCacheOrSessionStoreByCode(
+            when(mockCache.getValueFromCacheByCode(
                     any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
 
             Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(

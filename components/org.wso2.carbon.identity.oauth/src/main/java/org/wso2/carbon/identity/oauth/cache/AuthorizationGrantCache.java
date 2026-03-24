@@ -244,33 +244,6 @@ public class AuthorizationGrantCache extends
         return cacheEntry;
     }
 
-
-    /**
-     * Retrieves a cache entry by authorization code from the local JVM cache or,
-     * on a miss, directly from the session store (for multi-node deployments).
-     * Unlike {@link #getValueFromCacheByCode}, this does NOT call
-     * {@link org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationBaseCache#addToCache}
-     * after a session-store hit, preventing a second write to IDN_AUTH_SESSION_STORE
-     * that can cause duplicate PK violations when invoked at the token endpoint.
-     *
-     * @param key CacheKey wrapping the authorization code.
-     * @return Cached entry, or null if not found in either the local JVM cache or session store.
-     */
-    public AuthorizationGrantCacheEntry getValueFromCacheOrSessionStoreByCode(AuthorizationGrantCacheKey key) {
-
-        AuthorizationGrantCacheEntry cacheEntry = super.getValueFromCache(key);
-        if (cacheEntry == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Cache miss for authorization code. Falling back to session store.");
-            }
-            cacheEntry = getFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
-            // Intentionally no super.addToCache() — avoids a second AuthenticationBaseCache write
-            // to IDN_AUTH_SESSION_STORE that would risk a duplicate PK on (SESSION_ID, SESSION_TYPE,
-            // TIME_CREATED, OPERATION) when getValueFromCacheByCode() already stored the entry.
-        }
-        return cacheEntry;
-    }
-
     /**
      * Clears a cache entry by authorization code.
      *
