@@ -272,6 +272,18 @@ public class ResponseTypeHandlerUtil {
             if (authenticatedUser.getTenantDomain() != null) {
                 skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(oauthAuthzMsgCtx);
             }
+            /*
+            In new B2B login scenario, having federated user with a different tenant domain than the application
+            domain is expected. In such cases, the tenant domain of the authenticated user should not be overridden
+            with the tenant domain of the application.
+             */
+            if (!skipTenantDomainOverWriting && authenticatedUser.getUserResidentOrganization() != null) {
+                String userResidentOrgTenantDomain =
+                        OAuth2Util.getTenantDomainByOrgId(authenticatedUser.getUserResidentOrganization());
+                if (StringUtils.equals(authenticatedUser.getTenantDomain(), userResidentOrgTenantDomain)) {
+                    skipTenantDomainOverWriting = true;
+                }
+            }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!skipTenantDomainOverWriting) {
                 // If a federated user, treat the tenant domain as similar to the application domain.
