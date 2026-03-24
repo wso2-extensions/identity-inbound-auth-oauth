@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.openidconnect.util;
 
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -46,8 +45,7 @@ public class ClaimHandlerUtil {
 
         // If JWT access token OIDC claims separation is enabled and the application is configured to separate OIDC
         // claims, use the JWTAccessTokenOIDCClaimsHandler to handle custom claims.
-        int appTenantId = IdentityTenantUtil.getLoginTenantId();
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(appTenantId);
+        String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
         if (isAccessTokenClaimsSeparationFeatureEnabled() &&
                 isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO, tenantDomain)) {
             return OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
