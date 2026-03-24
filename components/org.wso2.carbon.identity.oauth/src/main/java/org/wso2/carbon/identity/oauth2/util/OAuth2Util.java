@@ -842,7 +842,8 @@ public class OAuth2Util {
                  */
                 if (isUsernameCaseSensitive) {
                     OAuthCache.getInstance()
-                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
+                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username),
+                                    new ClientCredentialDO(username));
                 } else {
                     OAuthCache.getInstance().addToCacheOnRead(
                             new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
