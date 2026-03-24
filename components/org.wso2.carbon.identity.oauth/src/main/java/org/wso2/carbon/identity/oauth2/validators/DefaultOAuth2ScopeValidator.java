@@ -28,22 +28,29 @@ import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
+import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerClientException;
@@ -80,6 +87,8 @@ public class DefaultOAuth2ScopeValidator {
 
     private static final String IS_LEGACY_APP = "isLegacyApp";
 
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+
     /**
      * Validate scope.
      *
@@ -100,6 +109,10 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
+        // Since claim configurations are honored from the parent application even in the shared app scenario,
+        // we need to filter the requested OIDC scopes based on the requested claims in the parent application.
+        Set<String> requestedOIDCScopes = filterRequestedOIDCScopesByApp(appId, tenantDomain, requestedScopes);
+
         // When user is not accessing the resident organization, resolve the application id from the shared app table.
         if (!AuthzUtil.isUserAccessingResidentOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
             String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
@@ -107,9 +120,8 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
             tenantDomain = getTenantDomainByOrgId(orgId);
         }
-        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, null,
-                tenantDomain);
+        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, requestedOIDCScopes, authzReqMessageContext
+                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         handleImpersonationScope(authzReqMessageContext, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
@@ -146,6 +158,10 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
+        // Since claim configurations are honored from the parent application even in the shared app scenario,
+        // we need to filter the requested OIDC scopes based on the requested claims in the parent application.
+        Set<String> requestedOIDCScopes = filterRequestedOIDCScopesByApp(appId, tenantDomain, requestedScopes);
+
         /*
          When user is not accessing the resident organization and if the user is not accessing an application in
          the organization level, resolve the application id from the shared app table.
@@ -160,7 +176,7 @@ public class DefaultOAuth2ScopeValidator {
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         String userType = tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE).toString();
-        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
+        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, requestedOIDCScopes, tokenReqMessageContext
                 .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
@@ -251,24 +267,21 @@ public class DefaultOAuth2ScopeValidator {
     /**
      * Get authorized scopes.
      *
-     * @param requestedScopes   Requested scopes.
-     * @param authenticatedUser Authenticated user.
-     * @param appId             App ID.
-     * @param grantType         Grant type.
-     * @param userType          User type.
-     * @param tenantDomain      Tenant domain.
+     * @param requestedScopes     Requested scopes.
+     * @param requestedOIDCScopes Requested OIDC scopes.
+     * @param authenticatedUser   Authenticated user.
+     * @param appId               App ID.
+     * @param grantType           Grant type.
+     * @param userType            User type.
+     * @param tenantDomain        Tenant domain.
      * @return Authorized scopes.
      * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
      */
-    private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String grantType, String userType, String tenantDomain)
+    private List<String> getAuthorizedScopes(List<String> requestedScopes, Set<String> requestedOIDCScopes,
+                                             AuthenticatedUser authenticatedUser, String appId, String grantType,
+                                             String userType, String tenantDomain)
             throws IdentityOAuth2Exception {
 
-        // Filter OIDC scopes and add to approved scopes list.
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Filtering OIDC scopes from requested scopes: " + StringUtils.join(requestedScopes, " "));
-        }
-        Set<String> requestedOIDCScopes = getRequestedOIDCScopes(tenantDomain, requestedScopes);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Requested OIDC scopes : " + StringUtils.join(requestedOIDCScopes, " "));
         }
@@ -463,14 +476,39 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     /**
-     * Get the requested OIDC scopes
+     * Filter the OIDC claims from the requested scopes based on the OIDC scopes.
+     * If the "DropUnrequestedOIDCScopes" configuration is enabled, the OIDC scopes will be further filtered based on
+     * the mapped requested claims in the application.
+     * Otherwise, OIDC scopes will be filtered based on the OIDC scopes registered in the tenant.
      *
+     * @param appId           Application ID.
      * @param tenantDomain    Tenant domain.
      * @param requestedScopes Requested scopes.
      * @return Requested OIDC scopes.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving oidc scopes.
      */
-    private Set<String> getRequestedOIDCScopes(String tenantDomain, List<String> requestedScopes)
+    private Set<String> filterRequestedOIDCScopesByApp(String appId, String tenantDomain, List<String> requestedScopes)
+            throws IdentityOAuth2Exception {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Filtering OIDC scopes from requested scopes: " + StringUtils.join(requestedScopes, " "));
+        }
+
+        if (CollectionUtils.isEmpty(requestedScopes)) {
+            return Collections.emptySet();
+        }
+
+        if (OAuth2Util.shouldDropUnrequestedOIDCScopes()) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("DropUnrequestedOIDCScopes config is enabled. Attempting to drop unrequested OIDC scopes.");
+            }
+            return getValidatedRequestedOIDCScopes(appId, requestedScopes, tenantDomain);
+        }
+
+        return getFilteredOIDCScopeInTenant(requestedScopes, tenantDomain);
+    }
+
+    private Set<String> getFilteredOIDCScopeInTenant(List<String> requestedScopes, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         OAuthAdminServiceImpl oAuthAdminServiceImpl = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService();
@@ -481,6 +519,87 @@ public class DefaultOAuth2ScopeValidator {
             throw new IdentityOAuth2Exception("Error while retrieving oidc scopes for tenant domain : "
                     + tenantDomain, e);
         }
+    }
+
+    /**
+     * This method validates the requested OIDC scopes against the requested claims in the application and returns
+     * the valid OIDC scopes.
+     *
+     * @param appId           Application ID.
+     * @param requestedScopes Requested scopes.
+     * @param tenantDomain    Tenant domain.
+     * @return Validated requested OIDC scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while validating oidc scopes.
+     */
+    private Set<String> getValidatedRequestedOIDCScopes(String appId, List<String> requestedScopes,
+                                                        String tenantDomain) throws IdentityOAuth2Exception {
+
+        if (!requestedScopes.contains(OAuthConstants.Scope.OPENID)) {
+            return Collections.emptySet();
+        }
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        try {
+            ServiceProvider serviceProvider = applicationMgtService.getApplicationByResourceId(appId, tenantDomain);
+            if (serviceProvider == null) {
+                throw new IdentityOAuth2Exception("No service provider found for applicationId: " + appId +
+                        " in tenant domain: " + tenantDomain);
+            }
+            Set<String> requestedClaimUris = getRequestedClaimUris(serviceProvider);
+            return getOIDCScopesForRequestedClaims(requestedClaimUris, requestedScopes, tenantDomain);
+        } catch (ClaimMetadataException | IdentityApplicationManagementException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("Error while validating requested oidc scopes: " +
+                    StringUtils.join(requestedScopes, " ") + " of applicationId: " + appId +
+                    " in tenant domain: " + tenantDomain, e);
+        }
+    }
+
+    private Set<String> getRequestedClaimUris(ServiceProvider serviceProvider) {
+
+        ClaimConfig claimConfig = serviceProvider.getClaimConfig();
+        if (claimConfig == null || claimConfig.getClaimMappings() == null) {
+            return Collections.emptySet();
+        }
+
+        return Arrays.stream(claimConfig.getClaimMappings())
+                .filter(mapping -> mapping.isRequested() && mapping.getLocalClaim() != null)
+                .map(mapping -> mapping.getLocalClaim().getClaimUri())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> getOIDCScopesForRequestedClaims(Set<String> requestedClaimUris, List<String> requestedScopes,
+                                                        String tenantDomain)
+            throws ClaimMetadataException, IdentityOAuth2Exception {
+
+        Set<String> validatedOIDCScopes = new HashSet<>();
+        if (requestedScopes.contains(OAuthConstants.Scope.OPENID)) {
+            validatedOIDCScopes.add(OAuthConstants.Scope.OPENID);
+        }
+
+        if (CollectionUtils.isEmpty(requestedClaimUris)) {
+            return validatedOIDCScopes;
+        }
+
+        Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
+                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
+        List<ScopeDTO> oidcScopesList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO()
+                .getScopes(IdentityTenantUtil.getTenantId(tenantDomain));
+
+        for (ScopeDTO scopeDTO : oidcScopesList) {
+            String scopeName = scopeDTO.getName();
+            if (!requestedScopes.contains(scopeName) || scopeDTO.getClaim() == null) {
+                continue;
+            }
+            for (String scopeClaim : scopeDTO.getClaim()) {
+                String localClaim = oidcToLocalClaimMappings.get(scopeClaim);
+                if (localClaim != null && requestedClaimUris.contains(localClaim)) {
+                    validatedOIDCScopes.add(scopeName);
+                    break;
+                }
+            }
+        }
+
+        return validatedOIDCScopes;
     }
 
     /**
