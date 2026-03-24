@@ -610,7 +610,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private AccessTokenDO createNewTokenBean(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean,
                                              OauthTokenIssuer oauthTokenIssuer) throws IdentityOAuth2Exception {
 
-        String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        String tenantDomain = OAuth2Util.getUserResidentTenantDomain(tokReqMsgCtx.getAuthorizedUser());
 
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         validateGrantTypeParam(tokenReq);
