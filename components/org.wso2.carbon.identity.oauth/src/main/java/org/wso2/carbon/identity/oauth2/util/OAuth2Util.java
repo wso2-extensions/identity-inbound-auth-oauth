@@ -6997,4 +6997,22 @@ public class OAuth2Util {
                 anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
                         Boolean.parseBoolean(property.getValue()));
     }
+
+    /**
+     * Resolve the tenant domain from the organization id.
+     *
+     * @param organizationId Organization ID.
+     * @return Tenant domain.
+     * @throws IdentityOAuth2Exception When an error occurred while resolving the tenant domain.
+     */
+    public static String getTenantDomainByOrgId(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for the " +
+                    "organization id: " + organizationId, e);
+        }
+    }
 }

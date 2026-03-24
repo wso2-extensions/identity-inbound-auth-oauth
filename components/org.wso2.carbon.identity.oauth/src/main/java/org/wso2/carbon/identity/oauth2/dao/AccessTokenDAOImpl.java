@@ -214,6 +214,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(3, accessTokenDO.getAuthzUser().getUserName());
             String userTenantDomain = getUserResidentTenantDomain(accessTokenDO.getAuthzUser());
             int tenantId = OAuth2Util.getTenantId(userTenantDomain);
+            int authzUserTenantId = OAuth2Util.getTenantId(accessTokenDO.getAuthzUser().getTenantDomain());
             insertTokenPrepStmt.setInt(4, tenantId);
             insertTokenPrepStmt.setString(5, OAuth2Util.getSanitizedUserStoreDomain(userDomain));
             insertTokenPrepStmt
@@ -261,14 +262,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
                 insertTokenPrepStmt.setString(21, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                insertTokenPrepStmt.setInt(22, appTenantId);
+                insertTokenPrepStmt.setInt(22, authzUserTenantId);
                 insertTokenPrepStmt.setString(23, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 insertTokenPrepStmt.setInt(24, appTenantId);
             } else {
                 insertTokenPrepStmt.setString(20, authenticatedIDP);
-                // Set tenant ID of the IDP by considering it is same as appTenantID.
-                insertTokenPrepStmt.setInt(21, appTenantId);
+                insertTokenPrepStmt.setInt(21, authzUserTenantId);
                 insertTokenPrepStmt.setString(22, getPersistenceProcessor().getProcessedClientId(consumerKey));
                 insertTokenPrepStmt.setInt(23, appTenantId);
             }

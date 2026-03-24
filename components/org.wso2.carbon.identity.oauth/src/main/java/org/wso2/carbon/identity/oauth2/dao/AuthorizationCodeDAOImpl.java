@@ -121,8 +121,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
             int appTenantId = IdentityTenantUtil.getTenantId(appTenantDomain);
             prepStmt.setString(15, authenticatedIDP);
-            // Set tenant ID of the IDP by considering it is same as appTenantID.
-            prepStmt.setInt(16, appTenantId);
+            prepStmt.setInt(16, tenantId);
             prepStmt.setInt(17, appTenantId);
 
             prepStmt.executeUpdate();
