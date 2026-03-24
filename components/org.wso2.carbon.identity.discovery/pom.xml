@@ -30,6 +30,7 @@
     <name>WSO2 Carbon - OAuth OpenId Connect Discovery</name>
     <description>OpenId Connect Discovery Bundle</description>
     <url>http://wso2.org</url>
+
     <dependencies>
         <dependency>
             <groupId>commons-codec</groupId>
