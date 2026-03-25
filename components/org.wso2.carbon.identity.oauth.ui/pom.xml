@@ -44,6 +44,12 @@
         <dependency>
             <groupId>org.wso2.carbon</groupId>
             <artifactId>org.wso2.carbon.ui</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.logging</groupId>
@@ -82,6 +88,12 @@
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -134,7 +146,7 @@
                             org.wso2.carbon.identity.oauth.ui.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
                         <Carbon-Component>UIBundle</Carbon-Component>
-                        <_contract>!JavaServlet</_contract>
+                        
                     </instructions>
                 </configuration>
             </plugin>
