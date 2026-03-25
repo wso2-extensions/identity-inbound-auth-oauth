@@ -121,7 +121,7 @@
                             org.wso2.carbon.identity.oauth.stub.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.stub.*; version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
-                        <_contract>!JavaServlet</_contract>
+                        
                     </instructions>
                 </configuration>
             </plugin>
