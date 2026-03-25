@@ -164,7 +164,6 @@
                             !org.wso2.carbon.identity.oidc.dcr.internal,
                             org.wso2.carbon.identity.oidc.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
-                        
                     </instructions>
                 </configuration>
             </plugin>

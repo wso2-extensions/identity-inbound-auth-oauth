@@ -136,7 +136,6 @@
                             org.wso2.carbon.identity.webfinger.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
-                        
                     </instructions>
                 </configuration>
             </plugin>
