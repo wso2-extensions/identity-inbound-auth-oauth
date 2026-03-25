@@ -65,11 +65,12 @@ public class OAuthScopeCacheTest {
     }
 
     /**
-     * Verifies that addToCacheOnRead always clears the OAuthScopeBindingCache for each scope binding,
-     * regardless of whether the cache is enabled or disabled.
+     * Verifies that addToCacheOnRead never clears the OAuthScopeBindingCache, regardless of whether
+     * the cache is enabled or disabled. On a read path the data is freshly loaded from DB so related
+     * caches are already consistent and should not be invalidated.
      */
     @Test(dataProvider = "cacheEnabledProvider")
-    public void testAddToCacheOnReadClearsBindingCacheForEachBinding(boolean cacheEnabled) {
+    public void testAddToCacheOnReadDoesNotClearBindingCache(boolean cacheEnabled) {
 
         OAuthScopeBindingCache mockBindingCache = mock(OAuthScopeBindingCache.class);
         IdentityCacheConfig mockConfig = mock(IdentityCacheConfig.class);
@@ -91,17 +92,17 @@ public class OAuthScopeCacheTest {
 
             OAuthScopeCache.getInstance().addToCacheOnRead(key, scope, TENANT_ID);
 
-            // clearCacheEntry should be called once per scope binding
-            verify(mockBindingCache, times(2)).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
+            // On a read path, binding cache should never be invalidated.
+            verify(mockBindingCache, never()).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
         }
     }
 
     /**
-     * Verifies that addToCacheOnRead clears the binding cache with the correct binding type key
-     * for each scope binding.
+     * Verifies that addToCacheOnRead does not interact with the binding cache at all,
+     * even when the scope has bindings present.
      */
     @Test
-    public void testAddToCacheOnReadClearsBindingCacheWithCorrectKey() {
+    public void testAddToCacheOnReadDoesNotInteractWithBindingCache() {
 
         OAuthScopeBindingCache mockBindingCache = mock(OAuthScopeBindingCache.class);
         IdentityCacheConfig mockConfig = mock(IdentityCacheConfig.class);
@@ -120,8 +121,7 @@ public class OAuthScopeCacheTest {
 
             OAuthScopeCache.getInstance().addToCacheOnRead(key, scope, TENANT_ID);
 
-            verify(mockBindingCache).clearCacheEntry(
-                    eq(new OAuthScopeBindingCacheKey("ROLE")), eq(TENANT_ID));
+            verify(mockBindingCache, never()).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
         }
     }
 
@@ -154,11 +154,11 @@ public class OAuthScopeCacheTest {
     }
 
     /**
-     * Verifies behaviour parity between addToCache and addToCacheOnRead:
-     * both should clear the OAuthScopeBindingCache for the same scope bindings.
+     * Verifies that addToCache clears the OAuthScopeBindingCache (write path invalidation),
+     * while addToCacheOnRead does not (read path should not cause cache churn).
      */
     @Test
-    public void testAddToCacheOnReadMatchesAddToCacheBehaviourForBindingCacheClearing() {
+    public void testOnlyAddToCacheClearsBindingCache() {
 
         OAuthScopeBindingCache mockBindingCache = mock(OAuthScopeBindingCache.class);
         IdentityCacheConfig mockConfig = mock(IdentityCacheConfig.class);
@@ -175,12 +175,13 @@ public class OAuthScopeCacheTest {
             Scope scope = new Scope("profile", "Profile", Collections.singletonList(binding), "Profile scope");
             OAuthScopeCacheKey key = new OAuthScopeCacheKey("profile");
 
-            // Both addToCache and addToCacheOnRead should clear the binding cache
+            // addToCache (write path) should clear the binding cache
             OAuthScopeCache.getInstance().addToCache(key, scope, TENANT_ID);
             verify(mockBindingCache, times(1)).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
 
+            // addToCacheOnRead (read path) should not trigger any additional clearing
             OAuthScopeCache.getInstance().addToCacheOnRead(key, scope, TENANT_ID);
-            verify(mockBindingCache, times(2)).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
+            verify(mockBindingCache, times(1)).clearCacheEntry(any(OAuthScopeBindingCacheKey.class), eq(TENANT_ID));
         }
     }
 }
