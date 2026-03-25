@@ -258,7 +258,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 appTenantId = OAuth2Util.getTenantId(appTenantDomain);
             }
 
-            int idpTenantId = OAuth2Util.getTenantId(accessTokenDO.getAuthzUser().getTenantDomain());
+            int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, accessTokenDO.getAuthzUser());
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
                 insertTokenPrepStmt.setString(21, authenticatedIDP);
@@ -514,7 +514,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(9, authenticatedIDP);
 
-            int idpTenantId = OAuth2Util.getTenantId(authzUser.getTenantDomain());
+            int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authzUser);
             prepStmt.setInt(10, idpTenantId);
 
 
@@ -772,7 +772,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(8, authenticatedIDP);
 
-            int idpTenantId = OAuth2Util.getTenantId(authzUser.getTenantDomain());
+            int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authzUser);
             prepStmt.setInt(9, idpTenantId);
 
 
@@ -888,7 +888,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt.setString(6, authenticatedIDP);
 
-            int idpTenantId = OAuth2Util.getTenantId(authenticatedUser.getTenantDomain());
+            int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authenticatedUser);
             prepStmt.setInt(7, idpTenantId);
 
             resultSet = prepStmt.executeQuery();

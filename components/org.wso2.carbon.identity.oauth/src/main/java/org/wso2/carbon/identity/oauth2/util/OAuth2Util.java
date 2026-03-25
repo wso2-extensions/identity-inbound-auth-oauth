@@ -5370,6 +5370,28 @@ public class OAuth2Util {
     }
 
     /**
+     * Returns the tenant ID to be used for the IDP column when persisting or querying tokens/codes.
+     * For LOCAL IDP, the app tenant ID is used. For federated IDPs, the tenant ID is derived from the
+     * authenticated user's tenant domain (which reflects the IDP's own tenant).
+     *
+     * @param authenticatedIDP the IDP name
+     * @param appTenantId      the tenant ID of the application
+     * @param user             the authenticated user
+     * @return the tenant ID to be stored in the IDP tenant ID column
+     * @throws IdentityOAuth2Exception if the tenant ID cannot be resolved.
+     */
+    public static int getIdpTenantId(String authenticatedIDP, int appTenantId, AuthenticatedUser user)
+            throws IdentityOAuth2Exception {
+
+        if (FrameworkConstants.LOCAL_IDP_NAME.equals(authenticatedIDP)) {
+            // App tenant ID is used to preserve the existing behaviour for legacy SaaS applications.
+            return appTenantId;
+        }
+        // For federated IDPs, the tenant ID is derived from the authenticated user's tenant domain.
+        return getTenantId(user.getTenantDomain());
+    }
+
+    /**
      * Used to get the user store domain name from a user.
      *
      * @param user Authenticated User.
