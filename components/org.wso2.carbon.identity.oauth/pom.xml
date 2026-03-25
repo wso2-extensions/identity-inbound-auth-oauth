@@ -501,7 +501,6 @@
                             org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
                             org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl
                         </ListenerManager-RequiredServices>
-                        <_contract>!JavaServlet</_contract>
                     </instructions>
                 </configuration>
             </plugin>
