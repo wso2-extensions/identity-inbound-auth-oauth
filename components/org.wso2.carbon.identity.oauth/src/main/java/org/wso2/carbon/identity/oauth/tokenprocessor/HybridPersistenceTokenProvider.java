@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants;
@@ -217,6 +218,10 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
                 throw new IdentityOAuth2Exception("Error while getting tenant ID from tenant domain:"
                         + authenticatedUser.getTenantDomain(), e);
             }
+            String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+            validationDataDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
+                    ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
+                    : IdentityTenantUtil.getLoginTenantId());
             if (isTokenActive) {
                 validationDataDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             } else {
@@ -469,6 +474,10 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
             throw new IdentityOAuth2Exception("Error while getting tenant ID from tenant domain:"
                     + authenticatedUser.getTenantDomain(), e);
         }
+        String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+        validationDataDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
+                ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
+                : IdentityTenantUtil.getLoginTenantId());
         if (isTokenActive) {
             validationDataDO.setTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
         } else {

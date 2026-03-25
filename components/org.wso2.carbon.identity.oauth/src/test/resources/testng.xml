@@ -142,6 +142,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactoryTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
@@ -152,6 +153,8 @@
             <class name="org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtilsTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ActorTokenValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.AgentAccessTokenClaimProviderTest"/>
         </classes>
     </test>
 
@@ -241,6 +244,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OIDCClaimUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactoryTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>

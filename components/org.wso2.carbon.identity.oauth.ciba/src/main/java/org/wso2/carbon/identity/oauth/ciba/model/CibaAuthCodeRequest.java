@@ -40,6 +40,17 @@ public class CibaAuthCodeRequest {
     private String[] acrValues;
     private String transactionContext;
     private String notificationChannel;
+    private String requestedActor;
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
+    }
 
     public String getTransactionContext() {
 

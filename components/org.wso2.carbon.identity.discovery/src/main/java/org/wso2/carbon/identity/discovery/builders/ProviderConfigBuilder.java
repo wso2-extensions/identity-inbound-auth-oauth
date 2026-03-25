@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.OAUTH_CIBA_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildServiceUrl;
 
@@ -145,6 +146,9 @@ public class ProviderConfigBuilder {
 
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
+        }
+        if (OAuth2Util.getSupportedGrantTypes().contains(OAUTH_CIBA_GRANT_TYPE)) {
+            providerConfig.setBackchannelAuthenticationEndpoint(OAuth2Util.OAuthURL.getCibaEPUrl());
         }
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
