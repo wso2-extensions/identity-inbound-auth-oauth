@@ -1150,7 +1150,7 @@ public class ResponseTypeHandlerUtil {
         if (OAuth2Util.isTokenPersistenceEnabled()) {
             OAuthCache.getInstance().addToCacheOnRead(cacheKey, tokenBean);
         }
-        // Adding AccessTokenDO to improve validation performance
+        // Adding AccessTokenDO to improve validation performance.
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenBean.getAccessToken());
         OAuthCache.getInstance().addToCacheOnRead(accessTokenCacheKey, tokenBean);
         if (log.isDebugEnabled()) {
