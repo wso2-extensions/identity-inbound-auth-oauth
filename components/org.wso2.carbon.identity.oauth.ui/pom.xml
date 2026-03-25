@@ -146,7 +146,6 @@
                             org.wso2.carbon.identity.oauth.ui.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
                         <Carbon-Component>UIBundle</Carbon-Component>
-                        
                     </instructions>
                 </configuration>
             </plugin>

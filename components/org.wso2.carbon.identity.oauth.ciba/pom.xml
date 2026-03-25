@@ -176,7 +176,6 @@
                             org.wso2.carbon.identity.oauth.ciba.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}",
                         </Export-Package>
-                        
                     </instructions>
                 </configuration>
             </plugin>

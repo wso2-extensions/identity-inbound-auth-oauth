@@ -30,7 +30,6 @@
     <name>WSO2 Carbon - OAuth OpenId Connect Discovery</name>
     <description>OpenId Connect Discovery Bundle</description>
     <url>http://wso2.org</url>
-
     <dependencies>
         <dependency>
             <groupId>commons-codec</groupId>
@@ -149,7 +148,6 @@
                             org.wso2.carbon.identity.discovery.*;
                             version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
-                        
                     </instructions>
                 </configuration>
             </plugin>
