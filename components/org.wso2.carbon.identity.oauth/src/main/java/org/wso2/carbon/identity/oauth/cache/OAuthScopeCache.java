@@ -83,11 +83,6 @@ public class OAuthScopeCache extends BaseCache<OAuthScopeCacheKey, Scope> {
                 log.debug("[AddToCacheOnRead] Scope is added to the cache. \n" + entry.toString());
             }
         }
-
-        for (ScopeBinding scopeBinding : entry.getScopeBindings()) {
-            OAuthScopeBindingCache.getInstance().clearCacheEntry(new OAuthScopeBindingCacheKey(scopeBinding
-                    .getBindingType()), tenantId);
-        }
     }
 
     /**
