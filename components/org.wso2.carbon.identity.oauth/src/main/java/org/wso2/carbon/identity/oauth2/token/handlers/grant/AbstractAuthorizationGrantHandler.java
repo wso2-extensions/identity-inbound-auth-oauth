@@ -1052,9 +1052,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void addTokenToCacheOnRead(OAuthCacheKey cacheKey, AccessTokenDO existingAccessTokenDO) {
+
         if (isHashDisabled && cacheEnabled) {
             oauthCache.addToCacheOnRead(cacheKey, existingAccessTokenDO);
-            // Adding AccessTokenDO to improve validation performance
+            // Adding AccessTokenDO to improve validation performance.
             OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(existingAccessTokenDO.getAccessToken());
             oauthCache.addToCacheOnRead(accessTokenCacheKey, existingAccessTokenDO);
             if (log.isDebugEnabled()) {
