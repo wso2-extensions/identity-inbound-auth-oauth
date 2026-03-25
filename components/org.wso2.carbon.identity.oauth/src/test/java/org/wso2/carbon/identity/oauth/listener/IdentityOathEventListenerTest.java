@@ -25,6 +25,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -42,15 +43,22 @@ import org.wso2.carbon.user.core.common.UserStore;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
+
+    private static final String REVOKE_CACHE_AT_LOGIN_PROPERTY = "OAuth.RevokeCacheAtLogin";
+    private static final String LAST_LOGIN_TIME_CLAIM_UPDATE = "LastLoginTimeClaimUpdate";
 
     private final String credentialUpdateUsername = "testUsername";
     private final String newCredential = "newPassword1$";
@@ -73,6 +81,8 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
 
     private MockedStatic<OAuthUtil> oAuthUtilMockedStatic;
+
+    private MockedStatic<IdentityUtil> identityUtilMockedStatic;
 
     @Mock
     private OrganizationUserSharingService organizationUserSharingService;
@@ -98,6 +108,9 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
 
         oAuthUtilMockedStatic = mockStatic(OAuthUtil.class);
+
+        identityUtilMockedStatic = mockStatic(IdentityUtil.class);
+        IdentityUtil.threadLocalProperties.set(new HashMap<>());
     }
 
     @AfterMethod
@@ -107,6 +120,8 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         oAuth2ServiceComponentHolderMockedStatic.close();
         oAuthComponentServiceHolderMockedStatic.close();
         oAuthUtilMockedStatic.close();
+        identityUtilMockedStatic.close();
+        IdentityUtil.threadLocalProperties.remove();
     }
 
     private void prepareForCredentialUpdate() throws UserStoreException, OrganizationManagementException {
@@ -244,6 +259,73 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
                 newCredential,
                 abstractUserStoreManager);
+    }
+
+    @DataProvider(name = "testDoPreSetUserClaimData")
+    public Object[][] testDoPreSetUserClaimData() {
+
+        return new Object[][]{
+                // {isLastLoginTimeClaimUpdate, revokeCacheConfigEnabled, expectCacheRemoved}
+                // Normal claim update -> always revoke regardless of config.
+                {false, false, true},
+                {false, true, true},
+                // Last login time claim update + config off (default) -> skip revocation.
+                {true, false, false},
+                // Last login time claim update + config on -> revoke (backward compatible).
+                {true, true, true}
+        };
+    }
+
+    @Test(dataProvider = "testDoPreSetUserClaimData")
+    public void testDoPreSetUserClaimValue(boolean isLastLoginTimeClaimUpdate, boolean revokeCacheConfigEnabled,
+                                           boolean expectCacheRemoved) throws UserStoreException {
+
+        if (isLastLoginTimeClaimUpdate) {
+            IdentityUtil.threadLocalProperties.get().put(LAST_LOGIN_TIME_CLAIM_UPDATE, true);
+        }
+        if (revokeCacheConfigEnabled) {
+            identityUtilMockedStatic.when(() -> IdentityUtil.getProperty(REVOKE_CACHE_AT_LOGIN_PROPERTY))
+                    .thenReturn("true");
+        }
+
+        boolean result = identityOathEventListener.doPreSetUserClaimValue(credentialUpdateUsername,
+                "claimURI", "claimValue", "default", abstractUserStoreManager);
+        assertTrue(result);
+
+        if (expectCacheRemoved) {
+            oAuthUtilMockedStatic.verify(() -> OAuthUtil.removeAuthzGrantCacheForUser(
+                    credentialUpdateUsername, abstractUserStoreManager));
+        } else {
+            oAuthUtilMockedStatic.verify(() -> OAuthUtil.removeAuthzGrantCacheForUser(
+                    any(), any()), never());
+        }
+    }
+
+    @Test(dataProvider = "testDoPreSetUserClaimData")
+    public void testDoPreSetUserClaimValues(boolean isLastLoginTimeClaimUpdate, boolean revokeCacheConfigEnabled,
+                                            boolean expectCacheRemoved) throws UserStoreException {
+
+        if (isLastLoginTimeClaimUpdate) {
+            IdentityUtil.threadLocalProperties.get().put(LAST_LOGIN_TIME_CLAIM_UPDATE, true);
+        }
+        if (revokeCacheConfigEnabled) {
+            identityUtilMockedStatic.when(() -> IdentityUtil.getProperty(REVOKE_CACHE_AT_LOGIN_PROPERTY))
+                    .thenReturn("true");
+        }
+
+        Map<String, String> claims = new HashMap<>();
+        claims.put("claimURI", "claimValue");
+        boolean result = identityOathEventListener.doPreSetUserClaimValues(credentialUpdateUsername,
+                claims, "default", abstractUserStoreManager);
+        assertTrue(result);
+
+        if (expectCacheRemoved) {
+            oAuthUtilMockedStatic.verify(() -> OAuthUtil.removeAuthzGrantCacheForUser(
+                    credentialUpdateUsername, abstractUserStoreManager));
+        } else {
+            oAuthUtilMockedStatic.verify(() -> OAuthUtil.removeAuthzGrantCacheForUser(
+                    any(), any()), never());
+        }
     }
 
 //
