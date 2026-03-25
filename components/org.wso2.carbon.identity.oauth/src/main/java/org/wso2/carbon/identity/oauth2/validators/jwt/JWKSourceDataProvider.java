@@ -85,7 +85,7 @@ public class JWKSourceDataProvider {
         }
         if (jwkSet == null) {
             jwkSet = retrieveJWKSFromJWKSEndpoint(jwksUri);
-            JWKSCache.getInstance().addToCache(jwksCacheKey, new JWKSCacheEntry(jwkSet));
+            JWKSCache.getInstance().addToCacheOnRead(jwksCacheKey, new JWKSCacheEntry(jwkSet));
             if (log.isDebugEnabled()) {
                 log.debug("Fetching JWKS from remote endpoint.");
             }
