@@ -844,9 +844,11 @@ public class OAuth2Util {
                  */
                 if (isUsernameCaseSensitive) {
                     OAuthCache.getInstance()
-                            .addToCache(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
+                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username),
+                                    new ClientCredentialDO(username));
                 } else {
-                    OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
+                    OAuthCache.getInstance().addToCacheOnRead(
+                            new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
                             new ClientCredentialDO(username));
                 }
                 if (log.isDebugEnabled()) {
@@ -2318,7 +2320,7 @@ public class OAuth2Util {
         // Add the token back to the cache in the case of a cache miss but don't add to cache when OAuth2 token
         // hashing feature enabled inorder to reduce the complexity.
         if (!cacheHit & OAuth2Util.isHashDisabled()) {
-            OAuthCache.getInstance().addToCache(cacheKey, accessTokenDO);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, accessTokenDO);
             if (log.isDebugEnabled()) {
                 log.debug("Access Token Info object was added back to the cache.");
             }
@@ -2616,7 +2618,7 @@ public class OAuth2Util {
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
             }
             return oAuthAppDO;
         }
@@ -2640,10 +2642,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 }
             }
         }
@@ -2673,7 +2675,7 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException(message);
             }
             oAuthAppDO = appList[0];
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
         }
         return oAuthAppDO;
     }
@@ -2734,7 +2736,7 @@ public class OAuth2Util {
         try {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 return Optional.of(oAuthAppDO);
             }
             return Optional.empty();
@@ -2766,10 +2768,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
                 }
             }
         }
@@ -5418,6 +5420,28 @@ public class OAuth2Util {
     }
 
     /**
+     * Returns the tenant ID to be used for the IDP column when persisting or querying tokens/codes.
+     * For LOCAL IDP, the app tenant ID is used. For federated IDPs, the tenant ID is derived from the
+     * authenticated user's tenant domain (which reflects the IDP's own tenant).
+     *
+     * @param authenticatedIDP the IDP name
+     * @param appTenantId      the tenant ID of the application
+     * @param user             the authenticated user
+     * @return the tenant ID to be stored in the IDP tenant ID column
+     * @throws IdentityOAuth2Exception if the tenant ID cannot be resolved.
+     */
+    public static int getIdpTenantId(String authenticatedIDP, int appTenantId, AuthenticatedUser user)
+            throws IdentityOAuth2Exception {
+
+        if (FrameworkConstants.LOCAL_IDP_NAME.equals(authenticatedIDP)) {
+            // App tenant ID is used to preserve the existing behaviour for legacy SaaS applications.
+            return appTenantId;
+        }
+        // For federated IDPs, the tenant ID is derived from the authenticated user's tenant domain.
+        return getTenantId(user.getTenantDomain());
+    }
+
+    /**
      * Used to get the user store domain name from a user.
      *
      * @param user Authenticated User.
@@ -7113,5 +7137,22 @@ public class OAuth2Util {
                     UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME).toUpperCase();
         }
         return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+    }
+  
+     * Resolve the tenant domain from the organization id.
+     *
+     * @param organizationId Organization ID.
+     * @return Tenant domain.
+     * @throws IdentityOAuth2Exception When an error occurred while resolving the tenant domain.
+     */
+    public static String getTenantDomainByOrgId(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for the " +
+                    "organization id: " + organizationId, e);
+        }
     }
 }
