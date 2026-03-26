@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.model.OAuthAppInfo;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -806,8 +807,8 @@ public final class OAuthUtil {
      * @param authenticatedUser  Authenticated user.
      * @return Set of clientIds of associated applications.
      */
-    private static Optional<String> getClientIdOfAssociatedApplication(RoleBasicInfo role,
-                                                                       AuthenticatedUser authenticatedUser)
+    private static Optional<OAuthAppInfo> getClientIdOfAssociatedApplication(RoleBasicInfo role,
+                                                                            AuthenticatedUser authenticatedUser)
             throws UserStoreException {
 
         ApplicationManagementService applicationManagementService =
@@ -831,7 +832,8 @@ public final class OAuthUtil {
                                 && "true".equals(property.getValue())))) {
                     associatedApplication = SharedAppResolveDAO.getMainApplication(
                             associatedApplication, authenticatedUser.getAccessingOrganization());
-                    appTenantDomain = authenticatedUser.getTenantDomain();
+                    int mainAppTenantId = applicationManagementService.getTenantIdByApp(associatedApplication);
+                    appTenantDomain = IdentityTenantUtil.getTenantDomain(mainAppTenantId);
                 }
             }
         } catch (IdentityOAuth2Exception e) {
@@ -849,9 +851,10 @@ public final class OAuthUtil {
             if (application != null && application.getInboundAuthenticationConfig() != null) {
                 InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs =
                         application.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs();
+                final String resolvedAppTenantDomain = appTenantDomain;
                 return Arrays.stream(inboundAuthenticationRequestConfigs)
                         .filter(config -> StandardInboundProtocols.OAUTH2.equals(config.getInboundAuthType()))
-                        .map(InboundAuthenticationRequestConfig::getInboundAuthKey)
+                        .map(config -> new OAuthAppInfo(config.getInboundAuthKey(), resolvedAppTenantDomain))
                         .findFirst();
             }
         } catch (IdentityApplicationManagementException e) {
@@ -862,25 +865,27 @@ public final class OAuthUtil {
         return Optional.empty();
     }
 
-    private static Set<String> filterClientIdsWithOrganizationAudience(List<String> clientIds, String tenantDomain) {
+    private static List<OAuthAppInfo> filterClientIdsWithOrganizationAudience(List<OAuthAppInfo> clientAppInfos) {
 
-        Set<String> clientIdsWithOrganizationAudience = new HashSet<>();
+        List<OAuthAppInfo> filtered = new ArrayList<>();
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
-        for (String clientId : clientIds) {
+        for (OAuthAppInfo appInfo : clientAppInfos) {
+            String clientId = appInfo.getClientId();
+            String appTenantDomain = appInfo.getAppTenantDomain();
             try {
                 String applicationId = applicationManagementService.getApplicationResourceIDByInboundKey(clientId,
-                        OAUTH2, tenantDomain);
+                        OAUTH2, appTenantDomain);
                 String audience = applicationManagementService.getAllowedAudienceForRoleAssociation(applicationId,
-                        tenantDomain);
+                        appTenantDomain);
                 if (RoleConstants.ORGANIZATION.equalsIgnoreCase(audience)) {
-                    clientIdsWithOrganizationAudience.add(clientId);
+                    filtered.add(appInfo);
                 }
             } catch (IdentityApplicationManagementException e) {
                 LOG.error("Error occurred while retrieving application information for client id: " + clientId, e);
             }
         }
-        return clientIdsWithOrganizationAudience;
+        return filtered;
     }
 
     /**
@@ -909,13 +914,16 @@ public final class OAuthUtil {
      * @param username           Username.
      * @return True if token revocation is successful. Else return false.
      */
-    private static boolean processTokenRevocation(Set<String> clientIds, AuthenticatedUser authenticatedUser,
+    private static boolean processTokenRevocation(List<OAuthAppInfo> clientAppInfos,
+                                                  AuthenticatedUser authenticatedUser,
                                                   String userStoreDomain, String username) {
 
         boolean isErrorOnRevokingTokens = false;
         boolean isTokenPreservingAtPasswordUpdateEnabled = IdPManagementUtil.
                 getPreserveCurrentSessionAtPasswordUpdate(authenticatedUser.getTenantDomain());
-        for (String clientId : clientIds) {
+        for (OAuthAppInfo appInfo : clientAppInfos) {
+            String clientId = appInfo.getClientId();
+            String appTenantDomain = appInfo.getAppTenantDomain();
             try {
                 Set<AccessTokenDO> accessTokenDOs = new HashSet<>();
                 try {
@@ -925,7 +933,7 @@ public final class OAuthUtil {
                     }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
                     accessTokenDOs.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
-                            .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true));
+                            .getAccessTokens(clientId, appTenantDomain, authenticatedUser, userStoreDomain, true));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while retrieving access tokens issued for " +
                             "Client ID : " + clientId + ", User ID : " + authenticatedUser;
@@ -997,7 +1005,7 @@ public final class OAuthUtil {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Revoke latest tokens with scopes for the clientId: " + clientId);
                     }
-                    revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
+                    revokeLatestTokensWithScopes(scopes, clientId, appTenantDomain, authenticatedUser);
                 } else {
                     // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
                     // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
@@ -1093,7 +1101,7 @@ public final class OAuthUtil {
         }
 
         // Get details about the role to identify the audience and associated applications.
-        Set<String> clientIds = new HashSet<>();
+        List<OAuthAppInfo> clientAppInfos = new ArrayList<>();
         RoleBasicInfo role = null;
         boolean getClientIdsFromUser = false;
         if (roleId != null) {
@@ -1105,7 +1113,7 @@ public final class OAuthUtil {
                             + role.getName());
                 }
                 getClientIdOfAssociatedApplication(role, authenticatedUser)
-                        .ifPresent(clientIds::add);
+                        .ifPresent(clientAppInfos::add);
             } else {
                 // Get all the distinct client Ids authorized by this user since this is an organization role.
                 if (LOG.isDebugEnabled()) {
@@ -1121,34 +1129,22 @@ public final class OAuthUtil {
         }
 
         if (getClientIdsFromUser) {
-            // Get all the distinct client Ids authorized by this user
+            // Get all the distinct client Ids authorized by this user along with the app tenant domain.
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Get all the distinct client Ids authorized by user: " + username);
             }
             try {
-                clientIds = OAuthTokenPersistenceFactory.getInstance()
-                            .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
+                clientAppInfos.addAll(OAuthTokenPersistenceFactory.getInstance()
+                        .getTokenManagementDAO().getAllTimeAuthorizedClientIdsWithAppTenantDomain(authenticatedUser));
                 if (authenticatedOrgUser != null) {
-                    clientIds.addAll(OAuthTokenPersistenceFactory.getInstance()
-                            .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedOrgUser));
+                    clientAppInfos.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getTokenManagementDAO()
+                            .getAllTimeAuthorizedClientIdsWithAppTenantDomain(authenticatedOrgUser));
                 }
 
-                Set<String> filteredClientIds = clientIds;
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
-                    filteredClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
-                            authenticatedUser.getTenantDomain());
+                    clientAppInfos = filterClientIdsWithOrganizationAudience(clientAppInfos);
                 }
-
-                if (authenticatedUser.getUserResidentOrganization() != null) {
-                    Set<String> organizationClientIds = new HashSet<>();
-                    String userResidentTenantDomain = OAuth2Util.getUserResidentTenantDomain(authenticatedUser);
-                    if (!StringUtils.equals(authenticatedUser.getTenantDomain(), userResidentTenantDomain)) {
-                        organizationClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
-                                userResidentTenantDomain);
-                    }
-                    filteredClientIds.addAll(organizationClientIds);
-                }
-                clientIds = filteredClientIds;
 
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
@@ -1156,20 +1152,26 @@ public final class OAuthUtil {
             }
         }
         if (LOG.isDebugEnabled()) {
-            LOG.debug("The number of distinct client IDs for the user: " + username + " is " + clientIds.size());
+            LOG.debug("The number of distinct client IDs for the user: " + username + " is "
+                    + clientAppInfos.size());
         }
 
         boolean isErrorOnRevokingTokens;
-        isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedUser, userStoreDomain, username);
+        isErrorOnRevokingTokens = processTokenRevocation(clientAppInfos, authenticatedUser,
+                userStoreDomain, username);
 
-        if (!isErrorOnRevokingTokens && CollectionUtils.isNotEmpty(clientIds)) {
+        if (!isErrorOnRevokingTokens && !clientAppInfos.isEmpty()) {
             // Considering the root tenant revocation in current scope, will consider the sub organizations later.
+            Set<String> clientIds = new HashSet<>();
+            for (OAuthAppInfo appInfo : clientAppInfos) {
+                clientIds.add(appInfo.getClientId());
+            }
             AccessTokenEventUtil.publishTokenRevokeEvent(clientIds, authenticatedUser);
         }
 
         if (authenticatedOrgUser != null) {
-            isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedOrgUser, authenticatedOrgUser.
-                    getUserStoreDomain(), username);
+            isErrorOnRevokingTokens = processTokenRevocation(clientAppInfos, authenticatedOrgUser,
+                    authenticatedOrgUser.getUserStoreDomain(), username);
         }
 
         // Throw exception if there was any error found in revoking tokens.
@@ -1204,7 +1206,7 @@ public final class OAuthUtil {
         }
     }
 
-    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId,
+    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId, String appTenantDomain,
                                                         AuthenticatedUser authenticatedUser) throws
             UserStoreException {
 
@@ -1217,8 +1219,8 @@ public final class OAuthUtil {
                 // Retrieve latest access token for particular client, user and scope combination
                 // if its ACTIVE or EXPIRED.
                 scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
-                        .getLatestAccessToken(clientId, authenticatedUser, authenticatedUser.getUserStoreDomain(),
-                                scope, true);
+                        .getLatestAccessToken(clientId, appTenantDomain, authenticatedUser,
+                                authenticatedUser.getUserStoreDomain(), scope, NONE, true);
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while retrieving latest access token issued for Client ID : " +
                         clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;

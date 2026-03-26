@@ -4942,7 +4942,7 @@ public class OAuth2Util {
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
             addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
-                    IdentityTenantUtil.getTenantDomain(appTenantID));
+                    IdentityTenantUtil.getTenantDomain(appTenantID), authenticatedUser.isFederatedUser());
         }
         return authenticatedUser;
     }
@@ -4965,7 +4965,8 @@ public class OAuth2Util {
         AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
-            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain, appTenantDomain);
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain, appTenantDomain,
+                    authenticatedUser.isFederatedUser());
         }
         return authenticatedUser;
     }
@@ -6489,14 +6490,17 @@ public class OAuth2Util {
     }
 
     private static void addOrganizationUserDetails(AuthenticatedUser authenticatedUser, String accessingOrganization,
-                                                   String tenantDomain, String appTenantDomain)
+                                                   String tenantDomain, String appTenantDomain,
+                                                   boolean isOrgSSOFederation)
             throws IdentityOAuth2Exception {
 
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
-        // Set authorized user tenant domain to the tenant domain of the application.
-        authenticatedUser.setTenantDomain(appTenantDomain);
+        if  (isOrgSSOFederation) {
+            // Set authorized user tenant domain to the tenant domain of the application.
+            authenticatedUser.setTenantDomain(appTenantDomain);
+        }
     }
 
     public static boolean isPairwiseSubEnabledForAccessTokens() {
@@ -7162,5 +7166,30 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for the " +
                     "organization id: " + organizationId, e);
         }
+    }
+
+    /**
+     * Retrieve the tenant ID based on client ID and request path.
+     *
+     * @param clientId Client ID of the OAuth application.
+     * @return Tenant ID based on client ID and request path.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving the tenant ID.
+     * @throws InvalidOAuthClientException If the client ID is invalid or the app information cannot be retrieved.
+     */
+    public static int getAppTenantId(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If accessingOrgId is not empty, it means request is coming with a tenant qualified org access path.
+         We need to resolve the tenant of the client application.
+        */
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            OAuthAppDO appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(appDO);
+            appTenantId = OAuth2Util.getTenantId(tenantDomain);
+        }
+        return appTenantId;
     }
 }

@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.model.OAuthAppInfo;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
@@ -368,7 +369,7 @@ public class OAuthUtilTest {
 
         accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokens.add(accessTokenDO);
-        when(mockAccessTokenDAO.getAccessTokens(anyString(),
+        when(mockAccessTokenDAO.getAccessTokens(anyString(), anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
@@ -449,13 +450,13 @@ public class OAuthUtilTest {
         authenticatedUser.setTenantDomain("carbon.super");
         accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokens.add(accessTokenDO);
-        when(mockAccessTokenDAO.getAccessTokens(anyString(),
+        when(mockAccessTokenDAO.getAccessTokens(anyString(), anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
         when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
-        Set<String> clientIds = new HashSet<>();
-        clientIds.add(clientId);
-        when(tokenManagementDAO.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
+        when(tokenManagementDAO.getAllTimeAuthorizedClientIdsWithAppTenantDomain(any()))
+                .thenReturn(Collections.singletonList(
+                        new OAuthAppInfo(clientId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)));
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
