@@ -3297,24 +3297,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     private static int getAppTenantId(String clientId) throws IdentityOAuth2Exception {
 
-        int appTenantId = IdentityTenantUtil.getLoginTenantId();
-        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getApplicationResidentOrganizationId();
-        /*
-         If accessingOrgId is not empty, it means request is coming with a tenant qualified org access path.
-         We need to resolve the tenant of the client application.
-        */
-        if (StringUtils.isNotEmpty(accessingOrgId)) {
-            try {
-                OAuthAppDO appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
-                String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(appDO);
-                appTenantId = OAuth2Util.getTenantId(tenantDomain);
-            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error occurred while resolving app tenant ID for client ID: " +
-                        clientId, e);
-            }
+        try {
+            return OAuth2Util.getAppTenantId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving app tenant ID for client ID: " +
+                    clientId, e);
         }
-        return appTenantId;
     }
 
     private static String getAppTenantDomain(String consumerKey) throws IdentityOAuth2Exception {

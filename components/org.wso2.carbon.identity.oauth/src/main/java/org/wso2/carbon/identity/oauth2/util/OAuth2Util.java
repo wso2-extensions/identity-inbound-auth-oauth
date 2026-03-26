@@ -7046,4 +7046,29 @@ public class OAuth2Util {
                 anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
                         Boolean.parseBoolean(property.getValue()));
     }
+
+    /**
+     * Retrieve the tenant ID based on client ID and request path.
+     *
+     * @param clientId Client ID of the OAuth application.
+     * @return Tenant ID based on client ID and request path.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving the tenant ID.
+     * @throws InvalidOAuthClientException If the client ID is invalid or the app information cannot be retrieved.
+     */
+    public static int getAppTenantId(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If accessingOrgId is not empty, it means request is coming with a tenant qualified org access path.
+         We need to resolve the tenant of the client application.
+        */
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            OAuthAppDO appDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(appDO);
+            appTenantId = OAuth2Util.getTenantId(tenantDomain);
+        }
+        return appTenantId;
+    }
 }
