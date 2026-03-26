@@ -7128,6 +7128,13 @@ public class OAuth2Util {
         mappedAttrs.put(GROUPS, String.join(FrameworkUtils.getMultiAttributeSeparator(), groupList));
     }
 
+
+    /**
+     * Resolves and returns the primary user store domain name.
+     *
+     * @return The primary user store domain name in uppercase, or the default primary domain name
+     *         if no domain is configured.
+     */
     public static String resolvePrimaryUserStoreDomainName() {
 
         RealmConfiguration realmConfiguration = OAuthComponentServiceHolder.getInstance().getRealmService()
@@ -7139,6 +7146,7 @@ public class OAuth2Util {
         return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
     }
   
+    /**
      * Resolve the tenant domain from the organization id.
      *
      * @param organizationId Organization ID.
