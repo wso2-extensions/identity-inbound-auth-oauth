@@ -760,7 +760,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 try {
                     activeDetailedTokens = OAuthTokenPersistenceFactory
                             .getInstance().getAccessTokenDAOImpl(oauthKey)
-                            .getActiveAcessTokenDataByConsumerKey(oauthKey);
+                            .getActiveAcessTokenDataByConsumerKey(oauthKey, tenantDomain);
                     String[] accessTokens = new String[activeDetailedTokens.size()];
                     for (AccessTokenDO detailToken : activeDetailedTokens) {
                         String token = detailToken.getAccessToken();
