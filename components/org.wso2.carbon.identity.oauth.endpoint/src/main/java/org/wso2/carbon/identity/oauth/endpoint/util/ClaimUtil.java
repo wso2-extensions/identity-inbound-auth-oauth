@@ -76,6 +76,7 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.handleGroupClaim;
 
 /**
  * Util class which contains claim related data.
@@ -308,6 +309,7 @@ public class ClaimUtil {
                 log.debug("Subject claim(sub) value: " + subjectClaimValue + " set in returned claims.");
             }
             mappedAppClaims.put(OAuth2Util.SUB, subjectClaimValue);
+            handleGroupClaim(authenticatedUser, mappedAppClaims);
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
                 log.debug(" Error while retrieving App information with provided client id.", e);
