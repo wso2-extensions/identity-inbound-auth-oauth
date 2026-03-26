@@ -65,7 +65,7 @@ public interface AccessTokenDAO {
      * @param consumerKey Consumer key.
      * @param appTenantDomain Application tenant domain.
      * @param authzUser Authorized user.
-     * @param userStoreDomain Use store domain
+     * @param userStoreDomain User store domain
      * @param scope Scope.
      * @param tokenBindingReference Token binding reference
      * @param includeExpiredTokens Include expired tokens.
