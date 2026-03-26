@@ -4183,4 +4183,282 @@ public class OAuth2UtilTest {
             assertFalse(result.isPresent());
         }
     }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithConfiguredDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn("SECONDARY");
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, "SECONDARY");
+        verify(mockRealmConfiguration, times(2)).getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME);
+    }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithNullDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn(null);
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+    }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithLowercaseDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn("secondary");
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, "SECONDARY");
+    }
+
+    @Test
+    public void testHandleGroupClaimWhenDisabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(false);
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWhenPropertyDisabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("false");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithoutGroupsClaim() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("roles", "role1,role2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("roles"), "role1,role2");
+            assertNull(mappedAttrs.get("groups"));
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithNullUser() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(null, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithPrimaryUserStore() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("PRIMARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithSecondaryUserStore() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "SECONDARY/group1,SECONDARY/group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithExistingDomainPrefix() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "SECONDARY/group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "SECONDARY/group1,SECONDARY/group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithCaseInsensitiveDomainPrefix() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "secondary/group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            // Case insensitive comparison means secondary/group1 should be kept as-is.
+            assertEquals(mappedAttrs.get("groups"), "secondary/group1,SECONDARY/group2");
+        }
+    }
 }
