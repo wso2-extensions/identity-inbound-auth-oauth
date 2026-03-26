@@ -2721,7 +2721,7 @@ public class OAuthAdminServiceImpl {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
-            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp, tenantDomain);
+            AppInfoCache.getInstance().addToCacheOnRead(consumerKey, oauthApp, tenantDomain);
         }
         return oauthApp;
     }

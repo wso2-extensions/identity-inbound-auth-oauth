@@ -615,7 +615,7 @@ public class ResponseTypeHandlerUtil {
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) && expireTime != 0 && cacheEnabled) {
                 // Active token retrieved from db, adding to cache if cacheEnabled
                 try {
-                    addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUser.getUserId(),
+                    addTokenToCacheOnRead(getOAuthCacheKey(consumerKey, scope, authorizedUser.getUserId(),
                             OAuth2Util.getAuthenticatedIDP(authorizedUser)), existingToken);
                 } catch (UserIdNotFoundException e) {
                     throw new IdentityOAuth2Exception("Error occurred while retrieving the user id for user: "
@@ -1132,6 +1132,27 @@ public class ResponseTypeHandlerUtil {
         // Adding AccessTokenDO to improve validation performance
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenBean.getAccessToken());
         OAuthCache.getInstance().addToCache(accessTokenCacheKey, tokenBean);
+        if (log.isDebugEnabled()) {
+            log.debug("Access token info was added to the cache for cache key : " + cacheKey.getCacheKeyString());
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Access token was added to OAuthCache for cache key : " + accessTokenCacheKey
+                        .getCacheKeyString());
+            }
+        }
+    }
+
+    private static void addTokenToCacheOnRead(OAuthCacheKey cacheKey, AccessTokenDO tokenBean) {
+
+        /*
+         * If no token persistence, the token will be not be cached against a cache key with userId, scope, client and
+         * idp. But, token will be cached and managed as an AccessTokenDO against the token identifier.
+         */
+        if (OAuth2Util.isTokenPersistenceEnabled()) {
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, tokenBean);
+        }
+        // Adding AccessTokenDO to improve validation performance.
+        OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenBean.getAccessToken());
+        OAuthCache.getInstance().addToCacheOnRead(accessTokenCacheKey, tokenBean);
         if (log.isDebugEnabled()) {
             log.debug("Access token info was added to the cache for cache key : " + cacheKey.getCacheKeyString());
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

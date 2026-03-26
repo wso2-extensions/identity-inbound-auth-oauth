@@ -64,6 +64,20 @@ public class OAuthScopeBindingCache extends BaseCache<OAuthScopeBindingCacheKey,
     }
 
     /**
+     * Add a cache entry during a READ operation.
+     *
+     * @param key   Key which cache entry is indexed.
+     * @param entry Actual object where cache entry is placed.
+     */
+    public void addToCacheOnRead(OAuthScopeBindingCacheKey key, Scope[] entry, int tenantId) {
+
+        super.addToCacheOnRead(key, entry, tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("[AddToCacheOnRead] Scope bindings are added to the cache. \n" + ArrayUtils.toString(entry));
+        }
+    }
+
+    /**
      * Retrieves a cache entry.
      *
      * @param key CacheKey
