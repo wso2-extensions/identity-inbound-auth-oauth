@@ -4937,7 +4937,7 @@ public class OAuth2Util {
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
             addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
-                    IdentityTenantUtil.getTenantDomain(appTenantID));
+                    IdentityTenantUtil.getTenantDomain(appTenantID), authenticatedUser.isFederatedUser());
         }
         return authenticatedUser;
     }
@@ -4960,7 +4960,8 @@ public class OAuth2Util {
         AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
-            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain, appTenantDomain);
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain, appTenantDomain,
+                    authenticatedUser.isFederatedUser());
         }
         return authenticatedUser;
     }
@@ -6461,14 +6462,17 @@ public class OAuth2Util {
     }
 
     private static void addOrganizationUserDetails(AuthenticatedUser authenticatedUser, String accessingOrganization,
-                                                   String tenantDomain, String appTenantDomain)
+                                                   String tenantDomain, String appTenantDomain,
+                                                   boolean isOrgSSOFederation)
             throws IdentityOAuth2Exception {
 
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
-        // Set authorized user tenant domain to the tenant domain of the application.
-        authenticatedUser.setTenantDomain(appTenantDomain);
+        if  (isOrgSSOFederation) {
+            // Set authorized user tenant domain to the tenant domain of the application.
+            authenticatedUser.setTenantDomain(appTenantDomain);
+        }
     }
 
     public static boolean isPairwiseSubEnabledForAccessTokens() {
