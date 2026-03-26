@@ -60,6 +60,27 @@ public interface AccessTokenDAO {
     }
 
     /**
+     * Get latest access token.
+     *
+     * @param consumerKey Consumer key.
+     * @param appTenantDomain Application tenant domain.
+     * @param authzUser Authorized user.
+     * @param userStoreDomain Use store domain
+     * @param scope Scope.
+     * @param tokenBindingReference Token binding reference
+     * @param includeExpiredTokens Include expired tokens.
+     * @return Latest access token.
+     * @throws IdentityOAuth2Exception If any error occurred while getting latest access token.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, String appTenantDomain, AuthenticatedUser authzUser,
+            String userStoreDomain, String scope, String tokenBindingReference, boolean includeExpiredTokens)
+        throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, tokenBindingReference,
+                includeExpiredTokens);
+    }
+
+    /**
      * Get tokenId by binding reference.
      * @param bindingRef BindingRef.
      * @return TokenId.
@@ -97,6 +118,13 @@ public interface AccessTokenDAO {
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 
+    default Set<AccessTokenDO> getAccessTokens(String consumerKey, String appTenantDomain,
+            AuthenticatedUser userName, String userStoreDomain, boolean includeExpired)
+            throws IdentityOAuth2Exception {
+
+        return getAccessTokens(consumerKey, userName, userStoreDomain, includeExpired);
+    }
+
     AccessTokenDO getAccessToken(String accessTokenIdentifier, boolean includeExpired) throws IdentityOAuth2Exception;
 
     Set<String> getAccessTokensByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception;
@@ -120,6 +148,12 @@ public interface AccessTokenDAO {
     Set<String> getActiveTokensByConsumerKey(String consumerKey) throws IdentityOAuth2Exception;
 
     Set<AccessTokenDO> getActiveAcessTokenDataByConsumerKey(String consumerKey) throws IdentityOAuth2Exception;
+
+    default Set<AccessTokenDO> getActiveAcessTokenDataByConsumerKey(String consumerKey, String appTenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return getActiveAcessTokenDataByConsumerKey(consumerKey);
+    }
 
     Set<AccessTokenDO> getAccessTokensByTenant(int tenantId) throws IdentityOAuth2Exception;
 
@@ -255,6 +289,12 @@ public interface AccessTokenDAO {
             throws IdentityOAuth2Exception {
 
         return Collections.emptySet();
+    }
+
+    default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyAndScope(String consumerKey,
+            String appTenantDomain, List<String> scopes) throws IdentityOAuth2Exception {
+
+        return getActiveTokenSetWithTokenIdByConsumerKeyAndScope(consumerKey, scopes);
     }
 
     /**
