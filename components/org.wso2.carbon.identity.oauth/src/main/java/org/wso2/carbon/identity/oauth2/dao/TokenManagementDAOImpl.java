@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
+import org.wso2.carbon.identity.oauth2.model.OAuthAppInfo;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -904,6 +905,52 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             log.debug("Found authorized clients " + consumerKeys.toString() + " for user: " + authzUser.toString());
         }
         return distinctConsumerKeys;
+    }
+
+    @Override
+    public List<OAuthAppInfo> getAllTimeAuthorizedClientIdsWithAppTenantDomain(AuthenticatedUser authzUser)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving all authorized clients with app tenant domain by user: " + authzUser.toString());
+        }
+        PreparedStatement ps = null;
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        ResultSet rs = null;
+        List<OAuthAppInfo> clientAppInfos = new ArrayList<>();
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authzUser.toString());
+        String tenantDomain = getUserResidentTenantDomain(authzUser);
+        String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
+        String userDomain = OAuth2Util.getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
+        try {
+            int tenantId = OAuth2Util.getTenantId(tenantDomain);
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_DISTINCT_APPS_WITH_APP_TENANT_AUTHORIZED_BY_USER_ALL_TIME, authzUser.getUserStoreDomain());
+            if (!isUsernameCaseSensitive) {
+                sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
+            }
+            ps = connection.prepareStatement(sqlQuery);
+            if (isUsernameCaseSensitive) {
+                ps.setString(1, tenantAwareUsernameWithNoUserDomain);
+            } else {
+                ps.setString(1, tenantAwareUsernameWithNoUserDomain.toLowerCase());
+            }
+            ps.setInt(2, tenantId);
+            ps.setString(3, userDomain);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                String consumerKey = getPersistenceProcessor().getPreprocessedClientId(rs.getString(1));
+                String appTenantDomain = IdentityTenantUtil.getTenantDomain(rs.getInt(2));
+                clientAppInfos.add(new OAuthAppInfo(consumerKey, appTenantDomain));
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred while retrieving all distinct Client IDs with app tenant domain authorized by " +
+                            "User ID : " + authzUser + " until now", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return clientAppInfos;
     }
 
     private String getAppTenantDomain() {
