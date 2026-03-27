@@ -523,7 +523,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (JWSAlgorithm.RS256.equals(signatureAlgorithm) || JWSAlgorithm.RS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.RS512.equals(signatureAlgorithm) || JWSAlgorithm.PS256.equals(signatureAlgorithm)) {
-            return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext, isRefreshToken);
+            if (isRefreshToken) {
+                return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext, true);
+            }
+            // Call the 3-arg overload for non-refresh tokens (access tokens) to preserve subclass override behavior.
+            return signJWTWithRSA(jwtClaimsSet, tokenContext, authorizationContext);
         } else if (JWSAlgorithm.HS256.equals(signatureAlgorithm) || JWSAlgorithm.HS384.equals(signatureAlgorithm) ||
                 JWSAlgorithm.HS512.equals(signatureAlgorithm)) {
             return signJWTWithHMAC(jwtClaimsSet, tokenContext, authorizationContext);
