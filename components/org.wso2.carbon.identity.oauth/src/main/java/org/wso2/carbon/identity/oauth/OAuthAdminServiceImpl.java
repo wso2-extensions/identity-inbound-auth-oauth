@@ -601,15 +601,14 @@ public class OAuthAdminServiceImpl {
                             throw handleClientError(INVALID_REQUEST,
                                     "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
                         }
-
-                        boolean isSubOrg = OrganizationManagementUtil.isOrganization(tenantDomain);
                         /*
                          If the app is not registering under a primary organization, and it is not a fragment app,
                          validate the issuer organization and set the issuer org of the app.
                         */
                         if (Boolean.parseBoolean(
-                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                            if (isSubOrg && !application.getIsFragmentApp()) {
+                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS)) &&
+                                !application.getIsFragmentApp()) {
+                            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
                                 String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
                                         resolveOrganizationId(tenantDomain);
                                 resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
@@ -1127,14 +1126,14 @@ public class OAuthAdminServiceImpl {
             }
 
             try {
-                boolean isSubOrg = OrganizationManagementUtil.isOrganization(tenantDomain);
                 /*
                  If the app is not updating under a primary organization, and it is not a fragment app,
                  validate the issuer organization and set the issuer org of the app.
                 */
                 if (Boolean.parseBoolean(
-                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                    if (isSubOrg && !consumerAppDTO.getIsFragmentApp()) {
+                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS)) &&
+                        !consumerAppDTO.getIsFragmentApp()) {
+                    if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
                         String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
                                 resolveOrganizationId(tenantDomain);
                         resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);

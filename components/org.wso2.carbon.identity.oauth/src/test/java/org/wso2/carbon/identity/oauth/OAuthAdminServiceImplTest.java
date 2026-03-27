@@ -144,7 +144,7 @@ public class OAuthAdminServiceImplTest {
     private static final String ACCESS_TOKEN = "access:token";
     private static final String USER_ID = "user:id";
     private static final String USER_NAME = "admin";
-    public static final String TEST_ORG_ID = "test-org-id";
+    private static final String TEST_ORG_ID = "test-org-id";
 
     @Mock
     private RealmConfiguration realmConfiguration;
