@@ -18,6 +18,33 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -50,6 +77,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -62,6 +90,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.OAuthAppInfo;
@@ -83,33 +113,6 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OAUTH2;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_TYPE_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PREVENT_TOKEN_REUSE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
 
 /**
  * OAuth utility functionality.
@@ -1575,6 +1578,59 @@ public final class OAuthUtil {
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Failed to retrieve the user store domain for the parent user with ID: "
                     + parentUserId + " in tenant domain: " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Triggers a cache clearance for the original scopes associated with a token.
+     * This is necessary because the scopes in the provided {@code accessTokenDO} might have been
+     * filtered or mutated during the request lifecycle. Fetch the original scopes from the
+     * database to ensure the cache is cleared using the correct keys.
+     *
+     * @param tokenBindingReference The token binding identifier.
+     * @param accessTokenDO        The current (potentially mutated) access token object.
+     * @param revokeRequestDTO     The revocation request details containing the consumer key.
+     */
+    public static void clearOAuthCacheUsingPersistedScopes(String tokenBindingReference, AccessTokenDO accessTokenDO,
+                                                           OAuthRevocationRequestDTO revokeRequestDTO) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing OAuth cache for persisted scopes. Consumer key: " + revokeRequestDTO.getConsumerKey());
+        }
+
+        if (OAuthServerConfiguration.getInstance().getAllowedScopes().isEmpty()) {
+            return;
+        }
+
+        String accessToken = accessTokenDO.getAccessToken();
+        if (StringUtils.isBlank(accessToken)) {
+            return;
+        }
+
+        try {
+            // The in-memory scopes may be mutated during validation. To avoid cache-key
+            // mismatches, retrieve the original scopes from the database before clearing
+            // the OAuth cache.
+            AccessTokenDO dbTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
+                    .getVerifiedAccessToken(accessToken, true);
+            if (dbTokenDO == null || dbTokenDO.getScope() == null || dbTokenDO.getScope().length == 0) {
+                return;
+            }
+
+            String dbTokenScopeString = OAuth2Util.buildScopeString(dbTokenDO.getScope());
+            OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(),
+                    accessTokenDO.getAuthzUser(), dbTokenScopeString, tokenBindingReference);
+            OAuthUtil.clearOAuthCache(revokeRequestDTO.getConsumerKey(),
+                    accessTokenDO.getAuthzUser(), dbTokenScopeString);
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully cleared OAuth cache entries for consumer key: " +
+                        revokeRequestDTO.getConsumerKey());
+            }
+
+        } catch (IdentityOAuth2Exception e) {
+            LOG.error("Error while clearing cache entries for extended scopes. Consumer key: "
+                    + revokeRequestDTO.getConsumerKey(), e);
         }
     }
 }
