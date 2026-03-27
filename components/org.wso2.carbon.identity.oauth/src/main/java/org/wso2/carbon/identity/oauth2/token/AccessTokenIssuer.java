@@ -116,6 +116,7 @@ import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.DELEGATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
@@ -639,6 +640,12 @@ public class AccessTokenIssuer {
                     diagnosticLogBuilder.inputParam(IMPERSONATOR, impersonatorId);
                 }
                 diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
+            }  else if (tokReqMsgCtx.isDelegationRequest()) {
+                if (tokReqMsgCtx.getProperty(DELEGATING_ACTOR) != null) {
+                    diagnosticLogBuilder.inputParam("delegating_actor",
+                            tokReqMsgCtx.getProperty(DELEGATING_ACTOR).toString());
+                }
+                diagnosticLogBuilder.resultMessage("Delegated Access token issued for the application.");
             } else {
                 diagnosticLogBuilder.resultMessage("Access token issued for the application.");
             }

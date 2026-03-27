@@ -246,6 +246,52 @@ public class JWTTokenIssuerTest {
     }
 
     /**
+     * Test that preset audiences on {@link OAuthTokenReqMessageContext} are preserved in the JWT
+     * (delegation scenario where token exchange pre-sets explicit audiences).
+     */
+    @Test
+    public void testBuildJWTTokenWithPresetAudiencesForTokenContext() throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+            accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
+            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+
+            OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+            reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("DUMMY_USERNAME");
+            authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
+            authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+            authenticatedUser.setUserId(DUMMY_USER_ID);
+            reqMessageContext.setAuthorizedUser(authenticatedUser);
+
+            // Pre-set audiences — simulates delegation/token-exchange where the grant handler
+            // sets explicit audiences before token issuance.
+            List<String> presetAudiences = Collections.singletonList("https://preset-audience.example.com");
+            reqMessageContext.setAudiences(presetAudiences);
+            // Scope without "aud" to avoid scope-based audience override
+            reqMessageContext.setScope(new String[]{"openid"});
+
+            prepareForBuildJWTToken(oAuth2Util);
+            JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
+            String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
+
+            PlainJWT plainJWT = PlainJWT.parse(jwtToken);
+            assertNotNull(plainJWT);
+            assertEquals(plainJWT.getJWTClaimsSet().getAudience(), presetAudiences,
+                    "Preset audiences should appear in the JWT when pre-set on the token request context");
+        }
+    }
+
+    /**
      * Test for Plain JWT Building from {@link OAuthAuthzReqMessageContext}
      */
     @Test(dataProvider = "requestScopesProvider")
@@ -516,6 +562,111 @@ public class JWTTokenIssuerTest {
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
                 assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), true);
+            }
+        }
+    }
+
+    @DataProvider(name = "delegationActClaimDataProvider")
+    public Object[][] delegationActClaimDataProvider() {
+
+        Map<String, Object> existingActClaimMap = new HashMap<>();
+        existingActClaimMap.put("sub", "previous-actor");
+        existingActClaimMap.put("azp", "previous-azp");
+
+        return new Object[][]{
+                // isDelegationRequest, actorSubject, actorAzp, existingActClaim, expectActClaim, expectAzp, 
+                // expectNested
+                {true,  "actor-subject", "actor-azp", null,              true,  true,  false},
+                {true,  "actor-subject", null,         null,              true,  false, false},
+                {true,  "actor-subject", "actor-azp", existingActClaimMap, true, true,  true},
+                {true,  null,            "actor-azp", null,              false, false, false},
+                {false, "actor-subject", "actor-azp", null,              false, false, false},
+        };
+    }
+
+    @Test(dataProvider = "delegationActClaimDataProvider")
+    public void testCreateJWTClaimSetDelegationActClaim(boolean isDelegationRequest, String actorSubject,
+                                                        String actorAzp, Map<String, Object> existingActClaim,
+                                                        boolean expectActClaim, boolean expectAzpInAct,
+                                                        boolean expectNestedAct) throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            OAuthAppDO appDO = spy(new OAuthAppDO());
+            mockGrantHandlers();
+            mockCustomClaimsCallbackHandler();
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
+                    .thenReturn(Collections.singletonList(DUMMY_CLIENT_ID));
+            oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
+            when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
+            when(mockOAuthServerConfiguration.getApplicationAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("DUMMY_USERNAME");
+            authenticatedUser.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            authenticatedUser.setUserStoreDomain("PRIMARY");
+            authenticatedUser.setUserId(DUMMY_USER_ID);
+            authenticatedUser.setFederatedUser(false);
+            authenticatedUser.setAuthenticatedSubjectIdentifier("DUMMY_USERNAME");
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
+            tokenReqDTO.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+
+            OAuthTokenReqMessageContext tokenReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenReqMsgCtx.setAuthorizedUser(authenticatedUser);
+            tokenReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenReqMsgCtx.setAudiences(Collections.singletonList(DUMMY_CLIENT_ID));
+
+            if (isDelegationRequest) {
+                tokenReqMsgCtx.addProperty(OAuthConstants.IS_DELEGATION_REQUEST, true);
+            }
+            if (actorSubject != null) {
+                tokenReqMsgCtx.addProperty(OAuthConstants.ACTOR_SUBJECT, actorSubject);
+            }
+            if (actorAzp != null) {
+                tokenReqMsgCtx.addProperty(OAuthConstants.ACTOR_AZP, actorAzp);
+            }
+            if (existingActClaim != null) {
+                tokenReqMsgCtx.addProperty(OAuthConstants.EXISTING_ACT_CLAIM, existingActClaim);
+            }
+
+            JWTTokenIssuer jwtTokenIssuer = spy(new JWTTokenIssuer());
+            JWTClaimsSet jwtClaimsSet = jwtTokenIssuer.createJWTClaimSet(null, tokenReqMsgCtx, DUMMY_CLIENT_ID);
+
+            assertNotNull(jwtClaimsSet);
+            Object actClaimObj = jwtClaimsSet.getClaim("act");
+            if (expectActClaim) {
+                assertNotNull(actClaimObj, "act claim should be present for delegation request");
+                assertTrue(actClaimObj instanceof Map, "act claim should be a Map");
+                Map<String, Object> actClaim = (Map<String, Object>) actClaimObj;
+                assertEquals(actClaim.get("sub"), actorSubject, "act.sub should match actor subject");
+                if (expectAzpInAct) {
+                    assertEquals(actClaim.get("azp"), actorAzp, "act.azp should match actor azp");
+                } else {
+                    assertNull(actClaim.get("azp"), "act.azp should not be present when not provided");
+                }
+                if (expectNestedAct) {
+                    assertNotNull(actClaim.get("act"), "Nested act claim should be present for chained delegation");
+                } else {
+                    assertNull(actClaim.get("act"), "No nested act claim expected");
+                }
+            } else {
+                assertNull(actClaimObj, "act claim should NOT be present");
             }
         }
     }

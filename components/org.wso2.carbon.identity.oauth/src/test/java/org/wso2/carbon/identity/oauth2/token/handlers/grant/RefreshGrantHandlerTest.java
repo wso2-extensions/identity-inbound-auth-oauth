@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
@@ -72,6 +73,8 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -493,6 +496,50 @@ public class RefreshGrantHandlerTest {
                     .replaceAccessTokenAuthorizationDetails(anyString(), any(), any());
             assertEquals(oAuth2AccessTokenRespDTO.getAccessToken(), "token");
 
+        }
+    }
+
+    @Test
+    public void testPropagateActorInfoForDelegation() throws Exception {
+
+        String delegatingActorId = "delegating-actor-id-123";
+        MockAuthenticatedUser user = new MockAuthenticatedUser("test_user");
+
+        Map<String, String> params = new HashMap<>();
+        params.put(OAuthConstants.DELEGATING_ACTOR, delegatingActorId);
+        AccessTokenExtendedAttributes attrs = mock(AccessTokenExtendedAttributes.class);
+        when(attrs.getParameters()).thenReturn(params);
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(user);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getAccessTokenExtendedAttributes()).thenReturn(attrs);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic = mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMockedStatic = mockStatic(FrameworkUtils.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            frameworkUtilsMockedStatic.when(FrameworkUtils::getFederatedAssociationManager)
+                    .thenReturn(mock(FederatedAssociationManager.class));
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+
+            verify(oAuthTokenReqMessageContext).setDelegationRequest(true);
+            verify(oAuthTokenReqMessageContext).addProperty(OAuthConstants.DELEGATING_ACTOR, delegatingActorId);
         }
     }
 }
