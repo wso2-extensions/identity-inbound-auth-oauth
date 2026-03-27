@@ -91,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -157,7 +158,7 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
-    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
+    public static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
             "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     /**
@@ -600,18 +601,16 @@ public class OAuthAdminServiceImpl {
                             throw handleClientError(INVALID_REQUEST,
                                     "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
                         }
-
-                        String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                resolveOrganizationId(tenantDomain);
-                        boolean isPrimaryOrg = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                isPrimaryOrganization(orgId);
                         /*
                          If the app is not registering under a primary organization, and it is not a fragment app,
                          validate the issuer organization and set the issuer org of the app.
                         */
                         if (Boolean.parseBoolean(
-                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                            if (!isPrimaryOrg && !application.getIsFragmentApp()) {
+                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS)) &&
+                                !application.getIsFragmentApp()) {
+                            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                        resolveOrganizationId(tenantDomain);
                                 resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
                             }
                         }
@@ -1127,17 +1126,16 @@ public class OAuthAdminServiceImpl {
             }
 
             try {
-                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                        resolveOrganizationId(tenantDomain);
-                boolean isPrimaryOrg = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                        isPrimaryOrganization(orgId);
                 /*
                  If the app is not updating under a primary organization, and it is not a fragment app,
                  validate the issuer organization and set the issuer org of the app.
                 */
                 if (Boolean.parseBoolean(
-                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                    if (!isPrimaryOrg && !consumerAppDTO.getIsFragmentApp()) {
+                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS)) &&
+                        !consumerAppDTO.getIsFragmentApp()) {
+                    if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                        String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveOrganizationId(tenantDomain);
                         resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);
                     }
                 }
