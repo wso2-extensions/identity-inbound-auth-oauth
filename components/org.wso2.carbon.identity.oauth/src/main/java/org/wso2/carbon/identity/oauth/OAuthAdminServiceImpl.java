@@ -158,7 +158,7 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
-    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
+    public static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
             "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     /**
