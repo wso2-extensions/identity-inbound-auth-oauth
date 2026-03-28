@@ -42,7 +42,9 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -195,6 +197,69 @@ public class PreIssueAccessTokenResponseProcessorTest {
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
     }
 
+    @Test
+    void testProcessSuccessResponse_AddClaim_WithValidObjectValue() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        Map<String, String> complexObject = new HashMap<>();
+        complexObject.put("key1", "value1");
+        complexObject.put("key2", "value2");
+
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("complexClaim", complexObject)));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("complexClaim");
+
+        assertNotNull(addedClaim);
+        assertTrue(addedClaim instanceof Map);
+        assertEquals(((Map<?, ?>) addedClaim).get("key1"), "value1");
+    }
+
+    @Test
+    void testProcessSuccessResponse_AddClaim_WithValidArrayValue() throws ActionExecutionResponseProcessorException {
+
+        List<String> arrayValue = Arrays.asList("perm1", "perm2", "perm3");
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("user_permissions", arrayValue)));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("user_permissions");
+
+        assertNotNull(addedClaim);
+        assertTrue(addedClaim instanceof List, "The added claim value should be processed as a List.");
+        List<?> resultedList = (List<?>) addedClaim;
+        assertEquals(resultedList.size(), 3);
+        assertEquals(resultedList, arrayValue);
+    }
+
+    @Test
+    void testProcessSuccessResponse_AddCustomObject() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> orgMetadata = new HashMap<>();
+        orgMetadata.put("tier", "Enterprise");
+        orgMetadata.put("region", "South-East-Asia");
+        orgMetadata.put("isInternal", false);
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                new AccessToken.Claim("org_metadata", orgMetadata)));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object addedClaim = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("org_metadata");
+
+        assertNotNull(addedClaim);
+        assertTrue(addedClaim instanceof Map, "The added claim value should be processed as a Map.");
+        Map<?, ?> resultMap = (Map<?, ?>) addedClaim;
+        assertEquals(resultMap.get("tier"), "Enterprise");
+        assertEquals(resultMap.get("region"), "South-East-Asia");
+        assertEquals(resultMap.get("isInternal"), false);
+    }
+
     @DataProvider(name = "scopeRemovalTestData")
     public Object[][] scopeRemovalTestData() {
 
@@ -290,6 +355,30 @@ public class PreIssueAccessTokenResponseProcessorTest {
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("CustomClaimName"));
     }
 
+    @Test
+    void testProcessSuccessResponse_RemoveNestedClaim() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> innerMap = new HashMap<>();
+        innerMap.put("childKey", "childValue");
+        innerMap.put("otherKey", "otherValue");
+        Map<String, Object> nestedClaim = new HashMap<>();
+        nestedClaim.put("parentKey", innerMap);
+
+        requestAccessTokenBuilder.addClaim("rootClaim", nestedClaim);
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + "rootClaim/parentKey/childKey", null));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object rootClaimObj = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("rootClaim");
+
+        assertNotNull(rootClaimObj);
+        Map<?, ?> rootMap = (Map<?, ?>) rootClaimObj;
+        Map<?, ?> parentMap = (Map<?, ?>) rootMap.get("parentKey");
+        assertFalse(parentMap.containsKey("childKey"), "Nested childKey should be removed.");
+        assertTrue(parentMap.containsKey("otherKey"), "otherKey should still exist.");
+    }
+
     @DataProvider(name = "replaceAudiencesTestData")
     public Object[][] replaceAudiencesTestData() {
 
@@ -337,6 +426,53 @@ public class PreIssueAccessTokenResponseProcessorTest {
         // Get the validity period in milliseconds
         long validityPeriod = oAuthTokenReqMessageContext.getValidityPeriod();
         assertEquals(validityPeriod, expectedExpireIn);
+    }
+
+    @Test
+    void testProcessSuccessResponse_ReplaceNestedClaim() throws ActionExecutionResponseProcessorException {
+
+        Map<String, Object> innerMap = new HashMap<>();
+        innerMap.put("targetKey", "oldValue");
+        Map<String, Object> complexClaim = new HashMap<>();
+        complexClaim.put("intermediate", innerMap);
+        requestAccessTokenBuilder.addClaim("complexClaim", complexClaim);
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + "complexClaim/intermediate/targetKey", "newValue"));
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object rootClaimObj = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("complexClaim");
+
+        assertNotNull(rootClaimObj);
+        Map<?, ?> complexMap = (Map<?, ?>) rootClaimObj;
+        Map<?, ?> intermediateMap = (Map<?, ?>) complexMap.get("intermediate");
+        assertEquals(intermediateMap.get("targetKey"), "newValue",
+                "The nested claim value should be updated.");
+    }
+
+    @Test
+    void testProcessSuccessResponse_ReplaceAndRemoveGroup() throws ActionExecutionResponseProcessorException {
+
+        List<String> initialGroupList = new ArrayList<>(Arrays.asList("admin", "editor", "viewer"));
+        requestAccessTokenBuilder.addClaim("groups", initialGroupList);
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + "groups/1", "manager"));
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + "groups/0", null));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        Object updatedGroupsObj = oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("groups");
+        assertNotNull(updatedGroupsObj);
+        List<?> updatedGroups = (List<?>) updatedGroupsObj;
+
+        assertEquals(updatedGroups.size(), 2,
+                "Group size should be 2 after the execution.");
+        assertTrue(updatedGroups.contains("manager"), "'manager' should be added.");
+        assertTrue(updatedGroups.contains("viewer"), "'viewer' should still be present.");
+        assertFalse(updatedGroups.contains("admin"), "'admin' should have been removed.");
+        assertFalse(updatedGroups.contains("editor"), "'editor' should have been replaced.");
     }
 
     private OAuthTokenReqMessageContext executeProcessSuccessResponse(List<PerformableOperation> operationsToPerform)
