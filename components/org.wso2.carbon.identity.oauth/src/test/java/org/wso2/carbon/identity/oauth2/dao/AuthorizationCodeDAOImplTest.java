@@ -439,6 +439,33 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         Assert.assertTrue(authorizationCodeDAO.getLatestAuthorizationCodesByTenant(100).isEmpty());
     }
 
+    @Test
+    public void testGetAuthorizationCodesDoByUser() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+        AuthenticatedUser dummyAuthenticatedUser = new AuthenticatedUser();
+        dummyAuthenticatedUser.setTenantDomain("super.wso2");
+        dummyAuthenticatedUser.setUserName("MockedUser");
+        dummyAuthenticatedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
+                OAuthConstants.AuthorizationCodeState.ACTIVE);
+        mockStatic(OAuth2Util.class);
+        mockStatic(IdentityUtil.class);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+        when(OAuth2Util.isHashDisabled()).thenReturn(true);
+        // Allow the method to pass the validation without wanting to traverse internally.
+        when(OAuth2Util.getTimeToExpire(anyLong(), anyLong())).thenReturn(2000L);
+
+        Assert.assertTrue((authorizationCodeDAO.getAuthorizationCodesDataByUser(authenticatedUser).size() > 0));
+        Assert.assertTrue(authorizationCodeDAO.getAuthorizationCodesByUser(dummyAuthenticatedUser).isEmpty());
+    }
+
     private void createApplication(String consumerKey, String consumerSecret, int tenantId) throws Exception {
 
         try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP)) {
