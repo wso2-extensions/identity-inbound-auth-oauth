@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 
 import java.util.Arrays;
@@ -106,6 +107,7 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContextMock;
     private MockedStatic<OAuth2Util> oAuth2UtilMock;
     private MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> oAuth2OIDCConfigOrgUsageScopeUtilsMockedStatic;
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtilMockedStatic;
 
     // Map to store tenant domain to issuer URL mappings for test-specific configurations
     private final java.util.Map<String, String> tenantIssuerMap = new java.util.HashMap<>();
@@ -175,6 +177,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         oAuth2OIDCConfigOrgUsageScopeUtilsMockedStatic.when(() ->
                 OAuth2OIDCConfigOrgUsageScopeUtils.handleClientException(any(), any(), any())).thenCallRealMethod();
 
+        organizationManagementUtilMockedStatic = mockStatic(OrganizationManagementUtil.class);
+
         // Create the service instance after all mocks are set up
         oAuth2OIDCConfigMgtService = new OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl();
     }
@@ -193,6 +197,9 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         }
         if (oAuth2OIDCConfigOrgUsageScopeUtilsMockedStatic != null) {
             oAuth2OIDCConfigOrgUsageScopeUtilsMockedStatic.close();
+        }
+        if (organizationManagementUtilMockedStatic != null) {
+            organizationManagementUtilMockedStatic.close();
         }
 
         // Clear the tenant issuer map for next test
@@ -481,9 +488,9 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     @Test
     public void testGetAllowedIssuersForPrimaryOrganization() throws Exception {
 
-        when(organizationManager.resolveOrganizationId(TENANT_DOMAIN)).thenReturn(ORG_ID);
-        when(organizationManager.isPrimaryOrganization(ORG_ID)).thenReturn(true);
-
+        lenient().when(organizationManager.resolveOrganizationId(TENANT_DOMAIN)).thenReturn(ORG_ID);
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(false);
         List<String> allowedIssuers = oAuth2OIDCConfigMgtService.getAllowedIssuers();
 
         assertNull(allowedIssuers, "Primary organization should return null for allowed issuers");
@@ -496,7 +503,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
                 "https://localhost:9443/t/carbon.super/o/bd2de88d-89b8-4388-b9c3-fceecfaedd67/oauth2/token";
         lenient().when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUB_ORG_TENANT_DOMAIN);
         when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT_DOMAIN)).thenReturn(SUB_ORG_ID);
-        when(organizationManager.isPrimaryOrganization(SUB_ORG_ID)).thenReturn(false);
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
 
         List<String> expectedIssuers = List.of(ISSUER_URL, subOrgIssuerUrl);
         when(orgResourceResolverService.getResourcesFromOrgHierarchy(eq(SUB_ORG_ID), any(), any()))
@@ -513,6 +521,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     @Test(expectedExceptions = OAuth2OIDCConfigOrgUsageScopeMgtServerException.class)
     public void testGetAllowedIssuersException() throws Exception {
 
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
         when(organizationManager.resolveOrganizationId(TENANT_DOMAIN))
                 .thenThrow(new OrganizationManagementException("Organization error"));
 
@@ -522,8 +532,9 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     @Test
     public void testGetAllowedIssuerDetailsForPrimaryOrganization() throws Exception {
 
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
         when(organizationManager.resolveOrganizationId(TENANT_DOMAIN)).thenReturn(ORG_ID);
-        when(organizationManager.isPrimaryOrganization(ORG_ID)).thenReturn(true);
 
         List<IssuerDetails> result = oAuth2OIDCConfigMgtService.getAllowedIssuerDetails();
 
@@ -537,7 +548,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
                 "https://localhost:9443/t/carbon.super/o/bd2de88d-89b8-4388-b9c3-fceecfaedd67/oauth2/token";
         lenient().when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUB_ORG_TENANT_DOMAIN);
         when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT_DOMAIN)).thenReturn(SUB_ORG_ID);
-        when(organizationManager.isPrimaryOrganization(SUB_ORG_ID)).thenReturn(false);
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
 
         IssuerDetails issuerDetails = createIssuerDetails(ISSUER_URL, ORG_ID, TENANT_DOMAIN);
         IssuerDetails subOrgIssuerDetails = createIssuerDetails(subOrgIssuerUrl, SUB_ORG_ID, SUB_ORG_TENANT_DOMAIN);
@@ -563,7 +575,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
         when(privilegedCarbonContext.getApplicationResidentOrganizationId()).thenReturn(appResidentOrgId);
         when(organizationManager.resolveTenantDomain(appResidentOrgId)).thenReturn(appResidentTenantDomain);
         when(organizationManager.resolveOrganizationId(appResidentTenantDomain)).thenReturn(appResidentOrgId);
-        when(organizationManager.isPrimaryOrganization(appResidentOrgId)).thenReturn(false);
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
 
         IssuerDetails issuerDetails = createIssuerDetails(ISSUER_URL, appResidentOrgId, appResidentTenantDomain);
 
@@ -580,6 +593,8 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImplTest {
     @Test(expectedExceptions = OAuth2OIDCConfigOrgUsageScopeMgtServerException.class)
     public void testGetAllowedIssuerDetailsException() throws Exception {
 
+        organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(true);
         when(organizationManager.resolveOrganizationId(TENANT_DOMAIN))
                 .thenThrow(new OrganizationManagementException("Organization error"));
 
