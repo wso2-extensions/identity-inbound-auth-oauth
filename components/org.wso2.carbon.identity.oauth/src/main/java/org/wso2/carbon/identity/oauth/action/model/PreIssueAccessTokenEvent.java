@@ -34,13 +34,11 @@ public class PreIssueAccessTokenEvent extends Event {
 
     private final AccessToken accessToken;
     private final RefreshToken refreshToken;
-    private final Session session;
 
     private PreIssueAccessTokenEvent(Builder builder) {
 
         this.accessToken = builder.accessToken;
         this.refreshToken = builder.refreshToken;
-        this.session = builder.session;
         this.request = builder.request;
         this.organization = builder.organization;
         this.tenant = builder.tenant;
@@ -58,11 +56,6 @@ public class PreIssueAccessTokenEvent extends Event {
         return refreshToken;
     }
 
-    public Session getSession() {
-
-        return session;
-    }
-
     /**
      * Builder for the PreIssueAccessTokenEvent.
      */
@@ -70,7 +63,6 @@ public class PreIssueAccessTokenEvent extends Event {
 
         private AccessToken accessToken;
         private RefreshToken refreshToken;
-        private Session session;
         private Request request;
         private Organization organization;
         private Tenant tenant;
@@ -87,12 +79,6 @@ public class PreIssueAccessTokenEvent extends Event {
         public Builder refreshToken(RefreshToken refreshToken) {
 
             this.refreshToken = refreshToken;
-            return this;
-        }
-
-        public Builder session(Session session) {
-
-            this.session = session;
             return this;
         }
 

@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -139,7 +138,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // calculating it again when issuing the access token.
         tokReqMsgCtx.addProperty(AUTHZ_CODE, tokenReq.getAuthorizationCode());
         this.setRARPropertiesForTokenGeneration(tokReqMsgCtx);
-        setSessionDataKeyConsentProperty(tokReqMsgCtx, tokenReq.getAuthorizationCode());
     }
 
     private boolean validateCallbackUrlFromRequest(String callbackUrlFromRequest,
@@ -688,20 +686,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             if (log.isDebugEnabled()) {
                 log.debug("The access token issued for client " + accessTokenDO.getConsumerKey() +
                         " was removed from the cache.");
-            }
-        }
-    }
-
-    private void setSessionDataKeyConsentProperty(OAuthTokenReqMessageContext tokReqMsgCtx, String authzCode) {
-
-        AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
-        if (grantCacheEntry != null && StringUtils.isNotEmpty(grantCacheEntry.getSessionDataKeyConsent())) {
-            tokReqMsgCtx.addProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT,
-                    grantCacheEntry.getSessionDataKeyConsent());
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Retrieved sessionDataKeyConsent: %s from AuthorizationGrantCacheEntry " +
-                        "and set to OAuthTokenReqMessageContext.", grantCacheEntry.getSessionDataKeyConsent()));
             }
         }
     }
