@@ -81,8 +81,6 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private String oidcSessionId;
 
-    private String sessionDataKeyConsent;
-
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
     private boolean isApiBasedAuthRequest;
@@ -310,26 +308,6 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setOidcSessionId(String oidcSessionId) {
 
         this.oidcSessionId = oidcSessionId;
-    }
-
-    /**
-     * Get sessionDataKeyConsent value.
-     *
-     * @return sessionDataKeyConsent value.
-     */
-    public String getSessionDataKeyConsent() {
-
-        return sessionDataKeyConsent;
-    }
-
-    /**
-     * Set sessionDataKeyConsent value.
-     *
-     * @param sessionDataKeyConsent sessionDataKeyConsent.
-     */
-    public void setSessionDataKeyConsent(String sessionDataKeyConsent) {
-
-        this.sessionDataKeyConsent = sessionDataKeyConsent;
     }
 
     /**
