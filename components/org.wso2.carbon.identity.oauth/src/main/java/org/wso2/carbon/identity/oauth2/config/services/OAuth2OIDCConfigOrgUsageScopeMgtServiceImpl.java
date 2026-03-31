@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScop
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.MergeAllAggregationStrategy;
@@ -291,11 +292,11 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
                 .getOrgResourceResolverService();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
-            String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                    resolveOrganizationId(tenantDomain);
-            if (OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().isPrimaryOrganization(orgId)) {
+            if (!OrganizationManagementUtil.isOrganization(tenantDomain)) {
                 return null;
             }
+            String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveOrganizationId(tenantDomain);
             return orgResourceResolverService.getResourcesFromOrgHierarchy(orgId,
                     LambdaExceptionUtils.rethrowFunction(this::getAllowedIssuerForOrg),
                     new MergeAllAggregationStrategy<>(this::mergeIssuersInHierarchy));
@@ -329,11 +330,11 @@ public class OAuth2OIDCConfigOrgUsageScopeMgtServiceImpl implements OAuth2OIDCCo
                         .resolveTenantDomain(appResidentOrgId);
             }
 
-            String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                    resolveOrganizationId(tenantDomain);
-            if (OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().isPrimaryOrganization(orgId)) {
+            if (!OrganizationManagementUtil.isOrganization(tenantDomain)) {
                 return null;
             }
+            String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveOrganizationId(tenantDomain);
 
             String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .getPrimaryOrganizationId(orgId);
