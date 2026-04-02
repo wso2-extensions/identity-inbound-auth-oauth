@@ -209,6 +209,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             throws IdentityOAuthAdminException, IdentityOAuth2Exception {
 
         Set<String> associatedOAuthConsumerKeys = getOAuthAppsAssociatedWithApplication(serviceProvider);
+        removeEntriesFromCache(associatedOAuthConsumerKeys);
         for (String consumerKey : associatedOAuthConsumerKeys) {
             if (log.isDebugEnabled()) {
                 log.debug("Removing OAuth application data for clientId: " + consumerKey + " associated with " +
@@ -216,7 +217,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
             OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeOAuthApplicationData(consumerKey);
         }
-        removeEntriesFromCache(associatedOAuthConsumerKeys);
     }
 
     public void onPreCreateInbound(ServiceProvider serviceProvider, boolean isUpdate) throws
