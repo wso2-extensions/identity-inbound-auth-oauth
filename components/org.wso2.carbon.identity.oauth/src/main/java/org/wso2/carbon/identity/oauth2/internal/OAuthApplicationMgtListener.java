@@ -452,10 +452,19 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
             AppInfoCache appInfoCache = AppInfoCache.getInstance();
             for (String oauthKey : consumerKeys) {
-                accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(oauthKey)
-                        .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
-                authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                try {
+                    accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAOImpl(oauthKey)
+                            .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
+                    authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO()
+                            .getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                } catch (IdentityOAuth2Exception e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("OAuth application with consumer key: " + oauthKey + " may have been already " +
+                                "deleted. Skipping token and authorization code cache cleanup for this key.", e);
+                    }
+                }
                 // Remove client credential from AppInfoCache
                 appInfoCache.clearCacheEntry(oauthKey);
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
