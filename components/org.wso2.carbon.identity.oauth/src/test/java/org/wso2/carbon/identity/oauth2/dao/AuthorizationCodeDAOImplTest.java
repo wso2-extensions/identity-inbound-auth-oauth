@@ -147,6 +147,8 @@ public class AuthorizationCodeDAOImplTest {
         oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(any()))
                 .thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
         oAuth2Util.when(() -> OAuth2Util.getAuthenticatedIDP(any())).thenReturn("LOCAL");
+        oAuth2Util.when(() -> OAuth2Util.getIdpTenantId(anyString(), anyInt(), any(AuthenticatedUser.class)))
+                .thenReturn(DEFAULT_TENANT_ID);
         oAuth2Util.when(OAuth2Util::isAuthCodePersistenceEnabled).thenReturn(true);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(DEFAULT_TENANT_ID))

@@ -4461,4 +4461,57 @@ public class OAuth2UtilTest {
             assertEquals(mappedAttrs.get("groups"), "secondary/group1,SECONDARY/group2");
         }
     }
+
+    @Test
+    public void testGetIdpTenantIdForLocalIDP() throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain("user-tenant.com");
+        int appTenantId = 1;
+
+        int result = OAuth2Util.getIdpTenantId("LOCAL", appTenantId, user);
+
+        assertEquals(result, appTenantId);
+    }
+
+    @Test
+    public void testGetIdpTenantIdForFederatedIDP() throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain("federated-tenant.com");
+        int appTenantId = 1;
+        int federatedTenantId = 2;
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId("federated-tenant.com")).thenReturn(federatedTenantId);
+
+        int result = OAuth2Util.getIdpTenantId("SomeFederatedIDP", appTenantId, user);
+
+        assertEquals(result, federatedTenantId);
+    }
+
+    @Test
+    public void testGetTenantDomainByOrgId() throws Exception {
+
+        String orgId = "test-org-id";
+        String expectedTenantDomain = "org-tenant.com";
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(organizationManagerMock.resolveTenantDomain(orgId)).thenReturn(expectedTenantDomain);
+
+        String result = OAuth2Util.getTenantDomainByOrgId(orgId);
+
+        assertEquals(result, expectedTenantDomain);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetTenantDomainByOrgIdWithOrganizationManagementException() throws Exception {
+
+        String orgId = "invalid-org-id";
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(organizationManagerMock.resolveTenantDomain(orgId))
+                .thenThrow(new OrganizationManagementException("Org not found"));
+
+        OAuth2Util.getTenantDomainByOrgId(orgId);
+    }
 }
