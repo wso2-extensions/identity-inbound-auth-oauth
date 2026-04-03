@@ -90,7 +90,7 @@ public class CacheBackedScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO
     public List<ScopeDTO> getScopes(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaimsOnRead(tenantId, oidcScopeClaimCacheEntry);
         return oidcScopeClaimCacheEntry.getScopeClaimMapping();
     }
 
@@ -129,7 +129,7 @@ public class CacheBackedScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO
     public List<String> getScopeNames(int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaimsOnRead(tenantId, oidcScopeClaimCacheEntry);
         List<String> scopes = new ArrayList<>();
         for (ScopeDTO scopeDTO : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
             scopes.add(scopeDTO.getName());
@@ -141,7 +141,7 @@ public class CacheBackedScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO
     public ScopeDTO getClaims(String scope, int tenantId) throws IdentityOAuth2Exception {
 
         OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = oidcScopeClaimCache.getScopeClaimMap(tenantId);
-        oidcScopeClaimCacheEntry = loadOIDCScopeClaims(tenantId, oidcScopeClaimCacheEntry);
+        oidcScopeClaimCacheEntry = loadOIDCScopeClaimsOnRead(tenantId, oidcScopeClaimCacheEntry);
         ScopeDTO scopeDTO = new ScopeDTO();
         for (ScopeDTO scopeObj : oidcScopeClaimCacheEntry.getScopeClaimMapping()) {
             if (scope.equals(scopeObj.getName()) && scopeObj.getClaim() != null) {
@@ -178,6 +178,26 @@ public class CacheBackedScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO
             if (log.isDebugEnabled()) {
                 log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache for " +
                         "the tenant : " + tenantId);
+            }
+        }
+        return oidcScopeClaimCacheEntry;
+    }
+
+    private OIDCScopeClaimCacheEntry loadOIDCScopeClaimsOnRead(int tenantId, OIDCScopeClaimCacheEntry
+            oidcScopeClaimCacheEntry) throws IdentityOAuth2Exception {
+
+        if (oidcScopeClaimCacheEntry == null || oidcScopeClaimCacheEntry.getScopeClaimMapping().size() == 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cache miss for OIDC scopes claims mapping for tenant: " + tenantId);
+            }
+            oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
+            List<ScopeDTO> scopeClaims = scopeClaimMappingDAOImpl.getScopes(tenantId);
+
+            oidcScopeClaimCacheEntry.setScopeClaimMapping(scopeClaims);
+            oidcScopeClaimCache.addScopeClaimMapOnRead(tenantId, oidcScopeClaimCacheEntry);
+            if (log.isDebugEnabled()) {
+                log.debug("[AddToCacheOnRead][AddScopeClaimMapOnRead] OIDC scopes and mapped claims are loaded from" + 
+                " the database and inserted to the cache for the tenant : " + tenantId);
             }
         }
         return oidcScopeClaimCacheEntry;

@@ -77,6 +77,22 @@ public class OAuthCache extends AuthenticationBaseCache<OAuthCacheKey, CacheEntr
     }
 
     @Override
+    public void addToCacheOnRead(OAuthCacheKey key, CacheEntry entry) {
+
+        if (entry instanceof AccessTokenDO) {
+            AccessTokenDO tokenDO = (AccessTokenDO) entry;
+            String tenantDomain = tokenDO.getAuthzUser().getTenantDomain();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("[AddToCacheOnRead] AccessTokenDO was added for the given token identifier: " +
+                                "%s in the tenant: %s.", ((AccessTokenDO) entry).getTokenId(), tenantDomain));
+            }
+            super.addToCacheOnRead(key, entry, tenantDomain);
+        } else {
+            super.addToCacheOnRead(key, entry);
+        }
+    }
+
+    @Override
     public void clearCacheEntry(OAuthCacheKey key, String tenantDomain) {
 
         if (LOG.isDebugEnabled()) {
