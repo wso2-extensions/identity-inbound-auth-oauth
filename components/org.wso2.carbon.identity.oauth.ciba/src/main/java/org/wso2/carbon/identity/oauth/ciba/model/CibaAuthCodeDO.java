@@ -40,6 +40,7 @@ public class CibaAuthCodeDO {
     private AuthenticatedUser authenticatedUser;
     private String resolvedUserId;
     private int idpId;
+    private String requestedActor;
 
     public String getCibaAuthCodeKey() {
 
@@ -161,5 +162,15 @@ public class CibaAuthCodeDO {
     public int getIdpId() {
 
         return this.idpId;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }

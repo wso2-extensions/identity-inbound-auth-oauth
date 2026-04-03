@@ -19,6 +19,8 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -45,6 +47,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 
@@ -115,13 +118,20 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 oAuth2Parameters.setTenantDomain(
                         PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
             }
+            String applicationRequestObjectEncryptionAlgorithm;
             if (StringUtils.isNotBlank(oAuth2Parameters.getClientId())) {
                 // If client id is available in the oauth2 parameters, validate encryption algorithm and method.
                 validateEncryptionAlgorithmAndMethod(encryptedJWT.getHeader(), oAuth2Parameters.getClientId(),
                         oAuth2Parameters.getTenantDomain());
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
+                        oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+                applicationRequestObjectEncryptionAlgorithm = oAuthAppDO.getRequestObjectEncryptionAlgorithm();
+            } else {
+                applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
-            RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
-            RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
+            JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
+            PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
+            JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);
@@ -157,6 +167,23 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
         }
+    }
+
+    /**
+     * Validate and get the Decrypter type.
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param privateKey          Private key
+     * @return Decrypter          decryptor type
+     * @throws JOSEException      Jose exception while creating decryptor
+     */
+    private JWEDecrypter validateDecryptorMode(JWEAlgorithm encryptionAlgorithm, PrivateKey privateKey)
+            throws JOSEException {
+
+        if (encryptionAlgorithm == null) {
+            log.debug("Request Object Encryption Algorithm is not found.");
+        }
+        return new RSADecrypter(privateKey);
     }
 
     /**

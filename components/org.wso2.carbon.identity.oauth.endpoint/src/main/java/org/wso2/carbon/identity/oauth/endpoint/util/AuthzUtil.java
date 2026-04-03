@@ -291,6 +291,9 @@ public class AuthzUtil {
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
     private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
+    private static final String HANDLE_FAIL_COMPLETED_AUTHENTICATOR_FLOW_STATUS = 
+        "AppNativeAuthentication.HandleFailCompletedAuthenticatorStatus";
+
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
     /**
@@ -1365,7 +1368,7 @@ public class AuthzUtil {
             } else {
                 oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
             }
-            AppInfoCache.getInstance().addToCache(authzReqDTO.getConsumerKey(), oAuthAppDO);
+            AppInfoCache.getInstance().addToCacheOnRead(authzReqDTO.getConsumerKey(), oAuthAppDO);
             return oAuthAppDO;
         }
     }
@@ -4249,6 +4252,18 @@ public class AuthzUtil {
                 // Marking the initial request as additional validation will be done from the auth service.
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+                try {
+                    String accessingOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                            getAccessingOrganizationId();
+                    if (StringUtils.isNotEmpty(accessingOrganizationId)) {
+                        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(
+                                oAuthMessage.getClientId(), accessingOrganizationId);
+                        requestWrapper.setAttribute(AuthServiceConstants.APP_TENANT_DOMAIN, oAuthAppDO.getAppOwner().
+                                getTenantDomain());
+                    }
+                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+                    throw new AuthServiceException(e.getMessage());
+                }
 
                 AuthenticationService authenticationService = new AuthenticationService();
                 AuthServiceResponse authServiceResponse = authenticationService.
@@ -4925,6 +4940,18 @@ public class AuthzUtil {
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return Response.ok().entity(jsonString).build();
+            } else if (shouldHandleFailCompletedAuthenticatorFlowStatus() &&
+                attribute == AuthenticatorFlowStatus.FAIL_COMPLETED) {
+                AuthServiceResponse authServiceResponse = (AuthServiceResponse) oAuthMessage.getRequest()
+                        .getAttribute(AUTH_SERVICE_RESPONSE);
+                        
+                if (authServiceResponse.getErrorInfo().isPresent()) {
+                    throw new AuthServiceClientException(authServiceResponse.getErrorInfo().get().getErrorCode(),
+                            authServiceResponse.getErrorInfo().get().getErrorDescription());
+                } else {
+                    throw new AuthServiceClientException(
+                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.message());
+                }
             } else {
                 List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
                 if (CollectionUtils.isNotEmpty(locationHeader)) {
@@ -5200,5 +5227,16 @@ public class AuthzUtil {
         builder.setParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
                 AuthorizationDetailsUtils.getUrlEncodedAuthorizationDetails(authorizationDetails));
         authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationDetails(authorizationDetails);
+    }
+
+    /**
+     * Check whether the FAIL_COMPLETED flow status should be handled in the API based authentication flow.
+     * 
+     * @return true if the FAIL_COMPLETED flow status should be handled in the API based authentication flow,
+     *         false otherwise.
+     */
+    private static boolean shouldHandleFailCompletedAuthenticatorFlowStatus() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(HANDLE_FAIL_COMPLETED_AUTHENTICATOR_FLOW_STATUS));
     }
 }

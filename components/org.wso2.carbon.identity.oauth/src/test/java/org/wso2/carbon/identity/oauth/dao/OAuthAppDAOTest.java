@@ -112,6 +112,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String CALLBACK = "http://localhost:8080/redirect";
     private static final String[] SCOPE_VALIDATORS = {"org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidator",
             "org.wso2.carbon.identity.oauth2.validators.XACMLScopeValidator"};
+    private static final String[] ACCESS_TOKEN_CLAIMS = {"http://wso2.org/claims/emailaddress",
+            "http://wso2.org/claims/username"};
     private static final int USER_ACCESS_TOKEN_EXPIRY_TIME = 3000;
     private static final int APPLICATION_ACCESS_TOKEN_EXPIRY_TIME = 2000;
     private static final int REFRESH_TOKEN_EXPIRY_TIME = 10000;
@@ -1291,6 +1293,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
                 OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
+                oAuthAppDO.setAccessTokenClaims(ACCESS_TOKEN_CLAIMS);
                 addOAuthApplication(oAuthAppDO, TENANT_ID);
 
                 OAuthAppDO actualAppDO = new OAuthAppDAO().getAppInformationByAppName(APP_NAME);
@@ -1298,6 +1301,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(actualAppDO.getApplicationName(), APP_NAME);
                 assertEquals(actualAppDO.getOauthConsumerKey(), CONSUMER_KEY);
                 assertEquals(actualAppDO.getOauthConsumerSecret(), CONSUMER_SECRET);
+                assertNotNull(actualAppDO.getAccessTokenClaims());
+                assertEquals(actualAppDO.getAccessTokenClaims(), ACCESS_TOKEN_CLAIMS);
             }
         } finally {
             resetPrivilegedCarbonContext();

@@ -81,6 +81,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ID_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.handleGroupClaim;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -155,7 +156,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Get any user attributes that were cached against the access token
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
-        if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
+        if (userAttributes != null &&
+                (userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser()))) {
@@ -180,6 +182,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
         // Remove the identityProviderMappedUserRoles claim since it is not an OIDC claim.
         userClaimsInOIDCDialect.remove(FrameworkConstants.IDP_MAPPED_USER_ROLES);
+
+        handleGroupClaim(requestMsgCtx.getAuthorizedUser(), userClaimsInOIDCDialect);
 
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
         if (isPreserverClaimUrisInAssertion(requestMsgCtx) || (hasNonOIDCClaimsProperty != null

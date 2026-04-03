@@ -444,6 +444,7 @@ public final class OAuthConstants {
         public static final String OIDC_DEFAULT_LOGOUT_RESPONSE_URL = "/authenticationendpoint/oauth2_logout.do";
         public static final String OIDC_LOGOUT_CONSENT_EP_URL = "/authenticationendpoint/oauth2_logout_consent.do";
         public static final String DEVICE_AUTHZ_EP_URL = "oauth2/device_authorize";
+        public static final String CIBA_EP_URL = "oauth2/ciba";
 
         private OAuth20Endpoints() {
 

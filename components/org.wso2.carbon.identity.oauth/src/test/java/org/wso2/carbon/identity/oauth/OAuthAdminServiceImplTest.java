@@ -316,7 +316,12 @@ public class OAuthAdminServiceImplTest {
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);

@@ -181,7 +181,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
             cacheEntry.setTenantId(resourceTenantId);
             // Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
             // which scopes haven't been defined).
-            OAuthCache.getInstance().addToCache(cacheKey, cacheEntry);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, cacheEntry);
         }
         // Return TRUE if - There does not exist a scope definition for the resource.
         if (resourceScope == null) {

@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -28,7 +26,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -55,15 +52,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
-import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
@@ -631,7 +624,11 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             }
             throw new IdentityOAuth2Exception("Actor token is not provided in the request.");
         } else if (StringUtils.isNotBlank(requestedActor) && StringUtils.isNotBlank(actorToken)) {
-            validateActorToken(tokReqMsgCtx, requestedActor);
+            String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+            String actorSub = ActorTokenValidator.validateAndGetSubject(actorToken, tenantDomain);
+            if (!StringUtils.equals(actorSub, requestedActor)) {
+                throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor.");
+            }
             tokReqMsgCtx.setRequestedActor(requestedActor);
         }
     }
@@ -745,60 +742,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
         oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
                 .getTrimmedAuthorizationDetails(authorizationCodeAuthorizationDetails));
-    }
-
-    /**
-     * Validates the actor token in the authorization code request.
-     *
-     * @param tokReqMsgCtx      OAuthTokenReqMessageContext
-     * @param requestedActor    The actor for which the token is requested
-     * @throws IdentityOAuth2Exception if an error occurs during validation
-     */
-    private void validateActorToken(OAuthTokenReqMessageContext tokReqMsgCtx, String requestedActor)
-            throws IdentityOAuth2Exception {
-
-        // Retrieve the signed JWT object from the request parameters
-        SignedJWT signedJWT;
-        try {
-            signedJWT = JWTUtils.parseJWT(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getActorToken());
-        } catch (ParseException e) {
-            throw new IdentityOAuth2Exception("Error while parsing the JWT", e);
-        }
-
-        // Extract claims from the JWT
-        Optional<JWTClaimsSet> claimsSetOptional = JWTUtils.getJWTClaimSet(signedJWT);
-
-        JWTClaimsSet claimsSet = claimsSetOptional.orElseThrow(() ->
-                new IdentityOAuth2Exception("Claim values are empty in the given Actor Token"));
-
-
-        String actorTokenSubject = claimsSet.getSubject();
-        // Validate the actor token subject against the requested actor
-        if (!StringUtils.equals(actorTokenSubject, requestedActor)) {
-            throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor");
-        }
-        // Validate mandatory claims
-        JWTUtils.validateMandatoryClaims(claimsSet);
-        String jwtIssuer = claimsSet.getIssuer();
-        String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        IdentityProvider identityProvider = OAuth2Util.getIdentityProviderWithJWTIssuer(jwtIssuer, tenantDomain);
-
-        if (JWTSignatureValidationUtils.validateSignature(signedJWT, identityProvider, tenantDomain)) {
-            log.debug("Signature/MAC validated successfully for actor token.");
-        } else {
-            throw new IdentityOAuth2Exception("Signature or Message Authentication invalid for actor token.");
-        }
-
-        // Check the validity of the JWT
-        JWTUtils.checkExpirationTime(claimsSet.getExpirationTime());
-        JWTUtils.checkNotBeforeTime(claimsSet.getNotBeforeTime());
-
-        // Validate the issuer of the subject token
-        String expectedIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
-        if (!StringUtils.equals(expectedIssuer, jwtIssuer)) {
-            throw new IdentityOAuth2Exception("Invalid issuer in the JWT. Expected: " + expectedIssuer +
-                    ", Received: " + jwtIssuer);
-        }
     }
 
 

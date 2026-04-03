@@ -65,6 +65,7 @@ import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.RequestCoordinator;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
@@ -72,6 +73,8 @@ import org.wso2.carbon.identity.application.authentication.framework.handler.req
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -87,6 +90,7 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -100,6 +104,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
@@ -167,6 +172,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.servlet.RequestDispatcher;
@@ -2291,6 +2297,111 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
 
         OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
         OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
+    }
+
+    @Test(description = "Test handleApiBasedAuthenticationResponse with FAIL_COMPLETED flow status, " +
+            "feature enabled, and error info present in AuthServiceResponse.")
+    public void testHandleApiBasedAuthResponseWithFailCompletedStatusAndErrorInfo() {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ApiAuthnUtils> apiAuthnUtils = mockStatic(ApiAuthnUtils.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    "AppNativeAuthentication.HandleFailCompletedAuthenticatorStatus")).thenReturn("true");
+
+            String testErrorCode = "AUTH-60001";
+            String testErrorDescription = "Authentication failed due to invalid credentials.";
+
+            AuthServiceErrorInfo errorInfo = mock(AuthServiceErrorInfo.class);
+            when(errorInfo.getErrorCode()).thenReturn(testErrorCode);
+            when(errorInfo.getErrorDescription()).thenReturn(testErrorDescription);
+
+            AuthServiceResponse authServiceResponse = mock(AuthServiceResponse.class);
+            when(authServiceResponse.getErrorInfo()).thenReturn(Optional.of(errorInfo));
+
+            Map<String, Object> requestAttributes = new HashMap<>();
+            requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS,
+                    AuthenticatorFlowStatus.FAIL_COMPLETED);
+            requestAttributes.put("authServiceResponse", authServiceResponse);
+            mockHttpRequest(new HashMap<>(), requestAttributes, HttpMethod.POST);
+
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response mockErrorResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            ArgumentCaptor<AuthServiceClientException> exceptionCaptor =
+                    ArgumentCaptor.forClass(AuthServiceClientException.class);
+            apiAuthnUtils.when(() -> ApiAuthnUtils.buildResponseForClientError(exceptionCaptor.capture(), any()))
+                    .thenReturn(mockErrorResponse);
+
+            Response oauthResponse = mock(Response.class);
+            Response result = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+
+            Assert.assertEquals(result, mockErrorResponse);
+            AuthServiceClientException capturedException = exceptionCaptor.getValue();
+            Assert.assertNotNull(capturedException);
+        }
+    }
+
+    @Test(description = "Test handleApiBasedAuthenticationResponse with FAIL_COMPLETED flow status, " +
+            "feature enabled, and no error info in AuthServiceResponse.")
+    public void testHandleApiBasedAuthResponseWithFailCompletedStatusWithoutErrorInfo() {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ApiAuthnUtils> apiAuthnUtils = mockStatic(ApiAuthnUtils.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    "AppNativeAuthentication.HandleFailCompletedAuthenticatorStatus")).thenReturn("true");
+
+            AuthServiceResponse authServiceResponse = mock(AuthServiceResponse.class);
+            when(authServiceResponse.getErrorInfo()).thenReturn(Optional.empty());
+
+            Map<String, Object> requestAttributes = new HashMap<>();
+            requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS,
+                    AuthenticatorFlowStatus.FAIL_COMPLETED);
+            requestAttributes.put("authServiceResponse", authServiceResponse);
+            mockHttpRequest(new HashMap<>(), requestAttributes, HttpMethod.POST);
+
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response mockErrorResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            ArgumentCaptor<AuthServiceClientException> exceptionCaptor =
+                    ArgumentCaptor.forClass(AuthServiceClientException.class);
+            apiAuthnUtils.when(() -> ApiAuthnUtils.buildResponseForClientError(exceptionCaptor.capture(), any()))
+                    .thenReturn(mockErrorResponse);
+
+            Response oauthResponse = mock(Response.class);
+            Response result = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+
+            Assert.assertEquals(result, mockErrorResponse);
+            Assert.assertNotNull(exceptionCaptor.getValue());
+        }
+    }
+
+    @Test(description = "Test handleApiBasedAuthenticationResponse with FAIL_COMPLETED flow status " +
+            "when feature is disabled falls through to else branch and returns original response.")
+    public void testHandleApiBasedAuthResponseWithFailCompletedStatusWhenFeatureDisabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    "AppNativeAuthentication.HandleFailCompletedAuthenticatorStatus")).thenReturn("false");
+
+            Map<String, Object> requestAttributes = new HashMap<>();
+            requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS,
+                    AuthenticatorFlowStatus.FAIL_COMPLETED);
+            mockHttpRequest(new HashMap<>(), requestAttributes, HttpMethod.POST);
+
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            MultivaluedMap<String, Object> metadata = mock(MultivaluedMap.class);
+            when(metadata.get("Location")).thenReturn(null);
+            Response oauthResponse = mock(Response.class);
+            when(oauthResponse.getMetadata()).thenReturn(metadata);
+
+            Response result = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+
+            Assert.assertEquals(result, oauthResponse);
+        }
     }
 
     private void mockSSOConsentService(boolean isConsentMgtEnabled) throws SSOConsentServiceException {

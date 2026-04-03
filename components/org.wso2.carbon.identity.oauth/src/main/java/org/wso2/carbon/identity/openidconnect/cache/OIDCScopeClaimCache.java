@@ -52,6 +52,11 @@ public class OIDCScopeClaimCache extends BaseCache<Integer, OIDCScopeClaimCacheE
         super.addToCache(tenantId, oidcScopeClaimCacheEntry, tenantId);
     }
 
+    public void addScopeClaimMapOnRead(int tenantId, OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry) {
+
+        super.addToCacheOnRead(tenantId, oidcScopeClaimCacheEntry, tenantId);
+    }
+
     public void clearScopeClaimMap(int tenantId) {
 
         super.clearCacheEntry(tenantId, tenantId);

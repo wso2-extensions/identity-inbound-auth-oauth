@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 
 import org.apache.commons.logging.Log;
 import java.lang.reflect.Field;
@@ -166,6 +167,25 @@ public class AccessTokenIssuerTest {
             Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
         }
         }
+
+    @Test
+    public void testHandleTokenBindingForRefreshTokenGrant() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext tokReqMsgCtx = Mockito.mock(OAuthTokenReqMessageContext.class);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setTokenBindingType("");
+
+        AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+        Method method = AccessTokenIssuer.class.getDeclaredMethod(
+                "handleTokenBinding",
+                OAuth2AccessTokenReqDTO.class, String.class,
+                OAuthTokenReqMessageContext.class, OAuthAppDO.class);
+        method.setAccessible(true);
+
+        method.invoke(issuer, tokenReqDTO, REFRESH_TOKEN, tokReqMsgCtx, oAuthAppDO);
+        Mockito.verify(tokReqMsgCtx, never()).setTokenBinding(any());
+    }
 
 //    @BeforeMethod
 //    public void setUp() throws Exception {

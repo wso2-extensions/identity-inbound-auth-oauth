@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.store.UserS
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAO;
@@ -54,8 +55,10 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.AUTH_REQ_ID;
@@ -80,6 +83,7 @@ public class CibaGrantHandlerTest {
     private MockedStatic<OAuth2Util> oAuth2Util;
     private MockedStatic<UserSessionStore> userSessionStore;
     private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder;
+    private MockedStatic<IdentityUtil> identityUtil;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -96,6 +100,7 @@ public class CibaGrantHandlerTest {
         oAuth2Util = mockStatic(OAuth2Util.class);
         userSessionStore = mockStatic(UserSessionStore.class);
         oAuth2ServiceComponentHolder = mockStatic(OAuth2ServiceComponentHolder.class);
+        identityUtil = mockStatic(IdentityUtil.class);
     }
 
     @AfterMethod
@@ -114,6 +119,9 @@ public class CibaGrantHandlerTest {
         }
         if (oAuth2ServiceComponentHolder != null) {
             oAuth2ServiceComponentHolder.close();
+        }
+        if (identityUtil != null) {
+            identityUtil.close();
         }
     }
 
@@ -473,12 +481,100 @@ public class CibaGrantHandlerTest {
         verify(cibaMgtDAO).updateStatus("auth-code-key", AuthReqStatus.TOKEN_ISSUED);
     }
 
+    @Test
+    public void testSetPropertiesForTokenGeneration_agentEnabled_withRequestedActor_setsActorOnContext()
+            throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setAuthenticatedUser(new AuthenticatedUser());
+        cibaAuthCodeDO.setScopes(new String[]{"openid"});
+        cibaAuthCodeDO.setRequestedActor("agent-sub-001");
+        identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+
+        invokePrivateMethodWithTypes(handler, "setPropertiesForTokenGeneration",
+                new Class[]{OAuthTokenReqMessageContext.class, CibaAuthCodeDO.class},
+                tokReqMsgCtx, cibaAuthCodeDO);
+
+        verify(tokReqMsgCtx).setRequestedActor("agent-sub-001");
+    }
+
+    @Test
+    public void testSetPropertiesForTokenGeneration_agentDisabled_doesNotSetActor() throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setAuthenticatedUser(new AuthenticatedUser());
+        cibaAuthCodeDO.setScopes(new String[]{"openid"});
+        cibaAuthCodeDO.setRequestedActor("agent-sub-001");
+        identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(false);
+
+        invokePrivateMethodWithTypes(handler, "setPropertiesForTokenGeneration",
+                new Class[]{OAuthTokenReqMessageContext.class, CibaAuthCodeDO.class},
+                tokReqMsgCtx, cibaAuthCodeDO);
+
+        verify(tokReqMsgCtx, never()).setRequestedActor(any());
+    }
+
+    @Test
+    public void testSetPropertiesForTokenGeneration_agentEnabled_nullRequestedActor_doesNotSetActor()
+            throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setAuthenticatedUser(new AuthenticatedUser());
+        cibaAuthCodeDO.setScopes(new String[]{"openid"});
+        cibaAuthCodeDO.setRequestedActor(null);
+        identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+
+        invokePrivateMethodWithTypes(handler, "setPropertiesForTokenGeneration",
+                new Class[]{OAuthTokenReqMessageContext.class, CibaAuthCodeDO.class},
+                tokReqMsgCtx, cibaAuthCodeDO);
+
+        verify(tokReqMsgCtx, never()).setRequestedActor(any());
+    }
+
+    @Test
+    public void testSetPropertiesForTokenGeneration_agentEnabled_emptyRequestedActor_doesNotSetActor()
+            throws Exception {
+
+        CibaGrantHandler handler = new CibaGrantHandler();
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setAuthenticatedUser(new AuthenticatedUser());
+        cibaAuthCodeDO.setScopes(new String[]{"openid"});
+        cibaAuthCodeDO.setRequestedActor("");
+        identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+
+        invokePrivateMethodWithTypes(handler, "setPropertiesForTokenGeneration",
+                new Class[]{OAuthTokenReqMessageContext.class, CibaAuthCodeDO.class},
+                tokReqMsgCtx, cibaAuthCodeDO);
+
+        verify(tokReqMsgCtx, never()).setRequestedActor(any());
+    }
+
     private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
 
         Class<?>[] paramTypes = new Class[params.length];
         for (int i = 0; i < params.length; i++) {
             paramTypes[i] = params[i].getClass();
         }
+        Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
+        method.setAccessible(true);
+
+        try {
+            return method.invoke(object, params);
+        } catch (InvocationTargetException e) {
+            throw (Exception) e.getTargetException();
+        }
+    }
+
+    private Object invokePrivateMethodWithTypes(Object object, String methodName,
+                                                Class<?>[] paramTypes, Object... params) throws Exception {
+
         Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
         method.setAccessible(true);
 

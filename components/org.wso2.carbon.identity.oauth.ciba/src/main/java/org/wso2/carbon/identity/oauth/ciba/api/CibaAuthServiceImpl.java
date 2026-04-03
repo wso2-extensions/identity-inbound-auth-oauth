@@ -72,6 +72,11 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             throw new CibaCoreException("Error fetching app information for client: " + clientID, e);
         }
 
+        if (appDO.isBypassClientCredentials()) {
+            throw new CibaClientException("CIBA cannot be used with public clients. Client: " + clientID + " " +
+                    "is configured as a public client.");
+        }
+
         // Generate and persist the auth code
         CibaAuthCodeDO cibaAuthCodeDO = generateCibaAuthCodeDO(cibaAuthCodeRequest, appDO);
 
@@ -306,6 +311,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
         cibaAuthCodeDO.setInterval(CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
         cibaAuthCodeDO.setExpiresIn(expiryTime);
         cibaAuthCodeDO.setScopes(scopes);
+        cibaAuthCodeDO.setRequestedActor(cibaAuthCodeRequest.getRequestedActor());
         return cibaAuthCodeDO;
     }
 

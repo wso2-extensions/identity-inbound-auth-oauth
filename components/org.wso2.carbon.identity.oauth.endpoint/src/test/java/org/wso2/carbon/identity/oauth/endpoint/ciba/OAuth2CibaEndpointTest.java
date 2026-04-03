@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
@@ -51,7 +52,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.CibaAuthServiceFactory;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.ActorTokenValidator;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -77,6 +80,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -739,5 +743,163 @@ public class OAuth2CibaEndpointTest {
         
         Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         Assert.assertTrue(response.getEntity().toString().contains("Invalid value for (requested_expiry)"));
+    }
+
+    @Test
+    public void testCibaRequest_actorToken_agentEnabled_validToken_setsRequestedActor() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+        lenient().when(httpServletRequest.getParameter(OAuthConstants.ACTOR_TOKEN)).thenReturn("actor.jwt.token");
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ActorTokenValidator> actorTokenValidator = mockStatic(ActorTokenValidator.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory =
+                     mockStatic(CibaAuthServiceFactory.class)) {
+
+            identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+            actorTokenValidator.when(() ->
+                    ActorTokenValidator.validateAndGetSubject("actor.jwt.token", "carbon.super"))
+                    .thenReturn("actor-subject-001");
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            ArgumentCaptor<org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest> captor =
+                    ArgumentCaptor.forClass(
+                            org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest.class);
+
+            Response cibaResponse = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            Assert.assertEquals(cibaResponse.getStatus(), HttpServletResponse.SC_OK);
+            verify(authService).generateAuthCodeResponse(captor.capture());
+            Assert.assertEquals(captor.getValue().getRequestedActor(), "actor-subject-001");
+        }
+    }
+
+    @Test
+    public void testCibaRequest_actorToken_agentDisabled_tokenIgnored() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+        lenient().when(httpServletRequest.getParameter(OAuthConstants.ACTOR_TOKEN)).thenReturn("actor.jwt.token");
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ActorTokenValidator> actorTokenValidator = mockStatic(ActorTokenValidator.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory =
+                     mockStatic(CibaAuthServiceFactory.class)) {
+
+            identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(false);
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            actorTokenValidator.verify(() ->
+                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()), never());
+        }
+    }
+
+    @Test
+    public void testCibaRequest_actorToken_agentEnabled_invalidToken_returns400() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+        lenient().when(httpServletRequest.getParameter(OAuthConstants.ACTOR_TOKEN)).thenReturn("bad.actor.token");
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ActorTokenValidator> actorTokenValidator = mockStatic(ActorTokenValidator.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+            actorTokenValidator.when(() ->
+                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()))
+                    .thenThrow(new IdentityOAuth2Exception("Signature validation failed for actor token"));
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+            Response cibaResponse = oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            Assert.assertEquals(cibaResponse.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+            Assert.assertTrue(cibaResponse.getEntity().toString().contains("Invalid actor_token"));
+        }
+    }
+
+    @Test
+    public void testCibaRequest_actorToken_agentEnabled_blankToken_skipsValidation() throws Exception {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(CONSUMER_KEY);
+        when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                oAuthClientAuthnContext);
+        lenient().when(httpServletRequest.getParameter(OAuthConstants.ACTOR_TOKEN)).thenReturn("");
+
+        MultivaluedHashMap<String, String> paramMap = new MultivaluedHashMap<>();
+        paramMap.put("scope", Collections.singletonList("openid"));
+        paramMap.put("login_hint", Collections.singletonList("user"));
+
+        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(paramMap.keySet()));
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ActorTokenValidator> actorTokenValidator = mockStatic(ActorTokenValidator.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory =
+                     mockStatic(CibaAuthServiceFactory.class)) {
+
+            identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+            mockServiceURLBuilder(serviceURLBuilder);
+
+            oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
+
+            actorTokenValidator.verify(() ->
+                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()), never());
+        }
     }
 }

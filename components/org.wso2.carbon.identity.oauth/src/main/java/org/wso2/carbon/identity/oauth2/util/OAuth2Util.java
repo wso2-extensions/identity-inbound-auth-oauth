@@ -30,6 +30,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDHEncrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -200,6 +201,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
@@ -225,6 +227,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ADD_USER_STORE_DOMAIN_TO_GROUPS_CLAIM;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
@@ -233,6 +236,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_I
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_TOKEN_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.CIBA_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.DEVICE_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_CONSENT_EP_URL;
@@ -247,6 +251,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OAUTH2_USER_INFO_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.Scope.OAUTH2;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
@@ -435,6 +440,7 @@ public class OAuth2Util {
             "OAuth.EnableLegacySessionBoundTokenBehaviour";
     private static final String ALLOW_SESSION_BOUND_TOKENS_AFTER_IDLE_SESSION_EXPIRY =
             "OAuth.AllowSessionBoundTokensAfterIdleSessionExpiry";
+    private static final String DROP_UNREQUESTED_OIDC_SCOPES = "OAuth.DropUnrequestedOIDCScopes";
 
     private OAuth2Util() {
 
@@ -838,9 +844,11 @@ public class OAuth2Util {
                  */
                 if (isUsernameCaseSensitive) {
                     OAuthCache.getInstance()
-                            .addToCache(new OAuthCacheKey(clientId + ":" + username), new ClientCredentialDO(username));
+                            .addToCacheOnRead(new OAuthCacheKey(clientId + ":" + username),
+                                    new ClientCredentialDO(username));
                 } else {
-                    OAuthCache.getInstance().addToCache(new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
+                    OAuthCache.getInstance().addToCacheOnRead(
+                            new OAuthCacheKey(clientId + ":" + username.toLowerCase()),
                             new ClientCredentialDO(username));
                 }
                 if (log.isDebugEnabled()) {
@@ -1754,6 +1762,11 @@ public class OAuth2Util {
             return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl,
                     OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrlV2);
         }
+
+        public static String getCibaEPUrl() {
+
+            return buildUrl(CIBA_EP_URL, null, null);
+        }
     }
 
     /**
@@ -2307,7 +2320,7 @@ public class OAuth2Util {
         // Add the token back to the cache in the case of a cache miss but don't add to cache when OAuth2 token
         // hashing feature enabled inorder to reduce the complexity.
         if (!cacheHit & OAuth2Util.isHashDisabled()) {
-            OAuthCache.getInstance().addToCache(cacheKey, accessTokenDO);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, accessTokenDO);
             if (log.isDebugEnabled()) {
                 log.debug("Access Token Info object was added back to the cache.");
             }
@@ -2605,7 +2618,7 @@ public class OAuth2Util {
         } else {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
             }
             return oAuthAppDO;
         }
@@ -2629,10 +2642,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 }
             }
         }
@@ -2662,7 +2675,7 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException(message);
             }
             oAuthAppDO = appList[0];
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
         }
         return oAuthAppDO;
     }
@@ -2723,7 +2736,7 @@ public class OAuth2Util {
         try {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO, tenantDomain);
                 return Optional.of(oAuthAppDO);
             }
             return Optional.empty();
@@ -2755,10 +2768,10 @@ public class OAuth2Util {
             if (oAuthAppDO != null) {
                 if (!AuthzUtil.isLegacyAuthzRuntime() && oAuthAppDO.getAppOwner() != null &&
                         StringUtils.isNotEmpty(oAuthAppDO.getAppOwner().getTenantDomain())) {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                    AppInfoCache.getInstance().addToCacheOnRead(clientId, oAuthAppDO);
                 }
             }
         }
@@ -3133,13 +3146,16 @@ public class OAuth2Util {
                                  String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
-        if (isRSAAlgorithm(encryptionAlgorithm)) {
+        if (isSupportedAlgorithm(encryptionAlgorithm)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Signing JWT before encryption using the algorithm: %s ."
                         , signatureAlgorithm));
             }
             SignedJWT signedJwt = (SignedJWT) OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain);
-            return encryptWithRSA(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Encrypting JWT using encryption algorithm: %s .", encryptionAlgorithm));
+            }
+            return encryptWithSPCertificate(signedJwt, encryptionAlgorithm, encryptionMethod, spTenantDomain, clientId);
         } else {
             throw new RuntimeException("Provided encryption algorithm: " + encryptionAlgorithm +
                     " is not supported");
@@ -3155,7 +3171,8 @@ public class OAuth2Util {
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
-     * @deprecated replaced by {@link #encryptWithRSA(SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
+     * @deprecated replaced by {@link #encryptWithSPCertificate(
+     *                                  SignedJWT, JWEAlgorithm, EncryptionMethod, String, String)}
      */
     @Deprecated
     private static JWT encryptWithRSA(JWTClaimsSet jwtClaimsSet, JWEAlgorithm encryptionAlgorithm,
@@ -3197,13 +3214,14 @@ public class OAuth2Util {
      * Encrypt JWT id token using RSA algorithm.
      *
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
+     * @param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption method
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
      * @return encrypted JWT token
      * @throws IdentityOAuth2Exception
      */
-    private static JWT encryptWithRSA(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
+    private static JWT encryptWithSPCertificate(SignedJWT signedJwt, JWEAlgorithm encryptionAlgorithm,
                                       EncryptionMethod encryptionMethod, String spTenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
@@ -3438,11 +3456,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt the JWT token with with given public key.
+     * Encrypt the JWT token with given public key.
      *
      * @param publicKey           public key used to encrypt
      * @param signedJwt           contains signed JWT body
-     * @param encryptionAlgorithm JWT signing algorithm
+     **@param encryptionAlgorithm JWT encryption algorithm
+     * @param encryptionMethod    JWT encryption Method
      * @param spTenantDomain      Service provider tenant domain
      * @param clientId            ID of the client
      * @param kid                 value used as 'kid'
@@ -3464,8 +3483,8 @@ public class OAuth2Util {
             JWEHeader header = headerBuilder.build();
 
             JWEObject jweObject = new JWEObject(header, new Payload(signedJwt));
-            // Encrypt with the recipient's public key.
-            jweObject.encrypt(new RSAEncrypter((RSAPublicKey) publicKey));
+            // Encrypt with the recipient's public key validating the encrypter type
+            jweObject.encrypt(validateEncrypterMode(encryptionAlgorithm, publicKey));
 
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(jweObject.serialize());
 
@@ -3479,6 +3498,29 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
+    }
+
+    /**
+     * Validate and get the Encrypter type.
+     *
+     * @param encryptionAlgorithm SP configured Encryption Algorithm
+     * @param publicKey           public key
+     * @return JWEEncrypter       encrypter type
+     * @throws JOSEException
+     */
+    private static JWEEncrypter validateEncrypterMode(JWEAlgorithm encryptionAlgorithm, Key publicKey)
+            throws JOSEException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Validating encrypter mode for algorithm: " + encryptionAlgorithm);
+        }
+        // Use built-in Nimbus Encryptor for supported algorithms
+         if (JWEAlgorithm.ECDH_ES_A256KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.equals(encryptionAlgorithm)) {
+            return new ECDHEncrypter((ECPublicKey) publicKey);
+         }
+        return new RSAEncrypter((RSAPublicKey) publicKey);
     }
 
     /**
@@ -3770,6 +3812,14 @@ public class OAuth2Util {
                 JWEAlgorithm.RSA_OAEP_256.equals(algorithm));
     }
 
+    private static boolean isSupportedAlgorithm(JWEAlgorithm algorithm) {
+
+        return (JWEAlgorithm.ECDH_ES_A128KW.equals(algorithm) || JWEAlgorithm.ECDH_ES_A192KW.equals(algorithm) ||
+                JWEAlgorithm.ECDH_ES_A256KW.equals(algorithm) || JWEAlgorithm.RSA_OAEP.equals(algorithm) ||
+                JWEAlgorithm.RSA1_5.equals(algorithm) || JWEAlgorithm.RSA_OAEP_256.equals(algorithm) ||
+                JWEAlgorithm.RSA_OAEP_384.equals(algorithm) || JWEAlgorithm.RSA_OAEP_512.equals(algorithm));
+    }
+
     /**
      * Method to obtain the public certificate for the tenant domain.
      * This could be the primary keystore public cert, tenant keystore public cert,
@@ -3790,10 +3840,10 @@ public class OAuth2Util {
     }
 
     /**
-     * Method to obatin Default Signing certificate for the tenant.
+     * Method to obtain Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
-     * @param tenantId     Tenan ID as an integer.
+     * @param tenantId     Tenant ID as an integer.
      * @return Default Signing Certificate of the tenant domain.
      * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
      */
@@ -5906,8 +5956,9 @@ public class OAuth2Util {
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             String requestedScopes = StringUtils.join(requestedScopesArr, " ");
+            boolean shouldIncludeOIDCScopes = !shouldDropUnrequestedOIDCScopes();
             Set<Scope> registeredScopeSet = OAuthTokenPersistenceFactory.getInstance().getOAuthScopeDAO()
-                    .getRequestedScopesOnly(tenantId, true, requestedScopes);
+                    .getRequestedScopesOnly(tenantId, shouldIncludeOIDCScopes, requestedScopes);
             List<String> filteredScopes = new ArrayList<>();
             registeredScopeSet.forEach(scope -> filteredScopes.add(scope.getName()));
 
@@ -7018,6 +7069,80 @@ public class OAuth2Util {
         return Arrays.stream(serviceProviderProperties).
                 anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
                         Boolean.parseBoolean(property.getValue()));
+    }
+
+    /**
+     * Check whether unrequested OIDC scopes from the application should be dropped in the token response.
+     *
+     * @return true if unrequested OIDC scopes should be dropped, false otherwise.
+     */
+    public static boolean shouldDropUnrequestedOIDCScopes() {
+
+        String property = IdentityUtil.getProperty(DROP_UNREQUESTED_OIDC_SCOPES);
+        if (StringUtils.isBlank(property)) {
+            return true;
+        }
+        return Boolean.parseBoolean(property);
+    }
+
+    /**
+     * Specially handle group claim values.
+     *
+     * @param authenticatedUser Authenticated User.
+     * @param mappedAttrs Mapped claim attributes.
+     */
+    public static void handleGroupClaim(AuthenticatedUser authenticatedUser, Map<String, Object> mappedAttrs) {
+
+        if (!IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled() ||
+                !Boolean.parseBoolean(IdentityUtil.getProperty(ADD_USER_STORE_DOMAIN_TO_GROUPS_CLAIM))) {
+            return;
+        }
+
+        if (!mappedAttrs.containsKey(GROUPS) || authenticatedUser == null) {
+            return;
+        }
+
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        if (resolvePrimaryUserStoreDomainName().equals(userStoreDomain)) {
+            return;
+        }
+        String domainPrefix = userStoreDomain + "/";
+        String[] groups = mappedAttrs.get(GROUPS).toString()
+                .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
+
+        List<String> groupList = Arrays.stream(groups)
+                .map(String::trim)
+                .map(group -> {
+                    if (group.isEmpty()) {
+                        return group;
+                    }
+                    // If the group already starts with the domain prefix (case-insensitive), keep it as-is.
+                    if (group.length() >= domainPrefix.length()
+                            && group.regionMatches(true, 0, domainPrefix, 0, domainPrefix.length())) {
+                        return group;
+                    }
+                    // Otherwise prepend the domain prefix.
+                    return domainPrefix + group;
+                })
+                .collect(Collectors.toList());
+        mappedAttrs.put(GROUPS, String.join(FrameworkUtils.getMultiAttributeSeparator(), groupList));
+    }
+
+    /**
+     * Resolves and returns the primary user store domain name.
+     *
+     * @return The primary user store domain name in uppercase, or the default primary domain name
+     *         if no domain is configured.
+     */
+    public static String resolvePrimaryUserStoreDomainName() {
+
+        RealmConfiguration realmConfiguration = OAuthComponentServiceHolder.getInstance().getRealmService()
+                .getBootstrapRealmConfiguration();
+        if (realmConfiguration.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME) != null) {
+            return realmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME).toUpperCase();
+        }
+        return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
     }
 
     /**

@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -304,6 +305,10 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
 
         tokReqMsgCtx.setAuthorizedUser(cibaAuthCodeDO.getAuthenticatedUser());
         tokReqMsgCtx.setScope(cibaAuthCodeDO.getScopes());
+        if (IdentityUtil.isAgentIdentityEnabled()
+                && StringUtils.isNotBlank(cibaAuthCodeDO.getRequestedActor())) {
+            tokReqMsgCtx.setRequestedActor(cibaAuthCodeDO.getRequestedActor());
+        }
     }
 
     /**
