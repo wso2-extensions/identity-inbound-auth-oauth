@@ -33,6 +33,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -176,6 +177,49 @@ public class AuthzServerMetadataEndpointTest {
             Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(httpServletRequest);
             Assert.assertEquals(expectedResponse, response.getStatus());
             threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        }
+    }
+
+    @Test
+    public void testGetAuthzServerMetadataWithOIDCDiscoveryException() throws Exception {
+
+        try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
+                     mockStatic(OIDCProviderServiceFactory.class);
+             MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceFactory =
+                     mockStatic(OIDCDiscoveryServiceFactory.class)) {
+
+            oidcDiscoveryServiceFactory.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
+                    .thenReturn(oidProviderResponseBuilder);
+            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
+                    .thenReturn(defaultOIDCProcessor);
+            when(defaultOIDCProcessor.getResponse(any(), any())).thenThrow(
+                    new OIDCDiscoveryEndPointException(OIDCDiscoveryEndPointException.ERROR_CODE_SERVER_ERROR,
+                            "Discovery error"));
+            when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
+                    .thenReturn(HttpServletResponse.SC_BAD_REQUEST);
+
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(httpServletRequest);
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    @Test
+    public void testGetAuthzServerMetadataWithServerConfigurationException() throws Exception {
+
+        try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
+                     mockStatic(OIDCProviderServiceFactory.class);
+             MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceFactory =
+                     mockStatic(OIDCDiscoveryServiceFactory.class)) {
+
+            oidcDiscoveryServiceFactory.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
+                    .thenReturn(oidProviderResponseBuilder);
+            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
+                    .thenReturn(defaultOIDCProcessor);
+            when(defaultOIDCProcessor.getResponse(any(), any()))
+                    .thenThrow(new ServerConfigurationException("Server config error"));
+
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(httpServletRequest);
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
 
