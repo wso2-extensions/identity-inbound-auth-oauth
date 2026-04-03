@@ -138,6 +138,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultRespons
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.JarmResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -2454,6 +2455,200 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
             Response result = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
 
             Assert.assertEquals(result, oauthResponse);
+        }
+    }
+    @Test
+    public void testIsFormPostOrFormPostJWTResponseMode() throws Exception {
+
+        Method isFormPostOrFormPostJWTResponseMode = AuthzUtil.class.getDeclaredMethod(
+                "isFormPostOrFormPostJWTResponseMode", String.class);
+        isFormPostOrFormPostJWTResponseMode.setAccessible(true);
+
+        Assert.assertTrue((boolean) isFormPostOrFormPostJWTResponseMode.invoke(
+                authzUtilObject, OAuthConstants.ResponseModes.FORM_POST));
+        Assert.assertFalse((boolean) isFormPostOrFormPostJWTResponseMode.invoke(
+                authzUtilObject, OAuthConstants.ResponseModes.QUERY));
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlWithRedirectResponse() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.JWT);
+        oAuth2Parameters.setResponseType("code");
+
+        Map<String, ResponseModeProvider> originalProviders = OAuth2ServiceComponentHolder.getResponseModeProviders();
+        ResponseModeProvider originalDefaultProvider = OAuth2ServiceComponentHolder.getDefaultResponseModeProvider();
+
+        JarmResponseModeProvider jarmResponseModeProvider = mock(JarmResponseModeProvider.class);
+        when(jarmResponseModeProvider.canHandle(any())).thenReturn(true);
+        when(jarmResponseModeProvider.getAuthResponseType()).thenReturn(ResponseModeProvider.AuthResponseType
+                .REDIRECTION);
+        when(jarmResponseModeProvider.getAuthResponseRedirectUrl(any())).thenReturn(
+                "https://localhost:9443/callback?response=dummy-jarm-jwt");
+
+        try {
+            OAuth2ServiceComponentHolder.setResponseModeProviders(Collections.singletonMap(
+                    OAuthConstants.ResponseModes.JWT, jarmResponseModeProvider));
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(jarmResponseModeProvider);
+
+            String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                    OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+            Assert.assertEquals(result, "https://localhost:9443/callback?response=dummy-jarm-jwt");
+        } finally {
+            OAuth2ServiceComponentHolder.setResponseModeProviders(originalProviders);
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(originalDefaultProvider);
+        }
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlReturnsNullForRegexRedirectUri() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.JWT);
+        oAuth2Parameters.setRedirectURI("regexp=(localhost)");
+
+        String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlReturnsNullForBlankResponseMode() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        // responseMode is blank
+
+        String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlReturnsNullForBlankRedirectUri() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.JWT);
+        // redirectURI is blank
+
+        String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlReturnsNullForNonJARMProvider() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.QUERY);
+        oAuth2Parameters.setResponseType("code");
+
+        Map<String, ResponseModeProvider> originalProviders = OAuth2ServiceComponentHolder.getResponseModeProviders();
+        ResponseModeProvider originalDefaultProvider = OAuth2ServiceComponentHolder.getDefaultResponseModeProvider();
+
+        // Use a non-JARM provider (e.g. query provider mock)
+        ResponseModeProvider nonJarmProvider = mock(ResponseModeProvider.class);
+        when(nonJarmProvider.canHandle(any())).thenReturn(true);
+        when(nonJarmProvider.getAuthResponseType()).thenReturn(ResponseModeProvider.AuthResponseType.REDIRECTION);
+
+        try {
+            OAuth2ServiceComponentHolder.setResponseModeProviders(Collections.singletonMap(
+                    OAuthConstants.ResponseModes.QUERY, nonJarmProvider));
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(nonJarmProvider);
+
+            String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                    OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+            Assert.assertNull(result);
+        } finally {
+            OAuth2ServiceComponentHolder.setResponseModeProviders(originalProviders);
+            OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(originalDefaultProvider);
+        }
+    }
+
+    @Test
+    public void testBuildJARMErrorRedirectUrlReturnsNullOnOAuthProblemException() throws Exception {
+
+        Method buildJARMErrorRedirectUrl = AuthzUtil.class.getDeclaredMethod(
+                "buildJARMErrorRedirectUrl", OAuth2Parameters.class, String.class, String.class);
+        buildJARMErrorRedirectUrl.setAccessible(true);
+
+        // query.jwt with token response type triggers OAuthProblemException in validateResponseModeWithResponseType
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.QUERY_JWT);
+        oAuth2Parameters.setResponseType("token");
+
+        String result = (String) buildJARMErrorRedirectUrl.invoke(authzUtilObject, oAuth2Parameters,
+                OAuth2ErrorCodes.INVALID_REQUEST, "invalid request");
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testIsJARMErrorResponseEnabled_returnsTrue() throws Exception {
+
+        Method isJARMErrorResponseEnabled = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponseEnabled");
+        isJARMErrorResponseEnabled.setAccessible(true);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isJARMErrorResponseEnabled()).thenReturn(true);
+
+            boolean result = (boolean) isJARMErrorResponseEnabled.invoke(authzUtilObject);
+            Assert.assertTrue(result);
+        }
+    }
+
+    @Test
+    public void testIsJARMErrorResponseEnabled_returnsFalse() throws Exception {
+
+        Method isJARMErrorResponseEnabled = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponseEnabled");
+        isJARMErrorResponseEnabled.setAccessible(true);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isJARMErrorResponseEnabled()).thenReturn(false);
+
+            boolean result = (boolean) isJARMErrorResponseEnabled.invoke(authzUtilObject);
+            Assert.assertFalse(result);
         }
     }
 

@@ -157,6 +157,7 @@ public class OAuthServerConfiguration {
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
     private long jarmResponseJwtValidityPeriodInSeconds = 3600;
+    private boolean jarmErrorResponseEnabled = false;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
@@ -1177,6 +1178,11 @@ public class OAuthServerConfiguration {
     public long getJarmResponseJwtValidityPeriodInSeconds() {
 
         return jarmResponseJwtValidityPeriodInSeconds;
+    }
+
+    public boolean isJARMErrorResponseEnabled() {
+
+        return jarmErrorResponseEnabled;
     }
 
     public long getApplicationAccessTokenValidityPeriodInSeconds() {
@@ -2399,6 +2405,13 @@ public class OAuthServerConfiguration {
                 ConfigElements.JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD));
         if (jarmResponseJwtTimeoutElem != null) {
             jarmResponseJwtValidityPeriodInSeconds = Long.parseLong(jarmResponseJwtTimeoutElem.getText());
+        }
+
+        // set JARM error response enabled
+        OMElement jarmErrorResponseEnabledElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ENABLE_JARM_ERROR_RESPONSE));
+        if (jarmErrorResponseEnabledElem != null) {
+            jarmErrorResponseEnabled = Boolean.parseBoolean(jarmErrorResponseEnabledElem.getText());
         }
 
         // set the application access token default timeout
@@ -4574,6 +4587,7 @@ public class OAuthServerConfiguration {
 
         private static final String JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD =
                 "JARMResponseJwtValidityPeriodInSeconds";
+        private static final String ENABLE_JARM_ERROR_RESPONSE = "EnableJARMErrorResponse";
         private static final String APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD = "AccessTokenDefaultValidityPeriod";
         private static final String REFRESH_TOKEN_VALIDITY_PERIOD = "RefreshTokenValidityPeriod";
         // Enable/Disable cache

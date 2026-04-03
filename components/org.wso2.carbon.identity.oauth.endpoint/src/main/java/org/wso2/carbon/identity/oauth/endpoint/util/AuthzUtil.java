@@ -147,6 +147,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.JarmResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
@@ -162,6 +163,8 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -2863,6 +2866,13 @@ public class AuthzUtil {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
+                // If response_mode requires JARM (e.g., response_mode=jwt for FAPI), wrap the error in a JWT.
+                if (isJARMErrorResponseEnabled()) {
+                    String jarmErrorUrl = buildJARMErrorRedirectUrl(params, e.getErrorCode(), e.getErrorMessage());
+                    if (StringUtils.isNotBlank(jarmErrorUrl)) {
+                        return jarmErrorUrl;
+                    }
+                }
                 if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
                     return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_URI,
@@ -2872,6 +2882,19 @@ public class AuthzUtil {
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
                             null, params);
                 }
+            } catch (InvalidRequestException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Request Object validation failed due to : " + e.getErrorCode() + " for client_id: "
+                            + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
+                }
+                // If response_mode requires JARM (e.g., response_mode=jwt for FAPI), wrap the error in a JWT.
+                if (isJARMErrorResponseEnabled()) {
+                    String jarmErrorUrl = buildJARMErrorRedirectUrl(params, e.getErrorCode(), e.getMessage());
+                    if (StringUtils.isNotBlank(jarmErrorUrl)) {
+                        return jarmErrorUrl;
+                    }
+                }
+                throw e;
             }
         }
 
@@ -3042,6 +3065,45 @@ public class AuthzUtil {
                     OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REDIRECT_URI);
         }
         persistRequestObject(parameters, requestObject);
+    }
+
+    private static String buildJARMErrorRedirectUrl(OAuth2Parameters params, String errorCode, String errorMessage) {
+
+        if (StringUtils.isBlank(params.getResponseMode()) || StringUtils.isBlank(params.getRedirectURI())
+                || StringUtils.startsWith(params.getRedirectURI(), REGEX_PATTERN)) {
+            return null;
+        }
+        AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(params);
+        authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, errorMessage, errorCode);
+        try {
+            ResponseModeProvider responseModeProvider = getResponseModeProvider(authorizationResponseDTO);
+            if (responseModeProvider instanceof JarmResponseModeProvider) {
+                log.debug("JARM response mode detected, building JARM error redirect URL.");
+                return responseModeProvider.getAuthResponseRedirectUrl(authorizationResponseDTO);
+            }
+            log.debug("Non-JARM response mode; default error handling will be used.");
+        } catch (OAuthProblemException e) {
+            log.error("Error determining response mode provider for JARM error redirect. Falling back to "
+                    + "default error handling.", e);
+        }
+        return null;
+    }
+
+    private static boolean isJARMErrorResponseEnabled() {
+
+        try {
+            Method isJarmErrorResponseEnabledMethod = OAuthServerConfiguration.class
+                    .getMethod("isJARMErrorResponseEnabled");
+            Object methodResult = isJarmErrorResponseEnabledMethod.invoke(OAuthServerConfiguration.getInstance());
+            return methodResult instanceof Boolean && (Boolean) methodResult;
+        } catch (NoSuchMethodException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("JARM error response toggle is not available in this OAuthServerConfiguration version.", e);
+            }
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            log.error("Error while checking JARM error response configuration. Falling back to default behavior.", e);
+        }
+        return false;
     }
 
     private static void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
