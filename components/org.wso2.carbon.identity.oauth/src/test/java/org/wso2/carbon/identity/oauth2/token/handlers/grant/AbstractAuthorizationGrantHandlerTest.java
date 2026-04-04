@@ -181,13 +181,13 @@ public class AbstractAuthorizationGrantHandlerTest {
         if (cachedTokenValidity > 0) {
             assertEquals(tokenRespDTO.getExpiresIn(), cachedTokenValidity);
         } else {
-            assertEquals(tokenRespDTO.getExpiresIn(), 9223372036854775L);
+            assertEquals(tokenRespDTO.getExpiresIn(), Long.MAX_VALUE / SECONDS_TO_MILISECONDS_FACTOR);
         }
         if (cachedTokenValidity > 0 && cachedRefreshTokenValidity > 0) {
             assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(),
                     cachedRefreshTokenValidity * SECONDS_TO_MILISECONDS_FACTOR);
         } else {
-            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(), 9223372036854775807L);
+            assertEquals(tokenRespDTO.getRefreshTokenExpiresInMillis(), Long.MAX_VALUE);
         }
     }
 
