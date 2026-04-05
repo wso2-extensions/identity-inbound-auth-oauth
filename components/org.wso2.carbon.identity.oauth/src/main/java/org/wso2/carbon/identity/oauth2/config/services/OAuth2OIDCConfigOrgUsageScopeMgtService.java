@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.config.services;
 
+import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerUsageScopeConfig;
@@ -27,6 +28,13 @@ import java.util.List;
 /**
  * Service interface for OAuth2 / OIDC configuration management.
  */
+@Capability(
+        namespace = "osgi.service",
+        attribute = {
+                "objectClass=org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService",
+                "service.scope=singleton"
+        }
+)
 public interface OAuth2OIDCConfigOrgUsageScopeMgtService {
 
     /**
