@@ -600,6 +600,31 @@ public class OAuth2ServiceTest {
     }
 
     @Test
+    public void testIssueAccessTokenWithOrgContextReturnsOrgSpecificError() throws IdentityException {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AccessTokenIssuer> accessTokenIssuer = mockStatic(AccessTokenIssuer.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
+            AccessTokenIssuer mockAccessTokenIssuer = mock(AccessTokenIssuer.class);
+            accessTokenIssuer.when(AccessTokenIssuer::getInstance).thenReturn(mockAccessTokenIssuer);
+            when(mockAccessTokenIssuer.issue(any(OAuth2AccessTokenReqDTO.class)))
+                    .thenThrow(new InvalidOAuthClientException("application.not.found"));
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setApplicationResidentOrganizationId("some-org-id");
+            try {
+                OAuth2AccessTokenRespDTO respDTO = oAuth2Service.issueAccessToken(new OAuth2AccessTokenReqDTO());
+                assertEquals(respDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_CLIENT);
+                assertEquals(respDTO.getErrorMsg(), "Application is not available in the organization.");
+            } finally {
+                PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .setApplicationResidentOrganizationId(null);
+            }
+        }
+    }
+
+    @Test
     public void testIsPKCESupportEnabled() {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {

@@ -461,7 +461,13 @@ public class OAuth2Service extends AbstractAdmin {
             OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
             tokenRespDTO.setError(true);
             tokenRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-            tokenRespDTO.setErrorMsg("Invalid Client");
+            String errorMessage = "Invalid Client";
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appOrgId)) {
+                errorMessage = "Application is not available in the organization.";
+            }
+            tokenRespDTO.setErrorMsg(errorMessage);
             return tokenRespDTO;
         } catch (IdentityOAuth2ClientException e) {
             if (log.isDebugEnabled()) {
