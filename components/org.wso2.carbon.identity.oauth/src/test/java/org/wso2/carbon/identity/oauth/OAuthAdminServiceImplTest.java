@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -64,6 +65,8 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
@@ -120,7 +123,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertThrows;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
@@ -140,6 +142,10 @@ public class OAuthAdminServiceImplTest {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final String ACCESS_TOKEN = "access:token";
     private static final String USER_ID = "user:id";
+    private static final String USER_NAME = "admin";
+    private static final String TEST_ORG_ID = "test-org-id";
+    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
+            "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     @Mock
     private RealmConfiguration realmConfiguration;
@@ -190,7 +196,7 @@ public class OAuthAdminServiceImplTest {
     @BeforeMethod
     public void setUp() throws Exception {
 
-        initMocks(this);
+        MockitoAnnotations.openMocks(this);
         System.setProperty("carbon.home",
                 System.getProperty("user.dir") + File.separator + "src" + File.separator + "test"
                         + File.separator + "resources");
@@ -233,7 +239,7 @@ public class OAuthAdminServiceImplTest {
 
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
 
         IdentityTenantUtil.setRealmService(realmService);
         identityTenantUtil.when(IdentityTenantUtil::getRealmService).thenReturn(realmService);
@@ -241,7 +247,7 @@ public class OAuthAdminServiceImplTest {
 
         try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                 (mock, context) -> {
-                    when(mock.addOAuthConsumer("admin", -1234, "PRIMARY")).thenReturn(new String[]{"consumer:key",
+                    when(mock.addOAuthConsumer(USER_NAME, -1234, "PRIMARY")).thenReturn(new String[]{"consumer:key",
                             "consumer:secret"});
                 })) {
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -256,7 +262,7 @@ public class OAuthAdminServiceImplTest {
 
     @DataProvider(name = "getDataForAllOAuthApplicationData")
     public Object[][] getDataForAllOAuthApplicationData() {
-        return new Object[][]{{"admin"}, {null}};
+        return new Object[][]{{USER_NAME}, {null}};
     }
 
     @Test(dataProvider = "getDataForAllOAuthApplicationData")
@@ -300,11 +306,11 @@ public class OAuthAdminServiceImplTest {
     @DataProvider(name = "getRegisterOAuthApplicationData")
     public Object[][] getRegisterOAuthApplicationData() {
 
-        return new String[][]{{OAuthConstants.OAuthVersions.VERSION_2, "admin", null, null},
-                {OAuthConstants.OAuthVersions.VERSION_2, "admin", CONSUMER_KEY, CONSUMER_SECRET},
-                {OAuthConstants.OAuthVersions.VERSION_2, "admin", CONSUMER_KEY, null},
-                {OAuthConstants.OAuthVersions.VERSION_2, "admin", null, CONSUMER_SECRET},
-                {null, "admin", CONSUMER_KEY, CONSUMER_SECRET}
+        return new String[][]{{OAuthConstants.OAuthVersions.VERSION_2, USER_NAME, null, null},
+                {OAuthConstants.OAuthVersions.VERSION_2, USER_NAME, CONSUMER_KEY, CONSUMER_SECRET},
+                {OAuthConstants.OAuthVersions.VERSION_2, USER_NAME, CONSUMER_KEY, null},
+                {OAuthConstants.OAuthVersions.VERSION_2, USER_NAME, null, CONSUMER_SECRET},
+                {null, USER_NAME, CONSUMER_KEY, CONSUMER_SECRET}
         };
     }
 
@@ -316,24 +322,27 @@ public class OAuthAdminServiceImplTest {
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
-            OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
-            oAuthConsumerAppDTO.setApplicationName("SAMPLE_APP1");
-            oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
-            oAuthConsumerAppDTO.setApplicationAccessTokenExpiryTime(1234585);
-            oAuthConsumerAppDTO.setGrantTypes("");
-            oAuthConsumerAppDTO.setUsername(userName);
-            oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
-            oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
-            oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
-            oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
-            oAuthConsumerAppDTO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+            OAuthConsumerAppDTO oAuthConsumerAppDTO = getoAuthConsumerAppDTO(userName, consumerKey,
+                    consumerSecret, oauthVersion);
 
             OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
             oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
@@ -1657,7 +1666,7 @@ public class OAuthAdminServiceImplTest {
 
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -1666,7 +1675,7 @@ public class OAuthAdminServiceImplTest {
             oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
             oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
             oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(3600); // Valid expiry
-            oAuthConsumerAppDTO.setUsername("admin");
+            oAuthConsumerAppDTO.setUsername(USER_NAME);
             oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
@@ -1706,7 +1715,7 @@ public class OAuthAdminServiceImplTest {
 
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -1715,7 +1724,7 @@ public class OAuthAdminServiceImplTest {
             oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
             oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
             oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(0); // Invalid expiry
-            oAuthConsumerAppDTO.setUsername("admin");
+            oAuthConsumerAppDTO.setUsername(USER_NAME);
             oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
@@ -1760,9 +1769,9 @@ public class OAuthAdminServiceImplTest {
 
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
 
-            OAuthAppDO app = buildDummyOAuthAppDO("admin");
+            OAuthAppDO app = buildDummyOAuthAppDO(USER_NAME);
             app.setOauthConsumerKey(consumerKey);
             app.setGrantTypes(CIBA_GRANT_TYPE);
 
@@ -1790,7 +1799,7 @@ public class OAuthAdminServiceImplTest {
                 oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
                 oAuthConsumerAppDTO.setGrantTypes(CIBA_GRANT_TYPE);
                 oAuthConsumerAppDTO.setCibaAuthReqExpiryTime(0); // Invalid expiry
-                oAuthConsumerAppDTO.setUsername("admin");
+                oAuthConsumerAppDTO.setUsername(USER_NAME);
                 oAuthConsumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
 
 
@@ -1804,5 +1813,181 @@ public class OAuthAdminServiceImplTest {
                 }
             }
         }
+    }
+
+    @DataProvider(name = "issuerConfigResolutionData")
+    public Object[][] issuerConfigResolutionData() {
+
+        // isSubOrg, isFragmentApp, expectIssuerResolutionCalled.
+        return new Object[][] {
+                {true, false, true},   // sub org + not fragment app → should resolve issuer.
+                {false, false, false},  // not sub org → should NOT resolve issuer.
+                {true, true, false},    // sub org + fragment app → should NOT resolve issuer.
+        };
+    }
+
+    @Test(dataProvider = "issuerConfigResolutionData")
+    public void testRegisterOAuthAppIssuerConfigResolution(boolean isSubOrg, boolean isFragmentApp,
+                                                           boolean expectIssuerResolutionCalled) throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(isSubOrg);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder =
+                    mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn(TEST_ORG_ID);
+
+            if (expectIssuerResolutionCalled) {
+                OAuth2OIDCConfigOrgUsageScopeMgtService mockConfigService =
+                        mock(OAuth2OIDCConfigOrgUsageScopeMgtService.class);
+                when(mockOAuth2ServiceComponentHolder.getOAuth2OIDCConfigOrgUsageScopeMgtService())
+                        .thenReturn(mockConfigService);
+                IssuerDetails issuerDetails = new IssuerDetails();
+                issuerDetails.setIssuerOrgId(TEST_ORG_ID);
+                when(mockConfigService.getAllowedIssuerDetails()).thenReturn(List.of(issuerDetails));
+            }
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            OAuthConsumerAppDTO oAuthConsumerAppDTO = getoAuthConsumerAppDTO(
+                    USER_NAME, null, null, OAuthConstants.OAuthVersions.VERSION_2);
+            oAuthConsumerAppDTO.setIsFragmentApp(isFragmentApp);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class));
+                    })) {
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))
+                        .thenReturn(String.valueOf(true));
+                oAuthAdminServiceImpl.registerOAuthApplicationData(oAuthConsumerAppDTO);
+            }
+            if (expectIssuerResolutionCalled) {
+                verify(mockOrganizationManager, times(1)).resolveOrganizationId(anyString());
+            } else {
+                verify(mockOrganizationManager, never()).resolveOrganizationId(anyString());
+            }
+        }
+    }
+
+    @Test(dataProvider = "issuerConfigResolutionData")
+    public void testUpdateConsumerAppIssuerConfigResolution(boolean isSubOrg, boolean isFragmentApp,
+                                                            boolean expectIssuerResolutionCalled) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+
+            try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                         mockStatic(OAuthComponentServiceHolder.class);
+                 MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                         mockStatic(OAuth2ServiceComponentHolder.class);
+                 MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                         mockStatic(OrganizationManagementUtil.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(isSubOrg);
+
+                OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder =
+                        mock(OAuth2ServiceComponentHolder.class);
+                oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                        .thenReturn(mockOAuth2ServiceComponentHolder);
+                when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+                when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn(TEST_ORG_ID);
+
+                if (expectIssuerResolutionCalled) {
+                    OAuth2OIDCConfigOrgUsageScopeMgtService mockConfigService =
+                            mock(OAuth2OIDCConfigOrgUsageScopeMgtService.class);
+                    when(mockOAuth2ServiceComponentHolder.getOAuth2OIDCConfigOrgUsageScopeMgtService())
+                            .thenReturn(mockConfigService);
+                    IssuerDetails issuerDetails = new IssuerDetails();
+                    issuerDetails.setIssuerOrgId(TEST_ORG_ID);
+                    when(mockConfigService.getAllowedIssuerDetails()).thenReturn(List.of(issuerDetails));
+                }
+
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+                OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+                existingApp.setOauthConsumerKey(CONSUMER_KEY);
+                existingApp.setOauthConsumerSecret(CONSUMER_SECRET);
+
+                OAuthConsumerAppDTO oAuthConsumerAppDTO = getoAuthConsumerAppDTO(
+                        USER_NAME, CONSUMER_KEY, CONSUMER_SECRET, OAuthConstants.OAuthVersions.VERSION_2);
+                oAuthConsumerAppDTO.setIsFragmentApp(isFragmentApp);
+
+                ServiceProvider serviceProvider = new ServiceProvider();
+                serviceProvider.setApplicationName(oAuthConsumerAppDTO.getApplicationName());
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                        .thenReturn(serviceProvider);
+
+                try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                        (mock, context) -> {
+                            when(mock.getAppInformation(CONSUMER_KEY, SUPER_TENANT_ID)).thenReturn(existingApp);
+                            doNothing().when(mock).updateConsumerApplication(any(OAuthAppDO.class));
+                        })) {
+
+                    mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                    identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                            .thenCallRealMethod();
+                    identityUtil.when(() -> IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))
+                            .thenReturn(String.valueOf(true));
+                    OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+                    oAuthAdminServiceImpl.updateConsumerApplication(oAuthConsumerAppDTO);
+                }
+                if (expectIssuerResolutionCalled) {
+                    verify(mockOrganizationManager, times(1)).resolveOrganizationId(anyString());
+                } else {
+                    verify(mockOrganizationManager, never()).resolveOrganizationId(anyString());
+                }
+            }
+        }
+    }
+
+    private static OAuthConsumerAppDTO getoAuthConsumerAppDTO(String userName, String consumerKey,
+                                                              String consumerSecret, String oauthVersion) {
+
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
+        oAuthConsumerAppDTO.setApplicationName("SAMPLE_APP1");
+        oAuthConsumerAppDTO.setCallbackUrl("http://localhost:8080/acsUrl");
+        oAuthConsumerAppDTO.setApplicationAccessTokenExpiryTime(1234585);
+        oAuthConsumerAppDTO.setGrantTypes("");
+        oAuthConsumerAppDTO.setUsername(userName);
+        oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
+        oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
+        oAuthConsumerAppDTO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
+        oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
+        oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
+        return oAuthConsumerAppDTO;
     }
 }
