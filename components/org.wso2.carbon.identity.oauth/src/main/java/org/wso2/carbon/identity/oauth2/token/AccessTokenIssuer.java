@@ -933,8 +933,20 @@ public class AccessTokenIssuer {
                         log.debug("Adding AuthorizationGrantCache entry for the access token");
                     }
                 }
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+                // Setting the validity period of the cache entry to be same as the validity period of the refresh token
+                long refreshTokenExpiresInMillis = tokenRespDTO.getRefreshTokenExpiresInMillis();
+                if (refreshTokenExpiresInMillis > 0) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Setting cache validity period to refresh token validity: "
+                                + refreshTokenExpiresInMillis + "ms");
+                    }
+                    authorizationGrantCacheEntry.setValidityPeriod(
+                            TimeUnit.MILLISECONDS.toNanos(refreshTokenExpiresInMillis));
+                } else {
+                    // Token is configured to never expire, use max value for cache validity.
+                    log.debug("Token configured with no expiry. Setting cache validity to maximum value.");
+                    authorizationGrantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
+                }
                 AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
             }
         }
