@@ -260,7 +260,7 @@ public class AuthzUtil {
     private static final String CLAIMS = "claims";
     public static final String COMMA_SEPARATOR = ",";
     public static final String SPACE_SEPARATOR = " ";
-    private static final String RESPONSE_MODE_FORM_POST = "form_post";
+
     private static boolean isCacheAvailable = false;
     private static final String RESPONSE_MODE = "response_mode";
     private static final String REQUEST = "request";
@@ -278,6 +278,8 @@ public class AuthzUtil {
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
     private static final String REGEX_PATTERN = "regexp";
     private static final String OIDC_SESSION_ID = "OIDC_SESSION_ID";
+    private static final String FORM_POST_RESPONSE_MARKER = "form_post_error_html_response";
+    private static final String FORM_POST_ERROR_RESPONSE_PROPERTY = "formPostErrorResponse";
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
@@ -519,16 +521,18 @@ public class AuthzUtil {
 
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
-        if (StringUtils.equals(oAuthMessage.getRequest().getParameter(RESPONSE_MODE), RESPONSE_MODE_FORM_POST)) {
+        String requestResponseMode = oAuthMessage.getRequest().getParameter(RESPONSE_MODE);
+        if (isFormPostOrFormPostJWTResponseMode(requestResponseMode)) {
             e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
-            if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
-                String params = buildErrorParams(e);
-                String redirectURI = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
-                return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
-            } else {
-                return Response.ok(createErrorFormPage(oAuthMessage.getRequest().getParameter(REDIRECT_URI), e))
-                        .build();
+            // Ensure OAuth2Parameters has the response mode and redirect URI for form_post.jwt handling.
+            if (StringUtils.isBlank(oAuth2Parameters.getResponseMode())) {
+                oAuth2Parameters.setResponseMode(requestResponseMode);
             }
+            String redirectURI = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
+            if (StringUtils.isBlank(oAuth2Parameters.getRedirectURI()) && StringUtils.isNotBlank(redirectURI)) {
+                oAuth2Parameters.setRedirectURI(redirectURI);
+            }
+            return handleFormPostResponseModeError(oAuthMessage, e, oAuth2Parameters);
         }
 
         String errorCode = StringUtils.isNotBlank(e.getError()) ? e.getError() : OAuth2ErrorCodes.INVALID_REQUEST;
@@ -1058,13 +1062,33 @@ public class AuthzUtil {
                                                             OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
+        return handleFormPostResponseModeError(oAuthMessage, oauthProblemException, oauth2Params);
+    }
+
+    private static Response handleFormPostResponseModeError(OAuthMessage oAuthMessage,
+                                                            OAuthProblemException oauthProblemException,
+                                                            OAuth2Parameters oauth2Params) {
+
+        if (OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode())) {
+            AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(oauth2Params);
+            authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND,
+                    oauthProblemException.getDescription(), oauthProblemException.getError());
+            authorizationResponseDTO.setFormPostRedirectPage(formPostRedirectPage);
+            try {
+                ResponseModeProvider responseModeProvider = getResponseModeProvider(authorizationResponseDTO);
+                if (isFormPostWithErrors(authorizationResponseDTO, responseModeProvider)) {
+                    return Response.ok(responseModeProvider
+                            .getAuthResponseBuilderEntity(authorizationResponseDTO)).build();
+                }
+            } catch (OAuthProblemException ex) {
+                log.error("Error building form_post.jwt error response. Falling back to form_post.", ex);
+            }
+        }
         if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
             String params = buildErrorParams(oauthProblemException);
-            String redirectURI = oauth2Params.getRedirectURI();
-            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
-        } else {
-            return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
+            return forwardToOauthResponseJSP(oAuthMessage, params, oauth2Params.getRedirectURI());
         }
+        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
     }
 
     private static void handleDeniedConsent(OAuthMessage oAuthMessage,
@@ -1642,7 +1666,10 @@ public class AuthzUtil {
             String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
             String callbackURL = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
             // If callback is present and redirectURL starts with it, skip.
-            if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
+            // Also skip if redirectURL is the form_post error marker to avoid corrupting it.
+            if (FORM_POST_RESPONSE_MARKER.equals(redirectURL)) {
+                log.debug("Skipping service provider id append for form_post error response.");
+            } else if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
                     !OAuthServerConfiguration.getInstance().returnSpIdToApps()) {
                 log.debug("Redirecting to app's callback URL. Hence not adding service provider id.");
             } else if (StringUtils.isNotBlank(clientId)) {
@@ -1659,6 +1686,12 @@ public class AuthzUtil {
         if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
             return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
         } else {
+            if (FORM_POST_RESPONSE_MARKER.equals(redirectURL)) {
+                Response formPostResponse = (Response) oAuthMessage.getProperty(FORM_POST_ERROR_RESPONSE_PROPERTY);
+                if (formPostResponse != null) {
+                    return formPostResponse;
+                }
+            }
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
     }
@@ -2864,12 +2897,22 @@ public class AuthzUtil {
                     log.debug("Request Object Handling failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
-                // If response_mode requires JARM (e.g., response_mode=jwt for FAPI), wrap the error in a JWT.
-                if (isJARMErrorResponseEnabled()) {
+                // Handle JARM response modes.
+                if (isJARMErrorResponse(params.getResponseMode())) {
                     String jarmErrorUrl = buildJARMErrorRedirectUrl(params, e.getErrorCode(), e.getErrorMessage());
                     if (StringUtils.isNotBlank(jarmErrorUrl)) {
                         return jarmErrorUrl;
                     }
+                }
+                // For form_post and form_post.jwt, return the error via an HTML auto-submit form.
+                if (isFormPostOrFormPostJWTResponseMode(params.getResponseMode())
+                        && StringUtils.isNotBlank(params.getRedirectURI())) {
+                    OAuthProblemException formPostEx = OAuthProblemException.error(e.getErrorCode(),
+                            e.getErrorMessage());
+                    formPostEx.state(params.getState());
+                    oAuthMessage.setProperty(FORM_POST_ERROR_RESPONSE_PROPERTY,
+                            handleFormPostResponseModeError(oAuthMessage, formPostEx, params));
+                    return FORM_POST_RESPONSE_MARKER;
                 }
                 if (StringUtils.isNotBlank(oAuthMessage.getRequest().getParameter(REQUEST_URI))) {
                     return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes
@@ -2885,12 +2928,22 @@ public class AuthzUtil {
                     log.debug("Request Object validation failed due to : " + e.getErrorCode() + " for client_id: "
                             + clientId + " of tenantDomain: " + params.getTenantDomain(), e);
                 }
-                // If response_mode requires JARM (e.g., response_mode=jwt for FAPI), wrap the error in a JWT.
-                if (isJARMErrorResponseEnabled()) {
+                // If response_mode requires JARM redirect (jwt, query.jwt, fragment.jwt), wrap error in a JWT.
+                if (isJARMErrorResponse(params.getResponseMode())) {
                     String jarmErrorUrl = buildJARMErrorRedirectUrl(params, e.getErrorCode(), e.getMessage());
                     if (StringUtils.isNotBlank(jarmErrorUrl)) {
                         return jarmErrorUrl;
                     }
+                }
+                // For form_post and form_post.jwt, return the error via an HTML auto-submit form.
+                if (isFormPostOrFormPostJWTResponseMode(params.getResponseMode())
+                        && StringUtils.isNotBlank(params.getRedirectURI())) {
+                    OAuthProblemException formPostEx = OAuthProblemException.error(e.getErrorCode(),
+                            e.getMessage());
+                    formPostEx.state(params.getState());
+                    oAuthMessage.setProperty(FORM_POST_ERROR_RESPONSE_PROPERTY,
+                            handleFormPostResponseModeError(oAuthMessage, formPostEx, params));
+                    return FORM_POST_RESPONSE_MARKER;
                 }
                 throw e;
             }
@@ -3067,7 +3120,7 @@ public class AuthzUtil {
 
     private static String buildJARMErrorRedirectUrl(OAuth2Parameters params, String errorCode, String errorMessage) {
 
-        if (StringUtils.isBlank(params.getResponseMode()) || StringUtils.isBlank(params.getRedirectURI())
+        if (StringUtils.isBlank(params.getRedirectURI())
                 || StringUtils.startsWith(params.getRedirectURI(), REGEX_PATTERN)) {
             return null;
         }
@@ -3087,8 +3140,13 @@ public class AuthzUtil {
         return null;
     }
 
-    private static boolean isJARMErrorResponseEnabled() {
+    private static boolean isJARMErrorResponse(String responseMode) {
 
+        if (!OAuthConstants.ResponseModes.JWT.equals(responseMode)
+                && !OAuthConstants.ResponseModes.QUERY_JWT.equals(responseMode)
+                && !OAuthConstants.ResponseModes.FRAGMENT_JWT.equals(responseMode)) {
+            return false;
+        }
         try {
             Method isJarmErrorResponseEnabledMethod = OAuthServerConfiguration.class
                     .getMethod("isJARMErrorResponseEnabled");

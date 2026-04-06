@@ -2404,6 +2404,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
             Assert.assertEquals(result, oauthResponse);
         }
     }
+
     @Test
     public void testIsFormPostOrFormPostJWTResponseMode() throws Exception {
 
@@ -2566,10 +2567,10 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
     }
 
     @Test
-    public void testIsJARMErrorResponseEnabled_returnsTrue() throws Exception {
+    public void testIsJARMErrorResponse_returnsTrueForJARMModeWhenFeatureEnabled() throws Exception {
 
-        Method isJARMErrorResponseEnabled = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponseEnabled");
-        isJARMErrorResponseEnabled.setAccessible(true);
+        Method isJARMErrorResponse = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponse", String.class);
+        isJARMErrorResponse.setAccessible(true);
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
                      mockStatic(OAuthServerConfiguration.class)) {
@@ -2577,16 +2578,17 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                     .thenReturn(mockOAuthServerConfiguration);
             when(mockOAuthServerConfiguration.isJARMErrorResponseEnabled()).thenReturn(true);
 
-            boolean result = (boolean) isJARMErrorResponseEnabled.invoke(authzUtilObject);
+            boolean result = (boolean) isJARMErrorResponse.invoke(authzUtilObject,
+                    OAuthConstants.ResponseModes.JWT);
             Assert.assertTrue(result);
         }
     }
 
     @Test
-    public void testIsJARMErrorResponseEnabled_returnsFalse() throws Exception {
+    public void testIsJARMErrorResponse_returnsFalseWhenFeatureDisabled() throws Exception {
 
-        Method isJARMErrorResponseEnabled = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponseEnabled");
-        isJARMErrorResponseEnabled.setAccessible(true);
+        Method isJARMErrorResponse = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponse", String.class);
+        isJARMErrorResponse.setAccessible(true);
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
                      mockStatic(OAuthServerConfiguration.class)) {
@@ -2594,7 +2596,26 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                     .thenReturn(mockOAuthServerConfiguration);
             when(mockOAuthServerConfiguration.isJARMErrorResponseEnabled()).thenReturn(false);
 
-            boolean result = (boolean) isJARMErrorResponseEnabled.invoke(authzUtilObject);
+            boolean result = (boolean) isJARMErrorResponse.invoke(authzUtilObject,
+                    OAuthConstants.ResponseModes.JWT);
+            Assert.assertFalse(result);
+        }
+    }
+
+    @Test
+    public void testIsJARMErrorResponse_returnsFalseForNonJARMMode() throws Exception {
+
+        Method isJARMErrorResponse = AuthzUtil.class.getDeclaredMethod("isJARMErrorResponse", String.class);
+        isJARMErrorResponse.setAccessible(true);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isJARMErrorResponseEnabled()).thenReturn(true);
+
+            boolean result = (boolean) isJARMErrorResponse.invoke(authzUtilObject,
+                    OAuthConstants.ResponseModes.FORM_POST);
             Assert.assertFalse(result);
         }
     }
