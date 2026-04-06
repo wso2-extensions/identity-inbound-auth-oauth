@@ -1698,6 +1698,7 @@ public class AuthzUtil {
                     return formPostResponse;
                 }
                 log.error("Form post error response property was not set.");
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
             }
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
