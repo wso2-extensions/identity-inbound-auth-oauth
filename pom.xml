@@ -120,6 +120,12 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
+                <groupId>de.ruedigermoeller</groupId>
+                <artifactId>fst</artifactId>
+                <version>${de.ruedigermoeller.fst.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon</groupId>
                 <artifactId>javax.cache.wso2</artifactId>
                 <version>${carbon.kernel.version}</version>
@@ -1137,6 +1143,7 @@
 
         <findbugs.annotations.version>3.0.1</findbugs.annotations.version>
         <carbon.database.utils.version>2.0.11</carbon.database.utils.version>
+        <de.ruedigermoeller.fst.version>2.56</de.ruedigermoeller.fst.version>
 
         <!--Identity Apps-->
         <authentication.portal.version>1.0.51</authentication.portal.version>
