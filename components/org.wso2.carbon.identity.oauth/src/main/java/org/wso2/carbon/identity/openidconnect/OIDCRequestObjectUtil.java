@@ -99,7 +99,6 @@ public class OIDCRequestObjectUtil {
         }
         requestObject = requestObjectBuilder.buildRequestObject(oauthRequest.getParam(requestObjType),
                 oAuth2Parameters);
-
         RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
                 .getRequestObjectValidator();
 
@@ -180,12 +179,6 @@ public class OIDCRequestObjectUtil {
                 }
             }
         } catch (RequestObjectException e) {
-            // Extract response_mode from the request object so that JARM error builders
-            // have it available when constructing a JARM-wrapped error redirect per FAPI.
-            String responseMode = requestObject.getClaimValue(OAuthConstants.OAuth20Params.RESPONSE_MODE);
-            if (StringUtils.isNotBlank(responseMode)) {
-                oAuth2Parameters.setResponseMode(responseMode);
-            }
             if (StringUtils.isNotBlank(e.getErrorMessage()) && e.getErrorMessage().contains("signature verification " +
                     "failed")) {
                 if (diagnosticLogBuilder != null) {
