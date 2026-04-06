@@ -2661,6 +2661,140 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
         }
     }
 
+    @Test
+    public void testHandleFormPostResponseModeErrorPlainFormPost() throws Exception {
+
+        Method handleFormPostResponseModeError = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseModeError", OAuthMessage.class, OAuthProblemException.class,
+                OAuth2Parameters.class);
+        handleFormPostResponseModeError.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        OAuthProblemException exception = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST)
+                .description("Test error");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(false);
+
+            when(httpServletRequest.getParameter(any())).thenReturn(null);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response response = (Response) handleFormPostResponseModeError.invoke(authzUtilObject,
+                    oAuthMessage, exception, oAuth2Parameters);
+
+            Assert.assertNotNull(response);
+            Assert.assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
+        }
+    }
+
+    @Test
+    public void testHandleFormPostResponseModeErrorAccessDeniedError() throws Exception {
+
+        Method handleFormPostResponseModeError = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseModeError", OAuthMessage.class, OAuthProblemException.class,
+                OAuth2Parameters.class);
+        handleFormPostResponseModeError.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        oAuth2Parameters.setState("testState");
+
+        OAuthProblemException exception = OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED)
+                .description("User denied access");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(false);
+
+            when(httpServletRequest.getParameter(any())).thenReturn(null);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response response = (Response) handleFormPostResponseModeError.invoke(authzUtilObject,
+                    oAuthMessage, exception, oAuth2Parameters);
+
+            Assert.assertNotNull(response);
+        }
+    }
+
+    @Test
+    public void testHandleFormPostResponseModeErrorServerUnavailableError() throws Exception {
+
+        Method handleFormPostResponseModeError = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseModeError", OAuthMessage.class, OAuthProblemException.class,
+                OAuth2Parameters.class);
+        handleFormPostResponseModeError.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        OAuthProblemException exception = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR)
+                .description("Server error occurred");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(false);
+
+            when(httpServletRequest.getParameter(any())).thenReturn(null);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response response = (Response) handleFormPostResponseModeError.invoke(authzUtilObject,
+                    oAuthMessage, exception, oAuth2Parameters);
+
+            Assert.assertNotNull(response);
+            Assert.assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
+        }
+    }
+
+    @Test
+    public void testHandleFormPostResponseModeErrorWithoutDescription() throws Exception {
+
+        Method handleFormPostResponseModeError = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseModeError", OAuthMessage.class, OAuthProblemException.class,
+                OAuth2Parameters.class);
+        handleFormPostResponseModeError.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId("testClient");
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        OAuthProblemException exception = OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(false);
+
+            when(httpServletRequest.getParameter(any())).thenReturn(null);
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+
+            Response response = (Response) handleFormPostResponseModeError.invoke(authzUtilObject,
+                    oAuthMessage, exception, oAuth2Parameters);
+
+            Assert.assertNotNull(response);
+        }
+    }
+
     private void mockSSOConsentService(boolean isConsentMgtEnabled) throws SSOConsentServiceException {
 
         // TODO: Remove mocking consentUtil and test the consent flow as well
