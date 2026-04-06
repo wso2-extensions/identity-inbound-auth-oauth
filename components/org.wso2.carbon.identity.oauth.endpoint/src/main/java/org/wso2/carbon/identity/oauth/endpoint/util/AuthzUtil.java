@@ -163,8 +163,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -529,8 +527,14 @@ public class AuthzUtil {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
 
         String requestResponseMode = oAuthMessage.getRequest().getParameter(RESPONSE_MODE);
-        if (isFormPostOrFormPostJWTResponseMode(requestResponseMode)) {
-            e.state(retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters));
+        if (isFormPostOrFormPostJWTResponseMode(requestResponseMode)
+                && OAuthServerConfiguration.getInstance().isJARMAndFormPostErrorResponseEnabled()) {
+            String resolvedState = retrieveStateForErrorURL(oAuthMessage.getRequest(), oAuth2Parameters);
+            e.state(resolvedState);
+            // Persist state into oAuth2Parameters so getAuthResponseDTO includes it in form_post.jwt error JWTs.
+            if (StringUtils.isNotBlank(resolvedState)) {
+                oAuth2Parameters.setState(resolvedState);
+            }
             // Ensure OAuth2Parameters has the response mode and redirect URI for form_post.jwt handling.
             if (StringUtils.isBlank(oAuth2Parameters.getResponseMode())) {
                 oAuth2Parameters.setResponseMode(requestResponseMode);
@@ -1076,7 +1080,8 @@ public class AuthzUtil {
                                                             OAuthProblemException oauthProblemException,
                                                             OAuth2Parameters oauth2Params) {
 
-        if (OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode())) {
+        if (OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode())
+                && OAuthServerConfiguration.getInstance().isJARMAndFormPostErrorResponseEnabled()) {
             AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(oauth2Params);
             authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND,
                     oauthProblemException.getDescription(), oauthProblemException.getError());
@@ -1087,15 +1092,18 @@ public class AuthzUtil {
                     return Response.ok(responseModeProvider
                             .getAuthResponseBuilderEntity(authorizationResponseDTO)).build();
                 }
+                log.warn("form_post.jwt error wrapping did not produce a response. Falling back to plain form_post.");
             } catch (OAuthProblemException ex) {
                 log.error("Error building form_post.jwt error response. Falling back to form_post.", ex);
             }
         }
         if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
             String params = buildErrorParams(oauthProblemException);
-            return forwardToOauthResponseJSP(oAuthMessage, params, oauth2Params.getRedirectURI());
+            String redirectURI = oauth2Params.getRedirectURI();
+            return forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+        } else {
+            return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
         }
-        return Response.ok(createErrorFormPage(oauth2Params.getRedirectURI(), oauthProblemException)).build();
     }
 
     private static void handleDeniedConsent(OAuthMessage oAuthMessage,
@@ -1673,12 +1681,12 @@ public class AuthzUtil {
             String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
             String callbackURL = oAuthMessage.getRequest().getParameter(REDIRECT_URI);
             // If callback is present and redirectURL starts with it, skip.
-            // Also skip if redirectURL is the form_post error marker to avoid corrupting it.
-            if (FORM_POST_RESPONSE_MARKER.equals(redirectURL)) {
-                log.debug("Skipping service provider id append for form_post error response.");
-            } else if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
+            if (StringUtils.isNotBlank(callbackURL) && StringUtils.startsWith(redirectURL, callbackURL) &&
                     !OAuthServerConfiguration.getInstance().returnSpIdToApps()) {
                 log.debug("Redirecting to app's callback URL. Hence not adding service provider id.");
+            // Also skip if redirectURL is the form_post error marker to avoid corrupting it.
+            } else if (FORM_POST_RESPONSE_MARKER.equals(redirectURL)) {
+                log.debug("Skipping service provider id append for form_post error response.");
             } else if (StringUtils.isNotBlank(clientId)) {
                 ServiceProvider sp = getServiceProvider(clientId);
                 if (sp != null) {
@@ -1698,6 +1706,7 @@ public class AuthzUtil {
                 if (formPostResponse != null) {
                     return formPostResponse;
                 }
+                log.error("Form post error response property was not set.");
             }
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
@@ -3149,19 +3158,7 @@ public class AuthzUtil {
                 && !OAuthConstants.ResponseModes.FRAGMENT_JWT.equals(responseMode)) {
             return false;
         }
-        try {
-            Method isJarmErrorResponseEnabledMethod = OAuthServerConfiguration.class
-                    .getMethod("isJARMErrorResponseEnabled");
-            Object methodResult = isJarmErrorResponseEnabledMethod.invoke(OAuthServerConfiguration.getInstance());
-            return methodResult instanceof Boolean && (Boolean) methodResult;
-        } catch (NoSuchMethodException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("JARM error response toggle is not available in this OAuthServerConfiguration version.", e);
-            }
-        } catch (IllegalAccessException | InvocationTargetException e) {
-            log.error("Error while checking JARM error response configuration. Falling back to default behavior.", e);
-        }
-        return false;
+        return OAuthServerConfiguration.getInstance().isJARMAndFormPostErrorResponseEnabled();
     }
 
     private static void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
