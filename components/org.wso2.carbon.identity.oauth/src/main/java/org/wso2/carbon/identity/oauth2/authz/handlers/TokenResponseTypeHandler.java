@@ -583,9 +583,7 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                         TimeUnit.MILLISECONDS.toNanos(refreshTokenValidityPeriodInMillis));
             } else {
                 // Token is configured to never expire, use max value for cache validity.
-                if (log.isDebugEnabled()) {
-                    log.debug("Token configured with no expiry. Setting cache validity to maximum value.");
-                }
+                log.debug("Token configured with no expiry. Setting cache validity to maximum value.");
                 authorizationGrantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,

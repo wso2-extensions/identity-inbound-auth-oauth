@@ -235,9 +235,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         TimeUnit.MILLISECONDS.toNanos(refreshTokenValidityPeriodInMillis));
             } else {
                 // Token is configured to never expire, use max value for cache validity.
-                if (log.isDebugEnabled()) {
-                    log.debug("Token configured with no expiry. Setting cache validity to maximum value.");
-                }
+                log.debug("Token configured with no expiry. Setting cache validity to maximum value.");
                 grantCacheEntry.setValidityPeriod(Long.MAX_VALUE);
             }
 
