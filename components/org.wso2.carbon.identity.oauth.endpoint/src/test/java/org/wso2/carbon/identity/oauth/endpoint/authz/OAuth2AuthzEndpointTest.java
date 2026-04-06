@@ -572,6 +572,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                     requestParams.put(RESPONSE_MODE, new String[]{RESPONSE_MODE_FORM_POST});
                     when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable())
                             .thenReturn(isOAuthResponseJspPageAvailable);
+                    when(mockOAuthServerConfiguration.isJARMAndFormPostErrorResponseEnabled()).thenReturn(true);
                 }
 
                 requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, flowStatus);
