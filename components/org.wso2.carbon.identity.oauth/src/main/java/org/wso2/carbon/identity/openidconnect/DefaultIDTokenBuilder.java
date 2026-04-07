@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.openidconnect.model.CustomClaimDTO;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
@@ -253,9 +254,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 tokenReqMsgCtxt.setConsentedToken(tokenRespDTO.getIsConsentedToken());
             }
             jwtClaimsSetBuilder.subject(subjectClaim);
-            Map<String, Object> oidcClaimSet = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
+            CustomClaimDTO customClaimDTO = handleOIDCCustomClaims(tokenReqMsgCtxt, jwtClaimsSetBuilder);
+            JWTClaimsSet.Builder filteredJwtClaimsSetBuilder = customClaimDTO.getJwtClaimsSetBuilder();
+            Map<String, Object> oidcClaimSet = customClaimDTO.getCustomClaims();
 
-            IDTokenDTO idTokenDTO = getIDTokenDTO(tokenReqMsgCtxt, jwtClaimsSetBuilder, audience,
+            IDTokenDTO idTokenDTO = getIDTokenDTO(tokenReqMsgCtxt, filteredJwtClaimsSetBuilder, audience,
                     idTokenValidityInMillis, oidcClaimSet);
 
             // Execute the Pre-Issue ID Token Action if configured. The changes done by the action are reflected in the
@@ -376,9 +379,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
-        Map<String, Object> oidcClaimSet = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
+        CustomClaimDTO  customClaimDTO = handleCustomOIDCClaims(authzReqMessageContext, jwtClaimsSetBuilder);
 
-        IDTokenDTO idTokenDTO = getIDTokenDTO(authzReqMessageContext, jwtClaimsSetBuilder, audience,
+        JWTClaimsSet.Builder filteredJwtClaimsSetBuilder = customClaimDTO.getJwtClaimsSetBuilder();
+        Map<String, Object> oidcClaimSet = customClaimDTO.getCustomClaims();
+
+        IDTokenDTO idTokenDTO = getIDTokenDTO(authzReqMessageContext, filteredJwtClaimsSetBuilder, audience,
                 idTokenLifeTimeInMillis, oidcClaimSet);
 
         // Execute the Pre-Issue ID Token Action if configured. The changes done by the action are reflected in the
@@ -475,7 +481,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
-    private Map<String, Object> handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,
+    private CustomClaimDTO handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                        JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
 
@@ -494,15 +500,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // - Adding truly new claims (no name collision) to returningClaims
         // - Updating the builder with custom claims that have matching names, allowing the handler's
         //   choice (whether to override or keep the original) to take effect.
+        JWTClaimsSet.Builder filteredClaimSetBuilder = new JWTClaimsSet.Builder();
         Map<String, Object> existingClaimMap = existingClaims.getClaims();
         for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
             if (!existingClaimMap.containsKey(entry.getKey())) {
                 returningClaims.put(entry.getKey(), entry.getValue());
             } else {
-                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+                filteredClaimSetBuilder.claim(entry.getKey(), entry.getValue());
             }
         }
-        return returningClaims;
+        return new CustomClaimDTO(filteredClaimSetBuilder, returningClaims);
     }
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -555,7 +562,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return new Date(currentTimeInMillis + lifetimeInMillis);
     }
 
-    private Map<String, Object> handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
+    private CustomClaimDTO handleCustomOIDCClaims(OAuthAuthzReqMessageContext request,
                                                        JWTClaimsSet.Builder jwtClaimsSetBuilder)
             throws IdentityOAuth2Exception {
 
@@ -574,15 +581,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // - Adding truly new claims (no name collision) to returningClaims
         // - Updating the builder with custom claims that have matching names, allowing the handler's
         //   choice (whether to override or keep the original) to take effect.
+        JWTClaimsSet.Builder filteredClaimSetBuilder = new JWTClaimsSet.Builder();
         Map<String, Object> existingClaimMap = existingClaims.getClaims();
         for (Map.Entry<String, Object> entry : customClaimsAddedJWTClaimSet.getClaims().entrySet()) {
             if (!existingClaimMap.containsKey(entry.getKey())) {
                 returningClaims.put(entry.getKey(), entry.getValue());
             } else {
-                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+                filteredClaimSetBuilder.claim(entry.getKey(), entry.getValue());
             }
         }
-        return returningClaims;
+        return new CustomClaimDTO(filteredClaimSetBuilder, returningClaims);
     }
 
     private String getSpTenantDomain(OAuthAuthzReqMessageContext request) {
