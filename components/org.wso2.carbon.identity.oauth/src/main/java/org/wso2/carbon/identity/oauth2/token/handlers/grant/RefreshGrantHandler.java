@@ -966,10 +966,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 .getValueFromCacheByTokenId(grantCacheKey, refreshTokenData.getTokenId());
 
         if (grantCacheEntry != null) {
+            boolean shouldClearCacheEntry = false;
             if (grantCacheEntry.isPreIssueAccessTokenActionsExecuted()) {
                 tokenRequestContext.setPreIssueAccessTokenActionsExecuted(true);
                 tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
                 tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
+                shouldClearCacheEntry = true;
                 log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
                         " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
                 tokenRequestContext.setRefreshTokenValidityPeriodInMillis(
@@ -979,11 +981,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             if (grantCacheEntry.isPreIssueIDTokenActionsExecuted()) {
                 tokenRequestContext.setPreIssueIDTokenActionsExecuted(true);
                 tokenRequestContext.setPreIssueIDTokenActionDTO(grantCacheEntry.getPreIssueIDTokenActionDTO());
+                shouldClearCacheEntry = true;
                 log.debug("Updated OAuthTokenReqMessageContext with customized ID token attributes in the" +
                         " AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
             }
 
-            AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
+            if (shouldClearCacheEntry) {
+                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
+            }
         }
     }
 
