@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -59,6 +60,8 @@ import java.util.Map;
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);
+    private static final String LAST_LOGIN_TIME_CLAIM_UPDATE = "LastLoginTimeClaimUpdate";
+    private static final String REVOKE_CACHE_AT_LOGIN_PROPERTY = "OAuth.RevokeCacheAtLogin";
 
     /**
      * Bundle execution order id.
@@ -97,7 +100,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        removeAuthzGrantCacheIfRequired(userName, userStoreManager);
         return true;
     }
 
@@ -108,7 +111,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        removeAuthzGrantCacheIfRequired(userName, userStoreManager);
         return true;
     }
 
@@ -319,6 +322,54 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return revokeTokensOfUser(userName, userStoreManager);
         }
         return true;
+    }
+
+    /**
+     * Remove the authz grant cache for the user if the claim update is not triggered by a last login time update,
+     * or if the revoke cache upon login configuration is enabled.
+     * Related to https://github.com/wso2/product-is/issues/25324
+     *
+     * @param userName         username of the user.
+     * @param userStoreManager user store manager.
+     * @throws UserStoreException if an error occurs while removing the cache.
+     */
+    private void removeAuthzGrantCacheIfRequired(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        if (isLastLoginTimeClaimUpdate() && !revokeCacheAtLoginEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping authz grant cache removal since the claim update is triggered by " +
+                        "last login time update for user: " +
+                        (LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(userName) : userName) +
+                        " and tenant: " + userStoreManager.getTenantId());
+            }
+        } else {
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        }
+    }
+
+    /**
+     * Check if the current claim update is a last login time claim update by checking the thread local flag.
+     *
+     * @return true if the current claim update is triggered by last login time update.
+     */
+    private boolean isLastLoginTimeClaimUpdate() {
+
+        Map<String, Object> properties = IdentityUtil.threadLocalProperties.get();
+        if (properties == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(properties.get(LAST_LOGIN_TIME_CLAIM_UPDATE));
+    }
+
+    /**
+     * Check if the revoke grant cache upon login configuration is enabled.
+     *
+     * @return true if the revoke grant cache upon login is enabled.
+     */
+    private boolean revokeCacheAtLoginEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(REVOKE_CACHE_AT_LOGIN_PROPERTY));
     }
 
     /**
