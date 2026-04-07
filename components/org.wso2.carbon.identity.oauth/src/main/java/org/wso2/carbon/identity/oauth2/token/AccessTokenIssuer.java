@@ -723,7 +723,8 @@ public class AccessTokenIssuer {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
 
-        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx);
+        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx,
+                                                                grantType);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
@@ -1510,7 +1511,8 @@ public class AccessTokenIssuer {
     private void persistCustomizedAccessTokenAttributesForRefreshToken(Optional<AuthorizationGrantCacheEntry>
                                                                                optionalAuthorizationGrantCacheEntry,
                                                                        OAuth2AccessTokenRespDTO tokenRespDTO,
-                                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                                       OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                                       String grantType) {
 
         if (!(tokReqMsgCtx.isPreIssueIDTokenActionsExecuted() ||
                 tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted())) {
@@ -1527,20 +1529,14 @@ public class AccessTokenIssuer {
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                 optionalAuthorizationGrantCacheEntry.orElseGet(AuthorizationGrantCacheEntry::new);
         authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-
+        if (GrantType.PASSWORD.toString().equals(grantType)) {
+            authorizationGrantCacheEntry.setUserAttributes(tokReqMsgCtx.getAuthorizedUser().getUserAttributes());
+        }
         if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
             authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
             authorizationGrantCacheEntry.setCustomClaims(tokReqMsgCtx.getAdditionalAccessTokenClaims());
-
-            if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
-            } else {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
-            }
             log.debug("Customized audience list and access token attributes from pre issue access token actions " +
                     "are persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
         }
@@ -1554,6 +1550,14 @@ public class AccessTokenIssuer {
                 log.debug("Customized audience list and ID token attributes from pre issue ID token actions are" +
                         "persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
             }
+        }
+
+        if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
+        } else {
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
         }
         AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
