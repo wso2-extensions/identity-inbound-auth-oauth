@@ -4999,15 +4999,24 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
+        /*
+        If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
+        Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
+        it will be used as the issuer.
+         */
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+
+            String residentIdp =  getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdp)) {
+                return residentIdp;
+            }
+        }
+
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 if (isMtlsRequest) {
                     return OAuthURL.getOAuth2MTLSTokenEPUrl();
-                }
-
-                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
-                    return getResidentIdpEntityId(tenantDomain);
                 }
 
                 return ServiceURLBuilder.create()
@@ -5027,6 +5036,20 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
+
+        /*
+        If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
+        Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
+        it will be used as the issuer. When resident idp is used as the issuer, application level config to select
+        issuer to be root or sub-org will not be applied as well.
+         */
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+
+            String residentIdp =  getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdp)) {
+                return residentIdp;
+            }
+        }
 
         String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
