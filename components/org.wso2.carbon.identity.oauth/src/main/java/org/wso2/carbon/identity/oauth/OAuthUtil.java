@@ -766,7 +766,7 @@ public final class OAuthUtil {
                         .isPrimaryOrganization(managedOrg)) {
                     userId = OAuthComponentServiceHolder.getInstance().getOrganizationUserSharingService()
                             .getUserAssociation(userId, accessingOrg).getAssociatedUserId();
-                    authenticatedUser.setUserName(userId);
+                    authenticatedUser.setUserId(userId);
                     setOrganizationSSOUserDetails(authenticatedUser);
                 } else {
                     UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
@@ -908,7 +908,7 @@ public final class OAuthUtil {
 
     /**
      * Initiate token revocation process for the associated clientIds for the given user.
-     * @param clientIds          Set of clientIds
+     * @param clientAppInfos     Set of clientIds
      * @param authenticatedUser  Authenticated User object of the user.
      * @param userStoreDomain    User store domain of the user.
      * @param username           Username.
@@ -1071,7 +1071,7 @@ public final class OAuthUtil {
                         authenticatedOrgUser.setUserName(authenticatedUserName);
                         authenticatedOrgUser.setUserResidentOrganization(authenticatedUser.
                                 getUserResidentOrganization());
-                        authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getUserResidentOrganization());
+                        authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
                         authenticatedOrgUser.setFederatedUser(false);
                         authenticatedOrgUser.setUserStoreDomain(user.get().getUserStoreDomain());
                         String userTenantDomain = OAuthComponentServiceHolder.getInstance().
