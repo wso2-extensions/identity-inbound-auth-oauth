@@ -130,7 +130,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
             // Retrieve active access tokens for the given client ID and removed scopes.
             Set<AccessTokenDO> accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance()
                     .getAccessTokenDAOImpl(clientId).getActiveTokenSetWithTokenIdByConsumerKeyAndScope(clientId,
-                            removedScopes);
+                            tenantDomain, removedScopes);
 
             // Iterate through the retrieved access tokens and revoke them.
             for (AccessTokenDO accessTokenDO: accessTokenDOSet) {
