@@ -422,10 +422,15 @@ public class AuthorizationHandlerManager {
 
     private void addAuthorizedInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
                                              String[] authorizedInternalScopes) {
-
         String[] scopes = authzReqMsgCtx.getApprovedScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, authorizedInternalScopes);
-        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+        Set<String> scopesToReturn = new HashSet<>();
+        if (scopes != null) {
+            scopesToReturn.addAll(Arrays.asList(scopes));
+        }
+        if (authorizedInternalScopes != null) {
+            scopesToReturn.addAll(Arrays.asList(authorizedInternalScopes));
+        }
+        authzReqMsgCtx.setApprovedScope(scopesToReturn.toArray(new String[0]));
     }
 
     private void addRequestedOIDCScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
@@ -437,10 +442,15 @@ public class AuthorizationHandlerManager {
     }
 
     private void addAllowedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx, String[] allowedScopes) {
-
         String[] scopes = authzReqMsgCtx.getApprovedScope();
-        String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
-        authzReqMsgCtx.setApprovedScope(scopesToReturn);
+        Set<String> scopesToReturn = new HashSet<>();
+        if (scopes != null) {
+            scopesToReturn.addAll(Arrays.asList(scopes));
+        }
+        if (allowedScopes != null) {
+            scopesToReturn.addAll(Arrays.asList(allowedScopes));
+        }
+        authzReqMsgCtx.setApprovedScope(scopesToReturn.toArray(new String[0]));
     }
 
     private void removeInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
