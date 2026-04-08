@@ -749,6 +749,8 @@ public class OAuth2Service extends AbstractAdmin {
                             getRevocationProcessor(revokeRequestDTO.getConsumerKey(), tenantDomain)
                                     .revokeAccessToken(revokeRequestDTO, accessTokenDO);
                         }
+                        OAuthUtil.clearOAuthCacheUsingPersistedScopes(tokenBindingReference,
+                                accessTokenDO, revokeRequestDTO);
                         addRevokeResponseHeaders(revokeResponseDTO,
                                 revokeRequestDTO.getToken(),
                                 accessTokenDO.getRefreshToken(),
