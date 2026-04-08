@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -128,6 +128,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomainWithOrgHierarchy;
@@ -225,6 +226,11 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     getAuthzGrantCacheEntryFromDeviceCode(tokenReqDTO);
             persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+            if (authorizationGrantCacheEntry != null
+                    && authorizationGrantCacheEntry.getSessionContextIdentifier() != null) {
+                tokReqMsgCtx.addProperty(SESSION_IDENTIFIER,
+                        authorizationGrantCacheEntry.getSessionContextIdentifier());
+            }
         }
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -829,6 +835,8 @@ public class AccessTokenIssuer {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
             }
+            authorizationGrantCacheEntry.setSessionContextIdentifier(
+                    cacheEntry.getSessionContextIdentifier());
             persistImpersonationInfoToAuthzGrantCacheEntry(cacheEntry, authorizationGrantCacheEntry);
             return Optional.of(authorizationGrantCacheEntry);
         }
