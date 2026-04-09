@@ -41,7 +41,6 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -662,9 +661,8 @@ public class AuthzUtil {
     private static boolean isFormPostWithoutErrors (OAuthMessage oAuthMessage, AuthorizationResponseDTO
             authorizationResponseDTO) {
 
-        return isFormPostResponseMode(oAuthMessage, authorizationResponseDTO.getRedirectUrl()) ||
-                (!authorizationResponseDTO.isError() && isFormPostResponseMode(oAuthMessage,
-                        authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody()));
+        return !authorizationResponseDTO.isError() &&
+                isFormPostOrFormPostJWTResponseMode(getOauth2Params(oAuthMessage).getResponseMode());
     }
 
     /**
@@ -676,9 +674,8 @@ public class AuthzUtil {
     private static boolean isFormPostWithErrors(AuthorizationResponseDTO authorizationResponseDTO,
                                                 ResponseModeProvider responseModeProvider) {
         return authorizationResponseDTO.isError() &&
-                (ResponseModeProvider.AuthResponseType.POST_RESPONSE.equals
-                        (responseModeProvider.getAuthResponseType()))
-                && !isJSON(authorizationResponseDTO.getRedirectUrl());
+                ResponseModeProvider.AuthResponseType.POST_RESPONSE.equals
+                        (responseModeProvider.getAuthResponseType());
     }
 
     public static Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
@@ -1620,19 +1617,6 @@ public class AuthzUtil {
         associateAuthenticationHistory(oAuthMessage.getSessionDataCacheEntry(), commonAuthIdCookieValue);
     }
 
-    private static boolean isFormPostResponseMode(OAuthMessage oAuthMessage, String redirectURL) {
-
-        OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
-        return isFormPostResponseMode(oauth2Params, redirectURL);
-    }
-
-    private static boolean isFormPostResponseMode(OAuth2Parameters oauth2Params, String redirectURL) {
-
-        return (OAuthConstants.ResponseModes.FORM_POST.equals(oauth2Params.getResponseMode()) ||
-                OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode()))
-                && isJSON(redirectURL);
-    }
-
     private static boolean isFormPostOrFormPostJWTResponseMode(String responseMode) {
 
         return (OAuthConstants.ResponseModes.FORM_POST.equals(responseMode) ||
@@ -1719,16 +1703,6 @@ public class AuthzUtil {
             type = OAuthConstants.Scope.OIDC;
         }
         return type;
-    }
-
-    private static boolean isJSON(String redirectURL) {
-
-        try {
-            new JSONObject(redirectURL);
-        } catch (JSONException ex) {
-            return false;
-        }
-        return true;
     }
 
     private static String createBaseFormPage(String params, String redirectURI) {
