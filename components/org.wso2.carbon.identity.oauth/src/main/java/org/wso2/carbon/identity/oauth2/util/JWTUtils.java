@@ -296,6 +296,8 @@ public class JWTUtils {
                         if (jwtIssuer.equals(resourceIssuerFromClient)) {
                             return residentIdentityProvider;
                         }
+                        throw new IdentityOAuth2ClientException("No registered IDP found for the token with " +
+                                "issuer name : " + jwtIssuer);
                     }
                 } catch (InvalidOAuthClientException e) {
                     throw new IdentityOAuth2Exception("Error while resolving client for client id: " +
