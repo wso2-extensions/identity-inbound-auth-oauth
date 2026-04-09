@@ -4007,6 +4007,15 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            // When skipping tenant validation for OAuth endpoints, the request context may not match
+            // the app's tenant domain, so we need to use the app's tenant domain to build the issuer.
+            if (IdentityTenantUtil.skipTenantValidationForOAuthEndpoints()) {
+                if(log.isDebugEnabled()) {
+                    log.debug("Skipping tenant validation for common OAuth endpoint. Using tenant domain: " +
+                            tenantDomain + " to build the issuer.");
+                }
+                return getIssuerLocation(tenantDomain);
+            }
             try {
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
@@ -4613,7 +4622,8 @@ public class OAuth2Util {
      */
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()
+                && !IdentityTenantUtil.skipTenantValidationForOAuthEndpoints()) {
 
             String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
@@ -4638,7 +4648,8 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp, OAuth2AccessTokenReqDTO tokenReqDTO)
             throws InvalidOAuthClientException {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()
+                && !IdentityTenantUtil.skipTenantValidationForOAuthEndpoints()) {
 
             Optional<String> contextTenantDomainFromTokenReqDTO = getContextTenantDomainFromTokenReqDTO(tokenReqDTO);
             String tenantDomainFromContext;
