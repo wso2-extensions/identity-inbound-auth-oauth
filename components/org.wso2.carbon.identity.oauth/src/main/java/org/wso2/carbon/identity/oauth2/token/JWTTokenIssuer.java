@@ -74,6 +74,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_AZP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
@@ -898,6 +902,54 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // But we are keeping this in JWT as well.
         jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
                 tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
+
+        // Handle act claim for delegation (covers both regular delegation and self-delegation).
+        // Both flows set IS_DELEGATION_REQUEST=true, ACTOR_SUBJECT, ACTOR_AZP, and optionally EXISTING_ACT_CLAIM.
+        if (tokenReqMessageContext != null) {
+            Object isDelegationRequest = tokenReqMessageContext.getProperty(IS_DELEGATION_REQUEST);
+
+            if (Boolean.TRUE.equals(isDelegationRequest)) {
+                Object actorSubject = tokenReqMessageContext.getProperty(ACTOR_SUBJECT);
+                Object actorAzp = tokenReqMessageContext.getProperty(ACTOR_AZP);
+
+                if (actorSubject != null) {
+                    Object existingActClaim = tokenReqMessageContext.getProperty(EXISTING_ACT_CLAIM);
+
+                    // Build the act claim structure
+                    Map<String, Object> actClaim = new HashMap<>();
+                    actClaim.put("sub", actorSubject.toString());
+
+                    // Include azp in act claim
+                    if (actorAzp != null) {
+                        actClaim.put("azp", actorAzp.toString());
+                    }
+
+                    // Support nested act claims for chained delegation
+                    if (existingActClaim != null) {
+                        if (existingActClaim instanceof Map) {
+                            actClaim.put("act", existingActClaim);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject +
+                                        ", AZP: " + actorAzp);
+                            }
+                        } else {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Delegation: Existing act claim is not in expected Map format. " +
+                                        "Type: " + existingActClaim.getClass().getName());
+                            }
+                        }
+                    }
+
+                    jwtClaimsSetBuilder.claim("act", actClaim);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("Added act claim for delegation. Actor: " + actorSubject +
+                                ", AZP: " + actorAzp + ", Has nested act: " + (existingActClaim != null));
+                    }
+                }
+            }
+            // Note: Impersonation uses "may_act" claim in subject token, not "act" in issued token
+        }
 
         JWTClaimsSet jwtClaimsSet;
 
