@@ -4010,7 +4010,7 @@ public class OAuth2Util {
             // When skipping tenant validation for OAuth endpoints, the request context may not match
             // the app's tenant domain, so we need to use the app's tenant domain to build the issuer.
             if (IdentityTenantUtil.skipTenantValidationForOAuthEndpoints()) {
-                if(log.isDebugEnabled()) {
+                if (log.isDebugEnabled()) {
                     log.debug("Skipping tenant validation for common OAuth endpoint. Using tenant domain: " +
                             tenantDomain + " to build the issuer.");
                 }
