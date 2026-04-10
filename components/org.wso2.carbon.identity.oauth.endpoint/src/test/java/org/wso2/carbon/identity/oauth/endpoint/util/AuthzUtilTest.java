@@ -133,6 +133,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
@@ -2845,6 +2846,90 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                     oAuthMessage, exception, oAuth2Parameters);
 
             Assert.assertNotNull(response);
+        }
+    }
+
+    @Test
+    public void testHandleFormPostResponseModeSkipsJSPForFormPostJwt() throws Exception {
+
+        Method handleFormPostResponseMode = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseMode", OAuthMessage.class, OIDCSessionState.class,
+                AuthorizationResponseDTO.class, AuthenticatedUser.class);
+        handleFormPostResponseMode.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST_JWT);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setScopes(new HashSet<>(Collections.singletonList("scope1")));
+
+        SessionDataCacheEntry cacheEntry = mock(SessionDataCacheEntry.class);
+        when(cacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Parameters);
+        when(cacheEntry.getAuthenticatedIdPs()).thenReturn("testIdP");
+        when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(cacheEntry);
+
+        AuthorizationResponseDTO authorizationResponseDTO = new AuthorizationResponseDTO();
+        authorizationResponseDTO.getSuccessResponseDTO()
+                .setFormPostBody("{\"code\":\"test_code\",\"state\":\"test_state\"}");
+
+        OIDCSessionState sessionState = new OIDCSessionState();
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(true);
+
+            handleFormPostResponseMode.invoke(authzUtilObject, oAuthMessage, sessionState,
+                    authorizationResponseDTO, null);
+
+            Assert.assertFalse(authorizationResponseDTO.getIsForwardToOAuthResponseJSP(),
+                    "form_post.jwt should NOT forward to JSP even when JSP is available");
+            Assert.assertEquals(authorizationResponseDTO.getAuthenticatedIDPs(), "testIdP",
+                    "AuthenticatedIDPs should be set on the DTO when JSP is skipped");
+        }
+    }
+
+    @Test
+    public void testHandleFormPostResponseModeUsesJSPForFormPost() throws Exception {
+
+        Method handleFormPostResponseMode = AuthzUtil.class.getDeclaredMethod(
+                "handleFormPostResponseMode", OAuthMessage.class, OIDCSessionState.class,
+                AuthorizationResponseDTO.class, AuthenticatedUser.class);
+        handleFormPostResponseMode.setAccessible(true);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setResponseMode(OAuthConstants.ResponseModes.FORM_POST);
+        oAuth2Parameters.setRedirectURI("https://localhost:9443/callback");
+        oAuth2Parameters.setScopes(new HashSet<>(Collections.singletonList("scope1")));
+
+        SessionDataCacheEntry cacheEntry = mock(SessionDataCacheEntry.class);
+        when(cacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Parameters);
+        when(cacheEntry.getAuthenticatedIdPs()).thenReturn("testIdP");
+        when(oAuthMessage.getSessionDataCacheEntry()).thenReturn(cacheEntry);
+
+        AuthorizationResponseDTO authorizationResponseDTO = new AuthorizationResponseDTO();
+        authorizationResponseDTO.getSuccessResponseDTO()
+                .setFormPostBody("{\"code\":\"test_code\",\"state\":\"test_state\"}");
+
+        OIDCSessionState sessionState = new OIDCSessionState();
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(true);
+
+            when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
+            when(httpServletRequest.getServletContext()).thenReturn(servletContext);
+            when(servletContext.getContext(anyString())).thenReturn(servletContext);
+            when(servletContext.getRequestDispatcher(anyString())).thenReturn(requestDispatcher);
+            doNothing().when(requestDispatcher).forward(any(ServletRequest.class), any(ServletResponse.class));
+
+            handleFormPostResponseMode.invoke(authzUtilObject, oAuthMessage, sessionState,
+                    authorizationResponseDTO, null);
+
+            Assert.assertTrue(authorizationResponseDTO.getIsForwardToOAuthResponseJSP(),
+                    "form_post should forward to JSP when JSP is available");
         }
     }
 
