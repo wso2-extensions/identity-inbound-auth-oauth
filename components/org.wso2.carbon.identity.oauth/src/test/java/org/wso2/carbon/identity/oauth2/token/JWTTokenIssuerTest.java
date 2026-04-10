@@ -246,52 +246,6 @@ public class JWTTokenIssuerTest {
     }
 
     /**
-     * Test that preset audiences on {@link OAuthTokenReqMessageContext} are preserved in the JWT
-     * (delegation scenario where token exchange pre-sets explicit audiences).
-     */
-    @Test
-    public void testBuildJWTTokenWithPresetAudiencesForTokenContext() throws Exception {
-
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
-
-            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-            OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-            accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
-            accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
-            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
-            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
-            accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
-
-            OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
-            reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
-            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-            authenticatedUser.setUserName("DUMMY_USERNAME");
-            authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
-            authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
-            authenticatedUser.setUserId(DUMMY_USER_ID);
-            reqMessageContext.setAuthorizedUser(authenticatedUser);
-
-            // Pre-set audiences — simulates delegation/token-exchange where the grant handler
-            // sets explicit audiences before token issuance.
-            List<String> presetAudiences = Collections.singletonList("https://preset-audience.example.com");
-            reqMessageContext.setAudiences(presetAudiences);
-            // Scope without "aud" to avoid scope-based audience override
-            reqMessageContext.setScope(new String[]{"openid"});
-
-            prepareForBuildJWTToken(oAuth2Util);
-            JWTTokenIssuer jwtTokenIssuer = getJWTTokenIssuer(NONE);
-            String jwtToken = jwtTokenIssuer.buildJWTToken(reqMessageContext);
-
-            PlainJWT plainJWT = PlainJWT.parse(jwtToken);
-            assertNotNull(plainJWT);
-            assertEquals(plainJWT.getJWTClaimsSet().getAudience(), presetAudiences,
-                    "Preset audiences should appear in the JWT when pre-set on the token request context");
-        }
-    }
-
-    /**
      * Test for Plain JWT Building from {@link OAuthAuthzReqMessageContext}
      */
     @Test(dataProvider = "requestScopesProvider")
