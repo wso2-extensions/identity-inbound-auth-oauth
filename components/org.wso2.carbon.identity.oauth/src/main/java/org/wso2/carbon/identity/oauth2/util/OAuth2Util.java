@@ -5074,6 +5074,14 @@ public class OAuth2Util {
             OAuthAppDO appDO = getAppInformationByClientId(consumerKey);
             return StringUtils.equals(appDO.getTokenType(), JWT);
 
+        } catch (InvalidOAuthClientException e) {
+            // This can happen when the OAuth app has already been deleted (e.g., during DCR delete flow
+            // where the OAuth app is removed before the service provider deletion triggers cache cleanup).
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth application not found for consumer key: " + consumerKey +
+                        ". The application may have been already deleted.", e);
+            }
+            return false;
         } catch (IdentityException e) {
             log.error("Error while retrieving the application information for the consumer key: " + consumerKey, e);
             return false;
