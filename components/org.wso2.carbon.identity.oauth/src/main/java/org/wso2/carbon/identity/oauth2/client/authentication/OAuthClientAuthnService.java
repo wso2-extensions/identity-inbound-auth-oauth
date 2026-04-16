@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -168,7 +169,7 @@ public class OAuthClientAuthnService {
             try {
                 List<OAuthClientAuthenticator> configuredClientAuthMethods = getConfiguredClientAuthMethods(clientId);
                 List<OAuthClientAuthenticator> applicableAuthenticators;
-                if (OAuth2Util.isFapiConformantApp(clientId)) {
+                if (FapiUtil.isFapiConformantApp(clientId)) {
                     applicableAuthenticators = filterClientAuthenticatorsForFapi(configuredClientAuthMethods);
                 } else {
                     if (configuredClientAuthMethods.isEmpty()) {

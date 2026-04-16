@@ -89,6 +89,7 @@ public class OIDProviderConfigResponse {
     private String mtlsPushedAuthorizationRequestEndpoint;
     private String[] authorizationDetailsTypesSupported;
     private String backchannelAuthenticationEndpoint;
+    private Boolean authorizationResponseIssParameterSupported;
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
@@ -563,6 +564,16 @@ public class OIDProviderConfigResponse {
         this.backchannelAuthenticationEndpoint = backchannelAuthenticationEndpoint;
     }
 
+    public Boolean getAuthorizationResponseIssParameterSupported() {
+
+        return authorizationResponseIssParameterSupported;
+    }
+
+    public void setAuthorizationResponseIssParameterSupported(Boolean authorizationResponseIssParameterSupported) {
+
+        this.authorizationResponseIssParameterSupported = authorizationResponseIssParameterSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -644,6 +655,8 @@ public class OIDProviderConfigResponse {
                 this.authorizationDetailsTypesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_AUTHENTICATION_ENDPOINT,
                 this.backchannelAuthenticationEndpoint);
+        configMap.put(DiscoveryConstants.AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED,
+                this.authorizationResponseIssParameterSupported);
         return configMap;
     }
 }

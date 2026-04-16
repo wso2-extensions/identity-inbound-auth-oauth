@@ -113,6 +113,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
+    private String fapiProfile;
     private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
@@ -543,6 +544,27 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
+    }
+
+    /**
+     * Returns the FAPI security profile applied to this application.
+     * Meaningful only when {@link #isFapiConformanceEnabled()} is true.
+     *
+     * @return the FAPI profile string (e.g. "FAPI1_ADVANCED"), or null if not set.
+     */
+    public String getFapiProfile() {
+
+        return this.fapiProfile;
+    }
+
+    /**
+     * Sets the FAPI security profile for this application.
+     *
+     * @param fapiProfile the FAPI profile string (e.g. "FAPI1_ADVANCED").
+     */
+    public void setFapiProfile(String fapiProfile) {
+
+        this.fapiProfile = fapiProfile;
     }
 
     public Boolean isJwtScopeAsArrayEnabled() {

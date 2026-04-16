@@ -148,6 +148,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -5005,7 +5009,8 @@ public class OAuth2Util {
         Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
         it will be used as the issuer.
          */
-        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()
+                        || OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
             String residentIdp =  getResidentIdpEntityId(tenantDomain);
             if (StringUtils.isNotBlank(residentIdp)) {
@@ -5044,7 +5049,8 @@ public class OAuth2Util {
         it will be used as the issuer. When resident idp is used as the issuer, application level config to select
         issuer to be root or sub-org will not be applied as well.
          */
-        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()
+                || OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
             String residentIdp =  getResidentIdpEntityId(tenantDomain);
             if (StringUtils.isNotBlank(residentIdp)) {
@@ -6149,27 +6155,33 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the application should be FAPI conformant.
+     * Check whether FAPI 2.0 is enabled in the organization.
      *
-     * @param clientId Client ID of the application.
-     * @return Whether the application should be FAPI conformant.
-     * @throws IdentityOAuth2Exception InvalidOAuthClientException
+     * @param tenantDomain The tenant domain of the organization.
+     * @return Whether FAPI 2.0 is enabled for the given tenant.
      */
-    public static boolean isFapiConformantApp(String clientId)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    public static boolean isFapi2Enabled(String tenantDomain) {
 
-        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
+        FapiConfigMgtService fapiConfigMgtService =
+                OAuth2ServiceComponentHolder.getInstance().getFapiConfigMgtService();
+        if (fapiConfigMgtService == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("FapiConfigMgtService is not available. Treating FAPI 2.0 as disabled for tenant: "
+                        + tenantDomain);
+            }
             return false;
         }
-        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
-        OAuthAppDO oAuthAppDO;
-        if (StringUtils.isNotBlank(accessingOrgId)) {
-            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
-        } else {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            return fapiConfig.isEnabled() && CollectionUtils.isNotEmpty(fapiConfig.getSupportedProfiles())
+                    && fapiConfig.getSupportedProfiles().contains(FapiProfileEnum.FAPI2_SECURITY);
+        } catch (FapiConfigMgtException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error retrieving FAPI configuration for tenant: " + tenantDomain
+                        + ". Treating FAPI 2.0 as disabled.", e);
+            }
+            return false;
         }
-        return oAuthAppDO.isFapiConformanceEnabled();
     }
 
     /**

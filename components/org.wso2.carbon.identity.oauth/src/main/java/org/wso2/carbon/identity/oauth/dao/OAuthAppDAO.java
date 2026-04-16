@@ -79,6 +79,7 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.FAPIProfiles.FAPI1_ADVANCED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_ALLOW_FEDERATED_USERS;
@@ -87,6 +88,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_SKIP_USER_VALIDATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FAPI_PROFILE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
@@ -1161,6 +1163,12 @@ public class OAuthAppDAO {
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
+        if (oauthAppDO.isFapiConformanceEnabled()) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    FAPI_PROFILE, String.valueOf(oauthAppDO.getFapiProfile()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1873,6 +1881,20 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
+            // Persist the FAPI security profile only when a value has been set.
+            // A null value means the profile is not configured (FAPI may still be disabled).
+            if (Boolean.parseBoolean(String.valueOf(consumerAppDO.isFapiConformanceEnabled())) &&
+                    consumerAppDO.getFapiProfile() == null) {
+                LOG.debug("fapiProfile not specified with isFAPIApplication=true. Defaulting to FAPI1_ADVANCED.");
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        FAPI_PROFILE, FAPI1_ADVANCED);
+            }
+
+            if (consumerAppDO.getFapiProfile() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        FAPI_PROFILE, consumerAppDO.getFapiProfile());
+            }
+
             if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(consumerAppDO.isJwtScopeAsArrayEnabled()));
@@ -2089,6 +2111,16 @@ public class OAuthAppDAO {
         String isFAPI = getFirstPropertyValue(spOIDCProperties, IS_FAPI_CONFORMANT_APP);
         if (isFAPI != null) {
             oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
+        }
+        // Read back the FAPI security profile. This value is non-null only for applications
+        // where a profile was explicitly configured via the management API.
+        String fapiProfile = getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE);
+        if (Boolean.parseBoolean(isFAPI) && fapiProfile == null) {
+            LOG.debug("fapiProfile not specified with isFAPIApplication=true. Defaulting to FAPI1_ADVANCED.");
+            oauthApp.setFapiProfile(FAPI1_ADVANCED);
+        }
+        if (fapiProfile != null) {
+            oauthApp.setFapiProfile(fapiProfile);
         }
 
         String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);

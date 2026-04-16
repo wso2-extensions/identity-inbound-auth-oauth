@@ -342,6 +342,32 @@ public final class OAuthConstants {
     }
 
     /**
+     * Define FAPI versions.
+     */
+    public static class FAPIVersions {
+
+        public static final String FAPI1 = "1";
+        public static final String FAPI2 = "2";
+
+        private FAPIVersions() {
+
+        }
+    }
+
+    /**
+     * Define FAPI profiles.
+     */
+    public static class FAPIProfiles {
+
+        public static final String FAPI1_ADVANCED = "FAPI1_ADVANCED";
+        public static final String FAPI2_SECURITY = "FAPI2_SECURITY";
+
+        private FAPIProfiles() {
+
+        }
+    }
+
+    /**
      * Define OAuth1.0a request parameters.
      */
     public static class OAuth10AParams {
@@ -658,6 +684,8 @@ public final class OAuthConstants {
         public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
         public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
         public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+        // Stores the FAPI security profile applied to the application (e.g. "FAPI1_ADVANCED").
+        public static final String FAPI_PROFILE = "fapiProfile";
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;

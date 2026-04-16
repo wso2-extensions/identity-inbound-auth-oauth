@@ -80,6 +80,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
+    private String fapiProfile;
     private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
@@ -543,6 +544,27 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
+    }
+
+    /**
+     * Returns the FAPI security profile configured for this OAuth application.
+     * Meaningful only when {@link #isFapiConformanceEnabled()} is true.
+     *
+     * @return the FAPI profile string (e.g. "FAPI1_ADVANCED"), or null if not set.
+     */
+    public String getFapiProfile() {
+
+        return fapiProfile;
+    }
+
+    /**
+     * Sets the FAPI security profile for this OAuth application.
+     *
+     * @param fapiProfile the FAPI profile string (e.g. "FAPI1_ADVANCED").
+     */
+    public void setFapiProfile(String fapiProfile) {
+
+        this.fapiProfile = fapiProfile;
     }
 
     public Boolean isJwtScopeAsArrayEnabled() {

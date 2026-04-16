@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
@@ -288,5 +289,34 @@ public class DCRServiceComponent {
     protected void unsetAdditionalAttributeFilter(AdditionalAttributeFilter tokenBinderInfo) {
 
         DCRDataHolder.getInstance().setAdditionalAttributeFilter(null);
+    }
+
+    /**
+     * Set the FapiConfigMgtService.
+     *
+     * @param fapiConfigMgtService The {@code FapiConfigMgtService} instance.
+     */
+    @Reference(
+            name = "identity.oauth2.fapi.config.service",
+            service = FapiConfigMgtService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetFapiConfigMgtService"
+    )
+    protected void setFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
+
+        log.debug("Setting FapiConfigMgtService in DCR Service Component.");
+        DCRDataHolder.getInstance().setFapiConfigMgtService(fapiConfigMgtService);
+    }
+
+    /**
+     * Unset the FapiConfigMgtService.
+     *
+     * @param fapiConfigMgtService The {@code FapiConfigMgtService} instance.
+     */
+    protected void unsetFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
+
+        log.debug("Unsetting FapiConfigMgtService in DCR Service Component.");
+        DCRDataHolder.getInstance().setFapiConfigMgtService(null);
     }
 }

@@ -103,6 +103,7 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -2770,7 +2771,7 @@ public class OAuth2UtilTest {
 
             identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn("carbon.super");
             identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
-            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+            Assert.assertEquals(FapiUtil.isFapiConformantApp(clientId), isFapiConformant);
         }
     }
 

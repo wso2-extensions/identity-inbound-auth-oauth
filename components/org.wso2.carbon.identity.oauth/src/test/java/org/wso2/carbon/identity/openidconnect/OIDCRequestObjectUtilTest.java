@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -143,7 +144,8 @@ public class OIDCRequestObjectUtilTest {
                  MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class,
                          CALLS_REAL_METHODS);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
 
                 OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
                 oAuth2Parameters.setTenantDomain("carbon.super");
@@ -170,7 +172,7 @@ public class OIDCRequestObjectUtilTest {
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
-                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
                 oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();

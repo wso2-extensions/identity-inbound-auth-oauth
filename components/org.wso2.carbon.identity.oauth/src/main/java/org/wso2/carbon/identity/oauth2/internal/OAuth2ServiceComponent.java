@@ -84,6 +84,8 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
@@ -436,6 +438,9 @@ public class OAuth2ServiceComponent {
                     null);
             bundleContext.registerService(ImpersonationNotificationMgtService.class,
                     new ImpersonationNotificationMgtServiceImpl(), null);
+            final FapiConfigMgtService fapiConfigMgtService = new FapiConfigMgtServiceImpl();
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(fapiConfigMgtService);
+            bundleContext.registerService(FapiConfigMgtService.class, fapiConfigMgtService, null);
 
             bundleContext.registerService(AccessTokenResponseHandler.class, new AccessTokenResponseRARHandler(), null);
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,

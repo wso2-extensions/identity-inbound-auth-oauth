@@ -567,6 +567,7 @@ public final class OAuthUtil {
         dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
         dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
+        dto.setFapiProfile(appDO.getFapiProfile());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
         dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
