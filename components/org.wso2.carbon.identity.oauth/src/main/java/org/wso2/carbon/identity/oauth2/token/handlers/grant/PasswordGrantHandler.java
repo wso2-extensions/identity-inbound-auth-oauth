@@ -275,7 +275,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
-            String message = "Authentication failed for the user: " + tokenReq.getResourceOwnerUsername();
+            String message = "Authentication failed for the user: " + OAuth2Util.getUserIdentifierFromRequest(tokenReq);
             if (log.isDebugEnabled()) {
                 log.debug(message, e);
             }
