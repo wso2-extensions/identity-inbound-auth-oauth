@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dcr;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
@@ -31,6 +32,10 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,9 +47,11 @@ import static org.wso2.carbon.identity.configuration.mgt.core.constant.Configura
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.CLIENT_AUTHENTICATION_REQUIRED;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_DCR_CONFIGURATION_RETRIEVE;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_UNSUPPORTED_FAPI_PROFILE;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.ENABLE_FAPI_ENFORCEMENT;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.FAPI_PROFILE;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.MANDATE_SSA;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.SSA_JWKS;
 import static org.wso2.carbon.identity.oauth.dcr.util.DCRConfigErrorUtils.handleClientException;
@@ -84,6 +91,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
 
         try {
             validateMandateSSA(dcrConfiguration);
+            this.validateFapiProfile(dcrConfiguration);
             ResourceAdd resourceAdd = parseConfig(dcrConfiguration);
             getConfigurationManager().replaceResource(DCR_CONFIG_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
@@ -174,6 +182,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
                     attributeMap.get(CLIENT_AUTHENTICATION_REQUIRED));
             Boolean mandateSSA = getBooleanFromString(attributeMap.get(MANDATE_SSA));
             String ssaJwks = attributeMap.get(SSA_JWKS);
+            String fapiProfile = attributeMap.get(FAPI_PROFILE);
 
             if (enableFapiEnforcement != null) {
                 dcrConfiguration.setEnableFapiEnforcement(enableFapiEnforcement);
@@ -186,6 +195,13 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
             }
             if (mandateSSA != null) {
                 dcrConfiguration.setMandateSSA(mandateSSA);
+            }
+            if (fapiProfile == null) {
+                if (Boolean.TRUE.equals(enableFapiEnforcement)) {
+                    dcrConfiguration.setFapiProfile(FapiProfileEnum.FAPI1_ADVANCED);
+                }
+            } else {
+                dcrConfiguration.setFapiProfile(FapiProfileEnum.fromValue(fapiProfile));
             }
         }
     }
@@ -209,6 +225,47 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
                 StringUtils.isBlank(dcrConfiguration.getSsaJwks())) {
             // if mandateSSA is True, ssaJwks should be provided.
             throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_JWKS_REQUIRED);
+        }
+    }
+
+    /**
+     * Validates that the requested FAPI profile is supported by the organization.
+     * Skips the check if no profile is specified or if the organization has not configured any supported profiles.
+     *
+     * @param dcrConfiguration The incoming DCR configuration to validate.
+     * @throws DCRMClientException If the requested profile is not in the organization's supported profiles.
+     * @throws DCRMServerException If the organization's FAPI configuration cannot be retrieved.
+     */
+    private void validateFapiProfile(DCRConfiguration dcrConfiguration)
+            throws DCRMClientException, DCRMServerException {
+
+        FapiProfileEnum requestedProfile = dcrConfiguration.getFapiProfile();
+        if (requestedProfile == null) {
+            return;
+        }
+
+        FapiConfigMgtService fapiConfigMgtService = DCRDataHolder.getInstance().getFapiConfigMgtService();
+        if (fapiConfigMgtService == null) {
+            return;
+        }
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            List<FapiProfileEnum> supportedProfiles = fapiConfig.getSupportedProfiles();
+            if (CollectionUtils.isEmpty(supportedProfiles)) {
+                return;
+            }
+            if (!supportedProfiles.contains(requestedProfile)) {
+                String supportedProfileValues = supportedProfiles.stream()
+                        .map(FapiProfileEnum::value)
+                        .collect(Collectors.joining(", "));
+                throw handleClientException(ERROR_CODE_UNSUPPORTED_FAPI_PROFILE,
+                        requestedProfile.value(), supportedProfileValues);
+            }
+        } catch (FapiConfigMgtException e) {
+            throw handleServerException(ERROR_CODE_UNSUPPORTED_FAPI_PROFILE, e,
+                    requestedProfile.value(), "");
         }
     }
 
@@ -241,6 +298,8 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         addAttribute(attributes, CLIENT_AUTHENTICATION_REQUIRED, authenticationRequired);
         addAttribute(attributes, SSA_JWKS, ssaJwks);
         addAttribute(attributes, MANDATE_SSA, mandateSSA);
+        addAttribute(attributes, FAPI_PROFILE,
+                dcrConfiguration.getFapiProfile() != null ? dcrConfiguration.getFapiProfile().value() : null);
 
         resourceAdd.setAttributes(attributes);
 

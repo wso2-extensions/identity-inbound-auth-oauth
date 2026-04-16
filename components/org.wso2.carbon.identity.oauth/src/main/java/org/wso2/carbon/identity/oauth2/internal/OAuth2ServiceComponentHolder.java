@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValid
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -147,6 +148,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
     private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
     private OrganizationDiscoveryHandler organizationDiscoveryHandler;
+    private FapiConfigMgtService fapiConfigMgtService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1163,6 +1165,26 @@ public class OAuth2ServiceComponentHolder {
     public void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
 
         this.organizationDiscoveryHandler = organizationDiscoveryHandler;
+    }
+
+    /**
+     * Get the FapiConfigMgtService instance.
+     *
+     * @return FapiConfigMgtService instance.
+     */
+    public FapiConfigMgtService getFapiConfigMgtService() {
+
+        return fapiConfigMgtService;
+    }
+
+    /**
+     * Set the FapiConfigMgtService instance.
+     *
+     * @param fapiConfigMgtService FapiConfigMgtService instance.
+     */
+    public void setFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
+
+        this.fapiConfigMgtService = fapiConfigMgtService;
     }
 }
 

@@ -593,6 +593,9 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
+                        if (isFAPIConformanceEnabled) {
+                            app.setFapiProfile(application.getFapiProfile());
+                        }
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                         app.setGracefulRefreshTokenRotationEnabled(
@@ -1155,6 +1158,10 @@ public class OAuthAdminServiceImpl {
             if (oAuthAppDO.isCibaAllowFederatedUsers() && !oAuthAppDO.isCibaSkipUserValidation()) {
                 throw handleClientError(INVALID_REQUEST,
                         "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
+            }
+
+            if (isFAPIConformanceEnabled) {
+                oAuthAppDO.setFapiProfile(consumerAppDTO.getFapiProfile());
             }
 
             try {
