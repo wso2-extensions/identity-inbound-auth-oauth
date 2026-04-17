@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.mockito.MockedStatic;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -29,6 +28,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;

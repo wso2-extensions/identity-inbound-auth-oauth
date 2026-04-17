@@ -1,8 +1,8 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.claims;
 
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
