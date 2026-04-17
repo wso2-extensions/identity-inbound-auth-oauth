@@ -711,12 +711,16 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
         if (authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME
                 .equals(authenticatedUser.getFederatedIdPName())) {
-            String userResideOrganization = resolveUserResidentOrganization(AuthorizationGrantCache.getInstance()
-                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode)).getUserAttributes());
-            String accessingOrganization = resolveUserAccessingOrganization(AuthorizationGrantCache.getInstance()
-                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode)).getUserAttributes());
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
+                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
+            String userResidentOrganization = resolveUserResidentOrganization(
+                    authorizationGrantCacheEntry.getUserAttributes());
+            String accessingOrganization = authorizationGrantCacheEntry.getAccessingOrganization();
+            if (StringUtils.isBlank(accessingOrganization)) {
+                accessingOrganization = userResidentOrganization;
+            }
             authenticatedUser.setAccessingOrganization(accessingOrganization);
-            authenticatedUser.setUserResidentOrganization(userResideOrganization);
+            authenticatedUser.setUserResidentOrganization(userResidentOrganization);
         }
     }
 
@@ -725,18 +729,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         for (Map.Entry<ClaimMapping, String> attributes : userAttributes.entrySet()) {
             if (attributes.getKey() != null && attributes.getKey().getLocalClaim() != null &&
                     FrameworkConstants.USER_ORGANIZATION_CLAIM
-                            .equals(attributes.getKey().getLocalClaim().getClaimUri())) {
-                return attributes.getValue();
-            }
-        }
-        return null;
-    }
-
-    private String resolveUserAccessingOrganization(Map<ClaimMapping, String> userAttributes) {
-
-        for (Map.Entry<ClaimMapping, String> attributes : userAttributes.entrySet()) {
-            if (attributes.getKey() != null && attributes.getKey().getLocalClaim() != null &&
-                    FrameworkConstants.ACCESSING_ORGANIZATION
                             .equals(attributes.getKey().getLocalClaim().getClaimUri())) {
                 return attributes.getValue();
             }

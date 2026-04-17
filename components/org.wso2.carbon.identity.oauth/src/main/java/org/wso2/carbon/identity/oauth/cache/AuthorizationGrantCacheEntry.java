@@ -54,6 +54,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private Map<ClaimMapping, String> userAttributes;
 
+    private String accessingOrganization;
+
     private String nonceValue;
 
     private String pkceCodeChallenge;
@@ -451,6 +453,26 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
 
         isPreIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
+    }
+
+    /**
+     * Get accessing organization.
+     *
+     * @param accessingOrganization accessing organization.
+     */
+    public void setAccessingOrganization(String accessingOrganization) {
+
+        this.accessingOrganization = accessingOrganization;
+    }
+
+    /**
+     * Get accessing organization.
+     *
+     * @return accessing organization.
+     */
+    public String getAccessingOrganization() {
+
+        return accessingOrganization;
     }
 
     /**
