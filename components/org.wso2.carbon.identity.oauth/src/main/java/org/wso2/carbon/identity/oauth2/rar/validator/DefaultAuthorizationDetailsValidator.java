@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth2.rar.validator;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizationDetailsType;

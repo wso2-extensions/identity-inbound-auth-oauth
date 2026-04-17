@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.claims;
 
-import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;

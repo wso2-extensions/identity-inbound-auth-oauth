@@ -24,7 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
@@ -308,12 +308,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 .SCOPE_VALIDATION_TOKEN);
         scopeValidationCallback.setRequestedScope(tokReqMsgCtx.getScope());
         if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
-                org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString())) {
-            scopeValidationCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
+                GrantType.SAML20_BEARER.toString())) {
+            scopeValidationCallback.setCarbonGrantType(GrantType.valueOf(
                     OAuthConstants.OAUTH_SAML2_BEARER_GRANT_ENUM.toString()));
         } else if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
-                org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString())) {
-            scopeValidationCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
+                GrantType.IWA_NTLM.toString())) {
+            scopeValidationCallback.setCarbonGrantType(GrantType.valueOf(
                     OAuthConstants.OAUTH_IWA_NTLM_GRANT_ENUM.toString()));
         } else {
             scopeValidationCallback.setGrantType(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType());
@@ -380,12 +380,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 OAuthCallback.OAuthCallbackType.ACCESS_DELEGATION_TOKEN);
         authzCallback.setRequestedScope(tokReqMsgCtx.getScope());
         if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
-                org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString())) {
-            authzCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
+                GrantType.SAML20_BEARER.toString())) {
+            authzCallback.setCarbonGrantType(GrantType.valueOf(
                     OAuthConstants.OAUTH_SAML2_BEARER_GRANT_ENUM));
         } else if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType().equals(
-                org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString())) {
-            authzCallback.setCarbonGrantType(org.wso2.carbon.identity.oauth.common.GrantType.valueOf(
+                GrantType.IWA_NTLM.toString())) {
+            authzCallback.setCarbonGrantType(GrantType.valueOf(
                     OAuthConstants.OAUTH_IWA_NTLM_GRANT_ENUM));
         } else {
             authzCallback.setGrantType(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType());
