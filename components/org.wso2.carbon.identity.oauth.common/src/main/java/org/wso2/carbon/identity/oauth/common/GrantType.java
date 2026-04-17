@@ -22,6 +22,10 @@ package org.wso2.carbon.identity.oauth.common;
  */
 public enum GrantType {
 
+    AUTHORIZATION_CODE("authorization_code"),
+    CLIENT_CREDENTIALS("client_credentials"),
+    PASSWORD("password"),
+    REFRESH_TOKEN("refresh_token"),
     SAML20_BEARER("urn:ietf:params:oauth:grant-type:saml2-bearer"),
     IWA_NTLM("iwa:ntlm");
 

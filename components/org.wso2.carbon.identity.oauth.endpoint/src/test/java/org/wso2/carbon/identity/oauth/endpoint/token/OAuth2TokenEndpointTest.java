@@ -25,7 +25,6 @@ import org.apache.oltu.oauth2.as.validator.ClientCredentialValidator;
 import org.apache.oltu.oauth2.as.validator.PasswordValidator;
 import org.apache.oltu.oauth2.as.validator.RefreshTokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +52,7 @@ import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.UserActor;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -544,8 +544,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                 {GrantType.AUTHORIZATION_CODE.toString(), OAuth.OAUTH_CODE},
                 {GrantType.PASSWORD.toString(), OAuth.OAUTH_USERNAME + "," + OAuth.OAUTH_PASSWORD},
                 {GrantType.REFRESH_TOKEN.toString(), OAuth.OAUTH_REFRESH_TOKEN},
-                {org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(), OAuth.OAUTH_ASSERTION},
-                {org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(), OAuthConstants.WINDOWS_TOKEN},
+                {GrantType.SAML20_BEARER.toString(), OAuth.OAUTH_ASSERTION},
+                {GrantType.IWA_NTLM.toString(), OAuthConstants.WINDOWS_TOKEN},
                 {GrantType.CLIENT_CREDENTIALS.toString(), OAuth.OAUTH_GRANT_TYPE},
         };
     }
@@ -591,9 +591,9 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
             grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), ClientCredentialValidator.class);
             grantTypeValidators.put(GrantType.AUTHORIZATION_CODE.toString(), AuthorizationCodeValidator.class);
             grantTypeValidators.put(GrantType.REFRESH_TOKEN.toString(), RefreshTokenValidator.class);
-            grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(),
+            grantTypeValidators.put(GrantType.IWA_NTLM.toString(),
                     NTLMAuthenticationValidator.class);
-            grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(),
+            grantTypeValidators.put(GrantType.SAML20_BEARER.toString(),
                     SAML2GrantValidator.class);
 
             mockOAuthServerConfiguration(oAuthServerConfiguration);

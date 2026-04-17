@@ -29,7 +29,6 @@ import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.base.ServerConfigurationException;
@@ -38,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -1330,7 +1330,7 @@ public class OAuthServerConfiguration {
                     supportedGrantTypeValidatorsTemp.put(GrantType.REFRESH_TOKEN.toString(),
                             RefreshTokenGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(
-                            org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER
+                            GrantType.SAML20_BEARER
                                     .toString(), SAML2GrantValidator.class);
 
                     if (supportedGrantTypeValidatorNames != null) {
@@ -3038,9 +3038,9 @@ public class OAuthServerConfiguration {
             defaultGrantTypes.put(GrantType.CLIENT_CREDENTIALS.toString(), CLIENT_CREDENTIALS_GRANT_HANDLER_CLASS);
             defaultGrantTypes.put(GrantType.PASSWORD.toString(), PASSWORD_GRANT_HANDLER_CLASS);
             defaultGrantTypes.put(GrantType.REFRESH_TOKEN.toString(), REFRESH_TOKEN_GRANT_HANDLER_CLASS);
-            defaultGrantTypes.put(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(),
+            defaultGrantTypes.put(GrantType.SAML20_BEARER.toString(),
                     SAML20_BEARER_GRANT_HANDLER_CLASS);
-            defaultGrantTypes.put(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(),
+            defaultGrantTypes.put(GrantType.IWA_NTLM.toString(),
                     IWA_NTLM_BEARER_GRANT_HANDLER_CLASS);
             supportedGrantTypeClassNames.putAll(defaultGrantTypes);
         }
