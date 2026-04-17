@@ -2270,7 +2270,9 @@ public class OAuth2Util {
      */
     public static OAuthAppDO getAppInformationByClientIdWithoutCaching(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
-
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving OAuth app information for client id without caching.");
+        }
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
         if (oAuthAppDO != null) {
             return oAuthAppDO;
