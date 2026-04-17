@@ -34,8 +34,11 @@ import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
+import org.wso2.carbon.identity.action.execution.api.model.UserClaim;
 import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.api.util.RequestBuilderUtil;
+import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -50,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDTokenDTO;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model.IDToken;
 import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model.IDTokenRequest;
@@ -57,6 +61,7 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model.PreIs
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -290,7 +295,8 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         return userBuilder.build();
     }
 
-    private User resolveLocalUser(AuthenticatedUser authenticatedUser, String grantType)
+    private User resolveLocalUser(AuthenticatedUser authenticatedUser, String grantType,
+                                  ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId());
@@ -301,7 +307,28 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             userBuilder.accessingOrganization(buildOrganization(authenticatedUser.getAccessingOrganization(),
                     authenticatedUser.getTenantDomain()));
         }
+
+        String userId = authenticatedUser.getUserId();
+        String userTenantDomain = resolveUserTenantDomain(authenticatedUser);
+        populateUserClaims(userBuilder, actionExecutionContext.getAction(), userId, userTenantDomain);
+
         return userBuilder.build();
+    }
+
+    private String resolveUserTenantDomain(AuthenticatedUser authenticatedUser) {
+
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        // For sub-org users, resolve the user's resident organization tenant domain
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
+            try {
+                userTenantDomain = OIDCClaimUtil.resolveTenantDomain(
+                        authenticatedUser.getUserResidentOrganization());
+            } catch (OrganizationManagementException e) {
+                // Fall back to the original tenant domain
+                userTenantDomain = authenticatedUser.getTenantDomain();
+            }
+        }
+        return userTenantDomain;
     }
 
     private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
@@ -443,5 +470,42 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             LOG.error("Error while retrieving organization Id with tenant: " + tenantDomain, e);
         }
         return null;
+    }
+
+    private void populateUserClaims(User.Builder userBuilder, Action action, String userId,
+                                    String userTenantDomain) {
+
+        if (action == null) {
+            return;
+        }
+        List<String> attributes = action.getAttributes();
+        if (attributes == null || attributes.isEmpty()) {
+            return;
+        }
+
+        // Retrieve user claims from user store for the requested attributes
+        Map<String, String> claimValues = new HashMap<>();
+        try {
+            if (StringUtils.isNotEmpty(userId) && StringUtils.isNotEmpty(userTenantDomain)) {
+                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+                claimValues = RequestBuilderUtil.getClaimValues(userId, attributes, userTenantDomain, realmService);
+            }
+        } catch (Exception e) {
+            LOG.error("Error occurred while retrieving user claims from user store.", e);
+        }
+
+        // Build user claims list with retrieved values
+        List<UserClaim> userClaimsList = new ArrayList<>();
+        for (String attributeUri : attributes) {
+            String claimValue = claimValues.get(attributeUri);
+            if (StringUtils.isEmpty(claimValue)) {
+                continue;
+            }
+            userClaimsList.add(new UserClaim(attributeUri, claimValue));
+        }
+
+        if (!userClaimsList.isEmpty()) {
+            userBuilder.claims(userClaimsList);
+        }
     }
 }
