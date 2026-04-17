@@ -2261,6 +2261,25 @@ public class OAuth2Util {
     }
 
     /**
+     * Get Oauth application information without using caching the fetched value
+     *
+     * @param clientId Consumer key of the application
+     * @return Oauth app information
+     * @throws IdentityOAuth2Exception when an error occurs while retrieving app information from the database.
+     * @throws InvalidOAuthClientException when the provided clientId does not correspond to a valid OAuth application.
+     */
+    public static OAuthAppDO getAppInformationByClientIdWithoutCaching(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO != null) {
+            return oAuthAppDO;
+        } else {
+            return new OAuthAppDAO().getAppInformation(clientId);
+        }
+    }
+
+    /**
      * Get the tenant domain of an oauth application
      *
      * @param oAuthAppDO
@@ -5071,7 +5090,8 @@ public class OAuth2Util {
                 return false;
             }
 
-            OAuthAppDO appDO = getAppInformationByClientId(consumerKey);
+            // Avoid caching the app info as app info might be removed from cache prior to this in some cases.
+            OAuthAppDO appDO = getAppInformationByClientIdWithoutCaching(consumerKey);
             return StringUtils.equals(appDO.getTokenType(), JWT);
         } catch (InvalidOAuthClientException e) {
             // This can happen when the OAuth app is removed before the service provider deletion triggers cache cleanup
