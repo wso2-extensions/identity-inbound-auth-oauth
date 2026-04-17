@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.text.ParseException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -356,6 +357,19 @@ public class AuthorizationGrantCache extends
         if (StringUtils.isNotBlank(id)) {
             SessionDataStore.getInstance().clearSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME);
         }
+    }
+
+    /**
+     * Clears cache entries from SessionDataStore for a batch of IDs in a single database operation.
+     *
+     * @param ids List of token/code IDs to clear from the session store.
+     */
+    public void clearFromSessionStoreBatch(List<String> ids) {
+
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        SessionDataStore.getInstance().clearSessionDataBatch(ids, AUTHORIZATION_GRANT_CACHE_NAME);
     }
 
     /**
