@@ -54,6 +54,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private Map<ClaimMapping, String> userAttributes;
 
+    @Version(1)
     private String accessingOrganization;
 
     private String nonceValue;
