@@ -4870,6 +4870,7 @@ public class OAuth2Util {
                         "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
+        authenticatedUser.setSharedUser(authzUser.isSharedUser());
         if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
             authenticatedUser.setAccessingOrganization(authzUser.getAccessingOrganization());
             authenticatedUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
@@ -4939,6 +4940,33 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        // For organization bound access tokens, the authenticated user should be populated considering below factors.
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
+                    IdentityTenantUtil.getTenantDomain(appTenantID), authenticatedUser.isFederatedUser());
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username              Username of the user.
+     * @param userStoreDomain       User store domain.
+     * @param tenantDomain          Tenant domain.
+     * @param idpName               Idp name.
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantID           The tenant ID of the application where user get authenticated.
+     * @param isSharedUser          Whether the user is a shared user.
+     * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @throws IdentityOAuth2Exception If an error occurred while creating the authenticated user.
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, int appTenantID, boolean isSharedUser)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        authenticatedUser.setSharedUser(isSharedUser);
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
             addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
@@ -6497,8 +6525,9 @@ public class OAuth2Util {
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
-        if  (isOrgSSOFederation) {
+        if  (isOrgSSOFederation && !authenticatedUser.isSharedUser()) {
             // Set authorized user tenant domain to the tenant domain of the application.
+            // For shared users, tenant domain of the user resident organization is already set.
             authenticatedUser.setTenantDomain(appTenantDomain);
         }
     }
