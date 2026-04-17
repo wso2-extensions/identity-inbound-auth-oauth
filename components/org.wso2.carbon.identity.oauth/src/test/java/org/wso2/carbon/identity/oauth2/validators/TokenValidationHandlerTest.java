@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
@@ -58,6 +59,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
@@ -106,6 +108,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
@@ -550,6 +553,171 @@ public class TokenValidationHandlerTest {
             conn = dataSource.getConnection();
         }
         return conn;
+    }
+
+    @DataProvider(name = "dataProviderForValidateIntrospectionForSubOrgTokens")
+    public Object[][] dataProviderForValidateIntrospectionForSubOrgTokens() {
+
+        IssuerDetails rootOrgIssuerDetails = new IssuerDetails();
+        rootOrgIssuerDetails.setIssuerTenantDomain("carbon.super");
+        rootOrgIssuerDetails.setIssuerOrgId("9e309826-dce7-4a8e-accf-f564870dee24");
+
+        IssuerDetails subOrgIssuerDetails = new IssuerDetails();
+        subOrgIssuerDetails.setIssuerTenantDomain("sub.tenant.domain");
+        subOrgIssuerDetails.setIssuerOrgId("847b836b-a52e-4896-957d-98574bd0ad4c");
+
+        // {accessingOrgID, introspectingTenantOrgId, primaryOrgOfAccessingOrg, isAppInSubOrg, isFragmentApp,
+        //  issuerDetails, issuerIsOrg, accessingOrgIdFromPath, isIntrospectionRequest, expectedValid}
+        return new Object[][] {
+                // Initial org check: accessing != introspecting AND introspecting is not primary → invalid
+                {"org-A", "org-B", "org-C", false, false, null, false, "", false, false},
+                // accessing == introspecting, app in root org, no path org → valid
+                {"same-org", "same-org", "root-org", false, false, null, false, "", false, true},
+                // App in root org, path org set → invalid
+                {"same-org", "same-org", "root-org", false, false, null, false, "some-path-org", false, false},
+                // App in sub-org, non-fragment, issuerDetails=null, no path org → valid
+                {"same-org", "same-org", "root-org", true, false, null, false, "", false, true},
+                // App in sub-org, non-fragment, issuerDetails=null, path org == accessing org → valid
+                {"org-A", "org-A", "root-org", true, false, null, false, "org-A", false, true},
+                // App in sub-org, non-fragment, issuerDetails=null, path org != accessing org → invalid
+                {"org-A", "org-A", "root-org", true, false, null, false, "different-org", false, false},
+                // App in sub-org, non-fragment, root org issuer, path org == accessing org → valid
+                {"org-A", "org-A", "root-org", true, false, rootOrgIssuerDetails, false, "org-A", false, true},
+                // App in sub-org, non-fragment, root org issuer, path org != accessing org → invalid
+                {"org-A", "org-A", "root-org", true, false, rootOrgIssuerDetails, false, "different-org", false, false},
+                // App in sub-org, non-fragment, root org issuer, no path org, introspecting == issuerOrgId → valid
+                {"org-A", "root-issuer-org-id", "root-issuer-org-id", true, false,
+                        rootOrgIssuerDetails, false, "", false, true},
+                // App in sub-org, non-fragment, sub-org issuer, path org == issuerOrgId → valid
+                {"org-A", "org-A", "root-org", true, false, subOrgIssuerDetails, true,
+                        "sub-issuer-org-id", false, true},
+                // App in sub-org, non-fragment, sub-org issuer, path org != issuerOrgId → invalid
+                {"org-A", "org-A", "root-org", true, false, subOrgIssuerDetails, true, "different-org", false, false},
+                // App in sub-org, non-fragment, sub-org issuer, no path org, introspection=true, accessing !=
+                // introspecting → invalid
+                {"org-A", "org-B", "org-B", true, false, subOrgIssuerDetails, true, "", true, false},
+        };
+    }
+
+    @Test(dataProvider = "dataProviderForValidateIntrospectionForSubOrgTokens")
+    public void testValidateIntrospectionForSubOrgTokens(String accessingOrgID, String introspectingTenantOrgId,
+            String primaryOrgOfAccessingOrg, boolean isAppInSubOrg, boolean isFragmentApp, IssuerDetails issuerDetails,
+            boolean issuerIsOrg, String accessingOrgIdFromPath, boolean isIntrospectionRequest, boolean expectedValid)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil =
+                     mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil =
+                     mockStatic(IdentityTenantUtil.class)) {
+
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
+
+            oAuthServerConfiguration.when(() ->
+                            OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed())
+                    .thenReturn(false);
+            oAuthServerConfiguration.when(() ->
+                            OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens())
+                    .thenReturn(false);
+            lenient().when(mockOAuthServerConfiguration.getAllowedScopes()).thenReturn(Collections.emptyList());
+
+            OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+            lenient().when(organizationManager.resolveOrganizationId(anyString()))
+                    .thenReturn(introspectingTenantOrgId);
+            lenient().when(organizationManager.getPrimaryOrganizationId(accessingOrgID))
+                    .thenReturn(primaryOrgOfAccessingOrg);
+
+            AuthenticatedUser tokenAuthzUser = new AuthenticatedUser();
+            tokenAuthzUser.setAccessingOrganization(accessingOrgID);
+            tokenAuthzUser.setTenantDomain("carbon.super");
+
+            int appResidentTenantId = isAppInSubOrg ? 100 : 1;
+            AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, tokenAuthzUser, scopeArraySorted, issuedTime,
+                    refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                    authorizationCode);
+            accessTokenDO.setTokenId("5b458841-f12a-4694-9b46-30b55f46b183");
+            accessTokenDO.setAppResidentTenantId(appResidentTenantId);
+
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolderInstance);
+            TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
+            when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            if (!expectedValid) {
+                // Throw to prevent RefreshTokenValidator from overwriting introResp with null error, which would cause
+                // "Token validation failed" to mask the specific sub-org rejection error we are asserting on.
+                lenient().when(tokenProvider.getVerifiedRefreshToken(anyString()))
+                        .thenThrow(new IdentityOAuth2Exception("Not a refresh token"));
+            }
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setAccessingOrganizationId(StringUtils.isNotEmpty(accessingOrgIdFromPath)
+                            ? accessingOrgIdFromPath : null);
+
+            organizationManagementUtil.when(
+                            () -> OrganizationManagementUtil.isOrganization(anyInt()))
+                    .thenReturn(isAppInSubOrg);
+            if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())) {
+                organizationManagementUtil.when(
+                                () -> OrganizationManagementUtil.isOrganization(issuerDetails.getIssuerTenantDomain()))
+                        .thenReturn(issuerIsOrg);
+            }
+
+            if (isAppInSubOrg) {
+                String subOrgTenantDomain = "sub.app.tenant.domain";
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(appResidentTenantId))
+                        .thenReturn(subOrgTenantDomain);
+
+                ServiceProvider serviceProvider = new ServiceProvider();
+                if (isFragmentApp) {
+                    ServiceProviderProperty fragmentProp = new ServiceProviderProperty();
+                    fragmentProp.setName("isFragmentApp");
+                    fragmentProp.setValue("true");
+                    serviceProvider.setSpProperties(new ServiceProviderProperty[]{fragmentProp});
+                } else {
+                    serviceProvider.setSpProperties(new ServiceProviderProperty[0]);
+                    OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                    oAuthAppDO.setIssuerDetails(issuerDetails);
+                    oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId), eq(subOrgTenantDomain)))
+                            .thenReturn(oAuthAppDO);
+                }
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(eq(clientId), eq(subOrgTenantDomain)))
+                        .thenReturn(serviceProvider);
+            }
+
+            // Return 0 to make the token appear expired for an early return (active=false, error=null) on valid paths
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), anyBoolean())).thenReturn(0L);
+
+            OAuth2TokenValidationRequestDTO validationRequest = new OAuth2TokenValidationRequestDTO();
+            OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken =
+                    validationRequest.new OAuth2AccessToken();
+            accessToken.setIdentifier("686e0d37-e430-43ee-8f78-04195301feb5");
+            accessToken.setTokenType("bearer");
+            validationRequest.setAccessToken(accessToken);
+            validationRequest.setIntrospectionRequest(isIntrospectionRequest);
+
+            OAuth2IntrospectionResponseDTO response = tokenValidationHandler
+                    .buildIntrospectionResponse(validationRequest);
+
+            assertNotNull(response, "Introspection response should not be null");
+            if (expectedValid) {
+                assertNotEquals(response.getError(), "Invalid Access Token. ACTIVE access token is not found.",
+                        "Expected sub-org validation to pass, but got the sub-org rejection error");
+            } else {
+                assertEquals(response.getError(), "Invalid Access Token. ACTIVE access token is not found.",
+                        "Expected sub-org token validation to fail with the correct error message");
+            }
+        }
     }
 
     private OAuth2TokenValidationMessageContext getOAuth2TokenValidationMessageContext(
