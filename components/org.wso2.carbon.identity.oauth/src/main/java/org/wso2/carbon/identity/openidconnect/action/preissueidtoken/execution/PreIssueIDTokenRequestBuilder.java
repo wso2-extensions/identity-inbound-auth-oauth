@@ -109,11 +109,11 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
             case REQUEST_TYPE_TOKEN:
                 return buildActionExecutionRequest(
                         flowContext.getValue(TOKEN_REQUEST_MESSAGE_CONTEXT, OAuthTokenReqMessageContext.class),
-                        idTokenDTO, oidcCustomClaims);
+                        idTokenDTO, oidcCustomClaims, actionExecutionContext);
             case REQUEST_TYPE_AUTHZ:
                 return buildActionExecutionRequest(
                         flowContext.getValue(AUTHZ_REQUEST_MESSAGE_CONTEXT, OAuthAuthzReqMessageContext.class),
-                        idTokenDTO, oidcCustomClaims);
+                        idTokenDTO, oidcCustomClaims, actionExecutionContext);
             default:
                 throw new ActionExecutionRequestBuilderException("Invalid request type found in the flow context: " +
                         requestType);
@@ -121,30 +121,33 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
     }
 
     private ActionExecutionRequest buildActionExecutionRequest(OAuthTokenReqMessageContext tokenMessageContext,
-                                                              IDTokenDTO idTokenDTO,
-                                                              Map<String, Object> oidcCustomClaims) {
+                                                               IDTokenDTO idTokenDTO,
+                                                               Map<String, Object> oidcCustomClaims,
+                                                               ActionExecutionRequestContext actionExecutionContext) {
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());
-        actionRequestBuilder.event(getEvent(tokenMessageContext, idTokenDTO, oidcCustomClaims));
+        actionRequestBuilder.event(getEvent(tokenMessageContext, idTokenDTO, oidcCustomClaims, actionExecutionContext));
         actionRequestBuilder.allowedOperations(getAllowedOperations(oidcCustomClaims));
         return actionRequestBuilder.build();
     }
 
     private ActionExecutionRequest buildActionExecutionRequest(OAuthAuthzReqMessageContext authzMessageContext,
-                                                              IDTokenDTO idTokenDTO,
-                                                              Map<String, Object> oidcCustomClaims) {
+                                                               IDTokenDTO idTokenDTO,
+                                                               Map<String, Object> oidcCustomClaims,
+                                                               ActionExecutionRequestContext actionExecutionContext) {
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());
-        actionRequestBuilder.event(getEvent(authzMessageContext, idTokenDTO, oidcCustomClaims));
+        actionRequestBuilder.event(getEvent(authzMessageContext, idTokenDTO, oidcCustomClaims, actionExecutionContext));
         actionRequestBuilder.allowedOperations(getAllowedOperations(oidcCustomClaims));
         return actionRequestBuilder.build();
     }
 
     private Event getEvent(OAuthTokenReqMessageContext tokenMessageContext,
                            IDTokenDTO idTokenDTO,
-                           Map<String, Object> oidcCustomClaims) {
+                           Map<String, Object> oidcCustomClaims,
+                           ActionExecutionRequestContext actionExecutionContext) {
 
         PreIssueIDTokenEvent.Builder eventBuilder = new PreIssueIDTokenEvent.Builder();
         OAuth2AccessTokenReqDTO tokenReqDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
@@ -158,7 +161,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
         if (authorizedUser != null) {
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(),
-                    tokenReqDTO.getGrantType());
+                    tokenReqDTO.getGrantType(), actionExecutionContext);
             if (authorizedUser.getUserStoreDomain() != null) {
                 eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
             }
@@ -172,7 +175,8 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
     private Event getEvent(OAuthAuthzReqMessageContext authzMessageContext,
                            IDTokenDTO idTokenDTO,
-                           Map<String, Object> oidcCustomClaims) {
+                           Map<String, Object> oidcCustomClaims,
+                           ActionExecutionRequestContext actionExecutionContext) {
 
         AuthenticatedUser authorizedUser = authzMessageContext.getAuthorizationReqDTO().getUser();
 
@@ -183,7 +187,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
         if (authorizedUser != null) {
             setUserForEventBuilder(eventBuilder, authorizedUser,
-                    authzMessageContext.getAuthorizationReqDTO().getConsumerKey(), null);
+                    authzMessageContext.getAuthorizationReqDTO().getConsumerKey(), null, actionExecutionContext);
             if (authorizedUser.getUserStoreDomain() != null) {
                 eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
             }
@@ -241,14 +245,15 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
     }
 
     private void setUserForEventBuilder(PreIssueIDTokenEvent.Builder eventBuilder, AuthenticatedUser authenticatedUser,
-                                        String clientID, String grantType) {
+                                        String clientID, String grantType,
+                                        ActionExecutionRequestContext actionExecutionContext) {
 
         try {
             User user;
             if (authenticatedUser.isFederatedUser()) {
-                user = resolveFederatedUser(authenticatedUser, grantType, clientID);
+                user = resolveFederatedUser(authenticatedUser, grantType, clientID, actionExecutionContext);
             } else {
-                user = resolveLocalUser(authenticatedUser, grantType);
+                user = resolveLocalUser(authenticatedUser, grantType, actionExecutionContext);
             }
 
             if (user != null) {
@@ -263,11 +268,12 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         }
     }
 
-    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID,
+                                      ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         if (SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
-            return resolveSSOFederatedUser(authenticatedUser, grantType, clientID);
+            return resolveSSOFederatedUser(authenticatedUser, grantType, clientID, actionExecutionContext);
         }
         return resolveFederatedUser(authenticatedUser, grantType);
     }
@@ -331,7 +337,8 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         return userTenantDomain;
     }
 
-    private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+    private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID,
+                                         ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         try {
@@ -341,7 +348,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
                     authenticatedUser.getAccessingOrganization(),
                     authenticatedUser.getUserResidentOrganization(),
                     clientID);
-            return resolveLocalUser(associatedUser, grantType);
+            return resolveLocalUser(associatedUser, grantType, actionExecutionContext);
         } catch (IdentityOAuth2Exception ignored) {
             // This means actual associated user is not found, means federated login at sub org level. hence treat as a
             // normal federated Login.
