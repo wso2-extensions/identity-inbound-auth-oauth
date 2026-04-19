@@ -36,8 +36,11 @@ import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
+import org.wso2.carbon.identity.action.execution.api.model.UserClaim;
 import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.api.util.RequestBuilderUtil;
+import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -64,6 +67,7 @@ import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,7 +111,8 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());
 
-        PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
+        PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken,
+                actionExecutionContext);
         actionRequestBuilder.event(event);
         actionRequestBuilder.allowedOperations(
                 getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null));
@@ -116,7 +121,8 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
     }
 
     private PreIssueAccessTokenEvent getEvent(OAuthTokenReqMessageContext tokenMessageContext,
-                                              Map<String, Object> claimsToAdd)
+                                              Map<String, Object> claimsToAdd,
+                                              ActionExecutionRequestContext actionExecutionContext)
             throws ActionExecutionRequestBuilderException {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
@@ -131,7 +137,8 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         String[] requestScopes = tokenMessageContext.getScope();
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser && authorizedUser != null) {
-            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
+            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType(),
+                    actionExecutionContext);
             if (StringUtils.isNotEmpty(authorizedUser.getUserStoreDomain())) {
                 eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
             }
@@ -200,14 +207,15 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
     }
 
     private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder,
-                                        AuthenticatedUser authenticatedUser, String clientID, String grantType) {
+                                        AuthenticatedUser authenticatedUser, String clientID, String grantType,
+                                        ActionExecutionRequestContext actionExecutionContext) {
 
         try {
             User user;
             if (authenticatedUser.isFederatedUser()) {
-                user = resolveFederatedUser(authenticatedUser, grantType, clientID);
+                user = resolveFederatedUser(authenticatedUser, grantType, clientID, actionExecutionContext);
             } else {
-                user = resolveLocalUser(authenticatedUser, grantType);
+                user = resolveLocalUser(authenticatedUser, grantType, actionExecutionContext);
             }
 
             if (user != null) {
@@ -224,11 +232,12 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         }
     }
 
-    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+    private User resolveFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID,
+                                      ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         if (SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
-            return resolveSSOFederatedUser(authenticatedUser, grantType, clientID);
+            return resolveSSOFederatedUser(authenticatedUser, grantType, clientID, actionExecutionContext);
         }
         return resolveFederatedUser(authenticatedUser, grantType);
     }
@@ -255,7 +264,8 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
         return userBuilder.build();
     }
 
-    private User resolveLocalUser(AuthenticatedUser authenticatedUser, String grantType)
+    private User resolveLocalUser(AuthenticatedUser authenticatedUser, String grantType,
+                                  ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId());
@@ -274,10 +284,32 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
             }
             userBuilder.accessingOrganization(accessingOrg);
         }
+
+        String userId = authenticatedUser.getUserId();
+        String userTenantDomain = resolveUserTenantDomain(authenticatedUser);
+        populateUserClaims(userBuilder, actionExecutionContext.getAction(), userId, userTenantDomain);
+
         return userBuilder.build();
     }
 
-    private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID)
+    private String resolveUserTenantDomain(AuthenticatedUser authenticatedUser) {
+
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+
+        // For sub-org users, resolve the user's resident organization tenant domain
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
+            try {
+                userTenantDomain = OIDCClaimUtil.resolveTenantDomain(
+                        authenticatedUser.getUserResidentOrganization());
+            } catch (OrganizationManagementException e) {
+                userTenantDomain = authenticatedUser.getTenantDomain();
+            }
+        }
+        return userTenantDomain;
+    }
+
+    private User resolveSSOFederatedUser(AuthenticatedUser authenticatedUser, String grantType, String clientID,
+                                         ActionExecutionRequestContext actionExecutionContext)
             throws UserIdNotFoundException {
 
         try {
@@ -287,8 +319,10 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                     authenticatedUser.getAccessingOrganization(),
                     authenticatedUser.getUserResidentOrganization(),
                     clientID);
-            return resolveLocalUser(associatedUser, grantType);
+            return resolveLocalUser(associatedUser, grantType, actionExecutionContext);
         } catch (IdentityOAuth2Exception ignored) {
+            // This means actual associated user is not found, means federated login at sub org level.
+            // hence treat as a normal federated Login.
             return resolveFederatedUser(authenticatedUser, grantType);
         }
     }
@@ -605,5 +639,42 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
                     "Error while retrieving organization Id with tenant: " + tenantDomain, e);
         }
         return null;
+    }
+
+    private void populateUserClaims(User.Builder userBuilder, Action action, String userId,
+                                    String userTenantDomain) {
+
+        if (action == null) {
+            return;
+        }
+        List<String> attributes = action.getAttributes();
+        if (attributes == null || attributes.isEmpty()) {
+            return;
+        }
+
+        // Retrieve user claims from user store for the requested attributes
+        Map<String, String> claimValues = new HashMap<>();
+        try {
+            if (StringUtils.isNotEmpty(userId) && StringUtils.isNotEmpty(userTenantDomain)) {
+                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+                claimValues = RequestBuilderUtil.getClaimValues(userId, attributes, userTenantDomain, realmService);
+            }
+        } catch (Exception e) {
+            LOG.error("Error occurred while retrieving user claims from user store.", e);
+        }
+
+        // Build user claims list with retrieved values
+        List<UserClaim> userClaimsList = new ArrayList<>();
+        for (String attributeUri : attributes) {
+            String claimValue = claimValues.get(attributeUri);
+            if (StringUtils.isEmpty(claimValue)) {
+                continue;
+            }
+            userClaimsList.add(new UserClaim(attributeUri, claimValue));
+        }
+
+        if (!userClaimsList.isEmpty()) {
+            userBuilder.claims(userClaimsList);
+        }
     }
 }

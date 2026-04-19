@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
 import org.wso2.carbon.identity.action.execution.api.model.UserStore;
+import org.wso2.carbon.identity.action.execution.api.util.RequestBuilderUtil;
 import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -61,6 +62,7 @@ import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,6 +91,9 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
 
     @Mock
     OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+
+    @Mock
+    RealmService mockRealmService;
 
     private static final String ORG_NAME = "test.com";
     private static final String ORG_ID = "2364283-349o34nnv-92713972nx";
@@ -164,7 +169,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
         identityTenantUtilMockedStatic.when(IdentityTenantUtil::getLoginTenantId).thenReturn(TENANT_ID_TEST);
         identityTenantUtilMockedStatic.when(() ->
-                        IdentityTenantUtil.getTenantDomain(TENANT_ID_TEST)).thenReturn(TENANT_DOMAIN_TEST);
+                IdentityTenantUtil.getTenantDomain(TENANT_ID_TEST)).thenReturn(TENANT_DOMAIN_TEST);
 
         loggerUtils = mockStatic(LoggerUtils.class);
         loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
@@ -178,11 +183,12 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         mockGrantTypesMap.put(OAuthConstants.GrantTypes.ORGANIZATION_SWITCH, authorizationGrantHandler);
 
         oAuthServerConfiguration.when(() ->
-                        OAuthServerConfiguration.getInstance().getSupportedGrantTypes()).thenReturn(mockGrantTypesMap);
+                OAuthServerConfiguration.getInstance().getSupportedGrantTypes()).thenReturn(mockGrantTypesMap);
         oAuthComponentServiceHolderMockedStatic = mockStatic(OAuthComponentServiceHolder.class);
         oAuthComponentServiceHolderMockedStatic.when(OAuthComponentServiceHolder::getInstance)
                 .thenReturn(mockOAuthComponentServiceHolder);
         when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+        when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockRealmService);
     }
 
     @AfterClass
@@ -236,6 +242,58 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
     }
 
     @Test
+    public void testUserAttributes() throws Exception {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder()
+                        .id(ORG_ID)
+                        .name(ORG_NAME)
+                        .organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH)
+                        .build();
+
+        ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
+        Action mockAction = mock(Action.class);
+        when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V2);
+        when(mockAction.getAttributes()).thenReturn(Arrays.asList("http://wso2.org/claims/givenname",
+                "http://wso2.org/claims/emailaddress"));
+        when(mockContext.getAction()).thenReturn(mockAction);
+
+        when(mockOrganizationManager.resolveOrganizationId(TENANT_DOMAIN_TEST)).thenReturn(ORG_ID);
+        when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                .thenReturn(minimalOrganization);
+
+        try (MockedStatic<RequestBuilderUtil> requestBuilderUtilMockedStatic = mockStatic(RequestBuilderUtil.class)) {
+            Map<String, String> mockClaims = new HashMap<>();
+            mockClaims.put("http://wso2.org/claims/givenname", "TestUser");
+            mockClaims.put("http://wso2.org/claims/emailaddress", "test@wso2.com");
+
+            requestBuilderUtilMockedStatic.when(() -> RequestBuilderUtil.getClaimValues(eq(USER_ID_TEST), any(),
+                            eq(TENANT_DOMAIN_TEST), eq(mockRealmService)))
+                    .thenReturn(mockClaims);
+
+            ActionExecutionRequest actionExecutionRequest =
+                    preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), mockContext);
+
+            PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+            Assert.assertNotNull(event.getUser());
+            Assert.assertNotNull(event.getUser().getClaims());
+            Assert.assertEquals(event.getUser().getClaims().size(), 2);
+
+            boolean hasGivenName = event.getUser().getClaims().stream()
+                    .anyMatch(c -> c.getUri().equals("http://wso2.org/claims/givenname") &&
+                            "TestUser".equals(c.getValue()));
+            boolean hasEmail = event.getUser().getClaims().stream()
+                    .anyMatch(c -> c.getUri().equals("http://wso2.org/claims/emailaddress") &&
+                            "test@wso2.com".equals(c.getValue()));
+
+            Assert.assertTrue(hasGivenName);
+            Assert.assertTrue(hasEmail);
+        }
+    }
+
+    @Test
     public void buildActionExecutionRequestWithImpersonatingActorClaim() throws ActionExecutionRequestBuilderException {
 
         OAuthTokenReqMessageContext tokenContext = getMockTokenMessageContext();
@@ -243,7 +301,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
 
         ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
                 .buildActionExecutionRequest(FlowContext.create()
-                        .add("tokenMessageContext", tokenContext), null);
+                        .add("tokenMessageContext", tokenContext), mockActionContext());
 
         PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
         AccessToken.Claim actClaim = event.getAccessToken().getClaims().stream()
@@ -273,7 +331,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
 
         ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
                 .buildActionExecutionRequest(FlowContext.create()
-                        .add("tokenMessageContext", tokenContext), null);
+                        .add("tokenMessageContext", tokenContext), mockActionContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
@@ -295,18 +353,18 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         AuthenticatedUser associatedUser = mockAuthenticatedUser();
 
         oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(
-                        eq(USER_ID_TEST),
-                        eq(TENANT_DOMAIN_TEST),
-                        eq(ACCESSING_ORG_ID),
-                        eq(USER_RESIDENT_ORG_ID),
-                        eq(CLIENT_ID_TEST))).thenReturn(associatedUser);
+                eq(USER_ID_TEST),
+                eq(TENANT_DOMAIN_TEST),
+                eq(ACCESSING_ORG_ID),
+                eq(USER_RESIDENT_ORG_ID),
+                eq(CLIENT_ID_TEST))).thenReturn(associatedUser);
 
         OAuthTokenReqMessageContext tokenContext = getMockTokenMessageContext();
         tokenContext.setAuthorizedUser(ssoUser);
 
         ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
                 .buildActionExecutionRequest(FlowContext.create()
-                        .add("tokenMessageContext", tokenContext), null);
+                        .add("tokenMessageContext", tokenContext), mockActionContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
@@ -321,7 +379,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
 
         ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
                 .buildActionExecutionRequest(FlowContext.create()
-                        .add("tokenMessageContext", tokenContext), null);
+                        .add("tokenMessageContext", tokenContext), mockActionContext());
 
         List<AllowedOperation> allowedOperations = actionExecutionRequest.getAllowedOperations();
         boolean hasRefreshTokenPath = allowedOperations.stream()
@@ -348,7 +406,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         tokenContext.setAdditionalAccessTokenClaims(customClaims);
 
         ActionExecutionRequest request = preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
-                FlowContext.create().add("tokenMessageContext", tokenContext), null);
+                FlowContext.create().add("tokenMessageContext", tokenContext), mockActionContext());
 
         List<String> removePaths = request.getAllowedOperations().stream()
                 .filter(op -> op.getOp() == Operation.REMOVE)
@@ -376,7 +434,7 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         tokenContext.setAdditionalAccessTokenClaims(customClaims);
 
         ActionExecutionRequest request = preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
-                FlowContext.create().add("tokenMessageContext", tokenContext), null);
+                FlowContext.create().add("tokenMessageContext", tokenContext), mockActionContext());
         List<String> removePaths = request.getAllowedOperations().get(1).getPaths();
         List<String> replacePaths = request.getAllowedOperations().get(2).getPaths();
 
@@ -406,6 +464,14 @@ public class PreIssueAccessTokenRequestBuilderV2Test extends PreIssueAccessToken
         OAuth2AccessTokenReqDTO tokenReqDTO = mockTokenRequestDTO();
         AuthenticatedUser authenticatedUser = mockAuthenticatedUser();
         return mockMessageContext(tokenReqDTO, authenticatedUser);
+    }
+
+    private ActionExecutionRequestContext mockActionContext() {
+        ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
+        Action mockAction = mock(Action.class);
+        when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V2);
+        when(mockContext.getAction()).thenReturn(mockAction);
+        return mockContext;
     }
 
     /**
