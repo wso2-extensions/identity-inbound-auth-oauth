@@ -3552,13 +3552,9 @@ public class OAuth2Util {
         // Pin JWSSigner to the SunPKCS11 provider so that Nimbus uses the HSM for signing.
         if (isHSMEnabled()) {
             Provider hsmProvider = getHSMProvider();
-            if (hsmProvider != null) {
-                signer.getJCAContext().setProvider(hsmProvider);
-                if (log.isDebugEnabled()) {
-                    log.debug("HSM enabled - pinned JWSSigner to provider: " + hsmProvider.getName());
-                }
-            } else {
-                log.warn("HSM keystore is enabled but no SunPKCS11 provider was found in the JVM.");
+            signer.getJCAContext().setProvider(hsmProvider);
+            if (log.isDebugEnabled()) {
+                log.debug("HSM enabled - pinned JWSSigner to provider: " + hsmProvider.getName());
             }
         }
         return signer;
@@ -3580,7 +3576,8 @@ public class OAuth2Util {
      * The provider is registered by Carbon Kernel's {@code KeyStoreManager.getHSMKeyStore()}
      * during server startup.
      *
-     * @return the first SunPKCS11-* provider, or {@code null} if none is registered.
+     * @return the first SunPKCS11-* provider.
+     * @throws IllegalStateException if no SunPKCS11 provider is registered.
      */
     private static Provider getHSMProvider() {
 
@@ -3589,7 +3586,8 @@ public class OAuth2Util {
                 return p;
             }
         }
-        return null;
+        throw new IllegalStateException("HSM keystore is enabled but no SunPKCS11 provider was found "
+                + "in the JVM. Ensure the PKCS#11 provider is configured and registered during server startup.");
     }
 
     /**
