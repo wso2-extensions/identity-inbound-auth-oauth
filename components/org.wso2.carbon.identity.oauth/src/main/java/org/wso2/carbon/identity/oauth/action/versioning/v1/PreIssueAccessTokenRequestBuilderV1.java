@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
@@ -83,7 +82,7 @@ public class PreIssueAccessTokenRequestBuilderV1 implements ActionExecutionReque
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
-    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
+    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilderV1.class);
 
     @Override
     public ActionType getSupportedActionType() {
