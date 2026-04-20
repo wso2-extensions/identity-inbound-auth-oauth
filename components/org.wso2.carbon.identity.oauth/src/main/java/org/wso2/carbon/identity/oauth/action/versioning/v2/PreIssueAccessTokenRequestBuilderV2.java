@@ -85,8 +85,7 @@ public class PreIssueAccessTokenRequestBuilderV2 implements ActionExecutionReque
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
-    private static final Log LOG =
-            LogFactory.getLog(org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.class);
+    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilderV2.class);
 
     private static final String FEDERATED_USER = "FEDERATED";
     private static final String LOCAL_USER = "LOCAL";
