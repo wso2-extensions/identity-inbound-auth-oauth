@@ -27,6 +27,10 @@ public enum ErrorMessage {
             "Invalid input.",
             "%s is not a valid tenant domain."),
 
+    ERROR_CODE_FAPI_ENABLED_WITH_EMPTY_PROFILES("60005",
+            "Invalid input.",
+            "FAPI enforcement cannot be enabled without at least one supported profile."),
+
     ERROR_CODE_FAPI_CONFIG_RETRIEVE("65023",
             "Unable to retrieve FAPI configuration.",
             "Server encountered an error while retrieving the FAPI configuration of %s."),

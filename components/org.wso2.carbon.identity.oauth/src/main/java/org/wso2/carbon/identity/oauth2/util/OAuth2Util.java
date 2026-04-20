@@ -147,11 +147,11 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
 import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -263,7 +263,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -5010,7 +5009,7 @@ public class OAuth2Util {
         it will be used as the issuer.
          */
         if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()
-                        || OAuth2Util.isFapi2Enabled(tenantDomain)) {
+                || OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
             String residentIdp =  getResidentIdpEntityId(tenantDomain);
             if (StringUtils.isNotBlank(residentIdp)) {

@@ -342,19 +342,6 @@ public final class OAuthConstants {
     }
 
     /**
-     * Define FAPI versions.
-     */
-    public static class FAPIVersions {
-
-        public static final String FAPI1 = "1";
-        public static final String FAPI2 = "2";
-
-        private FAPIVersions() {
-
-        }
-    }
-
-    /**
      * Define FAPI profiles.
      */
     public static class FAPIProfiles {

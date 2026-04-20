@@ -839,10 +839,9 @@ public class DCRMService {
             DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
             boolean enableFAPIDCR = dcrConfiguration.getEnableFapiEnforcement();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
-            oAuthConsumerApp.setFapiProfile(
-                    StringUtils.isNotEmpty(dcrConfiguration.getFapiProfile().value())
-                            ? dcrConfiguration.getFapiProfile().value()
-                            : FapiProfileEnum.FAPI1_ADVANCED.value()
+            oAuthConsumerApp.setFapiProfile(dcrConfiguration.getFapiProfile() != null
+                    ? dcrConfiguration.getFapiProfile().value()
+                    : FapiProfileEnum.FAPI1_ADVANCED.value()
             );
         }
 

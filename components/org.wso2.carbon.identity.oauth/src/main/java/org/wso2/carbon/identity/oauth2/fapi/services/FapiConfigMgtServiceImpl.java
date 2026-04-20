@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.fapi.services;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
@@ -79,12 +80,26 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
     public void setFapiConfig(FapiConfig fapiConfig, String tenantDomain) throws FapiConfigMgtException {
 
         validateTenantDomain(tenantDomain);
+        validateFapiConfig(fapiConfig);
         try {
             // Parse the FAPI configuration and replace the existing resource with the updated configuration.
             ResourceAdd resourceAdd = FapiUtil.parseConfig(fapiConfig);
             getConfigurationManager().replaceResource(FAPI_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_FAPI_CONFIG_UPDATE, e, tenantDomain);
+        }
+    }
+
+    /**
+     * Validates the given FAPI configuration.
+     *
+     * @param fapiConfig The FAPI configuration to validate.
+     * @throws FapiConfigMgtException If the configuration is invalid.
+     */
+    private void validateFapiConfig(FapiConfig fapiConfig) throws FapiConfigMgtException {
+
+        if (fapiConfig.isEnabled() && CollectionUtils.isEmpty(fapiConfig.getSupportedProfiles())) {
+            throw handleClientException(ErrorMessage.ERROR_CODE_FAPI_ENABLED_WITH_EMPTY_PROFILES, null);
         }
     }
 
