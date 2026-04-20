@@ -64,6 +64,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -197,6 +198,8 @@ import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -429,6 +432,10 @@ public class OAuth2Util {
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
     private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
+
+    // HSM / SunPKCS11 constants
+    private static final String HSM_KEYSTORE_ENABLED = "Security.HSMKeyStore.Enabled";
+    private static final String SUN_PKCS11_PREFIX = "SunPKCS11-";
 
     private static final List<String> PORTAL_APP_IDS = Arrays.asList(
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
@@ -3525,9 +3532,13 @@ public class OAuth2Util {
 
     /**
      * Create JWSSigner using the server level configurations and return.
+     * <p>
+     * When HSM keystore is enabled ({@code Security.HSMKeyStore.Enabled}), the signer's
+     * JCA context is pinned to the registered SunPKCS11 provider so that Nimbus
+     * delegates all cryptographic operations to the hardware security module.
      *
-     * @param privateKey RSA Private key.
-     * @return JWSSigner
+     * @param privateKey Private key (may be a PKCS#11 opaque handle).
+     * @return JWSSigner configured for the appropriate provider.
      */
     public static JWSSigner createJWSSigner(PrivateKey privateKey) {
 
@@ -3536,7 +3547,49 @@ public class OAuth2Util {
             log.debug("System flag 'allow_weak_rsa_signer_key' is  enabled. So weak keys (key length less than 2048) " +
                     " will be allowed for signing.");
         }
-        return new RSASSASigner(privateKey, allowWeakKey);
+        JWSSigner signer = new RSASSASigner(privateKey, allowWeakKey);
+
+        // Pin JWSSigner to the SunPKCS11 provider so that Nimbus uses the HSM for signing.
+        if (isHSMEnabled()) {
+            Provider hsmProvider = getHSMProvider();
+            if (hsmProvider != null) {
+                signer.getJCAContext().setProvider(hsmProvider);
+                if (log.isDebugEnabled()) {
+                    log.debug("HSM enabled - pinned JWSSigner to provider: " + hsmProvider.getName());
+                }
+            } else {
+                log.warn("HSM keystore is enabled but no SunPKCS11 provider was found in the JVM.");
+            }
+        }
+        return signer;
+    }
+
+    /**
+     * Check whether HSM-based keystore is enabled via {@code Security.HSMKeyStore.Enabled}
+     * in carbon.xml (sourced from deployment.toml).
+     *
+     * @return {@code true} if HSM keystore is enabled.
+     */
+    private static boolean isHSMEnabled() {
+
+        return Boolean.parseBoolean(ServerConfiguration.getInstance().getFirstProperty(HSM_KEYSTORE_ENABLED));
+    }
+
+    /**
+     * Auto-detect the configured SunPKCS11 provider from the JVM.
+     * The provider is registered by Carbon Kernel's {@code KeyStoreManager.getHSMKeyStore()}
+     * during server startup.
+     *
+     * @return the first SunPKCS11-* provider, or {@code null} if none is registered.
+     */
+    private static Provider getHSMProvider() {
+
+        for (Provider p : Security.getProviders()) {
+            if (p.getName().startsWith(SUN_PKCS11_PREFIX)) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /**
