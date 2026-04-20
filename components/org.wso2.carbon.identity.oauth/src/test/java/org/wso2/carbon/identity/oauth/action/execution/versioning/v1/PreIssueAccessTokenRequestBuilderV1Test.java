@@ -26,7 +26,15 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
-import org.wso2.carbon.identity.action.execution.api.model.*;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
+import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
+import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
+import org.wso2.carbon.identity.action.execution.api.model.Operation;
+import org.wso2.carbon.identity.action.execution.api.model.Organization;
+import org.wso2.carbon.identity.action.execution.api.model.Tenant;
+import org.wso2.carbon.identity.action.execution.api.model.User;
 import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -215,6 +223,11 @@ public class PreIssueAccessTokenRequestBuilderV1Test extends PreIssueAccessToken
                 new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
                         .depth(ORG_DEPTH).build();
 
+        ActionExecutionRequestContext mockContext = mock(ActionExecutionRequestContext.class);
+        Action mockAction = mock(Action.class);
+        when(mockAction.getActionVersion()).thenReturn(ACTION_VERSION_V1);
+        when(mockContext.getAction()).thenReturn(mockAction);
+
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class)) {
 
@@ -230,7 +243,7 @@ public class PreIssueAccessTokenRequestBuilderV1Test extends PreIssueAccessToken
 
             ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
                     .buildActionExecutionRequest(
-                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), mockContext);
 
             PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
             Assert.assertNotNull(event.getSession());
