@@ -158,8 +158,6 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
-    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
-            "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -607,13 +605,10 @@ public class OAuthAdminServiceImpl {
                          If the app is not registering under a primary organization, and it is not a fragment app,
                          validate the issuer organization and set the issuer org of the app.
                         */
-                        if (Boolean.parseBoolean(
-                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                            if (isSubOrg && !application.getIsFragmentApp()) {
-                                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                        resolveOrganizationId(tenantDomain);
-                                resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
-                            }
+                        if (isSubOrg && !application.getIsFragmentApp()) {
+                            String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                    resolveOrganizationId(tenantDomain);
+                            resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
                         }
                     }
                     dao.addOAuthApplication(app);
@@ -1132,13 +1127,10 @@ public class OAuthAdminServiceImpl {
                  If the app is not updating under a primary organization, and it is not a fragment app,
                  validate the issuer organization and set the issuer org of the app.
                 */
-                if (Boolean.parseBoolean(
-                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
-                    if (isSubOrg && !consumerAppDTO.getIsFragmentApp()) {
-                        String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                resolveOrganizationId(tenantDomain);
-                        resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);
-                    }
+                if (isSubOrg && !consumerAppDTO.getIsFragmentApp()) {
+                    String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                            resolveOrganizationId(tenantDomain);
+                    resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);
                 }
             } catch (OrganizationManagementException e) {
                 throw handleError("Error while resolving organization for tenant: " + tenantDomain, e);
