@@ -144,8 +144,6 @@ public class OAuthAdminServiceImplTest {
     private static final String USER_ID = "user:id";
     private static final String USER_NAME = "admin";
     private static final String TEST_ORG_ID = "test-org-id";
-    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
-            "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
     @Mock
     private RealmConfiguration realmConfiguration;
@@ -1879,8 +1877,6 @@ public class OAuthAdminServiceImplTest {
                         doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class));
                     })) {
                 mockUserstore(identityUtil, oAuthComponentServiceHolder);
-                identityUtil.when(() -> IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))
-                        .thenReturn(String.valueOf(true));
                 oAuthAdminServiceImpl.registerOAuthApplicationData(oAuthConsumerAppDTO);
             }
             if (expectIssuerResolutionCalled) {
@@ -1960,8 +1956,6 @@ public class OAuthAdminServiceImplTest {
                     mockUserstore(identityUtil, oAuthComponentServiceHolder);
                     identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
                             .thenCallRealMethod();
-                    identityUtil.when(() -> IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))
-                            .thenReturn(String.valueOf(true));
                     OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
                     oAuthAdminServiceImpl.updateConsumerApplication(oAuthConsumerAppDTO);
                 }
