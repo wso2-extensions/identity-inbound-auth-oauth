@@ -910,37 +910,49 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
                 if (actorSubject != null) {
                     Object existingActClaim = tokenReqMessageContext.getProperty(EXISTING_ACT_CLAIM);
+                    // Self-delegation: the app re-exchanging the token is the same app that received the
+                    // original delegation (its consumerKey matches the azp inside the existing act claim).
+                    // Carry forward the existing act claim as-is to avoid adding a duplicate wrapper.
+                    boolean isSelfDelegation = existingActClaim instanceof Map
+                            && consumerKey.equals(((Map<?, ?>) existingActClaim).get("azp"));
 
-                    // Build the act claim structure
-                    Map<String, Object> actClaim = new HashMap<>();
-                    actClaim.put("sub", actorSubject.toString());
+                    if (isSelfDelegation) {
+                        jwtClaimsSetBuilder.claim("act", existingActClaim);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Self-delegation detected. Carrying forward existing act claim without wrapping.");
+                        }
+                    } else {
+                        // Build the act claim structure
+                        Map<String, Object> actClaim = new HashMap<>();
+                        actClaim.put("sub", actorSubject.toString());
 
-                    // Include azp in act claim
-                    if (actorAzp != null) {
-                        actClaim.put("azp", actorAzp.toString());
-                    }
+                        // Include azp in act claim
+                        if (actorAzp != null) {
+                            actClaim.put("azp", actorAzp.toString());
+                        }
 
-                    // Support nested act claims for chained delegation
-                    if (existingActClaim != null) {
-                        if (existingActClaim instanceof Map) {
-                            actClaim.put("act", existingActClaim);
-                            if (log.isDebugEnabled()) {
-                                log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject +
-                                        ", AZP: " + actorAzp);
-                            }
-                        } else {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Delegation: Existing act claim is not in expected Map format. " +
-                                        "Type: " + existingActClaim.getClass().getName());
+                        // Support nested act claims for chained delegation
+                        if (existingActClaim != null) {
+                            if (existingActClaim instanceof Map) {
+                                actClaim.put("act", existingActClaim);
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Delegation: Nesting existing act claim. New actor: " + actorSubject +
+                                            ", AZP: " + actorAzp);
+                                }
+                            } else {
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Delegation: Existing act claim is not in expected Map format. " +
+                                            "Type: " + existingActClaim.getClass().getName());
+                                }
                             }
                         }
-                    }
 
-                    jwtClaimsSetBuilder.claim("act", actClaim);
+                        jwtClaimsSetBuilder.claim("act", actClaim);
 
-                    if (log.isDebugEnabled()) {
-                        log.debug("Added act claim for delegation. Actor: " + actorSubject +
-                                ", AZP: " + actorAzp + ", Has nested act: " + (existingActClaim != null));
+                        if (log.isDebugEnabled()) {
+                            log.debug("Added act claim for delegation. Actor: " + actorSubject +
+                                    ", AZP: " + actorAzp + ", Has nested act: " + (existingActClaim != null));
+                        }
                     }
                 }
             }
