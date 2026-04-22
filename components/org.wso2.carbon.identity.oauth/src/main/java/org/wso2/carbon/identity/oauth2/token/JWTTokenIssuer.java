@@ -919,7 +919,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     if (isSelfDelegation) {
                         jwtClaimsSetBuilder.claim("act", existingActClaim);
                         if (log.isDebugEnabled()) {
-                            log.debug("Self-delegation detected. Carrying forward existing act claim without wrapping.");
+                            log.debug("Self-delegation detected. Carrying forward existing act claim without wrapping");
                         }
                     } else {
                         // Build the act claim structure
