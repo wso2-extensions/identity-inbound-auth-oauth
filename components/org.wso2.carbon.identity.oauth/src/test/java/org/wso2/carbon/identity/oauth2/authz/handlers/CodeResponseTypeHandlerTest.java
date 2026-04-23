@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -178,8 +179,11 @@ public class CodeResponseTypeHandlerTest {
                         codeResponseTypeHandler.issue(authAuthzReqMessageContext);
                 Assert.assertNotNull(oAuth2AuthorizeRespDTO.getAuthorizationCode(),
                         "Authorization code should be generated for shared user.");
-            } catch (Exception e) {
-                // Expected exception due to incomplete DB setup in unit test environment.
+            } catch (IdentityOAuth2Exception e) {
+                // Only ignore DB-related exceptions due to incomplete DB setup in unit test environment.
+                if (!(e.getCause() instanceof java.sql.SQLException)) {
+                    throw e;
+                }
             }
 
             // Verify that the shared user's organization details are preserved (not overwritten).

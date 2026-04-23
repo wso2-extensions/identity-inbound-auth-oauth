@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -65,8 +66,8 @@ public class DefaultOAuth2ScopeValidatorTest {
             DefaultOAuth2ScopeValidator validator = new DefaultOAuth2ScopeValidator();
             try {
                 validator.validateScope(authzReqMessageContext);
-            } catch (Exception e) {
-                // Expected exceptions due to incomplete mocking of downstream dependencies.
+            } catch (IdentityOAuth2Exception e) {
+                // Only ignore service-layer exceptions due to incomplete mocking of downstream dependencies.
             }
 
             // Verify SharedAppResolveDAO is never called for shared users.

@@ -54,9 +54,6 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private Map<ClaimMapping, String> userAttributes;
 
-    @Version(1)
-    private String accessingOrganization;
-
     private String nonceValue;
 
     private String pkceCodeChallenge;
@@ -113,6 +110,9 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     @Version(1)
     private String sessionDataKeyConsent;
+
+    @Version(2)
+    private String accessingOrganization;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -457,7 +457,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     }
 
     /**
-     * Get accessing organization.
+     * Set accessing organization.
      *
      * @param accessingOrganization accessing organization.
      */
