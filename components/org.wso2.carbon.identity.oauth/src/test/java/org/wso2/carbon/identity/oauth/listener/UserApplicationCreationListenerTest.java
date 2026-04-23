@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.mgt.inbound.dto.ApplicationDTO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -294,7 +295,7 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
         String agentName = "MyAgent";
         String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
         Map<String, String> claims = new HashMap<>();
-        claims.put("http://wso2.org/claims/agent/Name", agentName);
+        claims.put(OAuth2Constants.AGENT_NAME_CLAIM_URI, agentName);
 
         setupCommonMocks();
         setupAgentUserMocks();
@@ -353,7 +354,7 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
 
         String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
         Map<String, String> claims = new HashMap<>();
-        claims.put("http://wso2.org/claims/agent/Name", "   "); // Blank agent name
+        claims.put(OAuth2Constants.AGENT_NAME_CLAIM_URI, "   "); // Blank agent name
 
         setupCommonMocks();
         setupAgentUserMocks();

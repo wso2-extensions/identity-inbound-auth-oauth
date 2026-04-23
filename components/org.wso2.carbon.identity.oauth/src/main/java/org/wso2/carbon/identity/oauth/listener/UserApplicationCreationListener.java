@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -122,10 +123,10 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
 
             // Only create the OAuth2/OIDC application if this is a user-serving agent
             if (isUserServingAgent) {
-                
-                String agentName = claims != null ? claims.get("http://wso2.org/claims/agent/Name") : null;
+
+                String agentName = claims != null ? claims.get(OAuth2Constants.AGENT_NAME_CLAIM_URI) : null;
                 if (StringUtils.isBlank(agentName)) {
-                    agentName = "agent"; 
+                    agentName = "agent";
                 }
                 createAgentApplication(username, tenantDomain, agentName);
             } else {
