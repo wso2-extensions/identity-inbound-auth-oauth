@@ -62,6 +62,7 @@ public class OAuth2Constants {
     public static final String AGENT_IDENTITY_ENABLE = "AgentIdentity.Enabled";
     public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
     public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
+    public static final String AGENT_NAME_CLAIM_URI = "http://wso2.org/claims/agent/Name";
     public static final String STORE_OPERATION = "STORE";
     public static final String SKIP_REFRESH_TOKEN_PERSISTENT = "npr:skipRefreshTokenPersistent";
 
