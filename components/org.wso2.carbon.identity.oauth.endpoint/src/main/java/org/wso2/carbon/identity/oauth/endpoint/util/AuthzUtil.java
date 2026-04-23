@@ -2424,6 +2424,9 @@ public class AuthzUtil {
         if (mappedRemoteClaims != null) {
             authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
         }
+
+        authorizationGrantCacheEntry.setAccessingOrganization(
+                sessionDataCacheEntry.getLoggedInUser().getAccessingOrganization());
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 

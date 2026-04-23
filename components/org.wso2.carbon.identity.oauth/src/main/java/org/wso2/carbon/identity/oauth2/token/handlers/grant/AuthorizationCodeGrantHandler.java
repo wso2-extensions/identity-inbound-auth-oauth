@@ -314,8 +314,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         getAuthorizedUser(), scope);
             }
             // The user resident organization should be resolved for the organization SSO users.
-            resolveUserResidentOrgForOrganizationSSOUsers(validationResult.getAuthzCodeDO().getAuthorizedUser(),
-                    tokenReqDTO.getAuthorizationCode());
+            resolveAccessingAndResidentOrgsForOrganizationSSOUsers(
+                    validationResult.getAuthzCodeDO().getAuthorizedUser(), tokenReqDTO.getAuthorizationCode());
             return validationResult.getAuthzCodeDO();
         } else {
             // This means an invalid authorization code was sent for validation. We return null since higher
@@ -706,14 +706,21 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-    private void resolveUserResidentOrgForOrganizationSSOUsers(AuthenticatedUser authenticatedUser, String authzCode) {
+    private void resolveAccessingAndResidentOrgsForOrganizationSSOUsers(
+            AuthenticatedUser authenticatedUser, String authzCode) {
 
         if (authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME
                 .equals(authenticatedUser.getFederatedIdPName())) {
-            String userResideOrganization = resolveUserResidentOrganization(AuthorizationGrantCache.getInstance()
-                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode)).getUserAttributes());
-            authenticatedUser.setAccessingOrganization(userResideOrganization);
-            authenticatedUser.setUserResidentOrganization(userResideOrganization);
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
+                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
+            String userResidentOrganization = resolveUserResidentOrganization(
+                    authorizationGrantCacheEntry.getUserAttributes());
+            String accessingOrganization = authorizationGrantCacheEntry.getAccessingOrganization();
+            if (StringUtils.isBlank(accessingOrganization)) {
+                accessingOrganization = userResidentOrganization;
+            }
+            authenticatedUser.setAccessingOrganization(accessingOrganization);
+            authenticatedUser.setUserResidentOrganization(userResidentOrganization);
         }
     }
 

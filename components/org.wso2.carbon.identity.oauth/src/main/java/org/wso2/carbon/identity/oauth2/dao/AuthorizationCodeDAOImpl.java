@@ -25,8 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -39,6 +38,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.sql.Connection;
@@ -98,7 +98,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         String userDomain = OAuth2Util.getUserStoreDomain(authzCodeDO.getAuthorizedUser());
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authzCodeDO.getAuthorizedUser());
         try {
-            String sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME;
+            String sql = SQLQueries.STORE_AUTHORIZATION_CODE_WITH_PKCE_IDP_NAME_WITH_IS_SHARED_USER;
 
             prepStmt = connection.prepareStatement(sql);
 
@@ -118,13 +118,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.setString(12, authzCodeDO.getPkceCodeChallengeMethod());
             //insert the hash value of the authorization code
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
-            prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setString(14, authzCodeDO.getAuthorizedUser().isSharedUser() ? "1" : "0");
+            prepStmt.setString(15, getPersistenceProcessor().getProcessedClientId(consumerKey));
             int appTenantId = IdentityTenantUtil.getTenantId(appTenantDomain);
-            prepStmt.setString(15, authenticatedIDP);
+            prepStmt.setString(16, authenticatedIDP);
             int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId,
                     authzCodeDO.getAuthorizedUser());
-            prepStmt.setInt(16, idpTenantId);
-            prepStmt.setInt(17, appTenantId);
+            prepStmt.setInt(17, idpTenantId);
+            prepStmt.setInt(18, appTenantId);
 
             prepStmt.executeUpdate();
             addAuthorizationCodeScopes(authzCodeDO, connection, tenantId);
@@ -229,7 +230,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             long validityPeriod = 0;
             int tenantId;
 
-            String sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE_IDP_NAME;
+            String sql = SQLQueries.VALIDATE_AUTHZ_CODE_WITH_PKCE_IDP_NAME_WITH_SHARED_USER;
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
@@ -264,22 +265,27 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 pkceCodeChallenge = resultSet.getString(13);
                 pkceCodeChallengeMethod = resultSet.getString(14);
                 String authenticatedIDP = resultSet.getString(15);
+                boolean isSharedUser = "1".equals(resultSet.getString(16));
 
                 user = OAuth2Util.createAuthenticatedUser(authorizedUser, userstoreDomain, tenantDomain,
                         authenticatedIDP);
-                ServiceProvider serviceProvider;
-                try {
-                    serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
-                            getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
-                } catch (IdentityApplicationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data " +
-                            "for client id " + consumerKey, e);
-                }
-                user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+                user.setSharedUser(isSharedUser);
+                user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                 if (StringUtils.isNotEmpty(appResidentOrganizationId)) {
                     String userOrganizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                             .resolveOrganizationId(tenantDomain);
                     user.setAccessingOrganization(appResidentOrganizationId);
+                    user.setUserResidentOrganization(userOrganizationId);
+                }
+
+                // appResidentOrganizationId is set for sub-org application logins in which case user accessing and
+                // resident orgs are set from above block.
+                if (StringUtils.isEmpty(appResidentOrganizationId) && user.isSharedUser()) {
+                    OrganizationManager organizationManager =
+                            OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
+                    String userOrganizationId = organizationManager.resolveOrganizationId(tenantDomain);
+                    user.setAccessingOrganization(organizationManager.resolveOrganizationId(
+                            FrameworkUtils.getLoginTenantDomainFromContext()));
                     user.setUserResidentOrganization(userOrganizationId);
                 }
 

@@ -31,8 +31,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -41,7 +39,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -52,6 +49,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,7 +65,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthVersions.VERSION_2;
 
 /**
@@ -80,13 +78,7 @@ public class AuthorizationCodeDAOImplTest {
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
     @Mock
-    private ServiceProvider mockedServiceProvider;
-
-    @Mock
     private AuthenticatedUser mockedAuthenticatedUser;
-
-    @Mock
-    private ApplicationManagementService mockedApplicationManagementService;
 
     @Mock
     private IdentityCoreServiceDataHolder mockedIdentityCoreServiceDataHolder;
@@ -328,9 +320,6 @@ public class AuthorizationCodeDAOImplTest {
         String authzCode = UUID.randomUUID().toString();
         AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, authzCodeID, authzCode,
                 OAuthConstants.AuthorizationCodeState.ACTIVE);
-        OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
-        when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(), anyString())).
-                thenReturn(mockedServiceProvider);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomain(1234)).thenReturn("super.wso2");
         oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString())).
                 thenReturn(mockedAuthenticatedUser);
@@ -464,6 +453,89 @@ public class AuthorizationCodeDAOImplTest {
 
         Assert.assertFalse(authorizationCodeDAO.getLatestAuthorizationCodesByTenant(DEFAULT_TENANT_ID).isEmpty());
         Assert.assertTrue(authorizationCodeDAO.getLatestAuthorizationCodesByTenant(100).isEmpty());
+    }
+
+    @Test
+    public void testInsertAuthorizationCode_SharedUser() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+
+        createApplication(consumerKey, UUID.randomUUID().toString(), DEFAULT_TENANT_ID);
+        AuthenticatedUser sharedUser = new AuthenticatedUser();
+        sharedUser.setTenantDomain("super.wso2");
+        sharedUser.setUserName("randomUser");
+        sharedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        sharedUser.setSharedUser(true);
+
+        AuthzCodeDO authzCodeDO = new AuthzCodeDO(sharedUser, scopes, new Timestamp(System.currentTimeMillis()),
+                3600000L, CALLBACK, consumerKey, authzCode, authzCodeID, OAuthConstants.AuthorizationCodeState.ACTIVE,
+                null, null);
+        lenient().when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
+        lenient().when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
+        lenient().when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey, CALLBACK, authzCodeDO);
+
+        String sql = "SELECT IS_SHARED_USER FROM IDN_OAUTH2_AUTHORIZATION_CODE WHERE CODE_ID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, authzCodeID);
+            try (ResultSet rs = ps.executeQuery()) {
+                Assert.assertTrue(rs.next(), "Authorization code should be found in the database.");
+                Assert.assertEquals(rs.getString(1), "1",
+                        "IS_SHARED_USER should be '1' for a shared user's authorization code.");
+            }
+        }
+    }
+
+    @Test
+    public void testInsertAuthorizationCode_NonSharedUser() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+        persistAuthorizationCode(consumerKey, authzCodeID, authzCode, OAuthConstants.AuthorizationCodeState.ACTIVE);
+
+        String sql = "SELECT IS_SHARED_USER FROM IDN_OAUTH2_AUTHORIZATION_CODE WHERE CODE_ID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, authzCodeID);
+            try (ResultSet rs = ps.executeQuery()) {
+                Assert.assertTrue(rs.next(), "Authorization code should be found in the database.");
+                Assert.assertEquals(rs.getString(1), "0",
+                        "IS_SHARED_USER should be '0' for a non-shared user's authorization code.");
+            }
+        }
+    }
+
+    @Test
+    public void testValidateAuthorizationCode_SharedUserFlag() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        String authzCodeID = UUID.randomUUID().toString();
+        String authzCode = UUID.randomUUID().toString();
+
+        createApplication(consumerKey, UUID.randomUUID().toString(), DEFAULT_TENANT_ID);
+        AuthenticatedUser sharedUser = new AuthenticatedUser();
+        sharedUser.setTenantDomain("super.wso2");
+        sharedUser.setUserName("randomUser");
+        sharedUser.setUserStoreDomain(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        sharedUser.setSharedUser(true);
+
+        AuthzCodeDO authzCodeDO = new AuthzCodeDO(sharedUser, scopes, new Timestamp(System.currentTimeMillis()),
+                3600000L, CALLBACK, consumerKey, authzCode, authzCodeID, OAuthConstants.AuthorizationCodeState.ACTIVE,
+                null, null);
+        lenient().when(mockedIdentityCoreServiceDataHolder.getRealmService()).thenReturn(mockedRealmService);
+        lenient().when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedTenantUserRealm);
+        lenient().when(mockedTenantUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        authorizationCodeDAO.insertAuthorizationCode(authzCode, consumerKey, CALLBACK, authzCodeDO);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomain(DEFAULT_TENANT_ID)).thenReturn("super.wso2");
+        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(mockedAuthenticatedUser);
+        authorizationCodeDAO.validateAuthorizationCode(consumerKey, authzCode);
+
+        // Verify that IS_SHARED_USER='1' stored in DB is read and set on the returned AuthenticatedUser.
+        verify(mockedAuthenticatedUser).setSharedUser(true);
     }
 
     private void createApplication(String consumerKey, String consumerSecret, int tenantId) throws Exception {

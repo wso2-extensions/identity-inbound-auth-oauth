@@ -111,6 +111,9 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     @Version(1)
     private String sessionDataKeyConsent;
 
+    @Version(2)
+    private String accessingOrganization;
+
     public String getSubjectClaim() {
         return subjectClaim;
     }
@@ -451,6 +454,26 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
 
         isPreIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
+    }
+
+    /**
+     * Set accessing organization.
+     *
+     * @param accessingOrganization accessing organization.
+     */
+    public void setAccessingOrganization(String accessingOrganization) {
+
+        this.accessingOrganization = accessingOrganization;
+    }
+
+    /**
+     * Get accessing organization.
+     *
+     * @return accessing organization.
+     */
+    public String getAccessingOrganization() {
+
+        return accessingOrganization;
     }
 
     /**
