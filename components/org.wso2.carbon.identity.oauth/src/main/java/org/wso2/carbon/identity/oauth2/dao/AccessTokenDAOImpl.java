@@ -876,13 +876,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             if (includeExpired) {
                 sql = SQLQueries.RETRIEVE_ACTIVE_EXPIRED_ACCESS_TOKEN_BY_CLIENT_ID_USER_IDP_NAME;
             } else {
-                sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER;
+                sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_IDP_NAME;
             }
 
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
 
             if (!isUsernameCaseSensitive) {
-                sql = SQLQueries.RETRIEVE_ACTIVE_ACCESS_TOKEN_BY_CLIENT_ID_USER_IDP_NAME;
+                sql = sql.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
 
             int appTenantId = OAuth2Util.getTenantId(appTenantDomain);
