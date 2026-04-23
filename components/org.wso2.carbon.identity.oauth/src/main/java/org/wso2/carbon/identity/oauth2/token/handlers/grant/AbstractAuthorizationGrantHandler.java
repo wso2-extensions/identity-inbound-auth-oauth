@@ -85,6 +85,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.DELEGATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
@@ -656,6 +657,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
                     accessTokenExtendedAttributes);
         }
+        if (tokReqMsgCtx.isDelegationRequest()) {
+            accessTokenExtendedAttributes =
+                    addExtendedAttribute(DELEGATING_ACTOR, tokReqMsgCtx.getProperty(DELEGATING_ACTOR).toString(),
+                    accessTokenExtendedAttributes);
+        }
         // Add any new extended attributes here using @addExtendedAttribute.
         return accessTokenExtendedAttributes;
     }
@@ -694,7 +700,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
         tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
 
-        updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, existingTokenBean, tokReqMsgCtx);
+        tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean,
