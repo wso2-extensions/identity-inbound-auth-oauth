@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -4988,6 +4988,7 @@ public class AuthzUtil {
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             cacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
+        cacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
 
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com)
+ * Copyright (c) 2023-2026, WSO2 LLC. (https://www.wso2.com)
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -33,6 +33,7 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     private Map<ClaimMapping, String> userAttributes;
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private String impersonator;
+    private String sessionContextIdentifier;
 
     public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
 
@@ -78,5 +79,15 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     public void setImpersonator(String impersonator) {
 
         this.impersonator = impersonator;
+    }
+
+    public String getSessionContextIdentifier() {
+
+        return sessionContextIdentifier;
+    }
+
+    public void setSessionContextIdentifier(String sessionContextIdentifier) {
+
+        this.sessionContextIdentifier = sessionContextIdentifier;
     }
 }
