@@ -48,6 +48,7 @@
             <class name="org.wso2.carbon.identity.oauth2.impersonation.SubjectScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.impersonation.UserAccountStatusValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.impersonation.ImpersonationConfigMgtTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.fapi.FapiConfigMgtServiceImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RememberMeStoreTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilderTest"/>

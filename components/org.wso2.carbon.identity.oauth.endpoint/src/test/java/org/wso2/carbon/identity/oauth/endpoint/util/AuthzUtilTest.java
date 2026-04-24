@@ -130,6 +130,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -1426,7 +1427,8 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
 
                 OAuth2Parameters oAuth2Parameters = (OAuth2Parameters) oAuth2ParametersObj;
                 OAuth2Parameters originalOAuth2Parameters = SerializationUtils.clone(oAuth2Parameters);
@@ -1460,7 +1462,9 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                         .thenReturn(appDO);
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                         oAuth2Parameters.getTenantDomain())).thenReturn(appDO);
-                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(any())).thenReturn(true);
+                fapiUtil.when(() -> FapiUtil.isFapi1AdvancedProfileCompliant(any())).thenReturn(true);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(any())).thenReturn(true);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(any(), any())).thenReturn(true);
 
                 mockEndpointUtil(false, endpointUtil);
                 when(oAuth2Service.isPKCESupportEnabled()).thenReturn(false);

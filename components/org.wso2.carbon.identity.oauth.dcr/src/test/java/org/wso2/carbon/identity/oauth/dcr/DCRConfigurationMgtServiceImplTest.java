@@ -23,19 +23,28 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 
 import java.util.Arrays;
+import java.util.Collections;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.ENABLE_FAPI_ENFORCEMENT;
@@ -117,5 +126,90 @@ public class DCRConfigurationMgtServiceImplTest {
 
         Assert.assertEquals(dcrConfiguration.getEnableFapiEnforcement(), false);
         Assert.assertEquals(dcrConfiguration.getAuthenticationRequired(), true);
+    }
+
+    @Test(priority = 4, description = "Setting an unsupported FAPI profile should throw DCRMClientException")
+    public void testSetDCRConfiguration_unsupportedFapiProfile_throws() throws Exception {
+
+        FapiConfigMgtService mockFapiService = mock(FapiConfigMgtService.class);
+        DCRDataHolder.getInstance().setFapiConfigMgtService(mockFapiService);
+
+        FapiConfig fapiConfig = new FapiConfig();
+        fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+
+        try (MockedStatic<PrivilegedCarbonContext> carbonContext = mockStatic(PrivilegedCarbonContext.class)) {
+            PrivilegedCarbonContext mockContext = mock(PrivilegedCarbonContext.class);
+            carbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockContext);
+            when(mockContext.getTenantDomain()).thenReturn("carbon.super");
+            when(mockFapiService.getFapiConfig(anyString())).thenReturn(fapiConfig);
+
+            DCRConfiguration config = new DCRConfiguration();
+            config.setFapiProfile(FapiProfileEnum.FAPI2_SECURITY);
+            config.setAuthenticationRequired(true);
+            config.setMandateSSA(true);
+            config.setSsaJwks(dummySSAJwks);
+
+            try {
+                dcrConfigurationMgtService.setDCRConfiguration(config);
+                Assert.fail("Expected DCRMClientException was not thrown");
+            } catch (DCRMClientException e) {
+                assertEquals(e.getErrorCode(),
+                        DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_UNSUPPORTED_FAPI_PROFILE.getCode());
+            }
+        } finally {
+            DCRDataHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @Test(priority = 5, description = "Setting a supported FAPI profile should not throw any exception")
+    public void testSetDCRConfiguration_supportedFapiProfile_succeeds() throws Exception {
+
+        FapiConfigMgtService mockFapiService = mock(FapiConfigMgtService.class);
+        DCRDataHolder.getInstance().setFapiConfigMgtService(mockFapiService);
+
+        FapiConfig fapiConfig = new FapiConfig();
+        fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+
+        try (MockedStatic<PrivilegedCarbonContext> carbonContext = mockStatic(PrivilegedCarbonContext.class)) {
+            PrivilegedCarbonContext mockContext = mock(PrivilegedCarbonContext.class);
+            carbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockContext);
+            when(mockContext.getTenantDomain()).thenReturn("carbon.super");
+            when(mockFapiService.getFapiConfig(anyString())).thenReturn(fapiConfig);
+
+            DCRConfiguration config = new DCRConfiguration();
+            config.setFapiProfile(FapiProfileEnum.FAPI1_ADVANCED);
+            config.setAuthenticationRequired(true);
+            config.setMandateSSA(true);
+            config.setSsaJwks(dummySSAJwks);
+
+            // Should complete without throwing
+            dcrConfigurationMgtService.setDCRConfiguration(config);
+        } catch (DCRMClientException e) {
+            Assert.fail("Unexpected DCRMClientException: " + e.getMessage());
+        } finally {
+            DCRDataHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @Test(priority = 6, description = "Null FAPI profile in DCRConfiguration should skip profile validation")
+    public void testSetDCRConfiguration_nullFapiProfile_skipsProfileValidation() throws Exception {
+
+        FapiConfigMgtService mockFapiService = mock(FapiConfigMgtService.class);
+        DCRDataHolder.getInstance().setFapiConfigMgtService(mockFapiService);
+
+        try {
+            DCRConfiguration config = new DCRConfiguration();
+            config.setFapiProfile(null);
+            config.setAuthenticationRequired(true);
+            config.setMandateSSA(true);
+            config.setSsaJwks(dummySSAJwks);
+
+            // Should complete without consulting FapiConfigMgtService or throwing
+            dcrConfigurationMgtService.setDCRConfiguration(config);
+        } catch (DCRMClientException e) {
+            Assert.fail("Unexpected DCRMClientException: " + e.getMessage());
+        } finally {
+            DCRDataHolder.getInstance().setFapiConfigMgtService(null);
+        }
     }
 }

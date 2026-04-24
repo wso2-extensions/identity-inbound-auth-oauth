@@ -1138,6 +1138,98 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @DataProvider(name = "testGetAppInformationWithFapiProfileData")
+    public Object[][] testGetAppInformationWithFapiProfileData() {
+
+        return new Object[][]{
+                {"FAPI1_ADVANCED"},
+                {"FAPI2_SECURITY"},
+        };
+    }
+
+    /**
+     * Verifies that the fapiProfile OIDC property is correctly persisted when an OAuth
+     * application is added, returned on retrieval, and updated via updateConsumerApplication.
+     */
+    @Test(dataProvider = "testGetAppInformationWithFapiProfileData")
+    public void testGetAppInformationWithFapiProfileTest(String fapiProfile) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+                // Set both FAPI conformance flag and profile before persisting.
+                defaultOAuthAppDO.setFapiConformanceEnabled(true);
+                defaultOAuthAppDO.setFapiProfile(fapiProfile);
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO retrievedAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(retrievedAppDO);
+                // Verify the profile was persisted and loaded correctly.
+                assertEquals(retrievedAppDO.isFapiConformanceEnabled(), true);
+                assertEquals(retrievedAppDO.getFapiProfile(), fapiProfile);
+
+                // Update the profile to the other known value and verify the change is persisted.
+                String updatedProfile = "FAPI1_ADVANCED".equals(fapiProfile) ? "FAPI2_SECURITY" : "FAPI1_ADVANCED";
+                retrievedAppDO.setFapiProfile(updatedProfile);
+                appDAO.updateConsumerApplication(retrievedAppDO);
+
+                OAuthAppDO updatedAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(updatedAppDO);
+                assertEquals(updatedAppDO.getFapiProfile(), updatedProfile);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    /**
+     * Verifies that fapiProfile is null when an OAuth application is persisted without
+     * a FAPI profile — i.e. the field is correctly absent and does not leak a default value.
+     */
+    @Test
+    public void testGetAppInformationWithNullFapiProfile() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                // Default app has fapiProfile = null (not set).
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO retrievedAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(retrievedAppDO);
+                // fapiProfile should be absent when not explicitly set.
+                assertNull(retrievedAppDO.getFapiProfile());
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAppInformationWithExceptions() throws Exception {
 

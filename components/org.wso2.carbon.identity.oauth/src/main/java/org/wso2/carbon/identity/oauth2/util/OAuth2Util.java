@@ -147,6 +147,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -259,7 +263,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -5000,6 +5003,14 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+
+            final String oidcDiscoveryEpUrl =  getResidentIdpOidcDiscoveryEpUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcDiscoveryEpUrl)) {
+                return oidcDiscoveryEpUrl;
+            }
+        }
+
         /*
         If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
         Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
@@ -5037,6 +5048,14 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
+
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+
+            final String oidcDiscoveryEpUrl =  getResidentIdpOidcDiscoveryEpUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcDiscoveryEpUrl)) {
+                return oidcDiscoveryEpUrl;
+            }
+        }
 
         /*
         If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
@@ -5140,6 +5159,18 @@ public class OAuth2Util {
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
+    }
+
+    public static String getResidentIdpOidcDiscoveryEpUrl(String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
+        // Get OIDC authenticator
+        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
+                "OIDCDiscoveryEPUrl").getValue();
     }
 
     /**
@@ -6149,27 +6180,33 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the application should be FAPI conformant.
+     * Check whether FAPI 2.0 is enabled in the organization.
      *
-     * @param clientId Client ID of the application.
-     * @return Whether the application should be FAPI conformant.
-     * @throws IdentityOAuth2Exception InvalidOAuthClientException
+     * @param tenantDomain The tenant domain of the organization.
+     * @return Whether FAPI 2.0 is enabled for the given tenant.
      */
-    public static boolean isFapiConformantApp(String clientId)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    public static boolean isFapi2Enabled(String tenantDomain) {
 
-        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
+        FapiConfigMgtService fapiConfigMgtService =
+                OAuth2ServiceComponentHolder.getInstance().getFapiConfigMgtService();
+        if (fapiConfigMgtService == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("FapiConfigMgtService is not available. Treating FAPI 2.0 as disabled for tenant: "
+                        + tenantDomain);
+            }
             return false;
         }
-        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
-        OAuthAppDO oAuthAppDO;
-        if (StringUtils.isNotBlank(accessingOrgId)) {
-            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
-        } else {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            return fapiConfig.isEnabled() && CollectionUtils.isNotEmpty(fapiConfig.getSupportedProfiles())
+                    && fapiConfig.getSupportedProfiles().contains(FapiProfileEnum.FAPI2_SECURITY);
+        } catch (FapiConfigMgtException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error retrieving FAPI configuration for tenant: " + tenantDomain
+                        + ". Treating FAPI 2.0 as disabled.", e);
+            }
+            return false;
         }
-        return oAuthAppDO.isFapiConformanceEnabled();
     }
 
     /**

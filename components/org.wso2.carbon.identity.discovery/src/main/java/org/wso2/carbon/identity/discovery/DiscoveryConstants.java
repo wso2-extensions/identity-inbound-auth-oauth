@@ -405,4 +405,14 @@ public class DiscoveryConstants {
      * Client Initiated Backchannel Authentication Flow - Core 1.0 specification.
      */
     public static final String BACKCHANNEL_AUTHENTICATION_ENDPOINT = "backchannel_authentication_endpoint";
+
+    /**
+     * authorization_response_iss_parameter_supported
+     * OPTIONAL. Boolean value specifying whether the OP supports the "iss" parameter in the
+     * Authorization Response. This allows RPs to securely determine the issuer of the response.
+     * If omitted, the default value is false.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc9207#as_metadata">rfc9207</a>
+     */
+    public static final String AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED =
+            "authorization_response_iss_parameter_supported";
 }

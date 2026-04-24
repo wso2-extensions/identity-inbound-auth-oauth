@@ -110,6 +110,7 @@ public class DCRMConstants {
     public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
     public static final String SSA_JWKS = "ssaJwks";
     public static final String MANDATE_SSA = "mandateSSA";
+    public static final String FAPI_PROFILE = "fapiProfile";
 
     /**
      * Enum for DCR Configuration related error messages.
@@ -135,7 +136,14 @@ public class DCRMConstants {
          */
         ERROR_CODE_SSA_NOT_MANDATED("65022",
                                              "SSA not mandated.",
-                                             "Authentication is disabled but mandateSSA is not set to True.");
+                                             "Authentication is disabled but mandateSSA is not set to True."),
+
+        /**
+         * Unsupported FAPI profile error.
+         */
+        ERROR_CODE_UNSUPPORTED_FAPI_PROFILE("65025",
+                "Unsupported FAPI profile.",
+                "The FAPI profile '%s' is not supported by this organization. Supported profiles: %s.");
 
         /**
          * The error code.
