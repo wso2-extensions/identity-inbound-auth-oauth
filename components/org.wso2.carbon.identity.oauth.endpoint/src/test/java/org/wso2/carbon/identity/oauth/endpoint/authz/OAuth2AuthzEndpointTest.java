@@ -2188,8 +2188,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 invocation -> invocation.getArguments()[0]);
         when(mockOAuthServerConfiguration.getOAuthAuthzRequestClassName())
                 .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
-        when(mockOAuthServerConfiguration.getFapiVersion())
-                .thenReturn("1");
     }
 
     private void mockServiceURLBuilder(MockedStatic<ServiceURLBuilder> serviceURLBuilder) throws URLBuilderException {

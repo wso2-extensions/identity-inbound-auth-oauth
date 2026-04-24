@@ -1881,10 +1881,7 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
-            // Persist the FAPI security profile only when a value has been set.
-            // A null value means the profile is not configured (FAPI may still be disabled).
-            if (Boolean.parseBoolean(String.valueOf(consumerAppDO.isFapiConformanceEnabled())) &&
-                    consumerAppDO.getFapiProfile() == null) {
+            if (consumerAppDO.isFapiConformanceEnabled() && consumerAppDO.getFapiProfile() == null) {
                 LOG.debug("fapiProfile not specified with isFAPIApplication=true. Defaulting to FAPI1_ADVANCED.");
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         FAPI_PROFILE, FAPI1_ADVANCED);
