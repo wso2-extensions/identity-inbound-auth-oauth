@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,6 +26,9 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -37,6 +40,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +49,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth2.TestConstants.DEVICE_CODE;
+import static org.wso2.carbon.identity.oauth2.TestConstants.SESSION_ID;
 
 import org.apache.commons.logging.Log;
 import java.lang.reflect.Field;
@@ -131,7 +138,7 @@ public class AccessTokenIssuerTest {
     }
 
     @Test
-        public void testValidateGrantExceptionLogsSanitizedError() throws Exception {
+    public void testValidateGrantExceptionLogsSanitizedError() throws Exception {
 
         // Enable debug at JUL level so that commons-logging Jdk14Logger reports debug enabled.
         java.util.logging.Logger.getLogger(AccessTokenIssuer.class.getName())
@@ -166,7 +173,7 @@ public class AccessTokenIssuerTest {
             Assert.assertTrue(resp.isError());
             Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
         }
-        }
+    }
 
     @Test
     public void testHandleTokenBindingForRefreshTokenGrant() throws Exception {
@@ -185,6 +192,36 @@ public class AccessTokenIssuerTest {
 
         method.invoke(issuer, tokenReqDTO, REFRESH_TOKEN, tokReqMsgCtx, oAuthAppDO);
         Mockito.verify(tokReqMsgCtx, never()).setTokenBinding(any());
+    }
+
+    @Test
+    public void testGetAuthzGrantCacheEntryFromDeviceCodeCopiesSessionContextIdentifier() throws Exception {
+
+        DeviceAuthorizationGrantCacheEntry deviceCacheEntry = new DeviceAuthorizationGrantCacheEntry(new HashMap<>());
+        deviceCacheEntry.setSessionContextIdentifier(SESSION_ID);
+
+        try (MockedStatic<DeviceAuthorizationGrantCache> mockedDeviceCache =
+                     Mockito.mockStatic(DeviceAuthorizationGrantCache.class)) {
+
+            DeviceAuthorizationGrantCache mockCache = Mockito.mock(DeviceAuthorizationGrantCache.class);
+            mockedDeviceCache.when(DeviceAuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCache(any(DeviceAuthorizationGrantCacheKey.class))).thenReturn(deviceCacheEntry);
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+
+            Method method = AccessTokenIssuer.class.getDeclaredMethod(
+                    "getAuthzGrantCacheEntryFromDeviceCode", String.class);
+            method.setAccessible(true);
+
+            @SuppressWarnings("unchecked")
+            Optional<AuthorizationGrantCacheEntry> result =
+                    (Optional<AuthorizationGrantCacheEntry>) method.invoke(issuer, DEVICE_CODE);
+
+            Assert.assertTrue(result.isPresent(),
+                    "AuthorizationGrantCacheEntry should be present when device code cache has an entry");
+            Assert.assertEquals(result.get().getSessionContextIdentifier(), SESSION_ID,
+                    "sessionContextIdentifier should be copied from DeviceAuthorizationGrantCacheEntry");
+        }
     }
 
 //    @BeforeMethod

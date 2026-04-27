@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -28,6 +28,7 @@ public class TestConstants {
     public static final String ATTRIBUTE_CONSUMER_INDEX = "1234567890";
     public static final String SAMPLE_NAME_ID_FORMAT = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress";
     public static final String SESSION_ID = "sessionId4567890";
+    public static final String DEVICE_CODE = "test-device-code";
     public static final String SAMPLE_SERVER_URL = "https://localhost:9443/server";
     public static final String CLAIM_URI1 = "http://wso2.org/claimuri1";
     public static final String CLAIM_URI2 = "http://wso2.org/claimuri2";
@@ -75,6 +76,7 @@ public class TestConstants {
     public static final String ACCESS_TOKEN = "d43e8da324a33bdc941b9b95cad6a6a2";
     public static final String REFRESH_TOKEN = "2881c5a375d03dc0ba12787386451b29";
     public static final String APP_TYPE = "oauth2";
+    public static final String ISK_CLAIM_VALUE = "session-key";
 
     //UnAuthorized Client for Implicit Grant
     public static final String CLIENT_ID_UNAUTHORIZED_CLIENT = "dabfba9390aa423f8b04332794d83614";

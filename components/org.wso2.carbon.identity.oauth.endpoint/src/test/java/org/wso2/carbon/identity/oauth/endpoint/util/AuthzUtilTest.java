@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -118,6 +118,9 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFa
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentServiceFactory;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -216,6 +219,8 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
+import static org.wso2.carbon.identity.common.testng.TestConstants.SESSION_ID;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXP;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.NBF;
 import static org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER;
@@ -2861,5 +2866,40 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                         any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
 
         when(mockedSSOConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
+    }
+
+    @Test(description = "Test addUserAttributesToCache copies sessionContextIdentifier to device code cache entry.")
+    public void testAddUserAttributesToCacheCopiesSessionContextIdentifier() throws Exception {
+
+        AuthenticatedUser loggedInUser = mock(AuthenticatedUser.class);
+        when(loggedInUser.getUserAttributes()).thenReturn(new HashMap<>());
+
+        SessionDataCacheEntry sessionDataCacheEntry = mock(SessionDataCacheEntry.class);
+        when(sessionDataCacheEntry.getLoggedInUser()).thenReturn(loggedInUser);
+        when(sessionDataCacheEntry.getSessionContextIdentifier()).thenReturn(SESSION_ID);
+
+        OAuthMessage mockOAuthMessage = mock(OAuthMessage.class);
+        when(mockOAuthMessage.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntry);
+        when(mockOAuthMessage.getProperty(any())).thenReturn(null);
+
+        ArgumentCaptor<DeviceAuthorizationGrantCacheEntry> cacheEntryCaptor =
+                ArgumentCaptor.forClass(DeviceAuthorizationGrantCacheEntry.class);
+
+        try (MockedStatic<DeviceAuthorizationGrantCache> mockedDeviceCache =
+                     mockStatic(DeviceAuthorizationGrantCache.class)) {
+
+            DeviceAuthorizationGrantCache mockCache = mock(DeviceAuthorizationGrantCache.class);
+            mockedDeviceCache.when(DeviceAuthorizationGrantCache::getInstance).thenReturn(mockCache);
+
+            Method method = AuthzUtil.class.getDeclaredMethod(
+                    "addUserAttributesToCache", OAuthMessage.class, String.class);
+            method.setAccessible(true);
+            method.invoke(null, mockOAuthMessage, DEVICE_CODE);
+
+            verify(mockCache).addToCache(any(DeviceAuthorizationGrantCacheKey.class), cacheEntryCaptor.capture());
+            DeviceAuthorizationGrantCacheEntry capturedEntry = cacheEntryCaptor.getValue();
+            assertEquals(capturedEntry.getSessionContextIdentifier(), SESSION_ID,
+                    "sessionContextIdentifier should be copied from SessionDataCacheEntry");
+        }
     }
 }
