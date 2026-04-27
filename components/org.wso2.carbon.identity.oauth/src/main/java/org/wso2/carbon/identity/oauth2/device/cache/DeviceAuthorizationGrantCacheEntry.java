@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.cache;
 
+import org.nustaq.serialization.annotations.Version;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 
@@ -33,6 +34,8 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     private Map<ClaimMapping, String> userAttributes;
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private String impersonator;
+
+    @Version(1)
     private String sessionContextIdentifier;
 
     public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
