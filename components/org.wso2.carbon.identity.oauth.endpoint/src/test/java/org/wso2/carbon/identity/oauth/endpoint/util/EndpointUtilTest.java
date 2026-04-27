@@ -948,6 +948,44 @@ public class EndpointUtilTest {
         assertTrue(EndpointUtil.isExternalConsentPageEnabledForSP(getServiceProvider()));
     }
 
+    @Test
+    public void testIsExternalConsentPageEnabledForSPWhenOrgEnforced() {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExternalConsentPageEnforced(anyString())).thenReturn(true);
+
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setApplicationName("testApp");
+            serviceProvider.setTenantDomain("testTenantDomain");
+            LocalAndOutboundAuthenticationConfig config = new LocalAndOutboundAuthenticationConfig();
+            config.setUseExternalConsentPage(false);
+            serviceProvider.setLocalAndOutBoundAuthenticationConfig(config);
+
+            assertTrue(EndpointUtil.isExternalConsentPageEnabledForSP(serviceProvider),
+                    "External consent page should be enabled when org-level enforcement is active, " +
+                            "regardless of app-level config.");
+        }
+    }
+
+    @Test
+    public void testIsExternalConsentPageEnabledForSPWhenOrgNotEnforcedAndAppDisabled() {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExternalConsentPageEnforced(anyString())).thenReturn(false);
+
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setApplicationName("testApp");
+            serviceProvider.setTenantDomain("testTenantDomain");
+            LocalAndOutboundAuthenticationConfig config = new LocalAndOutboundAuthenticationConfig();
+            config.setUseExternalConsentPage(false);
+            serviceProvider.setLocalAndOutBoundAuthenticationConfig(config);
+
+            assertTrue(!EndpointUtil.isExternalConsentPageEnabledForSP(serviceProvider),
+                    "External consent page should be disabled when org-level enforcement is inactive " +
+                            "and app-level config is disabled.");
+        }
+    }
+
     private ServiceProvider getServiceProvider() {
 
         ServiceProvider serviceProvider = new ServiceProvider();
