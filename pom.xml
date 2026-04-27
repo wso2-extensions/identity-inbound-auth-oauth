@@ -632,6 +632,13 @@
                 <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>de.ruedigermoeller</groupId>
+                <artifactId>fst</artifactId>
+                <version>${de.ruedigermoeller.fst.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
             <!--Test Dependencies-->
             <dependency>
                 <groupId>junit</groupId>
@@ -1147,6 +1154,8 @@
 
         <!--Identity Apps-->
         <authentication.portal.version>1.0.51</authentication.portal.version>
+
+        <de.ruedigermoeller.fst.version>2.56</de.ruedigermoeller.fst.version>
     </properties>
 
 </project>
