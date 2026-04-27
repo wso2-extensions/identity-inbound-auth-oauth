@@ -37,6 +37,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.internal.impl.AuthenticationMethodNameTranslatorImpl;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -119,7 +120,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
@@ -137,6 +140,7 @@ public class DefaultIDTokenBuilderTest {
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
     private static final String EC_CLIENT_ID  = TestConstants.EC_CLIENT_ID;
     private static final String ACCESS_TOKEN = TestConstants.ACCESS_TOKEN;
+    private static final String ISK_CLAIM_VALUE = TestConstants.ISK_CLAIM_VALUE;
     private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
     private DefaultIDTokenBuilder defaultIDTokenBuilder;
     private OAuthTokenReqMessageContext messageContext;
@@ -352,6 +356,30 @@ public class DefaultIDTokenBuilderTest {
         Assert.assertTrue(issueTime <= (new Date()).getTime());
         Assert.assertNull(IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.IS_SYSTEM_APPLICATION),
                 "Thread local should be cleaned up after ID token building.");
+    }
+
+    @Test
+    public void testBuildIDTokenForDeviceCodeGrantWithSessionIdentifier() throws Exception {
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+        OAuth2AccessTokenRespDTO deviceTokenRespDTO = new OAuth2AccessTokenRespDTO();
+        deviceTokenRespDTO.setAccessToken(ACCESS_TOKEN);
+
+        AuthenticatedUser deviceUser = getDefaultAuthenticatedUserFederatedUser();
+        OAuthTokenReqMessageContext deviceMessageContext = getTokenReqMessageContextForUser(deviceUser, CLIENT_ID);
+        deviceMessageContext.getOauth2AccessTokenReqDTO().setGrantType(DEVICE_FLOW_GRANT_TYPE);
+        deviceMessageContext.addProperty(SESSION_IDENTIFIER, ISK_CLAIM_VALUE);
+
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(deviceMessageContext, deviceTokenRespDTO);
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+        Assert.assertEquals(claims.getClaim("isk"), ISK_CLAIM_VALUE,
+                "isk claim should be present in ID token for device code grant when SESSION_IDENTIFIER is set.");
     }
 
     @Test
@@ -687,6 +715,7 @@ public class DefaultIDTokenBuilderTest {
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(realmService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mock(ActionExecutorService.class));
         TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
     }
 
