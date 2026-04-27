@@ -76,6 +76,7 @@ import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_AZP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.DELEGATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
@@ -914,7 +915,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     // original delegation (its consumerKey matches the azp inside the existing act claim).
                     // Carry forward the existing act claim as-is to avoid adding a duplicate wrapper.
                     boolean isSelfDelegation = existingActClaim instanceof Map
-                            && consumerKey.equals(((Map<?, ?>) existingActClaim).get("azp"));
+                            && consumerKey.equals(tokenReqMessageContext.getProperty(DELEGATING_ACTOR));
 
                     if (isSelfDelegation) {
                         jwtClaimsSetBuilder.claim("act", existingActClaim);
