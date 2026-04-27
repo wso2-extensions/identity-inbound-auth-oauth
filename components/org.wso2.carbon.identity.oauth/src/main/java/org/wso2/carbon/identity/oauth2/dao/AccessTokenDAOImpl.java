@@ -502,16 +502,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             int appTenantId = OAuth2Util.getTenantId(appTenantDomain);
-            try {
-                if (authzUser.isSharedUser()) {
-                    String accessingOrgId = authzUser.getAccessingOrganization();
-                    appTenantId = OAuth2Util.getTenantId(OAuth2ServiceComponentHolder
-                            .getInstance().getOrganizationManager().resolveTenantDomain(accessingOrgId));
-                }
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain for accessing organization: " +
-                        authzUser.getAccessingOrganization(), e);
-            }
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
