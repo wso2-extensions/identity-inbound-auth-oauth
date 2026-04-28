@@ -26,6 +26,14 @@ import java.util.Map;
 
 /**
  * Contains authenticated user attributes.
+ *
+ * <p><b>Serialization Compatibility Rules (FST):</b></p>
+ * <ul>
+ *   <li>New fields MUST be annotated with {@code @Version(n)} where n is incremented for each release.</li>
+ *   <li>New fields MUST be declared AFTER all existing fields.</li>
+ *   <li>NEVER remove, reorder, or change the type of existing fields.</li>
+ *   <li>Code must handle null/default values for versioned fields when deserializing old data.</li>
+ * </ul>
  */
 public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
 
