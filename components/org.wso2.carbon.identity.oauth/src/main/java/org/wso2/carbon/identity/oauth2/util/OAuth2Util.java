@@ -6060,9 +6060,14 @@ public class OAuth2Util {
         List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
         boolean isFederatedRoleBasedAuthzEnabled = false;
         if (!federatedRoleBasedAuthzApps.isEmpty()) {
-            OAuthAppDO app = null;
+            OAuthAppDO app;
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
             try {
-                app = getAppInformationByClientId(clientId);
+                if (StringUtils.isNotEmpty(accessingOrgId)) {
+                    app = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+                } else {
+                    app = getAppInformationByClientId(clientId);
+                }
             } catch (InvalidOAuthClientException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while retrieving the Application Information for client id: "
