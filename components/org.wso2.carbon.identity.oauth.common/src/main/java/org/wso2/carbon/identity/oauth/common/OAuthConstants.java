@@ -139,6 +139,7 @@ public final class OAuthConstants {
     public static final String IS_DELEGATION_REQUEST = "IS_DELEGATION_REQUEST";
     public static final String ACTOR_SUBJECT = "ACTOR_SUBJECT";
     public static final String EXISTING_ACT_CLAIM = "EXISTING_ACT_CLAIM";
+    public static final String REQUESTED_AUDIENCE = "REQUESTED_AUDIENCE";
 
     /**
      * Enum for OIDC supported subject types.

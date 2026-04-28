@@ -625,6 +625,73 @@ public class JWTTokenIssuerTest {
         }
     }
 
+    @DataProvider(name = "requestedAudienceDataProvider")
+    public Object[][] requestedAudienceDataProvider() {
+
+        return new Object[][]{
+                // requestedAudience, allowedAudiences, expectedAudience
+                {"https://api.example.com",
+                        Arrays.asList(DUMMY_CLIENT_ID, "https://api.example.com"),
+                        Collections.singletonList("https://api.example.com")},
+                {"https://not-allowed.example.com",
+                        Collections.singletonList(DUMMY_CLIENT_ID),
+                        Collections.singletonList(DUMMY_CLIENT_ID)},
+        };
+    }
+
+    @Test(dataProvider = "requestedAudienceDataProvider")
+    public void testRequestedAudienceInIssuedToken(String requestedAudience, List<String> allowedAudiences,
+                                                   List<String> expectedAudiences) throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            OAuthAppDO appDO = spy(new OAuthAppDO());
+            mockGrantHandlers();
+            mockCustomClaimsCallbackHandler();
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(allowedAudiences);
+            oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
+            when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
+            when(mockOAuthServerConfiguration.getApplicationAccessTokenValidityPeriodInSeconds())
+                    .thenReturn(DEFAULT_APPLICATION_ACCESS_TOKEN_EXPIRY_TIME);
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName("DUMMY_USERNAME");
+            authenticatedUser.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            authenticatedUser.setUserStoreDomain("PRIMARY");
+            authenticatedUser.setFederatedUser(false);
+            authenticatedUser.setAuthenticatedSubjectIdentifier("DUMMY_USERNAME");
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
+            tokenReqDTO.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+
+            OAuthTokenReqMessageContext tokenReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
+            tokenReqMsgCtx.setAuthorizedUser(authenticatedUser);
+            tokenReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenReqMsgCtx.setAudiences(allowedAudiences);
+            tokenReqMsgCtx.addProperty(OAuthConstants.REQUESTED_AUDIENCE, requestedAudience);
+
+            JWTTokenIssuer jwtTokenIssuer = spy(new JWTTokenIssuer());
+            JWTClaimsSet jwtClaimsSet = jwtTokenIssuer.createJWTClaimSet(null, tokenReqMsgCtx, DUMMY_CLIENT_ID);
+
+            assertNotNull(jwtClaimsSet);
+            assertEquals(jwtClaimsSet.getAudience(), expectedAudiences);
+        }
+    }
+
     @Test(dataProvider = "createJWTClaimSetDataProvider")
     public void testSignJWTWithRSA(Object authzReqMessageContext,
                                    Object tokenReqMessageContext,
