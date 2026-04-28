@@ -79,10 +79,10 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.DELEGATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_DELEGATION_REQUEST;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_AUDIENCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_AUDIENCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.PREV_ACCESS_TOKEN;
