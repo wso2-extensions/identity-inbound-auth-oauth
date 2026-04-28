@@ -4514,4 +4514,63 @@ public class OAuth2UtilTest {
 
         OAuth2Util.getTenantDomainByOrgId(orgId);
     }
+
+    /**
+     * Tests isFederatedRoleBasedAuthzEnabled(String clientId) when there IS an accessing org ID,
+     * so the app info is retrieved via getAppInformationFromOrgHierarchy.
+     */
+    @Test
+    public void testIsFederatedRoleBasedAuthzEnabledWithAccessingOrgId() throws Exception {
+
+        final String accessingOrgId = "7b4a9d9d-6137-415c-8166-978c286cdd91";
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+
+            identityUtil.when(() -> IdentityUtil.getPropertyAsList(OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG))
+                    .thenReturn(Arrays.asList("testApp"));
+
+            PrivilegedCarbonContext mockPCC = mock(PrivilegedCarbonContext.class);
+            when(mockPCC.getAccessingOrganizationId()).thenReturn(accessingOrgId);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPCC);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setApplicationName("testApp1");
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setTenantDomain("test-tenant.com");
+            appDO.setUser(user);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId))
+                    .thenReturn(appDO);
+
+            boolean result = OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
+            assertFalse(result);
+        }
+    }
+
+    /**
+     * Tests that isFederatedRoleBasedAuthzEnabled(String clientId) throws IdentityOAuth2Exception
+     * when an InvalidOAuthClientException is thrown while retrieving app information.
+     */
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testIsFederatedRoleBasedAuthzEnabledThrowsOnInvalidOAuthClient() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+
+            identityUtil.when(() -> IdentityUtil.getPropertyAsList(OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG))
+                    .thenReturn(Arrays.asList("testApp"));
+
+            PrivilegedCarbonContext mockPCC = mock(PrivilegedCarbonContext.class);
+            when(mockPCC.getAccessingOrganizationId()).thenReturn(null);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPCC);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId))
+                    .thenThrow(new InvalidOAuthClientException("Client not found"));
+
+            OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
+        }
+    }
 }
