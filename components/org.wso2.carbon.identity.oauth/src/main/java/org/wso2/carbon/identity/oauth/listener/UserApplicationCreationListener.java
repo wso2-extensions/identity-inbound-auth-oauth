@@ -212,7 +212,7 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME
                 + "-" + username);
-        serviceProvider.setDescription("Agent application auto-created for agent using OAuth2 client credentials.");
+        serviceProvider.setDescription("Agent application auto-created for agent.");
         serviceProvider.setTemplateId("agent-application");
         serviceProvider.setAPIBasedAuthenticationEnabled(true);
         AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
