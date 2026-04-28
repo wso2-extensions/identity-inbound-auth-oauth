@@ -1049,7 +1049,8 @@ public class AuthzUtil {
             authorizationResponseDTO.setSessionState(sessionStateValue);
         }
 
-        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
+        if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()
+                && !OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode())) {
             String params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
                     authenticatedIdPs, sessionStateValue);
             String redirectURI = oauth2Params.getRedirectURI();
