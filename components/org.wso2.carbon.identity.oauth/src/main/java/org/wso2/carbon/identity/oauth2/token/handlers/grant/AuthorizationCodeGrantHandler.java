@@ -343,7 +343,8 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
 
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authCode));
-        if (authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null &&
+        if (authorizationGrantCacheEntry != null &&
+                authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null &&
                 authorizationGrantCacheEntry.getAccessTokenExtensionDO().getParameters() != null &&
                 Boolean.parseBoolean(authorizationGrantCacheEntry.getAccessTokenExtensionDO().getParameters().get(
                         OAuthConstants.IS_SHARED_USER))) {
@@ -756,6 +757,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 .equals(authenticatedUser.getFederatedIdPName())) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
                     .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
+            if (authorizationGrantCacheEntry == null) {
+                return;
+            }
             String userResidentOrganization = resolveUserResidentOrganization(
                     authorizationGrantCacheEntry.getUserAttributes());
             String accessingOrganization = authorizationGrantCacheEntry.getAccessingOrganization();

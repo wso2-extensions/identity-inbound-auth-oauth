@@ -2428,6 +2428,10 @@ public class AuthzUtil {
 
         authorizationGrantCacheEntry.setAccessingOrganization(sessionDataCacheEntry.getLoggedInUser()
                 .getAccessingOrganization());
+        /*
+         * isSharedUser property of the authenticated user will be set to true in B2B login flows where user who is
+         * shared to a child organization is directly logging into the child organization.
+         */
         if (sessionDataCacheEntry.getLoggedInUser().isSharedUser()) {
             AccessTokenExtendedAttributes accessTokenExtendedAttributes =
                     authorizationGrantCacheEntry.getAccessTokenExtensionDO();
