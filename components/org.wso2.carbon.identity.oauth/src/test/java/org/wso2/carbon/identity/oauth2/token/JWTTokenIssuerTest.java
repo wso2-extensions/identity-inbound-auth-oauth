@@ -349,6 +349,7 @@ public class JWTTokenIssuerTest {
         HashMap<String, String> params = new HashMap<>();
         params.put("testExtendingKey", "testExtendingValue");
         params.put(OAuthConstants.IMPERSONATING_ACTOR, "DUMMY_ACTOR");
+        params.put(OAuthConstants.IS_SHARED_USER, "true");
         accessTokenExtendedAttributes.setParameters(params);
         tokenReqDTO.setAccessTokenExtendedAttributes(accessTokenExtendedAttributes);
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
@@ -481,6 +482,8 @@ public class JWTTokenIssuerTest {
                 assertNotNull(jwtClaimSet.getClaim("testExtendingKey"));
                 assertEquals(jwtClaimSet.getClaim("testExtendingKey"), "testExtendingValue");
                 assertNull(jwtClaimSet.getClaim(OAuthConstants.IMPERSONATING_ACTOR));
+                assertNull(jwtClaimSet.getClaim(OAuthConstants.IS_SHARED_USER),
+                        "IS_SHARED_USER should be removed from JWT custom claims and not exposed in the token.");
             }
 
             if (tokenReqMessageContext != null

@@ -79,6 +79,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
@@ -356,6 +357,37 @@ public class DefaultIDTokenBuilderTest {
         Assert.assertTrue(issueTime <= (new Date()).getTime());
         Assert.assertNull(IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.IS_SYSTEM_APPLICATION),
                 "Thread local should be cleaned up after ID token building.");
+    }
+
+    @Test
+    public void testBuildIDTokenFiltersSharedUserAttribute() throws Exception {
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+        String clientId = "dabfba9390aa423f8b04332794d83614";
+        OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+        tokenRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
+        AuthenticatedUser user = getDefaultAuthenticatedUserFederatedUser();
+        OAuthTokenReqMessageContext messageContext = getTokenReqMessageContextForUser(user, clientId);
+
+        // Populate extended attributes with both IS_SHARED_USER (must be filtered) and a regular custom claim.
+        Map<String, String> extendedParams = new HashMap<>();
+        extendedParams.put(OAuthConstants.IS_SHARED_USER, "true");
+        extendedParams.put("custom_claim_key", "custom_claim_value");
+        AccessTokenExtendedAttributes extendedAttributes = new AccessTokenExtendedAttributes(extendedParams);
+        messageContext.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(extendedAttributes);
+
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(clientId, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+
+        Assert.assertNull(claims.getClaim(OAuthConstants.IS_SHARED_USER),
+                "IS_SHARED_USER must not appear in the issued ID token.");
+        Assert.assertEquals(claims.getClaim("custom_claim_key"), "custom_claim_value",
+                "Other extended attribute claims should still be propagated to the ID token.");
     }
 
     @Test

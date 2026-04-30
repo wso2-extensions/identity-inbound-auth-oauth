@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators;
 import org.mockito.MockedStatic;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -28,11 +29,14 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link DefaultOAuth2ScopeValidator}.
@@ -43,6 +47,12 @@ public class DefaultOAuth2ScopeValidatorTest {
 
     @Test
     public void testValidateScopeSharedUserBypassesSharedAppResolution() throws Exception {
+
+        ApplicationManagementService originalAppMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
+        ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
+        when(applicationMgtService.getApplicationResourceIDByInboundKey(anyString(), anyString(), anyString()))
+                .thenReturn("test-app-resource-id");
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
 
         try (MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
              MockedStatic<SharedAppResolveDAO> sharedAppResolveDAO = mockStatic(SharedAppResolveDAO.class)) {
@@ -74,6 +84,8 @@ public class DefaultOAuth2ScopeValidatorTest {
             sharedAppResolveDAO.verify(
                     () -> SharedAppResolveDAO.resolveSharedApplication(anyString(), anyString(), anyString()),
                     never());
+        } finally {
+            OAuth2ServiceComponentHolder.setApplicationMgtService(originalAppMgtService);
         }
     }
 }

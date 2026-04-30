@@ -23,9 +23,14 @@ import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.common.model.Claim;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -33,15 +38,18 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -49,12 +57,16 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -417,6 +429,205 @@ public class AuthorizationCodeGrantHandlerTest {
 
             assertNull(tokReqMsgCtx.getProperty(OAuthConstants.SESSION_DATA_KEY_CONSENT));
         }
+    }
+
+    /**
+     * Verifies that resolveSharedUserDetails marks the user as shared and resolves both resident and accessing
+     * organizations via OrganizationManager when the cache entry signals IS_SHARED_USER and there is no
+     * application resident organization in the carbon context (i.e. tenant-bound login flow).
+     */
+    @Test
+    public void testResolveSharedUserDetailsMarksUserSharedAndResolvesOrgs() throws Exception {
+
+        String authCode = "shared-user-auth-code";
+        String userTenantDomain = "user.tenant.com";
+        String accessingTenantDomain = "accessing.tenant.com";
+        String residentOrgId = "user-resident-org-id";
+        String accessingOrgId = "user-accessing-org-id";
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("sharedUser");
+        user.setTenantDomain(userTenantDomain);
+
+        Map<String, String> extensionParams = new HashMap<>();
+        extensionParams.put(OAuthConstants.IS_SHARED_USER, "true");
+        AccessTokenExtendedAttributes extendedAttributes = new AccessTokenExtendedAttributes(extensionParams);
+
+        AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
+        cacheEntry.setAccessTokenExtensionDO(extendedAttributes);
+
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        when(organizationManager.resolveOrganizationId(userTenantDomain)).thenReturn(residentOrgId);
+        when(organizationManager.resolveOrganizationId(accessingTenantDomain)).thenReturn(accessingOrgId);
+
+        OrganizationManager originalOrgManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+        OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic = mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCacheByCode(any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+            identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(accessingTenantDomain);
+
+            // Ensure no application resident organization is set (regular tenant flow).
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
+
+            invokeResolveSharedUserDetails(user, authCode);
+
+            assertTrue(user.isSharedUser(), "User should be flagged as shared.");
+            assertEquals(user.getUserResidentOrganization(), residentOrgId);
+            assertEquals(user.getAccessingOrganization(), accessingOrgId);
+        } finally {
+            OAuthComponentServiceHolder.getInstance().setOrganizationManager(originalOrgManager);
+        }
+    }
+
+    /**
+     * Verifies that resolveSharedUserDetails sets the shared user flag but does NOT resolve organization details
+     * when the carbon context already has applicationResidentOrganizationId set (i.e. sub-org application login
+     * where these values are already populated upstream).
+     */
+    @Test
+    public void testResolveSharedUserDetailsSkipsOrgResolutionWhenAppResidentOrgIsSet() throws Exception {
+
+        String authCode = "shared-user-auth-code-suborg";
+        String preSetAccessingOrg = "pre-set-accessing-org";
+        String preSetResidentOrg = "pre-set-resident-org";
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("sharedUser");
+        user.setTenantDomain("user.tenant.com");
+        user.setAccessingOrganization(preSetAccessingOrg);
+        user.setUserResidentOrganization(preSetResidentOrg);
+
+        Map<String, String> extensionParams = new HashMap<>();
+        extensionParams.put(OAuthConstants.IS_SHARED_USER, "true");
+        AccessTokenExtendedAttributes extendedAttributes = new AccessTokenExtendedAttributes(extensionParams);
+
+        AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
+        cacheEntry.setAccessTokenExtensionDO(extendedAttributes);
+
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        OrganizationManager originalOrgManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+        OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic = mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCacheByCode(any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+
+            // Simulate sub-organization application login by setting the resident org id on carbon context.
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setApplicationResidentOrganizationId("sub-org-app-resident-id");
+            try {
+                invokeResolveSharedUserDetails(user, authCode);
+            } finally {
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
+            }
+
+            assertTrue(user.isSharedUser(), "User should be flagged as shared.");
+            // OrganizationManager should NOT have been consulted; pre-set values must remain unchanged.
+            verify(organizationManager, never()).resolveOrganizationId(anyString());
+            assertEquals(user.getAccessingOrganization(), preSetAccessingOrg);
+            assertEquals(user.getUserResidentOrganization(), preSetResidentOrg);
+        } finally {
+            OAuthComponentServiceHolder.getInstance().setOrganizationManager(originalOrgManager);
+        }
+    }
+
+    /**
+     * Verifies that resolveSharedUserDetails leaves the user untouched when the cache entry has no extension DO
+     * or when IS_SHARED_USER is not set.
+     */
+    @Test
+    public void testResolveSharedUserDetailsNoOpForNonSharedUser() throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("regularUser");
+        user.setTenantDomain("user.tenant.com");
+
+        // Cache entry without an AccessTokenExtensionDO at all.
+        AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry();
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic = mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCacheByCode(any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+
+            invokeResolveSharedUserDetails(user, "no-shared-flag-code");
+
+            assertFalse(user.isSharedUser(), "User must remain non-shared when no IS_SHARED_USER flag is present.");
+            assertNull(user.getAccessingOrganization());
+            assertNull(user.getUserResidentOrganization());
+        }
+    }
+
+    /**
+     * Verifies that for organization SSO federated users, the accessing organization in the cache entry takes
+     * precedence over the user-resident organization claim when populating the authenticated user.
+     */
+    @Test
+    public void testResolveAccessingAndResidentOrgsUsesCachedAccessingOrganization() throws Exception {
+
+        String authzCode = "org-sso-auth-code";
+        String accessingOrgFromCache = "cached-accessing-org";
+        String residentOrgFromClaim = "claimed-resident-org";
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setFederatedUser(true);
+        user.setFederatedIdPName(FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME);
+
+        AuthorizationGrantCacheEntry cacheEntry = new AuthorizationGrantCacheEntry(
+                buildUserOrganizationAttributes(residentOrgFromClaim));
+        cacheEntry.setAccessingOrganization(accessingOrgFromCache);
+
+        try (MockedStatic<AuthorizationGrantCache> mockCacheStatic = mockStatic(AuthorizationGrantCache.class)) {
+
+            AuthorizationGrantCache mockCache = mock(AuthorizationGrantCache.class);
+            mockCacheStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCacheByCode(any(AuthorizationGrantCacheKey.class))).thenReturn(cacheEntry);
+
+            invokeResolveAccessingAndResidentOrgs(user, authzCode);
+
+            assertEquals(user.getAccessingOrganization(), accessingOrgFromCache,
+                    "Accessing organization must come from the cache entry when set.");
+            assertEquals(user.getUserResidentOrganization(), residentOrgFromClaim);
+        }
+    }
+
+    private void invokeResolveSharedUserDetails(AuthenticatedUser user, String authCode) throws Exception {
+
+        Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
+                "resolveSharedUserDetails", AuthenticatedUser.class, String.class);
+        method.setAccessible(true);
+        method.invoke(new AuthorizationCodeGrantHandler(), user, authCode);
+    }
+
+    private void invokeResolveAccessingAndResidentOrgs(AuthenticatedUser user, String authzCode) throws Exception {
+
+        Method method = AuthorizationCodeGrantHandler.class.getDeclaredMethod(
+                "resolveAccessingAndResidentOrgsForOrganizationSSOUsers",
+                AuthenticatedUser.class, String.class);
+        method.setAccessible(true);
+        method.invoke(new AuthorizationCodeGrantHandler(), user, authzCode);
+    }
+
+    private Map<ClaimMapping, String> buildUserOrganizationAttributes(String organizationId) {
+
+        Map<ClaimMapping, String> attributes = new HashMap<>();
+        ClaimMapping mapping = new ClaimMapping();
+        Claim localClaim = new Claim();
+        localClaim.setClaimUri(FrameworkConstants.USER_ORGANIZATION_CLAIM);
+        Claim remoteClaim = new Claim();
+        remoteClaim.setClaimUri(FrameworkConstants.USER_ORGANIZATION_CLAIM);
+        mapping.setLocalClaim(localClaim);
+        mapping.setRemoteClaim(remoteClaim);
+        attributes.put(mapping, organizationId);
+        return attributes;
     }
 
     private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
