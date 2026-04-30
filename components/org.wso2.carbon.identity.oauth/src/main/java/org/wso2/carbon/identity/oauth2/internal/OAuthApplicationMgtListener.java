@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -103,18 +104,43 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
+        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                .getServiceProvider(serviceProvider.getApplicationID());
+        validateExternalConsentPageConfigurationForApplicationUpdate(serviceProvider, existingSP, tenantDomain);
+
         handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
 
-        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                .getServiceProvider(serviceProvider.getApplicationID());
         String newClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
         String existingClaimConfigString = new Gson().toJson(existingSP.getClaimConfig());
         if (StringUtils.equals(newClaimConfigString, existingClaimConfigString)) {
             threadLocalForClaimConfigUpdates.set(false);
         }
         return true;
+    }
+
+    private void validateExternalConsentPageConfigurationForApplicationUpdate(ServiceProvider updatedSP,
+                                                                              ServiceProvider existingSP,
+                                                                              String tenantDomain)
+            throws IdentityApplicationManagementValidationException {
+
+        if (!OAuth2Util.isExternalConsentPageEnforced(tenantDomain)) {
+            return;
+        }
+
+        LocalAndOutboundAuthenticationConfig existingAuthConfig =
+                existingSP == null ? null : existingSP.getLocalAndOutBoundAuthenticationConfig();
+        LocalAndOutboundAuthenticationConfig updatedAuthConfig = updatedSP.getLocalAndOutBoundAuthenticationConfig();
+        boolean isExistingConfigEnabled = existingAuthConfig != null && existingAuthConfig.isUseExternalConsentPage();
+        boolean isUpdatedConfigDisabling = updatedAuthConfig != null && !updatedAuthConfig.isUseExternalConsentPage();
+
+        if (isExistingConfigEnabled && isUpdatedConfigDisabling) {
+            throw new IdentityApplicationManagementValidationException(new String[]{
+                    "Cannot disable application-level useExternalConsentPage while organization-level external " +
+                            "consent page enforcement is enabled."
+            });
+        }
     }
 
     public boolean doPostGetServiceProvider(ServiceProvider serviceProvider, String serviceProviderName,

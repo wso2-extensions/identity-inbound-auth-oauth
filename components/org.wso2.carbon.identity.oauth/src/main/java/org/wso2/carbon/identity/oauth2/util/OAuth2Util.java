@@ -94,6 +94,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -6151,6 +6152,36 @@ public class OAuth2Util {
         }
 
         return externalConsentPageUrl;
+    }
+
+    /**
+     * Check whether the external consent page is enforced at the organization level.
+     * When enforced, the external consent page is used regardless of the application-level configuration.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return True if the external consent page is enforced at the organization level.
+     */
+    public static boolean isExternalConsentPageEnforced(String tenantDomain) {
+
+        try {
+            ConsentServerConfigsManagementService consentServerConfigsManagementService =
+                    OAuth2ServiceComponentHolder.getConsentServerConfigsManagementService();
+            if (consentServerConfigsManagementService == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("ConsentServerConfigsManagementService is not available. " +
+                            "Skipping org-level external consent page enforcement check for tenant domain: " +
+                            tenantDomain);
+                }
+                return false;
+            }
+            return consentServerConfigsManagementService.isExternalConsentPageEnforced(tenantDomain);
+        } catch (ConsentServerConfigsMgtException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while checking external consent page enforcement for tenant domain: " +
+                        tenantDomain, e);
+            }
+            return false;
+        }
     }
 
     /**
