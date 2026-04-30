@@ -123,7 +123,11 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
 
             // Only create the OAuth2/OIDC application if this is a user-serving agent
             if (isUserServingAgent) {
-                createAgentApplication(username, tenantDomain);
+                String agentName = claims != null ? claims.get(OAuth2Constants.AGENT_NAME_CLAIM_URI) : null;
+                if (StringUtils.isBlank(agentName)) {
+                        agentName = "agent";
+                }
+                createAgentApplication(username, tenantDomain, agentName);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Skipping application creation for non-user-serving agent");
@@ -205,13 +209,13 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
         return true;
     }
 
-    private void createAgentApplication(String username, String tenantDomain)
+    private void createAgentApplication(String username, String tenantDomain, String agentName)
             throws IdentityApplicationManagementException, NullPointerException {
 
         // Create a new ServiceProvider (Application).
         ServiceProvider serviceProvider = new ServiceProvider();
-        serviceProvider.setApplicationName(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME
-                + "-" + username);
+        String usernameSuffix = username.length() >= 4 ? username.substring(0, 4) : username;
+        serviceProvider.setApplicationName(agentName + "-" + usernameSuffix);
         serviceProvider.setDescription("Agent application auto-created for agent.");
         serviceProvider.setTemplateId("agent-application");
         serviceProvider.setAPIBasedAuthenticationEnabled(true);
