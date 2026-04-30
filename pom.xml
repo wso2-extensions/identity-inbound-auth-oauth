@@ -263,6 +263,11 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.organization.agent.sharing</artifactId>
+                <version>${carbon.identity.organization.management.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
@@ -987,7 +992,7 @@
         </carbon.identity.framework.imp.pkg.version.range>
         <identity.oauth.xacml.version.range>[2.0.0, 3.0.0)</identity.oauth.xacml.version.range>
 
-        <carbon.identity.organization.management.version>2.4.4
+        <carbon.identity.organization.management.version>2.4.18
         </carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.1.14, 3.0.0)
         </carbon.identity.organization.management.version.range>
