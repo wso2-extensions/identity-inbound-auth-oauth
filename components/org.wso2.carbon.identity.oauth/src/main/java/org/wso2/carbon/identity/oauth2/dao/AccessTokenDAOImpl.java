@@ -816,6 +816,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 accessTokenDO.setAccessToken(accessToken);
                 accessTokenDO.setRefreshToken(refreshToken);
                 accessTokenDO.setTokenId(tokenId);
+                accessTokenDO.getAuthzUser().setSharedUser(authzUser.isSharedUser());
                 accessTokenDO.getAuthzUser().setAccessingOrganization(authzUser.getAccessingOrganization());
                 accessTokenDO.getAuthzUser().setUserResidentOrganization(authzUser.getUserResidentOrganization());
             }
@@ -1032,8 +1033,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getBoolean(consentedTokenColumnIndex);
                     }
 
+                    AccessTokenExtendedAttributes accessTokenExtendedAttributes = new AccessTokenExtendedAttributes(
+                            getAccessTokenExtendedAttributeParameters(tokenId));
+                    boolean isSharedUser = Boolean.parseBoolean(accessTokenExtendedAttributes.getParameters().get(
+                                OAuthConstants.IS_SHARED_USER));
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
-                            userDomain, tenantDomain, authenticatedIDP, authorizedOrganization, appResideTenantId);
+                            userDomain, tenantDomain, authenticatedIDP, authorizedOrganization, appResideTenantId,
+                            isSharedUser);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -1054,8 +1060,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
                     dataDO.setAppResidentTenantId(appResideTenantId);
-                    dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(
-                            getAccessTokenExtendedAttributeParameters(tokenId)));
+                    dataDO.setAccessTokenExtendedAttributes(accessTokenExtendedAttributes);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);

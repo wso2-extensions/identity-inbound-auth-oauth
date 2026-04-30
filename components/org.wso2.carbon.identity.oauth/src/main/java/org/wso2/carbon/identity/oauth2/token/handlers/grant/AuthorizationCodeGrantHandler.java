@@ -22,6 +22,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -54,6 +56,8 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.HashMap;
@@ -313,14 +317,53 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                 OAuthUtil.clearOAuthCache(tokenReqDTO.getClientId(), validationResult.getAuthzCodeDO().
                         getAuthorizedUser(), scope);
             }
-            // The user resident organization should be resolved for the organization SSO users.
-            resolveUserResidentOrgForOrganizationSSOUsers(validationResult.getAuthzCodeDO().getAuthorizedUser(),
+            resolveSharedUserDetails(validationResult.getAuthzCodeDO().getAuthorizedUser(),
                     tokenReqDTO.getAuthorizationCode());
+            // The user resident organization should be resolved for the organization SSO users.
+            resolveAccessingAndResidentOrgsForOrganizationSSOUsers(
+                    validationResult.getAuthzCodeDO().getAuthorizedUser(), tokenReqDTO.getAuthorizationCode());
             return validationResult.getAuthzCodeDO();
         } else {
             // This means an invalid authorization code was sent for validation. We return null since higher
             // layers expect a null value for an invalid authorization code.
             return null;
+        }
+    }
+
+    /**
+     * This method is responsible for resolving the accessing org, resident org and the is shared user property
+     * of the authenticated user when shared users login to sub-organizations via shared apps.
+     * @param authenticatedUser AuthenticatedUser object to be populated.
+     * @param authCode authorization code.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the orgazniation ID of user accessing or
+     * resident organization.
+     */
+    private void resolveSharedUserDetails(AuthenticatedUser authenticatedUser, String authCode)
+            throws IdentityOAuth2Exception {
+
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authCode));
+        if (authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null &&
+                authorizationGrantCacheEntry.getAccessTokenExtensionDO().getParameters() != null &&
+                Boolean.parseBoolean(authorizationGrantCacheEntry.getAccessTokenExtensionDO().getParameters().get(
+                        OAuthConstants.IS_SHARED_USER))) {
+           authenticatedUser.setSharedUser(true);
+           // For sub-org application based login flows, below values are already set. Hence, skipping.
+           if (StringUtils.isBlank(PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                   .getApplicationResidentOrganizationId())) {
+               OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance()
+                       .getOrganizationManager();
+               try {
+                   authenticatedUser.setUserResidentOrganization(organizationManager.resolveOrganizationId(
+                           authenticatedUser.getTenantDomain()));
+               authenticatedUser.setAccessingOrganization(organizationManager.resolveOrganizationId(
+                       IdentityTenantUtil.resolveTenantDomain()));
+               } catch (OrganizationManagementException e) {
+                   throw new IdentityOAuth2Exception(
+                           "Error while resolving organization ID of the authenticated user: " +
+                                   authenticatedUser.getLoggableMaskedUserId(), e);
+               }
+           }
         }
     }
 
@@ -706,14 +749,21 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         }
     }
 
-    private void resolveUserResidentOrgForOrganizationSSOUsers(AuthenticatedUser authenticatedUser, String authzCode) {
+    private void resolveAccessingAndResidentOrgsForOrganizationSSOUsers(
+            AuthenticatedUser authenticatedUser, String authzCode) {
 
         if (authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME
                 .equals(authenticatedUser.getFederatedIdPName())) {
-            String userResideOrganization = resolveUserResidentOrganization(AuthorizationGrantCache.getInstance()
-                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode)).getUserAttributes());
-            authenticatedUser.setAccessingOrganization(userResideOrganization);
-            authenticatedUser.setUserResidentOrganization(userResideOrganization);
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
+                    .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
+            String userResidentOrganization = resolveUserResidentOrganization(
+                    authorizationGrantCacheEntry.getUserAttributes());
+            String accessingOrganization = authorizationGrantCacheEntry.getAccessingOrganization();
+            if (StringUtils.isBlank(accessingOrganization)) {
+                accessingOrganization = userResidentOrganization;
+            }
+            authenticatedUser.setAccessingOrganization(accessingOrganization);
+            authenticatedUser.setUserResidentOrganization(userResidentOrganization);
         }
     }
 

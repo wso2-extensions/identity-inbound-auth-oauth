@@ -2160,6 +2160,60 @@ public class OAuth2UtilTest {
                         "of the user should be in {username}@{tenant-domain} format.");
     }
 
+    @DataProvider(name = "createAuthenticatedUserWithSharedUserData")
+    public Object[][] createAuthenticatedUserWithSharedUserData() {
+
+        return new Object[][]{
+                // {username, userStoreDomain, tenantDomain, idpName, accessingOrganization, isSharedUser,
+                //  expectTenantDomainOverride}
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL", "accessing-org-id", true, false},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL", "accessing-org-id", false, true},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, false, false},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, true, false},
+        };
+    }
+
+    @Test(dataProvider = "createAuthenticatedUserWithSharedUserData")
+    public void testCreateAuthenticatedUserWithSharedUserFlag(String username, String userStoreDomain,
+                                                              String tenantDomain, String idpName,
+                                                              String accessingOrganization, boolean isSharedUser,
+                                                              boolean expectTenantDomainOverride) throws Exception {
+
+        String appTenantDomain = "app.tenant";
+        int appTenantId = 5678;
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(appTenantId)).thenReturn(appTenantDomain);
+
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            lenient().when(organizationManagerMock.resolveOrganizationId(tenantDomain))
+                    .thenReturn("user-resident-org-id");
+        }
+
+        AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                tenantDomain, idpName, accessingOrganization, appTenantId, isSharedUser);
+
+        Assert.assertEquals(authenticatedUser.getUserName(), username);
+        Assert.assertEquals(authenticatedUser.isSharedUser(), isSharedUser);
+
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            Assert.assertEquals(authenticatedUser.getAccessingOrganization(), accessingOrganization);
+            Assert.assertEquals(authenticatedUser.getUserResidentOrganization(), "user-resident-org-id");
+            if (expectTenantDomainOverride) {
+                Assert.assertEquals(authenticatedUser.getTenantDomain(), appTenantDomain,
+                        "For non-shared users, tenant domain should be overridden to app tenant domain.");
+            } else {
+                Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain,
+                        "For shared users, tenant domain should remain as the user's original tenant domain.");
+            }
+        } else {
+            Assert.assertNull(authenticatedUser.getAccessingOrganization(),
+                    "Accessing organization should not be set when it is NONE.");
+        }
+    }
+
     @DataProvider(name = "oidcAudienceDataProvider")
     public Object[][] getOIDCAudience() {
 
