@@ -195,6 +195,7 @@ public final class OAuthConstants {
     public static final String ID_TOKEN_SUBJECT_TOKEN = "id_token subject_token";
     public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
+    public static final String IS_SHARED_USER = "IS_SHARED_USER";
     public static final String IDTOKEN_TOKEN = "id_token token";
     public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";

@@ -49,6 +49,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -2158,6 +2159,76 @@ public class OAuth2UtilTest {
         Assert.assertEquals(authenticatedUser.toString(), UserCoreUtil.addTenantDomainToEntry(username, tenantDomain)
                 , "When user store domain is 'FEDERATED' full qualified username " +
                         "of the user should be in {username}@{tenant-domain} format.");
+    }
+
+    @DataProvider(name = "createAuthenticatedUserWithSharedUserData")
+    public Object[][] createAuthenticatedUserWithSharedUserData() {
+
+        // The tenant-domain override only fires for federated users, so the org-SSO scenarios use the
+        // FEDERATED-prefixed user store domain. The NONE accessingOrganization scenarios use PRIMARY since
+        // org details are not added for them.
+        return new Object[][]{
+                // {username, userStoreDomain, tenantDomain, idpName, accessingOrganization, isSharedUser,
+                //  expectTenantDomainOverride}
+                {"testuser1", "FEDERATED", "user.tenant", "LOCAL", "accessing-org-id", true, false},
+                {"testuser1", "FEDERATED", "user.tenant", "LOCAL", "accessing-org-id", false, true},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, false, false},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, true, false},
+        };
+    }
+
+    @Test(dataProvider = "createAuthenticatedUserWithSharedUserData")
+    public void testCreateAuthenticatedUserWithSharedUserFlag(String username, String userStoreDomain,
+                                                              String tenantDomain, String idpName,
+                                                              String accessingOrganization, boolean isSharedUser,
+                                                              boolean expectTenantDomainOverride) throws Exception {
+
+        String appTenantDomain = "app.tenant";
+        int appTenantId = 5678;
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(appTenantId)).thenReturn(appTenantDomain);
+        // Federated user creation reads this flag; default false keeps the user marked as federated.
+        lenient().when(oauthServerConfigurationMock.isMapFederatedUsersToLocal()).thenReturn(false);
+
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            lenient().when(organizationManagerMock.resolveOrganizationId(tenantDomain))
+                    .thenReturn("user-resident-org-id");
+        }
+
+        // The federated branch of createAuthenticatedUser calls UserSessionStore which would otherwise reach
+        // the DB layer; mock it so the test can focus on the shared-user / tenant-override logic.
+        UserSessionStore userSessionStoreMock = mock(UserSessionStore.class);
+        try (MockedStatic<UserSessionStore> userSessionStoreStatic = mockStatic(UserSessionStore.class)) {
+            userSessionStoreStatic.when(UserSessionStore::getInstance).thenReturn(userSessionStoreMock);
+            lenient().when(userSessionStoreMock.getIdPId(anyString(), anyInt())).thenReturn(1);
+            lenient().when(userSessionStoreMock.getFederatedUserId(anyString(), anyInt(), anyInt()))
+                    .thenReturn("federated-user-id");
+
+            AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                    tenantDomain, idpName, accessingOrganization, appTenantId, isSharedUser);
+
+            Assert.assertEquals(authenticatedUser.getUserName(), username);
+            Assert.assertEquals(authenticatedUser.isSharedUser(), isSharedUser);
+
+            if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+                Assert.assertEquals(authenticatedUser.getAccessingOrganization(), accessingOrganization);
+                Assert.assertEquals(authenticatedUser.getUserResidentOrganization(), "user-resident-org-id");
+                if (expectTenantDomainOverride) {
+                    Assert.assertEquals(authenticatedUser.getTenantDomain(), appTenantDomain,
+                            "For non-shared federated users, tenant domain should be overridden to app tenant " +
+                                    "domain.");
+                } else {
+                    Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain,
+                            "For shared users, tenant domain should remain as the user's original tenant domain.");
+                }
+            } else {
+                Assert.assertNull(authenticatedUser.getAccessingOrganization(),
+                        "Accessing organization should not be set when it is NONE.");
+            }
+        }
     }
 
     @DataProvider(name = "oidcAudienceDataProvider")
