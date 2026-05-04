@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015-2024, WSO2 LLC. (http://www.wso2.com).
+  ~ Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
   ~
   ~ WSO2 LLC. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
@@ -265,6 +265,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management</groupId>
                 <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
+                <version>${carbon.identity.organization.management.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.organization.agent.sharing</artifactId>
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
             <dependency>
@@ -993,7 +998,7 @@
         </carbon.identity.framework.imp.pkg.version.range>
         <identity.oauth.xacml.version.range>[2.0.0, 3.0.0)</identity.oauth.xacml.version.range>
 
-        <carbon.identity.organization.management.version>2.4.4
+        <carbon.identity.organization.management.version>2.5.5
         </carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.1.14, 3.0.0)
         </carbon.identity.organization.management.version.range>
