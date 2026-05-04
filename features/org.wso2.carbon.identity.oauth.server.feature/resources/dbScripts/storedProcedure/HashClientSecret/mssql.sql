@@ -7,17 +7,13 @@
      1. Run this file once to (re)create the procedure.
      2. Execute it with your schema:
            EXEC dbo.HashConsumerSecrets @Schema = N'dbo', @BatchSize = 500;
-        Pass @EnableBackup = 1 to capture plaintext rows in a backup table
-        before hashing (disabled by default — use only when a full DB backup
-        cannot be taken beforehand):
      3. Optionally drop it after the migration:
            DROP PROCEDURE dbo.HashConsumerSecrets;
 ======================================================================= */
 
 CREATE   PROCEDURE dbo.HashConsumerSecrets
     @Schema        SYSNAME = N'dbo',
-    @BatchSize     INT     = 500,
-    @EnableBackup  BIT     = 0      -- 0 = skip backup (default); 1 = capture plaintext in backup table first
+    @BatchSize     INT     = 500
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -27,53 +23,13 @@ BEGIN
         THROW 51000, '@BatchSize must be between 1 and 10000.', 1;
 
     DECLARE @AppsTbl NVARCHAR(300) = QUOTENAME(@Schema) + N'.' + QUOTENAME(N'IDN_OAUTH_CONSUMER_APPS');
-    DECLARE @BakName SYSNAME       = N'IDN_OAUTH_CONSUMER_APPS_SECRET_BAK_'
-                                      + CONVERT(CHAR(8), GETUTCDATE(), 112);
-    DECLARE @BakTbl  NVARCHAR(300) = QUOTENAME(@Schema) + N'.' + QUOTENAME(@BakName);
     DECLARE @Sql     NVARCHAR(MAX);
 
     IF OBJECT_ID(@AppsTbl, N'U') IS NULL
         THROW 51001, 'IDN_OAUTH_CONSUMER_APPS does not exist in the supplied schema.', 1;
 
     ---------------------------------------------------------------------
-    -- 1. Backup (only when @EnableBackup = 1).
-    ---------------------------------------------------------------------
-    IF @EnableBackup = 1
-    BEGIN
-        IF OBJECT_ID(@BakTbl, N'U') IS NULL
-        BEGIN
-            SET @Sql = N'
-                CREATE TABLE ' + @BakTbl + N' (
-                    ID               INT           NOT NULL,
-                    TENANT_ID        INT           NOT NULL,
-                    CONSUMER_KEY     VARCHAR(255)  NULL,
-                    CONSUMER_SECRET  VARCHAR(2048) NULL,
-                    BACKED_UP_AT_UTC DATETIME2(3)  NOT NULL
-                        CONSTRAINT ' + QUOTENAME(N'DF_' + @BakName + N'_ts')
-                        + N' DEFAULT SYSUTCDATETIME(),
-                    CONSTRAINT ' + QUOTENAME(N'PK_' + @BakName) + N' PRIMARY KEY (ID)
-                );';
-            EXEC sp_executesql @Sql;
-        END;
-
-        SET @Sql = N'
-            INSERT INTO ' + @BakTbl + N' (ID, TENANT_ID, CONSUMER_KEY, CONSUMER_SECRET)
-            SELECT a.ID, a.TENANT_ID, a.CONSUMER_KEY, a.CONSUMER_SECRET
-            FROM   ' + @AppsTbl + N' a
-            LEFT  JOIN ' + @BakTbl + N' b ON b.ID = a.ID
-            WHERE  b.ID IS NULL
-              AND  a.CONSUMER_SECRET IS NOT NULL
-              AND  a.CONSUMER_SECRET NOT LIKE ''{"hash":%''
-              AND  a.CONSUMER_SECRET NOT LIKE ''{"algorithm":%'';';
-        EXEC sp_executesql @Sql;
-
-        PRINT CONCAT('Backup table ready: ', @BakTbl);
-    END
-    ELSE
-        PRINT 'Backup skipped (@EnableBackup = 0). Ensure a full DB backup was taken before running.';
-
-    ---------------------------------------------------------------------
-    -- 2. Batched UPDATE. Per-batch transaction.
+    -- 1. Batched UPDATE. Per-batch transaction.
     ---------------------------------------------------------------------
     DECLARE @Rows INT = 1;
     DECLARE @TotalHashed BIGINT = 0;
@@ -116,7 +72,7 @@ BEGIN
     PRINT CONCAT('Rows hashed: ', @TotalHashed);
 
     ---------------------------------------------------------------------
-    -- 3. Verification: every non-null secret must be JSON-wrapped with
+    -- 2. Verification: every non-null secret must be JSON-wrapped with
     --    a 64-char lowercase hex digest inside.
     ---------------------------------------------------------------------
     DECLARE @BadRows INT;
