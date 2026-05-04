@@ -170,8 +170,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // on the app configuration. since we cannot retrieve the issued time and validity period of the previous
             // access token from the database.
             // Setting this value used for pre issue access token actions.
-            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
-                    getTenantDomain());
+            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), tokenReq.getTenantDomain());
             tokReqMsgCtx.setValidityPeriod(getValidityPeriodInMillis(tokReqMsgCtx, oAuthAppDO));
         } else {
             tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
@@ -715,8 +714,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                               RefreshTokenValidationDataDO validationBean, OAuth2AccessTokenReqDTO tokenReq,
                               Timestamp timestamp) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
-                getTenantDomain());
+        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), tokenReq.getTenantDomain());
         createTokens(accessTokenDO, tokReqMsgCtx);
         setRefreshTokenData(accessTokenDO, tokenReq, validationBean, oAuthAppDO, accessTokenDO.getRefreshToken(),
                 timestamp, tokReqMsgCtx);
@@ -915,7 +913,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
-        String tenantDomain = refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain();
+        String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         OAuthAppDO oAuthAppBean = getOAuthApp(clientId, tenantDomain);
         String grantType = refreshTokenValidationDataDO.getGrantType();
 
