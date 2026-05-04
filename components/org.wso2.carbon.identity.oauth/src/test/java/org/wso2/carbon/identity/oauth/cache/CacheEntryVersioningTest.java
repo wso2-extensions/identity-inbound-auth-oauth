@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.cache;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,6 +69,13 @@ public class CacheEntryVersioningTest {
                     "preIssueIDTokenActionDTO"
             ));
 
+    private static final List<String> DEVICE_AUTHORIZATION_GRANT_CACHE_ENTRY_V0_BASELINE =
+            Collections.unmodifiableList(Arrays.asList(
+                    "userAttributes",
+                    "mappedRemoteClaims",
+                    "impersonator"
+            ));
+
     @DataProvider(name = "cacheEntries")
     public Object[][] cacheEntries() {
 
@@ -75,6 +83,11 @@ public class CacheEntryVersioningTest {
                 {
                         AuthorizationGrantCacheEntry.class,
                         AUTHORIZATION_GRANT_CACHE_ENTRY_V0_BASELINE,
+                        2
+                },
+                {
+                        DeviceAuthorizationGrantCacheEntry.class,
+                        DEVICE_AUTHORIZATION_GRANT_CACHE_ENTRY_V0_BASELINE,
                         1
                 }
         };
