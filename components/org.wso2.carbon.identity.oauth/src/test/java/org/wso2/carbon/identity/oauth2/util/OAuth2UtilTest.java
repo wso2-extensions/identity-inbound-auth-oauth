@@ -576,7 +576,7 @@ public class OAuth2UtilTest {
 
                 when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(true);
 
-                when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(hashingProcessor);
+                when(oauthServerConfigurationMock.getClientSecretPersistenceProcessor()).thenReturn(hashingProcessor);
                 assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
             }
         }
@@ -629,6 +629,37 @@ public class OAuth2UtilTest {
 
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
         assertTrue(OAuth2Util.isHashEnabled());
+    }
+
+    @DataProvider(name = "clientSecretHashingFlagCombinations")
+    public Object[][] clientSecretHashingFlagCombinations() {
+        // {oldConfig (EnableClientSecretHash), newConfig (EnableClientSecretHashOnly), expectedHashingEnabled}
+        return new Object[][]{
+                {true,  false, true},   // old config alone enables hashing
+                {false, true,  true},   // new config alone enables hashing
+                {true,  true,  true},   // both on — still enabled
+                {false, false, false},  // both off — no hashing
+        };
+    }
+
+    @Test(dataProvider = "clientSecretHashingFlagCombinations")
+    public void testIsClientSecretHashingEnabled(boolean oldConfig, boolean newConfig,
+                                                 boolean expectedHashingEnabled) {
+
+        // lenient() required because || short-circuits when oldConfig is true,
+        // leaving the newConfig stub unused under strict stubbing.
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(oldConfig);
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashOnlyEnabled()).thenReturn(newConfig);
+        assertEquals(OAuth2Util.isClientSecretHashingEnabled(), expectedHashingEnabled);
+    }
+
+    @Test(dataProvider = "clientSecretHashingFlagCombinations")
+    public void testIsClientSecretHashingDisabled(boolean oldConfig, boolean newConfig,
+                                                  boolean expectedHashingEnabled) {
+
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(oldConfig);
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashOnlyEnabled()).thenReturn(newConfig);
+        assertEquals(OAuth2Util.isClientSecretHashingDisabled(), !expectedHashingEnabled);
     }
 
     @DataProvider(name = "AuthenticateUsername")

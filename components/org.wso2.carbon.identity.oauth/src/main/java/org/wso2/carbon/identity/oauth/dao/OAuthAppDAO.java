@@ -150,12 +150,12 @@ public class OAuthAppDAO {
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     private TokenPersistenceProcessor persistenceProcessor;
-    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isClientSecretHashingDisabled();
 
     public OAuthAppDAO() {
 
         try {
-            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
