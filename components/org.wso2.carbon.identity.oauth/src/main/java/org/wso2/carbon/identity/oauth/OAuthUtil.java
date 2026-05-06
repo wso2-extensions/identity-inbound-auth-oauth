@@ -1214,18 +1214,15 @@ public final class OAuthUtil {
             UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
                     .getOrganizationUserSharingService().getUserAssociation(
                             authenticatedUser.getSharedUserId(), accessingOrgId);
-            if (userAssociation != null) {
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && userAssociation != null) {
                 AuthenticatedUser sharedUser = new AuthenticatedUser(authenticatedUser);
-                sharedUser.setUserName(authenticatedUser.getUserId());
+                sharedUser.setUserName(userAssociation.getAssociatedUserId());
                 setOrganizationSSOUserDetails(sharedUser);
                 return sharedUser;
             }
             return null;
         } catch (OrganizationManagementException e) {
             throw new UserStoreException("Error while getting user associations for user: "
-                    + authenticatedUser.getLoggableMaskedUserId(), e);
-        } catch (UserIdNotFoundException e) {
-            throw new UserStoreException("Error while resolving user ID for user: "
                     + authenticatedUser.getLoggableMaskedUserId(), e);
         } catch (IdentityProviderManagementException e) {
             throw new UserStoreException("Error occurred while resolving IDP name of the organization login IDP in: "
