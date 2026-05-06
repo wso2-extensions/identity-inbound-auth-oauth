@@ -52,6 +52,7 @@ import java.sql.Connection;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -126,6 +127,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOauthServicerConfig);
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockOauthServicerConfig.getPersistenceProcessor()).thenReturn(processor);
+        lenient().when(mockOauthServicerConfig.getClientSecretPersistenceProcessor()).thenReturn(processor);
 
         authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
         authorizationGrantCache.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthorizationGrantCache);

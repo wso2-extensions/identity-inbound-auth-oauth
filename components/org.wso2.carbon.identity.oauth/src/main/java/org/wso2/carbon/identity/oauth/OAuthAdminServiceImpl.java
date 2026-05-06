@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -265,6 +266,14 @@ public class OAuthAdminServiceImpl {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
+                }
+                if (OAuth2Util.isClientSecretHashingEnabled()) {
+                    TokenPersistenceProcessor persistenceProcessor = OAuth2Util.getClientSecretPersistenceProcessor();
+                    if (persistenceProcessor != null) {
+                        if (!persistenceProcessor.isProcessed(app.getOauthConsumerSecret())) {
+                            AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+                        }
+                    }
                 }
             } else {
                 dto = new OAuthConsumerAppDTO();
@@ -622,8 +631,14 @@ public class OAuthAdminServiceImpl {
                             app.setCallbackUrl(consoleCallBackURL);
                         }
                     }
-                    if (StringUtils.isNotBlank(app.getCallbackUrl()) &&
-                            !app.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                    String callbackUrl = app.getCallbackUrl();
+                    boolean containsUnresolvedPlaceholder = StringUtils.isNotBlank(callbackUrl) &&
+                            callbackUrl.contains(BASE_URL_PLACEHOLDER);
+
+                    // For apps shared with sub-organizations, the callback URL may contain a base URL
+                    // placeholder that is resolved only after DB retrieval.
+                    // Avoid caching entries with unresolved placeholders on app creation.
+                    if (!containsUnresolvedPlaceholder) {
                         AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     }
                     if (LOG.isDebugEnabled()) {
@@ -2665,7 +2680,7 @@ public class OAuthAdminServiceImpl {
      */
     public boolean isHashDisabled() {
 
-        return OAuth2Util.isHashDisabled();
+        return OAuth2Util.isClientSecretHashingDisabled();
     }
 
     AuthenticatedUser getAppOwner(OAuthConsumerAppDTO application,

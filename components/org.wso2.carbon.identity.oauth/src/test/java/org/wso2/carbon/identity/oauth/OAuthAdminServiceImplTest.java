@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceCompo
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -114,6 +115,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -539,6 +541,76 @@ public class OAuthAdminServiceImplTest {
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
             oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        }
+    }
+
+    @DataProvider(name = "clientSecretHashCacheInvalidation")
+    public Object[][] clientSecretHashCacheInvalidationData() {
+
+        return new Object[][]{
+                // hashingEnabled, secretAlreadyProcessed, expectCacheClear
+                {false, true,  false},  // hashing disabled: cache never cleared
+                {true,  true,  false},  // hashing enabled, secret already hashed: no clear
+                {true,  false, true},   // hashing enabled, plaintext secret in cache: clear triggered
+        };
+    }
+
+    @Test(dataProvider = "clientSecretHashCacheInvalidation")
+    public void testGetOAuthApplicationData_clientSecretHashCacheInvalidation(
+            boolean hashingEnabled, boolean secretAlreadyProcessed, boolean expectCacheClear) throws Exception {
+
+        String consumerKey = "test-consumer-key";
+        OAuthAppDO app = buildDummyOAuthAppDO("test-user");
+
+        // OAuthServerConfiguration must be stubbed before OAuth2Util is instrumented,
+        // because OAuth2Util's static initializer calls OAuthServerConfiguration.getInstance().
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+
+            try (MockedStatic<OAuth2Util> oAuth2UtilStatic = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtilStatic = mockStatic(IdentityUtil.class);
+                 MockedStatic<AppInfoCache> appInfoCacheStatic = mockStatic(AppInfoCache.class);
+                 MockedConstruction<OAuthAppDAO> ignored = Mockito.mockConstruction(OAuthAppDAO.class,
+                         (mock, context) ->
+                                 when(mock.getAppInformation(consumerKey, MultitenantConstants.SUPER_TENANT_ID))
+                                         .thenReturn(app))) {
+
+                // Disable claim separation so the test focuses on hashing logic only.
+                identityUtilStatic.when(() -> IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN))
+                        .thenReturn("false");
+
+                oAuth2UtilStatic.when(OAuth2Util::isClientSecretHashingEnabled).thenReturn(hashingEnabled);
+
+                if (hashingEnabled) {
+                    TokenPersistenceProcessor mockProcessor = mock(TokenPersistenceProcessor.class);
+                    // Use doReturn to safely stub a default interface method.
+                    doReturn(secretAlreadyProcessed).when(mockProcessor).isProcessed(anyString());
+                    oAuth2UtilStatic.when(OAuth2Util::getClientSecretPersistenceProcessor)
+                            .thenReturn(mockProcessor);
+                }
+
+                AppInfoCache mockCache = mock(AppInfoCache.class);
+                appInfoCacheStatic.when(AppInfoCache::getInstance).thenReturn(mockCache);
+                // Simulate cache miss so the app is loaded from DAO.
+                lenient().when(mockCache.getValueFromCache(consumerKey, SUPER_TENANT_DOMAIN_NAME)).thenReturn(null);
+
+                OAuthAdminServiceImpl service = new OAuthAdminServiceImpl();
+                OAuthConsumerAppDTO result = service.getOAuthApplicationData(consumerKey, SUPER_TENANT_DOMAIN_NAME);
+
+                Assert.assertNotNull(result, "DTO should not be null");
+                Assert.assertEquals(result.getOauthConsumerKey(), app.getOauthConsumerKey(),
+                        "Consumer key in DTO should match the app");
+
+                if (expectCacheClear) {
+                    verify(mockCache, times(1)).clearCacheEntry(consumerKey, SUPER_TENANT_DOMAIN_NAME);
+                } else {
+                    verify(mockCache, never()).clearCacheEntry(consumerKey, SUPER_TENANT_DOMAIN_NAME);
+                }
+            }
         }
     }
 

@@ -174,6 +174,8 @@ public class AccessTokenDAOImplTest {
 
         TokenPersistenceProcessor mockTokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
         when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(mockTokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(mockTokenPersistenceProcessor);
         accessTokenDAO = new AccessTokenDAOImpl();
     }
 
