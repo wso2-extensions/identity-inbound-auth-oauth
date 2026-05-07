@@ -57,14 +57,21 @@ public class ActionTriggerEvaluatorForVersion {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
+        if (tokenMessageContext == null || tokenMessageContext.getOauth2AccessTokenReqDTO() == null) {
+            throw new ActionExecutionException(
+                    "Token message context or access token request DTO is unavailable in flow context.");
+        }
 
         String grantType = tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
-
         if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)
                 || OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType)
                 || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)
                 || OAuthConstants.GrantTypes.JWT_BEARER.equals(grantType)
                 || OAuthConstants.GrantTypes.SAML20_BEARER.equals(grantType)) {
+            
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("V1 pre-issue access token action skipped for grant type: " + grantType);
+            }
             return false;
         }
 

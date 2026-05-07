@@ -85,7 +85,7 @@ public abstract class PreIssueAccessTokenRequestBuilderBaseTestCase {
         }
         Assert.assertEquals(actualAccessToken.getScopes().size(), expectedAccessToken.getScopes().size());
         for (int i = 0; i < expectedAccessToken.getScopes().size(); i++) {
-            String actualScope = expectedAccessToken.getScopes().get(i);
+            String actualScope = actualAccessToken.getScopes().get(i);
             String expectedScope = expectedAccessToken.getScopes().get(i);
             Assert.assertEquals(actualScope, expectedScope);
         }

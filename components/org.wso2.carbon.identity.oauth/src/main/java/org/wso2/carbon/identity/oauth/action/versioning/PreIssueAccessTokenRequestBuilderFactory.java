@@ -39,6 +39,11 @@ public class PreIssueAccessTokenRequestBuilderFactory {
     public ActionExecutionRequestBuilder getActionExecutionRequestBuilder(String actionVersion)
             throws ActionExecutionRequestBuilderException {
 
+        if (actionVersion == null) {
+            throw new ActionExecutionRequestBuilderException(
+                    "Pre-issue access token action version is null.");
+        }
+
         switch (actionVersion) {
             case PreIssueAccessTokenActionConstants.ACTION_VERSION_V1:
                 return new PreIssueAccessTokenRequestBuilderV1();
