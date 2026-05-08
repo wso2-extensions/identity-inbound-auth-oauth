@@ -604,7 +604,7 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -615,7 +615,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
@@ -661,7 +661,7 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -672,7 +672,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
@@ -772,9 +772,30 @@ public class OAuth2Util {
         return persistenceProcessor;
     }
 
+    public static TokenPersistenceProcessor getClientSecretPersistenceProcessor() {
+
+        TokenPersistenceProcessor persistenceProcessor;
+        try {
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error retrieving TokenPersistenceProcessor configured in " +
+                    "OAuth.ClientSecretPersistenceProcessor in identity.xml. " +
+                    "Defaulting to PlainTextPersistenceProcessor.";
+            log.warn(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            persistenceProcessor = getPersistenceProcessor();
+        }
+        return persistenceProcessor;
+    }
+
     /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is disabled or not in identity.xml file.
+     *
+     * <p>For client-secret-specific hashing decisions use {@link #isClientSecretHashingDisabled()} instead,
+     * as it also honours the newer {@code EnableClientSecretHashOnly} configuration.
      *
      * @return Whether hash feature is disabled or not.
      */
@@ -789,12 +810,41 @@ public class OAuth2Util {
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
      *
+     * <p>For client-secret-specific hashing decisions use {@link #isClientSecretHashingEnabled()} instead,
+     * as it also honours the newer {@code EnableClientSecretHashOnly} configuration.
+     *
      * @return Whether hash feature is enable or not.
      */
     public static boolean isHashEnabled() {
 
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return isHashEnabled;
+    }
+
+    /**
+     * Check whether client secret hashing is effectively enabled — i.e., either the legacy
+     * {@code EnableClientSecretHash} flag (which hashes client secret, access token, refresh token and auth code)
+     * OR the newer {@code EnableClientSecretHashOnly} flag (which hashes ONLY the client secret) is turned on.
+     *
+     * <p>Use this for any client-secret-hashing decision. For token / auth-code decisions,
+     * keep using {@link #isHashEnabled()} / {@link #isHashDisabled()}.
+     *
+     * @return Whether client secret hashing is enabled.
+     */
+    public static boolean isClientSecretHashingEnabled() {
+
+        return isHashEnabled() || OAuthServerConfiguration.getInstance().isClientSecretHashOnlyEnabled();
+    }
+
+    /**
+     * Check whether client secret hashing is disabled.
+     *
+     * @return Whether client secret hashing is disabled.
+     * @see #isClientSecretHashingEnabled()
+     */
+    public static boolean isClientSecretHashingDisabled() {
+
+        return !isClientSecretHashingEnabled();
     }
 
     /**
@@ -4871,6 +4921,7 @@ public class OAuth2Util {
                         "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
+        authenticatedUser.setSharedUser(authzUser.isSharedUser());
         if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
             authenticatedUser.setAccessingOrganization(authzUser.getAccessingOrganization());
             authenticatedUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
@@ -4940,6 +4991,33 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        // For organization bound access tokens, the authenticated user should be populated considering below factors.
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
+                    IdentityTenantUtil.getTenantDomain(appTenantID), authenticatedUser.isFederatedUser());
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username              Username of the user.
+     * @param userStoreDomain       User store domain.
+     * @param tenantDomain          Tenant domain.
+     * @param idpName               Idp name.
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantID           The tenant ID of the application where user get authenticated.
+     * @param isSharedUser          Whether the user is a shared user.
+     * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @throws IdentityOAuth2Exception If an error occurred while creating the authenticated user.
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, int appTenantID, boolean isSharedUser)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        authenticatedUser.setSharedUser(isSharedUser);
         // For organization bound access tokens, the authenticated user should be populated considering below factors.
         if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
             addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
@@ -6556,8 +6634,10 @@ public class OAuth2Util {
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
-        if  (isOrgSSOFederation) {
-            // Set authorized user tenant domain to the tenant domain of the application.
+        if  (isOrgSSOFederation && !authenticatedUser.isSharedUser()) {
+            /* Set authorized user tenant domain to the tenant domain of the application.
+             * For shared users, tenant domain of the user resident organization is already set.
+             */
             authenticatedUser.setTenantDomain(appTenantDomain);
         }
     }

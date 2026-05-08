@@ -114,7 +114,9 @@ public class DefaultOAuth2ScopeValidator {
         Set<String> requestedOIDCScopes = filterRequestedOIDCScopesByApp(appId, tenantDomain, requestedScopes);
 
         // When user is not accessing the resident organization, resolve the application id from the shared app table.
-        if (!AuthzUtil.isUserAccessingResidentOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
+        // However, for shared user direct login flow, no need to resolve the shared app id.
+        if (!AuthzUtil.isUserAccessingResidentOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser()) &&
+                !authzReqMessageContext.getAuthorizationReqDTO().getUser().isSharedUser()) {
             String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);

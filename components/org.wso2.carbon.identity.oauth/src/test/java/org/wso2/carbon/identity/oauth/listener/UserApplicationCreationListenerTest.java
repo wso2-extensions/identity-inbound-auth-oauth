@@ -31,12 +31,14 @@ import org.wso2.carbon.identity.application.mgt.inbound.dto.ApplicationDTO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -47,6 +49,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -283,6 +286,120 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
             assertTrue(e.getMessage().contains("Agent application deletion failed for agent"),
                     "Exception message should indicate agent application deletion failure");
         }
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_ApplicationNameWithAgentNameFromClaims()
+            throws UserStoreException, IdentityApplicationManagementException {
+
+        String agentName = "MyAgent";
+        String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
+        Map<String, String> claims = new HashMap<>();
+        claims.put(OAuth2Constants.AGENT_NAME_CLAIM_URI, agentName);
+
+        setupCommonMocks();
+        setupAgentUserMocks();
+        when(user.getUsername()).thenReturn(username);
+
+        boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                claims, null, userStoreManager);
+
+        assertTrue(result, "Listener should return true after successful application creation");
+
+        ArgumentCaptor<ApplicationDTO> applicationDTOCaptor =
+                ArgumentCaptor.forClass(ApplicationDTO.class);
+        verify(applicationManagementService).createApplication(applicationDTOCaptor.capture(),
+                eq(TENANT_DOMAIN), eq(username));
+
+        ApplicationDTO capturedAppDTO = applicationDTOCaptor.getValue();
+        assertNotNull(capturedAppDTO, "ApplicationDTO should not be null");
+        assertNotNull(capturedAppDTO.getServiceProvider(), "ServiceProvider should not be null");
+
+        String applicationName = capturedAppDTO.getServiceProvider().getApplicationName();
+        assertEquals(applicationName, "MyAgent-0796",
+                "Application name should be in format {agentName}-{first4CharsOfUsername}");
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_ApplicationNameWithMissingAgentNameClaim()
+            throws UserStoreException, IdentityApplicationManagementException {
+
+        String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
+        Map<String, String> claims = new HashMap<>();
+        // Agent name claim is not present
+
+        setupCommonMocks();
+        setupAgentUserMocks();
+        when(user.getUsername()).thenReturn(username);
+
+        boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                claims, null, userStoreManager);
+
+        assertTrue(result, "Listener should return true after successful application creation");
+
+        ArgumentCaptor<ApplicationDTO> applicationDTOCaptor =
+                ArgumentCaptor.forClass(ApplicationDTO.class);
+        verify(applicationManagementService).createApplication(applicationDTOCaptor.capture(),
+                eq(TENANT_DOMAIN), eq(username));
+
+        ApplicationDTO capturedAppDTO = applicationDTOCaptor.getValue();
+        String applicationName = capturedAppDTO.getServiceProvider().getApplicationName();
+        assertEquals(applicationName, "agent-0796",
+                "Application name should fallback to 'agent' when claim is missing");
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_ApplicationNameWithBlankAgentNameClaim()
+            throws UserStoreException, IdentityApplicationManagementException {
+
+        String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
+        Map<String, String> claims = new HashMap<>();
+        claims.put(OAuth2Constants.AGENT_NAME_CLAIM_URI, "   "); // Blank agent name
+
+        setupCommonMocks();
+        setupAgentUserMocks();
+        when(user.getUsername()).thenReturn(username);
+
+        boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                claims, null, userStoreManager);
+
+        assertTrue(result, "Listener should return true after successful application creation");
+
+        ArgumentCaptor<ApplicationDTO> applicationDTOCaptor =
+                ArgumentCaptor.forClass(ApplicationDTO.class);
+        verify(applicationManagementService).createApplication(applicationDTOCaptor.capture(),
+                eq(TENANT_DOMAIN), eq(username));
+
+        ApplicationDTO capturedAppDTO = applicationDTOCaptor.getValue();
+        String applicationName = capturedAppDTO.getServiceProvider().getApplicationName();
+        assertEquals(applicationName, "agent-0796",
+                "Application name should fallback to 'agent' when claim is blank");
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_ApplicationNameWithNullClaims()
+            throws UserStoreException, IdentityApplicationManagementException {
+
+        String username = "0796b8ac-c867-4f71-8dba-fd08b8ed2383";
+
+        setupCommonMocks();
+        setupAgentUserMocks();
+        when(user.getUsername()).thenReturn(username);
+
+        boolean result = listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                null, null, userStoreManager);
+
+        assertTrue(result, "Listener should return true after successful application creation");
+
+        ArgumentCaptor<ApplicationDTO> applicationDTOCaptor =
+                ArgumentCaptor.forClass(ApplicationDTO.class);
+        verify(applicationManagementService).createApplication(applicationDTOCaptor.capture(),
+                eq(TENANT_DOMAIN), eq(username));
+
+        ApplicationDTO capturedAppDTO = applicationDTOCaptor.getValue();
+        String applicationName = capturedAppDTO.getServiceProvider().getApplicationName();
+        assertEquals(applicationName, "agent-0796",
+                "Application name should fallback to 'agent' when claims are null");
     }
 
     private void setupCommonMocks() throws UserStoreException {

@@ -682,6 +682,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(tokenPersistenceProcessor);
         lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
     }

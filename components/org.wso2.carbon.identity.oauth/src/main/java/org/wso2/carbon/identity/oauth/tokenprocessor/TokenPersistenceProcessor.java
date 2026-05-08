@@ -51,4 +51,8 @@ public interface TokenPersistenceProcessor {
     public String getPreprocessedRefreshToken(String processedRefreshToken)
             throws IdentityOAuth2Exception;
 
+    default boolean isProcessed(String secret) throws IdentityOAuth2Exception {
+        return true;
+    }
+
 }

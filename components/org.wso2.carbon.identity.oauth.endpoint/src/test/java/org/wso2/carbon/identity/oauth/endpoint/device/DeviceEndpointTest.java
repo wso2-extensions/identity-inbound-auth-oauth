@@ -282,6 +282,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(tokenPersistenceProcessor);
         lenient().when(mockOAuthServerConfiguration.getDeviceCodeKeySet())
                 .thenReturn("abcdefghijklmnopABCDEFGHIJ123456789");
         lenient().when(mockOAuthServerConfiguration.getDeviceCodeExpiryTime()).thenReturn(60000L);

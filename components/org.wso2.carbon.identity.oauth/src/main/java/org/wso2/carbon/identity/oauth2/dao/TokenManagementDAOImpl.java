@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -591,6 +593,11 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 updateStateStatement.execute();
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
+                TokenPersistenceProcessor tokenPersistenceProcessor = getPersistenceProcessor();
+                if (OAuthServerConfiguration.getInstance().isClientSecretHashOnlyEnabled()) {
+                    tokenPersistenceProcessor = OAuthServerConfiguration.getInstance()
+                            .getClientSecretPersistenceProcessor();
+                }
                 String newSecretKey;
                 if (properties.containsKey(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY)) {
                     newSecretKey = properties.getProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY);
@@ -603,7 +610,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     updateStateStatement = connection.prepareStatement
                             (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.
                                     UPDATE_OAUTH_SECRET_KEY_AND_STATE);
-                    updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
+                    updateStateStatement.setString(1, tokenPersistenceProcessor.getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, properties.getProperty(OAuthConstants.OAUTH_APP_NEW_STATE));
                     updateStateStatement.setString(3, consumerKey);
                     updateStateStatement.setInt(4, appTenantId);
@@ -612,7 +619,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     updateStateStatement = connection.prepareStatement
                             (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.
                                     UPDATE_OAUTH_SECRET_KEY);
-                    updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
+                    updateStateStatement.setString(1, tokenPersistenceProcessor.getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, consumerKey);
                     updateStateStatement.setInt(3, appTenantId);
                 }

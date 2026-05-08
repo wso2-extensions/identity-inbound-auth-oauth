@@ -176,6 +176,8 @@ public class SAML2BearerGrantHandlerTest {
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         when(mockOAuthServerConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(persistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(persistenceProcessor);
         federatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
         saml2BearerGrantHandler = new SAML2BearerGrantHandler();
         saml2BearerGrantHandler.init();

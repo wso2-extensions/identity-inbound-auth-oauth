@@ -207,6 +207,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_SHARED_USER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -2424,7 +2425,34 @@ public class AuthzUtil {
         if (mappedRemoteClaims != null) {
             authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
         }
+
+        authorizationGrantCacheEntry.setAccessingOrganization(sessionDataCacheEntry.getLoggedInUser()
+                .getAccessingOrganization());
+        /*
+         * isSharedUser property of the authenticated user will be set to true in B2B login flows where user who is
+         * shared to a child organization is directly logging into the child organization.
+         */
+        if (sessionDataCacheEntry.getLoggedInUser().isSharedUser()) {
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes =
+                    authorizationGrantCacheEntry.getAccessTokenExtensionDO();
+            accessTokenExtendedAttributes = addExtendedAttribute(IS_SHARED_USER,
+                    String.valueOf(sessionDataCacheEntry.getLoggedInUser().isSharedUser()),
+                    accessTokenExtendedAttributes);
+            authorizationGrantCacheEntry.setAccessTokenExtensionDO(accessTokenExtendedAttributes);
+        }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
+    }
+
+    private static AccessTokenExtendedAttributes addExtendedAttribute(
+            String key, String value, AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
+
+        if (accessTokenExtendedAttributes == null) {
+            accessTokenExtendedAttributes = new AccessTokenExtendedAttributes(new HashMap<>());
+        }
+        if (key != null && value != null) {
+            accessTokenExtendedAttributes.getParameters().put(key, value);
+        }
+        return accessTokenExtendedAttributes;
     }
 
     /**

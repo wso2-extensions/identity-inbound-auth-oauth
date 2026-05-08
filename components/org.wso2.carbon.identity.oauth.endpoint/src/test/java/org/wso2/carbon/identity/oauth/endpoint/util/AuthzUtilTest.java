@@ -1713,6 +1713,8 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
 
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(tokenPersistenceProcessor);
         when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
         when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
