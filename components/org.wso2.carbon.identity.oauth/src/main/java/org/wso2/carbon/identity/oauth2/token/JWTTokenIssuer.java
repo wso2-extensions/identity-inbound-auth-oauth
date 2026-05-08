@@ -38,6 +38,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -218,6 +219,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(oauthAuthzMsgCtx);
             if (additionalClaims != null) {
                 additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+                if (additionalClaims.containsKey(FrameworkConstants.USER_ORG_CLAIM) &&
+                        sharedUserImpersonatingSubOrgUser(authenticatedUser)) {
+                    jwtClaimsSetBuilder.claim(FrameworkConstants.USER_ORG_CLAIM,
+                            authenticatedUser.getImpersonatedUser().getUserResidentOrganization());
+                }
             }
         }
 
@@ -232,6 +238,32 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             log.debug("Subject token expiry time : " + expirationTime + "ms.");
         }
         return expirationTime;
+    }
+
+    /**
+     * Determines whether a shared user (logged in via a shared app through enhanced or legacy org authentication)
+     * accessing a sub-org is impersonating a user who reside in the sub-org.
+     *
+     * @param authenticatedUser the actor performing the impersonation.
+     * @return {@code true} if the actor is a shared user impersonating a user from
+     *         a different sub-organization; {@code false} otherwise.
+     */
+    private boolean sharedUserImpersonatingSubOrgUser(AuthenticatedUser authenticatedUser) {
+
+        if (authenticatedUser.getImpersonatedUser() == null) {
+            return false;
+        }
+
+        if (!authenticatedUser.isSharedUser() &&
+                !(authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME.equals(
+                                authenticatedUser.getFederatedIdPName()))) {
+            return false;
+        }
+
+        String actorResidentOrg = authenticatedUser.getUserResidentOrganization();
+        String subjectResidentOrg = authenticatedUser.getImpersonatedUser().getUserResidentOrganization();
+        return StringUtils.isNotBlank(actorResidentOrg) && StringUtils.isNotBlank(subjectResidentOrg) &&
+                !actorResidentOrg.equals(subjectResidentOrg);
     }
 
     @Override

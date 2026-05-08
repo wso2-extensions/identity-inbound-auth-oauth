@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
@@ -70,6 +71,12 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
             try {
                 subjectTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                         .resolveTenantDomain(impersonator.getUserResidentOrganization());
+                // Impersonator is a shared user, so the impersonator exist in a different org than the subject.
+                if (StringUtils.isNotBlank(impersonator.getAccessingOrganization()) &&
+                        !impersonator.getUserResidentOrganization().equals(impersonator.getAccessingOrganization())) {
+                    subjectTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(impersonator.getAccessingOrganization());
+                }
             } catch (OrganizationManagementException e) {
                 throw new IdentityOAuth2Exception("Error while resolving organization handle for the impersonated " +
                         "user.", e);
