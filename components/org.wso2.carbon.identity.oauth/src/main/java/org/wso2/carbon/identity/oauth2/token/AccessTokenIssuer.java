@@ -346,7 +346,7 @@ public class AccessTokenIssuer {
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
 
         if (!isOfTypeApplicationUser) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            tokReqMsgCtx.setAuthorizedUser(new AuthenticatedUser(oAuthAppDO.getAppOwner()));
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
             String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
