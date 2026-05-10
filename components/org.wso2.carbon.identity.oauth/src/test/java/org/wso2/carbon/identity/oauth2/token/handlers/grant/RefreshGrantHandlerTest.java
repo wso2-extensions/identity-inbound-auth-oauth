@@ -463,6 +463,7 @@ public class RefreshGrantHandlerTest {
             when(oAuthTokenReqMessageContext.getAuthorizedUser()).thenReturn(user1);
             when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
+            when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(tenantDomain);
             when(mockValidationBean.getAccessTokenValidityInMillis()).thenReturn(10000L);
             Timestamp currentTime = Timestamp.from(Instant.now());
             when(mockValidationBean.getIssuedTime()).thenReturn(currentTime);
