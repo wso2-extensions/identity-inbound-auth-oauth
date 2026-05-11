@@ -263,6 +263,10 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.organization.management</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.management.organization.agent.sharing</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management</groupId>
             <artifactId>org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service</artifactId>
         </dependency>
         <dependency>
@@ -467,6 +471,7 @@
                             org.wso2.carbon.identity.organization.management.role.management.service.models; version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.models;version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.management.organization.agent.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service;
                             version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception;
@@ -641,4 +646,3 @@
     </build>
 
 </project>
-
