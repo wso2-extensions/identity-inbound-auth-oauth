@@ -24,7 +24,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -33,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -152,24 +152,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            int tenantId = IdentityTenantUtil.getLoginTenantId();
-            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
-            /*
-             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
-             directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
-             tenant domain of the organization to get the application tenant id.
-            */
-            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-                try {
-                    String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                            .resolveTenantDomain(applicationResidentOrgId);
-                    tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-                } catch (OrganizationManagementException e) {
-                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                            + applicationResidentOrgId, e);
-                }
-            }
+            int tenantId = getAppTenantId(consumerKey);
             prepStmt.setInt(2, tenantId);
             if (refreshToken != null) {
                 prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
@@ -973,6 +956,16 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while resolving organization ID for the tenant domain: " +
                     tenantDomain, e);
+        }
+    }
+
+    private static int getAppTenantId(String clientId) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2Util.getAppTenantId(clientId);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving app tenant ID for client ID: " +
+                    clientId, e);
         }
     }
 }

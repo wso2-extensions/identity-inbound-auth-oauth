@@ -28,9 +28,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.agent.sharing.util.OrganizationSharedAgentUtil;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -40,12 +43,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.user.core.UserStoreConfigConstants.PRIMARY;
 
 /**
  * Unit tests for AuthzUtil class.
@@ -68,11 +73,14 @@ public class AuthzUtilTest {
     private MockedStatic<AuthzUtil> authzUtilMockedStatic;
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic;
 
+    private static final String AGENT = "AGENT";
     private static final String USER_ID = "test-user-id";
     private static final String ACCESSING_ORGANIZATION = "accessing-org-id";
     private static final String TENANT_DOMAIN = "tenantDomain";
     private static final String USER_RESIDENT_ORG_TENANT = "resident-tenant";
     private static final String ACCESSING_ORG_TENANT = "accessing-tenant";
+    private static final String SHARED_AGENT_ID = "shared-agent-id";
+    private static final String SHARED_USER_ID = "shared-user-id";
 
     @BeforeMethod
     public void setUp() {
@@ -312,5 +320,45 @@ public class AuthzUtilTest {
         List<String> result = AuthzUtil.getSubOrgUserRoles(USER_ID, "");
         Assert.assertNotNull(result);
         Assert.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testAgentGetUserIdOfAssociatedUser() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationSharedAgentUtil> sharedAgentUtil =
+                     mockStatic(OrganizationSharedAgentUtil.class)) {
+
+            when(authenticatedUser.isFederatedUser()).thenReturn(false);
+            when(authenticatedUser.getUserId()).thenReturn(USER_ID);
+            when(authenticatedUser.getUserStoreDomain()).thenReturn(AGENT);
+            when(authenticatedUser.getAccessingOrganization()).thenReturn(ACCESSING_ORGANIZATION);
+            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn(AGENT);
+            sharedAgentUtil.when(() -> OrganizationSharedAgentUtil
+                    .getAgentIdOfAssociatedAgentByOrgId(USER_ID, ACCESSING_ORGANIZATION))
+                    .thenReturn(Optional.of(SHARED_AGENT_ID));
+            String result = AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser);
+            Assert.assertEquals(result, SHARED_AGENT_ID);
+        }
+    }
+
+    @Test
+    public void testGetUserIdOfAssociatedUserFallsBackToUserSharing() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationSharedUserUtil> sharedUserUtil =
+                     mockStatic(OrganizationSharedUserUtil.class)) {
+
+            when(authenticatedUser.isFederatedUser()).thenReturn(false);
+            when(authenticatedUser.getUserId()).thenReturn(USER_ID);
+            when(authenticatedUser.getUserStoreDomain()).thenReturn(PRIMARY);
+            when(authenticatedUser.getAccessingOrganization()).thenReturn(ACCESSING_ORGANIZATION);
+            identityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn(AGENT);
+            sharedUserUtil.when(() -> OrganizationSharedUserUtil
+                    .getUserIdOfAssociatedUserByOrgId(USER_ID, ACCESSING_ORGANIZATION))
+                    .thenReturn(Optional.of(SHARED_USER_ID));
+            String result = AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser);
+            Assert.assertEquals(result, SHARED_USER_ID);
+        }
     }
 }

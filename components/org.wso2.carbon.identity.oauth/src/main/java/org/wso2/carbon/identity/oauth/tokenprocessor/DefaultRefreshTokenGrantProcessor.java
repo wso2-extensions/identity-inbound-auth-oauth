@@ -107,10 +107,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
-        String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
-        accessTokenDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
-                ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
-                : IdentityTenantUtil.getLoginTenantId());
+        int appTenantId = IdentityTenantUtil.getTenantId(tokenReq.getTenantDomain());
+        accessTokenDO.setAppResidentTenantId(appTenantId);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
