@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -94,7 +95,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
@@ -651,10 +651,12 @@ public class OAuthUtilTest {
             verify(mockAuthorizationCodeDAO, times(2))
                     .getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class));
             // Cache should be cleared for the retrieved token and code.
+            verify(mockAuthorizationGrantCache, times(2))
+                    .clearCacheEntry(any(AuthorizationGrantCacheKey.class));
             verify(mockAuthorizationGrantCache)
-                    .clearCacheEntryByTokenId(any(), eq("tokenId"), isNull());
+                    .clearFromSessionStoreBatch(Collections.singletonList("tokenId"));
             verify(mockAuthorizationGrantCache)
-                    .clearCacheEntryByCodeId(any(), eq("authzCodeId"), isNull());
+                    .clearFromSessionStoreBatch(Collections.singletonList("authzCodeId"));
         }
     }
 
@@ -709,10 +711,12 @@ public class OAuthUtilTest {
                     .getAccessTokensByUserForOpenidScope(any(AuthenticatedUser.class), anyBoolean());
             verify(mockAuthorizationCodeDAO, times(1))
                     .getAuthorizationCodesByUserForOpenidScope(any(AuthenticatedUser.class));
+            verify(mockAuthorizationGrantCache, times(2))
+                    .clearCacheEntry(any(AuthorizationGrantCacheKey.class));
             verify(mockAuthorizationGrantCache)
-                    .clearCacheEntryByTokenId(any(), eq("tokenId"), isNull());
+                    .clearFromSessionStoreBatch(Collections.singletonList("tokenId"));
             verify(mockAuthorizationGrantCache)
-                    .clearCacheEntryByCodeId(any(), eq("authzCodeId"), isNull());
+                    .clearFromSessionStoreBatch(Collections.singletonList("authzCodeId"));
         }
     }
 
