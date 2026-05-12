@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.dao.SQLQueries.RefreshTokenPersistenceSQL
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -576,6 +577,8 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             insertTokenStmt.executeUpdate();
             // Insert token scopes if available
             insertScopesForToken(addScopeStmt, accessTokenDO);
+            // Insert token binding
+            insertTokenBindingForRefreshToken(connection, accessTokenDO);
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLIntegrityConstraintViolationException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -901,5 +904,26 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
     private boolean isEnabled() {
 
         return !OAuth2Util.isAccessTokenPersistenceEnabled() && OAuth2Util.isRefreshTokenPersistenceEnabled();
+    }
+
+    private void insertTokenBindingForRefreshToken(Connection connection, AccessTokenDO accessTokenDO)
+            throws SQLException, IdentityOAuth2Exception {
+
+        TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+        if (tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingType()) ||
+                StringUtils.isBlank(tokenBinding.getBindingReference())) {
+            return;
+        }
+
+        int tenantId = OAuth2Util.getTenantId(accessTokenDO.getAuthzUser().getTenantDomain());
+        try (PreparedStatement stmt = connection.prepareStatement(
+                RefreshTokenPersistenceSQLQueries.STORE_REFRESH_TOKEN_BINDING)) {
+            stmt.setString(1, accessTokenDO.getTokenId());
+            stmt.setString(2, tokenBinding.getBindingType());
+            stmt.setString(3, tokenBinding.getBindingReference());
+            stmt.setString(4, tokenBinding.getBindingValue());
+            stmt.setInt(5, tenantId);
+            stmt.executeUpdate();
+        }
     }
 }

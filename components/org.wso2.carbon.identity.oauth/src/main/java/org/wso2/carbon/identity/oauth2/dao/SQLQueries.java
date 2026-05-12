@@ -1937,6 +1937,10 @@ public class SQLQueries {
                 "ON REFRESH_TOKEN_TABLE.REFRESH_TOKEN_ID = IDN_OAUTH2_REFRESH_TOKEN_SCOPE.REFRESH_TOKEN_ID " +
                 "WHERE TOKEN_SCOPE=?";
 
+        public static final String STORE_REFRESH_TOKEN_BINDING =
+                "INSERT INTO IDN_OAUTH2_REFRESH_TOKEN_BINDING (REFRESH_TOKEN_ID, TOKEN_BINDING_TYPE, " +
+                        "TOKEN_BINDING_REF, TOKEN_BINDING_VALUE, TENANT_ID) VALUES (?, ?, ?, ?, ?)";
+
         private RefreshTokenPersistenceSQLQueries() {
         }
     }
