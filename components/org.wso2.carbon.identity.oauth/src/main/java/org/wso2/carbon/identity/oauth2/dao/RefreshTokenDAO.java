@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.util.Set;
 
@@ -69,6 +70,21 @@ public interface RefreshTokenDAO {
      */
     AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
                                                String scope) throws IdentityOAuth2Exception;
+
+    /**
+     * Retrieves an active refresh token for a given consumer key, authenticated user, user store domain, scope and
+     * token binding.
+     *
+     * @param consumerKey      The consumer key of the application.
+     * @param authzUser        The authenticated user.
+     * @param userStoreDomain  The user store domain of the authenticated user.
+     * @param scope            The scope of the access token.
+     * @param tokenBinding     The token binding of the current request.
+     * @return An AccessTokenDO object representing the active refresh token.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving the refresh token.
+     */
+    AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+                                        String scope, TokenBinding tokenBinding) throws IdentityOAuth2Exception;
 
     /**
      * Invalidates the existing refresh token and creates a new one.

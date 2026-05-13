@@ -148,6 +148,14 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
     public AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser,
                                                String userStoreDomain, String scope) throws IdentityOAuth2Exception {
 
+        return getActiveRefreshToken(consumerKey, authzUser, userStoreDomain, scope, null);
+    }
+
+    @Override
+    public AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser,
+                                               String userStoreDomain, String scope, TokenBinding tokenBinding)
+            throws IdentityOAuth2Exception {
+
         if (!isEnabled()) {
             return null;
         }
@@ -166,7 +174,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = createPreparedStatementGetActiveRefreshToken(connection, consumerKey,
                      tenantAwareUsername,
-                     tenantId, userDomain, scope, authenticatedIDP, isUsernameCaseSensitive);
+                     tenantId, userDomain, scope, authenticatedIDP, isUsernameCaseSensitive, tokenBinding);
              ResultSet resultSet = prepStmt.executeQuery()) {
 
             if (resultSet.next()) {
@@ -256,31 +264,49 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
                                                                            String tenantAwareUsername, int tenantId,
                                                                            String userDomain,
                                                                            String scope, String authenticatedIDP,
-                                                                           boolean isUsernameCaseSensitive)
+                                                                           boolean isUsernameCaseSensitive,
+                                                                           TokenBinding tokenBinding)
             throws SQLException, IdentityOAuth2Exception {
 
-        String sql = RefreshTokenPersistenceSQLQueries.RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE;
+        boolean isBoundRequest = isTokenBindingAvailable(tokenBinding);
+        String sql = isBoundRequest ?
+                RefreshTokenPersistenceSQLQueries.RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE_BINDING :
+                RefreshTokenPersistenceSQLQueries.RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE;
         if (!isUsernameCaseSensitive) {
             sql = sql.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
         }
 
         String hashedScope = OAuth2Util.hashScopes(scope);
         if (hashedScope == null) {
+            sql = sql.replace("REFRESH_TOKEN_TABLE.TOKEN_SCOPE_HASH=?",
+                    "REFRESH_TOKEN_TABLE.TOKEN_SCOPE_HASH IS NULL");
             sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH IS NULL");
         }
 
         PreparedStatement prepStmt = connection.prepareStatement(sql);
-        prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-        prepStmt.setString(2, isUsernameCaseSensitive ? tenantAwareUsername : tenantAwareUsername.toLowerCase());
-        prepStmt.setInt(3, tenantId);
-        prepStmt.setString(4, userDomain);
+        int parameterIndex = 1;
+        prepStmt.setString(parameterIndex++, getPersistenceProcessor().getProcessedClientId(consumerKey));
+        prepStmt.setString(parameterIndex++,
+                isUsernameCaseSensitive ? tenantAwareUsername : tenantAwareUsername.toLowerCase());
+        prepStmt.setInt(parameterIndex++, tenantId);
+        prepStmt.setString(parameterIndex++, userDomain);
         if (hashedScope == null) {
-            prepStmt.setString(5, authenticatedIDP);
+            prepStmt.setString(parameterIndex++, authenticatedIDP);
         } else {
-            prepStmt.setString(5, hashedScope);
-            prepStmt.setString(6, authenticatedIDP);
+            prepStmt.setString(parameterIndex++, hashedScope);
+            prepStmt.setString(parameterIndex++, authenticatedIDP);
+        }
+        if (isBoundRequest) {
+            prepStmt.setString(parameterIndex++, tokenBinding.getBindingType());
+            prepStmt.setString(parameterIndex, tokenBinding.getBindingReference());
         }
         return prepStmt;
+    }
+
+    private boolean isTokenBindingAvailable(TokenBinding tokenBinding) {
+
+        return tokenBinding != null && StringUtils.isNotBlank(tokenBinding.getBindingType()) &&
+                StringUtils.isNotBlank(tokenBinding.getBindingReference());
     }
 
     @Override
