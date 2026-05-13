@@ -63,7 +63,7 @@ public class OIDCDiscoveryServlet extends HttpServlet {
     private static final long serialVersionUID = -4599438512732128049L;
 
     private static final Log log = LogFactory.getLog(OIDCDiscoveryServlet.class);
-    private static final Pattern TENANT_PATH_PATTERN = Pattern.compile("^/t/([^/]+)$");
+    private static final Pattern TENANT_PATH_PATTERN = Pattern.compile("^/(|t/[^/]+)$");
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {

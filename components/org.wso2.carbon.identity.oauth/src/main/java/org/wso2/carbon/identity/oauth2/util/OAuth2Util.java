@@ -1577,6 +1577,25 @@ public class OAuth2Util {
         throw new IllegalArgumentException("Cannot create user from empty user name");
     }
 
+    /**
+     * Builds the server base URL for use as the OIDC issuer identifier. The URL is
+     * {@code https://host:port} for the super-tenant, or {@code https://host:port/t/{tenant}} for
+     * other tenants.
+     *
+     * @param tenantDomain tenant domain for which the issuer URL is required.
+     * @return absolute public base URL for the given tenant.
+     * @throws IdentityOAuth2Exception if the URL cannot be constructed.
+     */
+    public static String buildBaseIssuerUrl(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return ServiceURLBuilder.create().setTenant(tenantDomain).build().getAbsolutePublicURL();
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while building base issuer URL for tenant: " + tenantDomain, e);
+        }
+    }
+
     public static String getIDTokenIssuer() {
 
         String issuer = OAuthServerConfiguration.getInstance().getOpenIDConnectIDTokenIssuerIdentifier();
@@ -5084,9 +5103,9 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
-            final String oidcDiscoveryEpUrl =  getResidentIdpOidcDiscoveryEpUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcDiscoveryEpUrl)) {
-                return oidcDiscoveryEpUrl;
+            final String oidcIssuerEpUrl =  buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                return oidcIssuerEpUrl;
             }
         }
 
@@ -5130,9 +5149,9 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
-            final String oidcDiscoveryEpUrl =  getResidentIdpOidcDiscoveryEpUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcDiscoveryEpUrl)) {
-                return oidcDiscoveryEpUrl;
+            final String oidcIssuerEpUrl =  buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                return oidcIssuerEpUrl;
             }
         }
 
@@ -5238,18 +5257,6 @@ public class OAuth2Util {
                         IdentityApplicationConstants.Authenticator.OIDC.NAME);
         return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
                 IDP_ENTITY_ID).getValue();
-    }
-
-    public static String getResidentIdpOidcDiscoveryEpUrl(String tenantDomain) throws IdentityOAuth2Exception {
-
-        IdentityProvider identityProvider = getResidentIdp(tenantDomain);
-        FederatedAuthenticatorConfig[] fedAuthnConfigs = identityProvider.getFederatedAuthenticatorConfigs();
-        // Get OIDC authenticator
-        FederatedAuthenticatorConfig oidcAuthenticatorConfig =
-                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
-                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
-        return IdentityApplicationManagementUtil.getProperty(oidcAuthenticatorConfig.getProperties(),
-                "OIDCDiscoveryEPUrl").getValue();
     }
 
     /**
