@@ -357,8 +357,12 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                try {
                    authenticatedUser.setUserResidentOrganization(organizationManager.resolveOrganizationId(
                            authenticatedUser.getTenantDomain()));
-               authenticatedUser.setAccessingOrganization(organizationManager.resolveOrganizationId(
-                       IdentityTenantUtil.resolveTenantDomain()));
+                   String accessingOrganization = authorizationGrantCacheEntry.getAccessingOrganization();
+                   if (StringUtils.isBlank(accessingOrganization)) {
+                       accessingOrganization = organizationManager.resolveOrganizationId(
+                               IdentityTenantUtil.resolveTenantDomain());
+                   }
+                   authenticatedUser.setAccessingOrganization(accessingOrganization);
                } catch (OrganizationManagementException e) {
                    throw new IdentityOAuth2Exception(
                            "Error while resolving organization ID of the authenticated user: " +
