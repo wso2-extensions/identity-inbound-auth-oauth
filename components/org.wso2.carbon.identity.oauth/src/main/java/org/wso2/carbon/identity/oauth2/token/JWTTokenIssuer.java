@@ -112,6 +112,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
     private static final String CNF = "cnf";
+    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
+    private static final String JWK_THUMBPRINT = "jkt";
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
@@ -1063,7 +1065,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
                 authenticatedUser, oAuthAppDO);
-        return jwtClaimsSetBuilder.build();
+        return handleRefreshTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
     /**
@@ -1483,20 +1485,43 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
 
-        if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
-            // Include token binding into the jwt token.
-            String bindingType = tokReqMsgCtx.getTokenBinding().getBindingType();
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
-            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
-                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
-                if (StringUtils.isNotBlank(cnf)) {
-                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,
-                            tokReqMsgCtx.getTokenBinding().getBindingValue()));
-                }
-            }
-        }
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
         return jwtClaimsSetBuilder.build();
+    }
+
+    private JWTClaimsSet handleRefreshTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
+        return jwtClaimsSetBuilder.build();
+    }
+
+    private void addTokenBindingClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        if (tokenBinding == null) {
+            return;
+        }
+
+        // Include token binding into the JWT token.
+        String bindingType = tokenBinding.getBindingType();
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokenBinding.getBindingReference());
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
+        addConfirmationClaim(jwtClaimsSetBuilder, tokenBinding);
+    }
+
+    private void addConfirmationClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        String bindingValue = tokenBinding.getBindingValue();
+        if (StringUtils.isBlank(bindingValue)) {
+            return;
+        }
+
+        String bindingType = tokenBinding.getBindingType();
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(OAuthConstants.X5T_S256, bindingValue));
+        } else if (DPOP_TOKEN_BINDING_TYPE.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(JWK_THUMBPRINT, bindingValue));
+        }
     }
 
     /**
