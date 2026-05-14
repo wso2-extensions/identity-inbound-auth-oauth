@@ -692,6 +692,29 @@ public class RefreshTokenDAOImplTest {
     }
 
     @Test
+    public void testValidateRefreshToken_WithTokenBinding_ReturnsBindingMetadata() throws Exception {
+
+        String tokenId = UUID.randomUUID().toString();
+        String refreshToken = "validate-bound-token-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId, refreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        RefreshTokenValidationDataDO result = refreshTokenDAO.validateRefreshToken(TEST_CONSUMER_KEY, refreshToken);
+
+        assertNotNull(result, "Validation data should be returned for a valid refresh token");
+        assertEquals(result.getTokenBindingReference(), TEST_BINDING_REF,
+                "Validation data should expose the refresh token binding reference");
+        assertNotNull(result.getTokenBinding(), "Validation data should contain refresh token binding metadata");
+        assertEquals(result.getTokenBinding().getBindingType(), TEST_BINDING_TYPE,
+                "Binding type should match the refresh token binding row");
+        assertEquals(result.getTokenBinding().getBindingReference(), TEST_BINDING_REF,
+                "Binding reference should match the refresh token binding row");
+        assertEquals(result.getTokenBinding().getBindingValue(), TEST_BINDING_VALUE,
+                "Binding value should match the refresh token binding row");
+    }
+
+    @Test
     public void testGetRefreshToken_WhenDisabled() throws Exception {
 
         // Mock isEnabled to return false

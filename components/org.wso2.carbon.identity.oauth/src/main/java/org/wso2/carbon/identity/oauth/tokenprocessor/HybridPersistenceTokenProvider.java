@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
@@ -46,6 +47,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -65,6 +67,10 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
     private static final String ISS = "iss";
     private static final String AUD = "aud";
     private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
+    private static final String TOKEN_BINDING_REF = "binding_ref";
+    private static final String TOKEN_BINDING_TYPE = "binding_type";
+    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
+    private static final String JWK_THUMBPRINT = "jkt";
 
     /**
      * Retrieves and verifies JWT access token based on the JWT claims with an option to include expired tokens
@@ -336,9 +342,49 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
         validationDataDO.setRefreshTokenState(state);
         validationDataDO.setTokenId(TokenMgtUtil.getTokenId(claimsSet));
         validationDataDO.setTokenBindingReference(OAuthConstants.TokenBindings.NONE);
+        setTokenBinding(claimsSet, validationDataDO);
 
         return validationDataDO;
 
+    }
+
+    private void setTokenBinding(JWTClaimsSet claimsSet, RefreshTokenValidationDataDO validationDataDO)
+            throws IdentityOAuth2Exception {
+
+        Object bindingTypeObj = claimsSet.getClaim(TOKEN_BINDING_TYPE);
+        Object bindingRefObj = claimsSet.getClaim(TOKEN_BINDING_REF);
+        if (bindingTypeObj == null && bindingRefObj == null) {
+            return;
+        }
+
+        if (bindingTypeObj == null || bindingRefObj == null || StringUtils.isBlank(bindingTypeObj.toString()) ||
+                StringUtils.isBlank(bindingRefObj.toString())) {
+            throw new IdentityOAuth2Exception("Malformed token binding claims found in the refresh token.");
+        }
+
+        String bindingType = bindingTypeObj.toString();
+        String bindingReference = bindingRefObj.toString();
+        TokenBinding tokenBinding = new TokenBinding(bindingType, bindingReference,
+                getTokenBindingValue(claimsSet, bindingType));
+        validationDataDO.setTokenBinding(tokenBinding);
+        validationDataDO.setTokenBindingReference(bindingReference);
+    }
+
+    private String getTokenBindingValue(JWTClaimsSet claimsSet, String bindingType) {
+
+        Object cnfObj = claimsSet.getClaim(OAuthConstants.CNF);
+        if (!(cnfObj instanceof Map)) {
+            return null;
+        }
+
+        Map<?, ?> cnf = (Map<?, ?>) cnfObj;
+        Object bindingValue = null;
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            bindingValue = cnf.get(OAuthConstants.X5T_S256);
+        } else if (DPOP_TOKEN_BINDING_TYPE.equals(bindingType)) {
+            bindingValue = cnf.get(JWK_THUMBPRINT);
+        }
+        return bindingValue == null ? null : bindingValue.toString();
     }
 
     private void validateAudienceClaim(JWTClaimsSet claimsSet) throws IdentityOAuth2Exception {

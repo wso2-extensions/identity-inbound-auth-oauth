@@ -126,19 +126,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         validateRefreshTokenInRequest(tokenReq, validationBean);
 
-        TokenBinding tokenBinding = null;
-        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
-                .equals(validationBean.getTokenBindingReference())) {
-            Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
-                    .getTokenBindingMgtDAO()
-                    .getTokenBindingByBindingRef(validationBean.getTokenId(),
-                            validationBean.getTokenBindingReference());
-            if (tokenBindingOptional.isPresent()) {
-                tokenBinding = tokenBindingOptional.get();
-                tokReqMsgCtx.setTokenBinding(tokenBinding);
-            }
+        TokenBinding tokenBinding = resolveTokenBinding(validationBean);
+        if (tokenBinding != null) {
+            tokReqMsgCtx.setTokenBinding(tokenBinding);
         }
-        validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
+        if (!validationBean.isWithNotPersistedAT()) {
+            validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
+        }
         validateAuthenticatedUser(validationBean, tokReqMsgCtx);
 
         if (log.isDebugEnabled()) {
@@ -148,6 +142,27 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         setPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
         return true;
+    }
+
+    private TokenBinding resolveTokenBinding(RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
+
+        if (validationBean.getTokenBinding() != null) {
+            TokenBinding tokenBinding = validationBean.getTokenBinding();
+            validationBean.setTokenBindingReference(tokenBinding.getBindingReference());
+            return tokenBinding;
+        }
+
+        if (StringUtils.isBlank(validationBean.getTokenBindingReference()) ||
+                NONE.equals(validationBean.getTokenBindingReference())) {
+            return null;
+        }
+
+        Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
+                .getTokenBindingMgtDAO()
+                .getTokenBindingByBindingRef(validationBean.getTokenId(),
+                        validationBean.getTokenBindingReference());
+        return tokenBindingOptional.orElse(null);
     }
 
     @Override

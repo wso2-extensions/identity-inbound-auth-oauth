@@ -386,6 +386,43 @@ public class RefreshGrantHandlerTest {
     }
 
     @Test
+    public void testValidateGrantRestoresTokenBindingForNonPersistentAccessToken() throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding("cookie", "binding-ref", null);
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getTokenBinding()).thenReturn(tokenBinding);
+        when(refreshTokenValidationDataDO.isWithNotPersistedAT()).thenReturn(true);
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            assertTrue(refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext));
+            verify(oAuthTokenReqMessageContext).setTokenBinding(tokenBinding);
+        }
+    }
+
+    @Test
     public void testIssueToken() throws IdentityOAuth2Exception, OAuthSystemException {
 
         String userStoreDomain = "user-store-domain";

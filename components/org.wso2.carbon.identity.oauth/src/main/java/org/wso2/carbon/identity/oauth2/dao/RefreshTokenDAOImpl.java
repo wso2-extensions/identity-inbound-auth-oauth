@@ -418,10 +418,33 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
                             scopes.toArray(new String[0])));
                 }
             }
+            setRefreshTokenBinding(connection, validationDataDO);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error occurred while validating the refresh token", e);
         }
         return validationDataDO;
+    }
+
+    private void setRefreshTokenBinding(Connection connection, RefreshTokenValidationDataDO validationDataDO)
+            throws SQLException {
+
+        if (validationDataDO == null || StringUtils.isBlank(validationDataDO.getTokenId())) {
+            return;
+        }
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                RefreshTokenPersistenceSQLQueries.RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN_ID)) {
+            prepStmt.setString(1, validationDataDO.getTokenId());
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                if (!resultSet.next()) {
+                    return;
+                }
+                TokenBinding tokenBinding = new TokenBinding(resultSet.getString(1), resultSet.getString(2),
+                        resultSet.getString(3));
+                validationDataDO.setTokenBinding(tokenBinding);
+                validationDataDO.setTokenBindingReference(tokenBinding.getBindingReference());
+            }
+        }
     }
 
     private RefreshTokenValidationDataDO buildValidationDataDO(ResultSet resultSet, String refreshToken)
