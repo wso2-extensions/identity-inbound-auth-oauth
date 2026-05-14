@@ -172,4 +172,30 @@ public class OpenIDConnectUserEndpointTest {
         }
     }
 
+    @Test
+    public void testGetUserClaimsInactiveTokenRaceReturnsInvalidToken() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class)) {
+
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            lenient().when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(3600L);
+
+            when(requestValidator.validateRequest(any())).thenReturn("race-token");
+            when(tokenValidator.validateToken(nullable(String.class), any())).thenThrow(
+                    new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found."));
+
+            when(mockUserInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
+            when(mockUserInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
+            userInfoEndpointConfig.when(UserInfoEndpointConfig::getInstance).thenReturn(mockUserInfoEndpointConfig);
+
+            Response response = openIDConnectUserEndpoint.getUserClaims(httpServletRequest);
+            assertNotNull(response);
+            assertEquals(response.getStatus(), HttpServletResponse.SC_UNAUTHORIZED,
+                    "Race-window IllegalArgumentException should translate to HTTP 401 invalid_token");
+        }
+    }
 }

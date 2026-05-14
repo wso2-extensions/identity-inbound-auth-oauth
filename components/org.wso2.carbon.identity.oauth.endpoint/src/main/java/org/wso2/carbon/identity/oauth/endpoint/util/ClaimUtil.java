@@ -140,6 +140,13 @@ public class ClaimUtil {
             throw new UserInfoEndpointException("Error while retrieving claims for user: " +
                     tokenResponse.getAuthorizedUser(), e);
         } catch (Exception e) {
+            if (e instanceof IllegalArgumentException && e.getMessage() != null
+                    && e.getMessage().startsWith("Invalid Access Token")) {
+                // Race-window IAE from the token lookup — translate to invalid_token so the
+                // outer broad-catch doesn't rewrap it without an errorCode (which yields HTTP 400).
+                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN,
+                        "Access token validation failed");
+            }
             String errMsg = StringUtils.isNotEmpty(authorizedUserName) ? "Error while retrieving the claims " +
                     "from user store for the username: " + authorizedUserName : "Error while retrieving the " +
                     "claims from user store";
