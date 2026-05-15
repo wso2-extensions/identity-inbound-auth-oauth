@@ -130,9 +130,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         if (tokenBinding != null) {
             tokReqMsgCtx.setTokenBinding(tokenBinding);
         }
-        if (!validationBean.isWithNotPersistedAT()) {
-            validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
-        }
+        validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
         validateAuthenticatedUser(validationBean, tokReqMsgCtx);
 
         if (log.isDebugEnabled()) {
