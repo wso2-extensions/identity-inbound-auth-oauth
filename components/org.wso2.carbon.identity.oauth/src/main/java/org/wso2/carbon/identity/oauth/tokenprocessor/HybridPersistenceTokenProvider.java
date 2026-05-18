@@ -341,7 +341,6 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
 
         validationDataDO.setRefreshTokenState(state);
         validationDataDO.setTokenId(TokenMgtUtil.getTokenId(claimsSet));
-        validationDataDO.setTokenBindingReference(OAuthConstants.TokenBindings.NONE);
         setTokenBinding(claimsSet, validationDataDO);
 
         return validationDataDO;
