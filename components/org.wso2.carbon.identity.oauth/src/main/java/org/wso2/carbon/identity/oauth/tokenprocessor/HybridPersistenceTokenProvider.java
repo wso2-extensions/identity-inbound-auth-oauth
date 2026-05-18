@@ -363,10 +363,20 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
 
         String bindingType = bindingTypeObj.toString();
         String bindingReference = bindingRefObj.toString();
-        TokenBinding tokenBinding = new TokenBinding(bindingType, bindingReference,
-                getTokenBindingValue(claimsSet, bindingType));
+        String bindingValue = getTokenBindingValue(claimsSet, bindingType);
+        if (isBindingValueRequired(bindingType) && StringUtils.isBlank(bindingValue)) {
+            throw new IdentityOAuth2Exception("Malformed token binding claims found in the refresh token.");
+        }
+
+        TokenBinding tokenBinding = new TokenBinding(bindingType, bindingReference, bindingValue);
         validationDataDO.setTokenBinding(tokenBinding);
         validationDataDO.setTokenBindingReference(bindingReference);
+    }
+
+    private boolean isBindingValueRequired(String bindingType) {
+
+        return OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)
+                || DPOP_TOKEN_BINDING_TYPE.equals(bindingType);
     }
 
     private String getTokenBindingValue(JWTClaimsSet claimsSet, String bindingType) {

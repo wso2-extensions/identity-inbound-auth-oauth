@@ -212,8 +212,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
             return tokenBindingList.isEmpty() ? Optional.empty() : Optional.ofNullable(tokenBindingList.get(0));
         } catch (DataAccessException e) {
-            String error = String.format("Error obtaining token binding type using refresh token: %s.",
-                    processedRefreshToken);
+            String error = "Error obtaining token binding type using refresh token.";
             throw new IdentityOAuth2Exception(error, e);
         }
     }
@@ -246,8 +245,17 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
         String bindingType = bindingTypeObj.toString();
         String bindingReference = bindingRefObj.toString();
-        return Optional.of(new TokenBinding(bindingType, bindingReference, getTokenBindingValue(claimsSet,
-                bindingType)));
+        String bindingValue = getTokenBindingValue(claimsSet, bindingType);
+        if (isBindingValueRequired(bindingType) && StringUtils.isBlank(bindingValue)) {
+            return Optional.empty();
+        }
+        return Optional.of(new TokenBinding(bindingType, bindingReference, bindingValue));
+    }
+
+    private boolean isBindingValueRequired(String bindingType) {
+
+        return OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)
+                || DPOP_TOKEN_BINDING_TYPE.equals(bindingType);
     }
 
     private String getTokenBindingValue(JWTClaimsSet claimsSet, String bindingType) {
