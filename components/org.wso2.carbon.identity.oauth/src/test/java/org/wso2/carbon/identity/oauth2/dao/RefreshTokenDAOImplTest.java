@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
@@ -288,7 +289,7 @@ public class RefreshTokenDAOImplTest {
     }
 
     private void insertRefreshTokenDirectly(String tokenId, String refreshToken, String[] scopes, String state)
-            throws SQLException {
+            throws SQLException, IdentityOAuth2Exception {
 
         try (Connection conn = DAOUtils.getConnection(DB_NAME)) {
             String sql = "INSERT INTO IDN_OAUTH2_REFRESH_TOKEN (REFRESH_TOKEN_ID, REFRESH_TOKEN, CONSUMER_KEY_ID, " +
@@ -309,7 +310,7 @@ public class RefreshTokenDAOImplTest {
                 ps.setString(8, scopes == null ? null : OAuth2Util.hashScopes(scopes));
                 ps.setString(9, state);
                 ps.setString(10, TEST_SUBJECT_IDENTIFIER);
-                ps.setString(11, refreshToken); // Set hash same as token for test queries
+                ps.setString(11, new HashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
                 ps.setInt(12, TEST_TENANT_ID);
                 ps.setString(13, "false");
                 ps.setString(14, "NONE");

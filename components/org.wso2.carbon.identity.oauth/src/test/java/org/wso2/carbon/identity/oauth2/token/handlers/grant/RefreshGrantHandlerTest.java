@@ -399,6 +399,9 @@ public class RefreshGrantHandlerTest {
         when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
         when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
         when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
+        when(authorizationDetailsService.getAccessTokenAuthorizationDetails(anyString(), anyInt()))
+                .thenReturn(new AuthorizationDetails());
         when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
         when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
         when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
@@ -414,6 +417,8 @@ public class RefreshGrantHandlerTest {
             oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
                     .thenReturn(oAuth2ServiceComponentHolder);
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
+                    .thenReturn(oAuthAppDO);
 
             RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
             refreshGrantHandler.init();
