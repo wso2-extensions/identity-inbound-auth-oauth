@@ -32,9 +32,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -46,9 +46,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.DELETE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN;
-import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN_HASH;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID_AND_BINDING_REF;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REF_EXISTS;
@@ -194,20 +195,24 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
         JdbcTemplate jdbcTemplate = new JdbcTemplate(IdentityDatabaseUtil.getDataSource());
         String processedRefreshToken = getProcessedRefreshToken(refreshToken, isTokenHashingEnabled);
-        String sql = isTokenHashingEnabled ? RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN_HASH :
+        String retrieveTokenBindingQuery = OAuth2Util.isAccessTokenPersistenceEnabled() ?
+                RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN :
                 RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN;
         try {
-            List<TokenBinding> tokenBindingList = jdbcTemplate.executeQuery(sql,
+            List<TokenBinding> tokenBindingList = jdbcTemplate.executeQuery(retrieveTokenBindingQuery,
                     (resultSet, rowNumber) -> {
                         TokenBinding tokenBinding = new TokenBinding();
                         tokenBinding.setBindingType(resultSet.getString(1));
-                        tokenBinding.setBindingReference(resultSet.getString(2));
-                        tokenBinding.setBindingValue(resultSet.getString(3));
+                        tokenBinding.setBindingValue(resultSet.getString(2));
+                        tokenBinding.setBindingReference(resultSet.getString(3));
 
                         return tokenBinding;
                     },
                     preparedStatement -> {
                         preparedStatement.setString(1, processedRefreshToken);
+                        if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
+                            preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
+                        }
                     });
 
             return tokenBindingList.isEmpty() ? Optional.empty() : Optional.ofNullable(tokenBindingList.get(0));
@@ -254,7 +259,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
     private boolean isBindingValueRequired(String bindingType) {
 
-        return OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)
+        return CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)
                 || DPOP_TOKEN_BINDING_TYPE.equals(bindingType);
     }
 
@@ -267,7 +272,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
         Map<?, ?> cnf = (Map<?, ?>) cnfObj;
         Object bindingValue = null;
-        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+        if (CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
             bindingValue = cnf.get(OAuthConstants.X5T_S256);
         } else if (DPOP_TOKEN_BINDING_TYPE.equals(bindingType)) {
             bindingValue = cnf.get(JWK_THUMBPRINT);
