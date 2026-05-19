@@ -86,6 +86,14 @@ public class OpenIDConnectUserEndpoint {
 
         } catch (UserInfoEndpointException e) {
             return handleError(e);
+        } catch (IllegalArgumentException e) {
+            // Translate race-window token-state IAE to invalid_token (HTTP 401) instead of uncaught 500.
+            String message = e.getMessage();
+            if (message != null && message.startsWith("Invalid Access Token")) {
+                return handleError(new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_TOKEN, "Access token validation failed"));
+            }
+            throw e;
         } catch (OAuthSystemException e) {
             log.error("UserInfoEndpoint Failed", e);
             throw new OAuthSystemException("UserInfoEndpoint Failed");
