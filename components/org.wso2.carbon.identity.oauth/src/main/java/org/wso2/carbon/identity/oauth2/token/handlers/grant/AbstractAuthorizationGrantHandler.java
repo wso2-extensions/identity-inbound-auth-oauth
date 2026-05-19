@@ -66,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
@@ -770,11 +771,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      * from the database or cache.
      * Returns null if no valid refresh token is found.
      */
-    private AccessTokenDO getLatestRefreshToken(String clientId, AuthenticatedUser authorizedUser, String[] scope)
+    private AccessTokenDO getLatestRefreshToken(String clientId, AuthenticatedUser authorizedUser, String[] scope,
+                                                TokenBinding tokenBinding)
             throws IdentityOAuth2Exception {
 
         return new RefreshTokenDAOImpl().getActiveRefreshToken(clientId, authorizedUser,
-                authorizedUser.getUserStoreDomain(), OAuth2Util.buildScopeString(scope));
+                authorizedUser.getUserStoreDomain(), OAuth2Util.buildScopeString(scope), tokenBinding);
     }
 
     /**
@@ -804,7 +806,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         AccessTokenDO nonPersistentRefreshTokenBean = getLatestRefreshToken(
                 tokenReq.getClientId(),
                 tokReqMsgCtx.getAuthorizedUser(),
-                tokReqMsgCtx.getScope()
+                tokReqMsgCtx.getScope(),
+                tokReqMsgCtx.getTokenBinding()
         );
 
         if (nonPersistentRefreshTokenBean == null) {

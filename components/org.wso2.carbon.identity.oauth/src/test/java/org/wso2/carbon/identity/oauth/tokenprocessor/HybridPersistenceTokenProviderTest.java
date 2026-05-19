@@ -32,14 +32,21 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.TokenMgtUtil;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -65,6 +72,12 @@ public class HybridPersistenceTokenProviderTest {
     private static final String TEST_TENANT_DOMAIN = "carbon.super";
     private static final String TEST_SUBJECT = "testUser";
     private static final String TEST_ACCESSING_ORG = "test-org-001";
+    private static final String TEST_BINDING_REFERENCE = "test-binding-reference";
+    private static final String TEST_BINDING_VALUE = "test-binding-value";
+    private static final String TOKEN_BINDING_REF_CLAIM = "binding_ref";
+    private static final String TOKEN_BINDING_TYPE_CLAIM = "binding_type";
+    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
+    private static final String JWK_THUMBPRINT = "jkt";
     private static final int TEST_TENANT_ID = -1234;
 
     private HybridPersistenceTokenProvider hybridPersistenceTokenProvider;
@@ -531,6 +544,75 @@ public class HybridPersistenceTokenProviderTest {
         }
     }
 
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testSetTokenBinding_WithCertificateBindingWithoutCnf_ShouldFail() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(
+                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER, null);
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testSetTokenBinding_WithDPoPBindingWithoutCnf_ShouldFail() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(DPOP_TOKEN_BINDING_TYPE, null);
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+    }
+
+    @Test
+    public void testSetTokenBinding_WithCookieBindingWithoutCnf_ShouldRestoreRefOnlyBinding() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(
+                OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER, null);
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+
+        assertTokenBinding(validationDataDO, OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER, null);
+    }
+
+    @Test
+    public void testSetTokenBinding_WithSSOSessionBindingWithoutCnf_ShouldRestoreRefOnlyBinding() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(
+                OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER, null);
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+
+        assertTokenBinding(validationDataDO, OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER, null);
+    }
+
+    @Test
+    public void testSetTokenBinding_WithCertificateBindingCnf_ShouldRestoreBinding() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(
+                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER,
+                Collections.singletonMap(OAuthConstants.X5T_S256, TEST_BINDING_VALUE));
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+
+        assertTokenBinding(validationDataDO, OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER,
+                TEST_BINDING_VALUE);
+    }
+
+    @Test
+    public void testSetTokenBinding_WithDPoPBindingCnf_ShouldRestoreBinding() throws Throwable {
+
+        RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+        JWTClaimsSet claimsSet = buildTokenBindingClaims(DPOP_TOKEN_BINDING_TYPE,
+                Collections.singletonMap(JWK_THUMBPRINT, TEST_BINDING_VALUE));
+
+        invokeSetTokenBinding(claimsSet, validationDataDO);
+
+        assertTokenBinding(validationDataDO, DPOP_TOKEN_BINDING_TYPE, TEST_BINDING_VALUE);
+    }
+
     @Test
     public void testGetVerifiedAccessToken_WhenCacheHit_ShouldReturnCachedToken()
             throws Exception {
@@ -593,5 +675,40 @@ public class HybridPersistenceTokenProviderTest {
             assertEquals(result.getAccessToken(), TEST_JTI);
             assertEquals(result.getConsumerKey(), TEST_CONSUMER_KEY);
         }
+    }
+
+    private JWTClaimsSet buildTokenBindingClaims(String bindingType, Map<String, Object> cnf) {
+
+        JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                .claim(TOKEN_BINDING_TYPE_CLAIM, bindingType)
+                .claim(TOKEN_BINDING_REF_CLAIM, TEST_BINDING_REFERENCE);
+        if (cnf != null) {
+            builder.claim(OAuthConstants.CNF, cnf);
+        }
+        return builder.build();
+    }
+
+    private void invokeSetTokenBinding(JWTClaimsSet claimsSet, RefreshTokenValidationDataDO validationDataDO)
+            throws Throwable {
+
+        Method method = HybridPersistenceTokenProvider.class.getDeclaredMethod("setTokenBinding", JWTClaimsSet.class,
+                RefreshTokenValidationDataDO.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(hybridPersistenceTokenProvider, claimsSet, validationDataDO);
+        } catch (InvocationTargetException e) {
+            throw e.getTargetException();
+        }
+    }
+
+    private void assertTokenBinding(RefreshTokenValidationDataDO validationDataDO, String bindingType,
+                                    String bindingValue) {
+
+        TokenBinding tokenBinding = validationDataDO.getTokenBinding();
+        assertNotNull(tokenBinding);
+        assertEquals(tokenBinding.getBindingType(), bindingType);
+        assertEquals(tokenBinding.getBindingReference(), TEST_BINDING_REFERENCE);
+        assertEquals(tokenBinding.getBindingValue(), bindingValue);
+        assertEquals(validationDataDO.getTokenBindingReference(), TEST_BINDING_REFERENCE);
     }
 }

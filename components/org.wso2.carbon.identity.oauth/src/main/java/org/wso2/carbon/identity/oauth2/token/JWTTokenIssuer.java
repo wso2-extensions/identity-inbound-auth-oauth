@@ -79,7 +79,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_W
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.JWK_THUMBPRINT;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.PREV_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.DPOP_TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
@@ -1063,7 +1065,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
                 authenticatedUser, oAuthAppDO);
-        return jwtClaimsSetBuilder.build();
+        return handleRefreshTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
     /**
@@ -1483,20 +1485,43 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
 
-        if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
-            // Include token binding into the jwt token.
-            String bindingType = tokReqMsgCtx.getTokenBinding().getBindingType();
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
-            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
-                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
-                if (StringUtils.isNotBlank(cnf)) {
-                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,
-                            tokReqMsgCtx.getTokenBinding().getBindingValue()));
-                }
-            }
-        }
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
         return jwtClaimsSetBuilder.build();
+    }
+
+    private JWTClaimsSet handleRefreshTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
+        return jwtClaimsSetBuilder.build();
+    }
+
+    private void addTokenBindingClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        if (tokenBinding == null) {
+            return;
+        }
+
+        // Include token binding into the JWT token.
+        String bindingType = tokenBinding.getBindingType();
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokenBinding.getBindingReference());
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
+        addConfirmationClaim(jwtClaimsSetBuilder, tokenBinding);
+    }
+
+    private void addConfirmationClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        String bindingValue = tokenBinding.getBindingValue();
+        if (StringUtils.isBlank(bindingValue)) {
+            return;
+        }
+
+        String bindingType = tokenBinding.getBindingType();
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(OAuthConstants.X5T_S256, bindingValue));
+        } else if (DPOP_TOKEN_BINDING_TYPE.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(JWK_THUMBPRINT, bindingValue));
+        }
     }
 
     /**

@@ -151,6 +151,12 @@ public class JWTTokenIssuerTest {
     private static final String DUMMY_GRANT_TYPE = "password";
     private static final String DUMMY_TENANT_DOMAIN = "carbon.super";
     private static final String DUMMY_TOKEN_ID = "dummy-token-id-1234";
+    private static final String TOKEN_BINDING_TYPE_CLAIM = "binding_type";
+    private static final String TOKEN_BINDING_REF_CLAIM = "binding_ref";
+    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
+    private static final String JWK_THUMBPRINT = "jkt";
+    private static final String TEST_BINDING_REFERENCE = "test_binding_reference";
+    private static final String TEST_BINDING_VALUE = "test_binding_value";
 
     @Mock
     private OAuthServerConfiguration mockOAuthServerConfiguration;
@@ -183,6 +189,15 @@ public class JWTTokenIssuerTest {
                 {new String[0], Collections.emptyList()},
                 {new String[]{"scope1", "scope1"}, Collections.emptyList()},
                 {scopesWithAud, Arrays.asList(scopesWithAud)}
+        };
+    }
+
+    @DataProvider(name = "refOnlyRefreshTokenBindings")
+    public Object[][] provideRefOnlyRefreshTokenBindings() {
+
+        return new Object[][]{
+                {OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER},
+                {OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER}
         };
     }
 
@@ -1397,7 +1412,53 @@ public class JWTTokenIssuerTest {
             assertNotNull(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY),
                     "Scope claim should be present");
             assertEquals(claims.getClaim(OAuth2Constants.REFRESH_TOKEN_SCOPE_CLAIM_KEY), "openid profile");
+            assertNull(claims.getClaim(TOKEN_BINDING_TYPE_CLAIM));
+            assertNull(claims.getClaim(TOKEN_BINDING_REF_CLAIM));
+            assertNull(claims.getClaim(OAuthConstants.CNF));
         }
+    }
+
+    @Test
+    public void testCreateRefreshTokenJWTClaimSet_WithCertificateTokenBinding() throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding(
+                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER,
+                TEST_BINDING_REFERENCE,
+                TEST_BINDING_VALUE);
+
+        JWTClaimsSet claims = buildJWTRefreshTokenClaimsWithTokenBinding(tokenBinding);
+
+        assertEquals(claims.getClaim(TOKEN_BINDING_TYPE_CLAIM),
+                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        assertEquals(claims.getClaim(TOKEN_BINDING_REF_CLAIM), TEST_BINDING_REFERENCE);
+        Map<String, Object> cnf = claims.getJSONObjectClaim(OAuthConstants.CNF);
+        assertEquals(cnf.get(OAuthConstants.X5T_S256), TEST_BINDING_VALUE);
+    }
+
+    @Test
+    public void testCreateRefreshTokenJWTClaimSet_WithDPoPTokenBinding() throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding(DPOP_TOKEN_BINDING_TYPE, TEST_BINDING_REFERENCE,
+                TEST_BINDING_VALUE);
+
+        JWTClaimsSet claims = buildJWTRefreshTokenClaimsWithTokenBinding(tokenBinding);
+
+        assertEquals(claims.getClaim(TOKEN_BINDING_TYPE_CLAIM), DPOP_TOKEN_BINDING_TYPE);
+        assertEquals(claims.getClaim(TOKEN_BINDING_REF_CLAIM), TEST_BINDING_REFERENCE);
+        Map<String, Object> cnf = claims.getJSONObjectClaim(OAuthConstants.CNF);
+        assertEquals(cnf.get(JWK_THUMBPRINT), TEST_BINDING_VALUE);
+    }
+
+    @Test(dataProvider = "refOnlyRefreshTokenBindings")
+    public void testCreateRefreshTokenJWTClaimSet_WithRefOnlyTokenBinding(String bindingType) throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding(bindingType, TEST_BINDING_REFERENCE, TEST_BINDING_VALUE);
+
+        JWTClaimsSet claims = buildJWTRefreshTokenClaimsWithTokenBinding(tokenBinding);
+
+        assertEquals(claims.getClaim(TOKEN_BINDING_TYPE_CLAIM), bindingType);
+        assertEquals(claims.getClaim(TOKEN_BINDING_REF_CLAIM), TEST_BINDING_REFERENCE);
+        assertNull(claims.getClaim(OAuthConstants.CNF));
     }
 
     @Test
@@ -1446,6 +1507,38 @@ public class JWTTokenIssuerTest {
         doReturn(UUID.randomUUID().toString()).when(tokenGenerator).accessToken();
         when(mockOAuthServerConfiguration.getOAuthTokenGenerator()).thenReturn(tokenGenerator);
         return new JWTTokenIssuer();
+    }
+
+    private JWTClaimsSet buildJWTRefreshTokenClaimsWithTokenBinding(TokenBinding tokenBinding) throws Exception {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(DUMMY_TENANT_DOMAIN);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(DUMMY_CONSUMER_KEY);
+
+            prepareNonPersistentRefreshTokenJWTMocks(oAuth2Util, appDO);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(NONE);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(anyString())).thenReturn(true);
+
+            OAuthTokenReqMessageContext tokenCtx = buildTokenReqCtx(DUMMY_CONSUMER_KEY, DUMMY_GRANT_TYPE);
+            tokenCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+            tokenCtx.setTokenId(DUMMY_TOKEN_ID);
+            tokenCtx.setTokenBinding(tokenBinding);
+
+            JWTTokenIssuer issuer = createJWTTokenIssuer();
+            return PlainJWT.parse(issuer.refreshToken(tokenCtx)).getJWTClaimsSet();
+        }
+    }
+
+    private void prepareNonPersistentRefreshTokenJWTMocks(MockedStatic<OAuth2Util> oAuth2Util, OAuthAppDO appDO)
+            throws Exception {
+
+        oAuth2Util.when(() -> OAuth2Util.isNonPersistentTokenEnabled(anyString())).thenReturn(true);
+        oAuth2Util.when(OAuth2Util::isRefreshTokenPersistenceEnabled).thenReturn(false);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+        oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
+        oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+        oAuth2Util.when(() -> OAuth2Util.isMtlsRequest(anyString())).thenReturn(false);
     }
 
     private OAuthAuthzReqMessageContext buildAuthzCtx(String consumerKey, String tenantDomain) {
