@@ -28,7 +28,6 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -46,7 +45,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.JWK_THUMBPRINT;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TOKEN_BINDING_REF;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.DPOP_TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.DELETE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN;
@@ -61,10 +64,6 @@ import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING
 public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
 
     private static final Log log = LogFactory.getLog(TokenBindingMgtDAOImpl.class);
-    private static final String TOKEN_BINDING_REF = "binding_ref";
-    private static final String TOKEN_BINDING_TYPE = "binding_type";
-    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
-    private static final String JWK_THUMBPRINT = "jkt";
 
     @Override
     public Optional<TokenBinding> getTokenBinding(String tokenId) throws IdentityOAuth2Exception {
@@ -193,12 +192,16 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
             return getBindingFromRefreshTokenJWT(refreshToken);
         }
 
+        TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
         JdbcTemplate jdbcTemplate = new JdbcTemplate(IdentityDatabaseUtil.getDataSource());
-        String processedRefreshToken = getProcessedRefreshToken(refreshToken, isTokenHashingEnabled);
+        if (isTokenHashingEnabled) {
+            refreshToken = hashingPersistenceProcessor.getProcessedRefreshToken(refreshToken);
+        }
         String retrieveTokenBindingQuery = OAuth2Util.isAccessTokenPersistenceEnabled() ?
                 RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN :
                 RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN;
         try {
+            String finalRefreshToken = refreshToken;
             List<TokenBinding> tokenBindingList = jdbcTemplate.executeQuery(retrieveTokenBindingQuery,
                     (resultSet, rowNumber) -> {
                         TokenBinding tokenBinding = new TokenBinding();
@@ -209,7 +212,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
                         return tokenBinding;
                     },
                     preparedStatement -> {
-                        preparedStatement.setString(1, processedRefreshToken);
+                        preparedStatement.setString(1, finalRefreshToken);
                         if (OAuth2Util.isAccessTokenPersistenceEnabled()) {
                             preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
                         }
@@ -220,18 +223,6 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
             String error = "Error obtaining token binding type using refresh token.";
             throw new IdentityOAuth2Exception(error, e);
         }
-    }
-
-    private String getProcessedRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
-            throws IdentityOAuth2Exception {
-
-        if (isTokenHashingEnabled) {
-            TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
-            return hashingPersistenceProcessor.getProcessedRefreshToken(refreshToken);
-        }
-        TokenPersistenceProcessor persistenceProcessor = OAuthServerConfiguration.getInstance()
-                .getPersistenceProcessor();
-        return persistenceProcessor.getProcessedRefreshToken(refreshToken);
     }
 
     private Optional<TokenBinding> getBindingFromRefreshTokenJWT(String refreshToken) throws IdentityOAuth2Exception {

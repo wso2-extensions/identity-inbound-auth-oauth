@@ -349,6 +349,8 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
             oAuth2UtilMockedStatic.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
                     .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isAccessTokenPersistenceEnabled)
+                    .thenReturn(true);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);

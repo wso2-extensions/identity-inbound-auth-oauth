@@ -1047,7 +1047,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         // Validate SSO session bound token.
         if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())
-            && !JWTUtils.isJWT(tokenReqDTO.getRefreshToken())) {
+            && OAuth2Util.isAccessTokenPersistenceEnabled()) {
 
             if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
                     || (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()

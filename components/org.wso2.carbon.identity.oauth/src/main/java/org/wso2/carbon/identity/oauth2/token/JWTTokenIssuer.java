@@ -79,7 +79,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_W
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.JWK_THUMBPRINT;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.PREV_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.DPOP_TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
@@ -112,8 +114,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
     private static final String CNF = "cnf";
-    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
-    private static final String JWK_THUMBPRINT = "jkt";
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;

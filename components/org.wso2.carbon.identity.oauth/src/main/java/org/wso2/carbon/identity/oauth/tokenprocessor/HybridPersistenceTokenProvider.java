@@ -51,6 +51,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.JWK_THUMBPRINT;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TOKEN_BINDING_REF;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TOKEN_BINDING_TYPE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.DPOP_TOKEN_BINDING_TYPE;
+
 /**
  * Token Validation processor is supposed to be used during token introspection and user info endpoints where you need
  * to validate the token before proceeding. This class provides methods for validating access tokens and refresh tokens
@@ -67,10 +72,6 @@ public class HybridPersistenceTokenProvider implements TokenProvider {
     private static final String ISS = "iss";
     private static final String AUD = "aud";
     private static final String DEFAULT_JWT_RT_HEADER_VALUE = "rt+jwt";
-    private static final String TOKEN_BINDING_REF = "binding_ref";
-    private static final String TOKEN_BINDING_TYPE = "binding_type";
-    private static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
-    private static final String JWK_THUMBPRINT = "jkt";
 
     /**
      * Retrieves and verifies JWT access token based on the JWT claims with an option to include expired tokens
