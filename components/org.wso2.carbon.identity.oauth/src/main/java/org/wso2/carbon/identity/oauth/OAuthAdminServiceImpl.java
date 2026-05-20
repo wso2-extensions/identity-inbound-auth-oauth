@@ -3308,9 +3308,12 @@ public class OAuthAdminServiceImpl {
 
         int maxValidity = OAuthServerConfiguration.getInstance()
                 .getGracefulRefreshTokenRotationValidityPeriodMax();
-        if (appDO.getGracefulRefreshTokenRotationValidityPeriod() <= 0) {
-            appDO.setGracefulRefreshTokenRotationValidityPeriod(GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE);
-        } else if (appDO.getGracefulRefreshTokenRotationValidityPeriod() > maxValidity) {
+        int current = appDO.getGracefulRefreshTokenRotationValidityPeriod();
+        if (current <= 0) {
+            // Clamp default to the operator-configured ceiling so we never exceed it.
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    Math.min(GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE, maxValidity));
+        } else if (current > maxValidity) {
             appDO.setGracefulRefreshTokenRotationValidityPeriod(maxValidity);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("The graceful refresh token rotation validity period configured for the application: " +

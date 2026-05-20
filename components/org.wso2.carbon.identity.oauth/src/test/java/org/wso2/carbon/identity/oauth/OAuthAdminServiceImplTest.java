@@ -2343,4 +2343,66 @@ public class OAuthAdminServiceImplTest {
             }
         }
     }
+
+    @Test
+    public void testNormalizeGracefulRotationValidityPeriodWhenDefaultExceedsConfiguredMax() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            // Configure a max (10) that is less than the compile-time default (30).
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(10);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(5);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenRotationEnabled(true);
+                dto.setGracefulRefreshTokenRotationValidityPeriod(0);
+                dto.setGracefulRefreshTokenReuseLimit(3);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenRotationValidityPeriod(), 10,
+                        "When the configured max (10) is less than the default (30), the default path must "
+                                + "be clamped to the max, not set to 30.");
+            }
+        }
+    }
 }
