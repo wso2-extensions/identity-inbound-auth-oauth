@@ -122,9 +122,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             } else {
                 /* When previousGrantType == refresh_token, we need to check whether the original grant type
                  is consented or not. */
-                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
-                        validationBean.getAccessToken(), false);
-                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+                accessTokenDO.setIsConsentedToken(validationBean.isConsented());
             }
 
             if (accessTokenDO.isConsentedToken()) {
