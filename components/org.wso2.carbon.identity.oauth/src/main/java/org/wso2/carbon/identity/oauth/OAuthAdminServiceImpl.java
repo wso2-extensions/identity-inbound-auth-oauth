@@ -123,6 +123,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -593,6 +595,14 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        app.setGracefulRefreshTokenRotationEnabled(
+                                application.isGracefulRefreshTokenRotationEnabled());
+                        app.setGracefulRefreshTokenRotationValidityPeriod(
+                                application.getGracefulRefreshTokenRotationValidityPeriod());
+                        app.setGracefulRefreshTokenReuseLimit(
+                                application.getGracefulRefreshTokenReuseLimit());
+                        normalizeGracefulRotationValidityPeriod(app);
+                        normalizeGracefulReuseLimit(app);
                         app.setJwtScopeAsArrayEnabled(application.isJwtScopeAsArrayEnabled());
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
@@ -1097,6 +1107,13 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            oAuthAppDO.setGracefulRefreshTokenRotationEnabled(
+                    consumerAppDTO.isGracefulRefreshTokenRotationEnabled());
+            oAuthAppDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    consumerAppDTO.getGracefulRefreshTokenRotationValidityPeriod());
+            oAuthAppDO.setGracefulRefreshTokenReuseLimit(consumerAppDTO.getGracefulRefreshTokenReuseLimit());
+            normalizeGracefulRotationValidityPeriod(oAuthAppDO);
+            normalizeGracefulReuseLimit(oAuthAppDO);
             oAuthAppDO.setJwtScopeAsArrayEnabled(consumerAppDTO.isJwtScopeAsArrayEnabled());
 
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
@@ -3285,5 +3302,38 @@ public class OAuthAdminServiceImpl {
                                 + consumerKey, e);
             }
         }
+    }
+
+    private void normalizeGracefulRotationValidityPeriod(OAuthAppDO appDO) {
+
+        int maxValidity = OAuthServerConfiguration.getInstance()
+                .getGracefulRefreshTokenRotationValidityPeriodMax();
+        if (appDO.getGracefulRefreshTokenRotationValidityPeriod() <= 0) {
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE);
+        } else if (appDO.getGracefulRefreshTokenRotationValidityPeriod() > maxValidity) {
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(maxValidity);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token rotation validity period configured for the application: " +
+                        appDO.getApplicationName() + " is greater than the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxValidity + " seconds.");
+            }
+        }
+    }
+
+    private void normalizeGracefulReuseLimit(OAuthAppDO appDO) {
+
+        int maxLimit = OAuthServerConfiguration.getInstance().getGracefulRefreshTokenReuseLimitMax();
+        int limit = appDO.getGracefulRefreshTokenReuseLimit();
+        if (limit < GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE) {
+            limit = GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
+        } else if (limit > maxLimit) {
+            limit = maxLimit;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token reuse limit configured for the application: " +
+                        appDO.getApplicationName() + " exceeds the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxLimit + ".");
+            }
+        }
+        appDO.setGracefulRefreshTokenReuseLimit(limit);
     }
 }

@@ -686,6 +686,25 @@ public final class OAuthConstants {
     }
 
     /**
+     * Graceful refresh token rotation constants.
+     */
+    public static class GracefulRefreshTokenRotation {
+
+        public static final String IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED = "isGracefulRefreshTokenRotationEnabled";
+        public static final String GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD =
+                "gracefulRefreshTokenRotationValidityPeriod";
+        public static final int GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE = 30;
+        public static final int GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE = 60;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT = "gracefulRefreshTokenReuseLimit";
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE = 5;
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE = 1;
+
+        private GracefulRefreshTokenRotation() {
+
+        }
+    }
+
+    /**
      * Signature algorithms constants.
      */
     public static class SignatureAlgorithms {
