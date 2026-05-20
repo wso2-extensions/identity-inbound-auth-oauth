@@ -71,9 +71,9 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
             try {
                 subjectTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                         .resolveTenantDomain(impersonator.getUserResidentOrganization());
-                // Impersonator is a shared user, so the impersonator exist in a different org than the subject.
                 if (StringUtils.isNotBlank(impersonator.getAccessingOrganization()) &&
                         !impersonator.getUserResidentOrganization().equals(impersonator.getAccessingOrganization())) {
+                    // Impersonator is a shared user, so the impersonator exist in a different org than the subject.
                     subjectTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                             .resolveTenantDomain(impersonator.getAccessingOrganization());
                 }
