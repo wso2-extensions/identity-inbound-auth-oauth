@@ -323,6 +323,7 @@ public final class OAuthConstants {
         public static final String ORGANIZATION_SWITCH = "organization_switch";
         public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
         public static final String CIBA = "urn:openid:params:grant-type:ciba";
+        public static final String SAML20_BEARER = "urn:ietf:params:oauth:grant-type:saml2-bearer";
 
         private GrantTypes() {
 
