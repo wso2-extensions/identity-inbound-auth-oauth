@@ -123,8 +123,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -3312,7 +3312,7 @@ public class OAuthAdminServiceImpl {
         if (current <= 0) {
             // Clamp default to the operator-configured ceiling so we never exceed it.
             appDO.setGracefulRefreshTokenRotationValidityPeriod(
-                    Math.min(GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE, maxValidity));
+                    Math.min(DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE, maxValidity));
         } else if (current > maxValidity) {
             appDO.setGracefulRefreshTokenRotationValidityPeriod(maxValidity);
             if (LOG.isDebugEnabled()) {
