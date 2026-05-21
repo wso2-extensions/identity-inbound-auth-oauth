@@ -569,6 +569,9 @@ public final class OAuthUtil {
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
+        dto.setGracefulRefreshTokenRotationEnabled(appDO.isGracefulRefreshTokenRotationEnabled());
+        dto.setGracefulRefreshTokenRotationValidityPeriod(appDO.getGracefulRefreshTokenRotationValidityPeriod());
+        dto.setGracefulRefreshTokenReuseLimit(appDO.getGracefulRefreshTokenReuseLimit());
         dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
         dto.setCibaNotificationChannels(appDO.getCibaNotificationChannels());

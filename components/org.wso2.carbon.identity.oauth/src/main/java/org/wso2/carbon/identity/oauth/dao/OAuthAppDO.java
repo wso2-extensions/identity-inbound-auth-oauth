@@ -116,6 +116,9 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private boolean gracefulRefreshTokenRotationEnabled;
+    private int gracefulRefreshTokenRotationValidityPeriod;
+    private int gracefulRefreshTokenReuseLimit;
     private String[] accessTokenClaims;
     private String issuerOrg;
     // CIBA related properties.
@@ -573,6 +576,36 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
 
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
+    }
+
+    public boolean isGracefulRefreshTokenRotationEnabled() {
+
+        return gracefulRefreshTokenRotationEnabled;
+    }
+
+    public void setGracefulRefreshTokenRotationEnabled(boolean gracefulRefreshTokenRotationEnabled) {
+
+        this.gracefulRefreshTokenRotationEnabled = gracefulRefreshTokenRotationEnabled;
+    }
+
+    public int getGracefulRefreshTokenRotationValidityPeriod() {
+
+        return gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public void setGracefulRefreshTokenRotationValidityPeriod(int gracefulRefreshTokenRotationValidityPeriod) {
+
+        this.gracefulRefreshTokenRotationValidityPeriod = gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public int getGracefulRefreshTokenReuseLimit() {
+
+        return gracefulRefreshTokenReuseLimit;
+    }
+
+    public void setGracefulRefreshTokenReuseLimit(int gracefulRefreshTokenReuseLimit) {
+
+        this.gracefulRefreshTokenReuseLimit = gracefulRefreshTokenReuseLimit;
     }
 
     public String[] getAccessTokenClaims() {

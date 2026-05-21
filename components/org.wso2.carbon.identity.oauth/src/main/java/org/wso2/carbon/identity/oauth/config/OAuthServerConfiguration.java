@@ -174,6 +174,10 @@ public class OAuthServerConfiguration {
     private String persistAccessTokenAlias;
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
+    private int gracefulRefreshTokenRotationValidityPeriodMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE;
+    private int gracefulRefreshTokenReuseLimitMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
     private boolean globalRbacScopeIssuerEnabled = false;
@@ -468,6 +472,9 @@ public class OAuthServerConfiguration {
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
+
+        // read graceful refresh token rotation config
+        parseGracefulRefreshTokenRotationConfig(oauthElem);
 
         // read token persistence config
         parseTokenPersistenceConfiguration(oauthElem);
@@ -1142,6 +1149,16 @@ public class OAuthServerConfiguration {
     public boolean isTokenCleanupEnabled() {
 
         return Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable);
+    }
+
+    public int getGracefulRefreshTokenRotationValidityPeriodMax() {
+
+        return gracefulRefreshTokenRotationValidityPeriodMax;
+    }
+
+    public int getGracefulRefreshTokenReuseLimitMax() {
+
+        return gracefulRefreshTokenReuseLimitMax;
     }
 
     public String getOIDCConsentPageUrl() {
@@ -2990,6 +3007,39 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseGracefulRefreshTokenRotationConfig(OMElement oauthConfigElem) {
+
+        OMElement rootElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.GRACEFUL_REFRESH_TOKEN_ROTATION));
+        if (rootElem == null) {
+            return;
+        }
+        gracefulRefreshTokenRotationValidityPeriodMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_VALIDITY_PERIOD_MAX,
+                gracefulRefreshTokenRotationValidityPeriodMax);
+        gracefulRefreshTokenReuseLimitMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_REUSE_LIMIT_MAX,
+                gracefulRefreshTokenReuseLimitMax);
+    }
+
+    private int parsePositiveIntChild(OMElement parent, String childName, int fallback) {
+
+        OMElement child = parent.getFirstChildWithName(getQNameWithIdentityNS(childName));
+        if (child == null || !StringUtils.isNotBlank(child.getText())) {
+            return fallback;
+        }
+        try {
+            int value = Integer.parseInt(child.getText().trim());
+            if (value > 0) {
+                return value;
+            }
+            log.warn("Invalid value for " + childName + ": " + value + ". Using default: " + fallback);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid value for " + childName + ": " + child.getText() + ". Using default: " + fallback);
+        }
+        return fallback;
+    }
+
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
 
         OMElement tokenCleanElem = oauthCleanupConfigElem
@@ -4710,6 +4760,10 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_CLEANUP_FEATURE = "EnableTokenCleanup";
         // Enable/Disable retain old access token
         private static final String RETAIN_OLD_ACCESS_TOKENS = "RetainOldAccessToken";
+        // Graceful refresh token rotation config
+        private static final String GRACEFUL_REFRESH_TOKEN_ROTATION = "GracefulRefreshTokenRotation";
+        private static final String GRACEFUL_VALIDITY_PERIOD_MAX = "ValidityPeriodMax";
+        private static final String GRACEFUL_REUSE_LIMIT_MAX = "ReuseLimitMax";
 
         // Supported Grant Types
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
