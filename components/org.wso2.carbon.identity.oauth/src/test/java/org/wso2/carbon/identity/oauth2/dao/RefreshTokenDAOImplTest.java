@@ -35,11 +35,13 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -83,6 +85,9 @@ public class RefreshTokenDAOImplTest {
     private static final String[] SCOPES_WITH_OPENID = {"openid", "profile", "email"};
     private static final String[] SCOPES_WITHOUT_OPENID = {"profile", "email"};
     private static final String TEST_SUBJECT_IDENTIFIER = "testSubjectIdentifier";
+    private static final String TEST_BINDING_TYPE = "cookie";
+    private static final String TEST_BINDING_REF = "binding-ref";
+    private static final String TEST_BINDING_VALUE = "binding-value";
 
     private RefreshTokenDAOImpl refreshTokenDAO;
     private Connection connection = null;
@@ -284,7 +289,7 @@ public class RefreshTokenDAOImplTest {
     }
 
     private void insertRefreshTokenDirectly(String tokenId, String refreshToken, String[] scopes, String state)
-            throws SQLException {
+            throws SQLException, IdentityOAuth2Exception {
 
         try (Connection conn = DAOUtils.getConnection(DB_NAME)) {
             String sql = "INSERT INTO IDN_OAUTH2_REFRESH_TOKEN (REFRESH_TOKEN_ID, REFRESH_TOKEN, CONSUMER_KEY_ID, " +
@@ -302,10 +307,10 @@ public class RefreshTokenDAOImplTest {
                 ps.setString(5, PRIMARY_USER_STORE);
                 ps.setString(6, TEST_GRANT_TYPE);
                 ps.setLong(7, 3600000L);
-                ps.setString(8, OAuth2Util.hashScopes(scopes));
+                ps.setString(8, scopes == null ? null : OAuth2Util.hashScopes(scopes));
                 ps.setString(9, state);
                 ps.setString(10, TEST_SUBJECT_IDENTIFIER);
-                ps.setString(11, refreshToken); // Set hash same as token for test queries
+                ps.setString(11, new HashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
                 ps.setInt(12, TEST_TENANT_ID);
                 ps.setString(13, "false");
                 ps.setString(14, "NONE");
@@ -314,8 +319,10 @@ public class RefreshTokenDAOImplTest {
             }
 
             // Insert scopes
-            for (String scope : scopes) {
-                insertRefreshTokenScope(conn, tokenId, scope);
+            if (scopes != null) {
+                for (String scope : scopes) {
+                    insertRefreshTokenScope(conn, tokenId, scope);
+                }
             }
         }
     }
@@ -332,10 +339,40 @@ public class RefreshTokenDAOImplTest {
         }
     }
 
+    private void insertRefreshTokenBindingDirectly(String tokenId, String bindingType, String bindingReference,
+                                                   String bindingValue) throws SQLException {
+
+        try (Connection conn = DAOUtils.getConnection(DB_NAME);
+             PreparedStatement ps = conn.prepareStatement("INSERT INTO IDN_OAUTH2_REFRESH_TOKEN_BINDING " +
+                     "(REFRESH_TOKEN_ID, TOKEN_BINDING_TYPE, TOKEN_BINDING_REF, TOKEN_BINDING_VALUE, TENANT_ID) " +
+                     "VALUES (?, ?, ?, ?, ?)")) {
+            ps.setString(1, tokenId);
+            ps.setString(2, bindingType);
+            ps.setString(3, bindingReference);
+            ps.setString(4, bindingValue);
+            ps.setInt(5, TEST_TENANT_ID);
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateRefreshTokenCreatedTime(String tokenId, Timestamp createdTime) throws SQLException {
+
+        try (Connection conn = DAOUtils.getConnection(DB_NAME);
+             PreparedStatement ps = conn.prepareStatement("UPDATE IDN_OAUTH2_REFRESH_TOKEN SET " +
+                     "REFRESH_TOKEN_TIME_CREATED = ? WHERE REFRESH_TOKEN_ID = ?")) {
+            ps.setTimestamp(1, createdTime);
+            ps.setString(2, tokenId);
+            ps.executeUpdate();
+        }
+    }
+
     private void cleanupRefreshTokens() {
 
         try (Connection conn = DAOUtils.getConnection(DB_NAME)) {
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM IDN_OAUTH2_REFRESH_TOKEN_SCOPE")) {
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM IDN_OAUTH2_REFRESH_TOKEN_BINDING")) {
                 ps.executeUpdate();
             }
             try (PreparedStatement ps = conn.prepareStatement("DELETE FROM IDN_OAUTH2_REFRESH_TOKEN")) {
@@ -394,6 +431,15 @@ public class RefreshTokenDAOImplTest {
              ResultSet rs = ps.executeQuery()) {
             assertTrue(rs.next() && rs.getInt(1) > 0,
                     "IDN_OAUTH2_REFRESH_TOKEN_SCOPE table should exist");
+        }
+
+        try (Connection conn = DAOUtils.getConnection(DB_NAME);
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME =" +
+                             " 'IDN_OAUTH2_REFRESH_TOKEN_BINDING'");
+             ResultSet rs = ps.executeQuery()) {
+            assertTrue(rs.next() && rs.getInt(1) > 0,
+                    "IDN_OAUTH2_REFRESH_TOKEN_BINDING table should exist");
         }
     }
 
@@ -647,6 +693,29 @@ public class RefreshTokenDAOImplTest {
     }
 
     @Test
+    public void testValidateRefreshToken_WithTokenBinding_ReturnsBindingMetadata() throws Exception {
+
+        String tokenId = UUID.randomUUID().toString();
+        String refreshToken = "validate-bound-token-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId, refreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        RefreshTokenValidationDataDO result = refreshTokenDAO.validateRefreshToken(TEST_CONSUMER_KEY, refreshToken);
+
+        assertNotNull(result, "Validation data should be returned for a valid refresh token");
+        assertEquals(result.getTokenBindingReference(), TEST_BINDING_REF,
+                "Validation data should expose the refresh token binding reference");
+        assertNotNull(result.getTokenBinding(), "Validation data should contain refresh token binding metadata");
+        assertEquals(result.getTokenBinding().getBindingType(), TEST_BINDING_TYPE,
+                "Binding type should match the refresh token binding row");
+        assertEquals(result.getTokenBinding().getBindingReference(), TEST_BINDING_REF,
+                "Binding reference should match the refresh token binding row");
+        assertEquals(result.getTokenBinding().getBindingValue(), TEST_BINDING_VALUE,
+                "Binding value should match the refresh token binding row");
+    }
+
+    @Test
     public void testGetRefreshToken_WhenDisabled() throws Exception {
 
         // Mock isEnabled to return false
@@ -705,6 +774,132 @@ public class RefreshTokenDAOImplTest {
                 PRIMARY_USER_STORE, scopeString);
 
         assertNull(result, "Should return null when no tokens exist");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithMatchingTokenBinding_ReturnsBoundRefreshToken() throws Exception {
+
+        String tokenId1 = UUID.randomUUID().toString();
+        String refreshToken1 = "bound-token-a-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId1, refreshToken1, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId1, TEST_BINDING_TYPE, "binding-ref-a", "binding-value-a");
+
+        String tokenId2 = UUID.randomUUID().toString();
+        String refreshToken2 = "bound-token-b-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId2, refreshToken2, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId2, TEST_BINDING_TYPE, "binding-ref-b", "binding-value-b");
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, String.join(" ", SCOPES_WITH_OPENID),
+                new TokenBinding(TEST_BINDING_TYPE, "binding-ref-b", "ignored-value"));
+
+        assertNotNull(result, "Should return the refresh token matching the current request binding");
+        assertEquals(result.getTokenId(), tokenId2, "Should return the token with matching binding reference");
+        assertEquals(result.getRefreshToken(), refreshToken2, "Refresh token should match the bound token");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithTokenBindingAndCaseInsensitiveUser_ReturnsBoundRefreshToken()
+            throws Exception {
+
+        identityUtil.when(() -> IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(false);
+
+        String tokenId = UUID.randomUUID().toString();
+        String refreshToken = "bound-token-case-insensitive-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId, refreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, String.join(" ", SCOPES_WITH_OPENID),
+                new TokenBinding(TEST_BINDING_TYPE, TEST_BINDING_REF, "ignored-value"));
+
+        assertNotNull(result, "Should return the bound refresh token for a case-insensitive user store");
+        assertEquals(result.getTokenId(), tokenId, "Should return the matching bound refresh token");
+        assertEquals(result.getRefreshToken(), refreshToken, "Refresh token should match the bound token");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithNewTokenBindingReference_ReturnsNull() throws Exception {
+
+        String tokenId = UUID.randomUUID().toString();
+        String refreshToken = "bound-token-old-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId, refreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, String.join(" ", SCOPES_WITH_OPENID),
+                new TokenBinding(TEST_BINDING_TYPE, "new-binding-ref", "ignored-value"));
+
+        assertNull(result, "Should not reuse an existing refresh token when the request binding ref changed");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithTokenBindingAndNullScope_ReturnsBoundRefreshToken() throws Exception {
+
+        String tokenId = UUID.randomUUID().toString();
+        String refreshToken = "bound-token-null-scope-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(tokenId, refreshToken, null, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(tokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, null,
+                new TokenBinding(TEST_BINDING_TYPE, TEST_BINDING_REF, "ignored-value"));
+
+        assertNotNull(result, "Should return a bound refresh token with a null scope");
+        assertEquals(result.getTokenId(), tokenId, "Should return the matching bound refresh token");
+        assertEquals(result.getRefreshToken(), refreshToken, "Refresh token should match the bound token");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithoutTokenBinding_ReturnsOnlyUnboundRefreshToken() throws Exception {
+
+        String boundTokenId = UUID.randomUUID().toString();
+        String boundRefreshToken = "bound-token-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(boundTokenId, boundRefreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(boundTokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, TEST_BINDING_VALUE);
+
+        String unboundTokenId = UUID.randomUUID().toString();
+        String unboundRefreshToken = "unbound-token-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(unboundTokenId, unboundRefreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, String.join(" ", SCOPES_WITH_OPENID));
+
+        assertNotNull(result, "Should return an unbound refresh token for an unbound request");
+        assertEquals(result.getTokenId(), unboundTokenId, "Should not return a bound refresh token");
+        assertEquals(result.getRefreshToken(), unboundRefreshToken, "Refresh token should match the unbound token");
+    }
+
+    @Test
+    public void testGetActiveRefreshToken_WithSameTokenBinding_ReturnsLatestRefreshToken() throws Exception {
+
+        String oldTokenId = UUID.randomUUID().toString();
+        String oldRefreshToken = "bound-token-old-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(oldTokenId, oldRefreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(oldTokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, "old-binding-value");
+        updateRefreshTokenCreatedTime(oldTokenId, Timestamp.valueOf("2026-01-01 00:00:00"));
+
+        String newTokenId = UUID.randomUUID().toString();
+        String newRefreshToken = "bound-token-new-" + UUID.randomUUID();
+        insertRefreshTokenDirectly(newTokenId, newRefreshToken, SCOPES_WITH_OPENID,
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        insertRefreshTokenBindingDirectly(newTokenId, TEST_BINDING_TYPE, TEST_BINDING_REF, "new-binding-value");
+        updateRefreshTokenCreatedTime(newTokenId, Timestamp.valueOf("2026-01-02 00:00:00"));
+
+        AccessTokenDO result = refreshTokenDAO.getActiveRefreshToken(TEST_CONSUMER_KEY,
+                createTestAuthenticatedUser(), PRIMARY_USER_STORE, String.join(" ", SCOPES_WITH_OPENID),
+                new TokenBinding(TEST_BINDING_TYPE, TEST_BINDING_REF, "ignored-value"));
+
+        assertNotNull(result, "Should return a matching refresh token");
+        assertEquals(result.getTokenId(), newTokenId, "Should return the latest matching refresh token");
+        assertEquals(result.getRefreshToken(), newRefreshToken, "Refresh token should match the latest token");
     }
 
     // ======================== Test: Insert Refresh Token via DAO ========================

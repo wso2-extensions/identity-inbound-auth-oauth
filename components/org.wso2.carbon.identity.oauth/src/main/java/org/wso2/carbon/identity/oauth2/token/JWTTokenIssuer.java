@@ -38,6 +38,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -79,7 +80,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_W
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.JWK_THUMBPRINT;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.PREV_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.DPOP_TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT_X5T_ENABLED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getPrivateKey;
 
@@ -218,6 +221,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(oauthAuthzMsgCtx);
             if (additionalClaims != null) {
                 additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+                if (additionalClaims.containsKey(FrameworkConstants.USER_ORG_CLAIM) &&
+                        sharedUserImpersonatingSubOrgUser(authenticatedUser)) {
+                    jwtClaimsSetBuilder.claim(FrameworkConstants.USER_ORG_CLAIM,
+                            authenticatedUser.getImpersonatedUser().getUserResidentOrganization());
+                }
             }
         }
 
@@ -232,6 +240,32 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             log.debug("Subject token expiry time : " + expirationTime + "ms.");
         }
         return expirationTime;
+    }
+
+    /**
+     * Determines whether a shared user (logged in via a shared app through enhanced or legacy org authentication)
+     * accessing a sub-org is impersonating a user who reside in the sub-org.
+     *
+     * @param authenticatedUser the actor performing the impersonation.
+     * @return {@code true} if the actor is a shared user impersonating a user from
+     *         a different sub-organization; {@code false} otherwise.
+     */
+    private boolean sharedUserImpersonatingSubOrgUser(AuthenticatedUser authenticatedUser) {
+
+        if (authenticatedUser.getImpersonatedUser() == null) {
+            return false;
+        }
+
+        if (!authenticatedUser.isSharedUser() &&
+                !(authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME.equals(
+                                authenticatedUser.getFederatedIdPName()))) {
+            return false;
+        }
+
+        String actorResidentOrg = authenticatedUser.getUserResidentOrganization();
+        String subjectResidentOrg = authenticatedUser.getImpersonatedUser().getUserResidentOrganization();
+        return StringUtils.isNotBlank(actorResidentOrg) && StringUtils.isNotBlank(subjectResidentOrg) &&
+                !actorResidentOrg.equals(subjectResidentOrg);
     }
 
     @Override
@@ -916,6 +950,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                             .getParameters();
             if (customClaims != null && !customClaims.isEmpty()) {
                 customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
+                customClaims.remove(OAuthConstants.IS_SHARED_USER);
                 if (log.isDebugEnabled()) {
                     log.debug("Processing custom claims for JWT token. Total claims count: " + customClaims.size());
                 }
@@ -1062,7 +1097,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
                 authenticatedUser, oAuthAppDO);
-        return jwtClaimsSetBuilder.build();
+        return handleRefreshTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
     /**
@@ -1482,20 +1517,43 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
         }
 
-        if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
-            // Include token binding into the jwt token.
-            String bindingType = tokReqMsgCtx.getTokenBinding().getBindingType();
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
-            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
-                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
-                if (StringUtils.isNotBlank(cnf)) {
-                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,
-                            tokReqMsgCtx.getTokenBinding().getBindingValue()));
-                }
-            }
-        }
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
         return jwtClaimsSetBuilder.build();
+    }
+
+    private JWTClaimsSet handleRefreshTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        addTokenBindingClaims(jwtClaimsSetBuilder, tokReqMsgCtx == null ? null : tokReqMsgCtx.getTokenBinding());
+        return jwtClaimsSetBuilder.build();
+    }
+
+    private void addTokenBindingClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        if (tokenBinding == null) {
+            return;
+        }
+
+        // Include token binding into the JWT token.
+        String bindingType = tokenBinding.getBindingType();
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokenBinding.getBindingReference());
+        jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
+        addConfirmationClaim(jwtClaimsSetBuilder, tokenBinding);
+    }
+
+    private void addConfirmationClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder, TokenBinding tokenBinding) {
+
+        String bindingValue = tokenBinding.getBindingValue();
+        if (StringUtils.isBlank(bindingValue)) {
+            return;
+        }
+
+        String bindingType = tokenBinding.getBindingType();
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(OAuthConstants.X5T_S256, bindingValue));
+        } else if (DPOP_TOKEN_BINDING_TYPE.equals(bindingType)) {
+            jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(JWK_THUMBPRINT, bindingValue));
+        }
     }
 
     /**

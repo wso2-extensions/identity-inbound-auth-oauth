@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -612,6 +613,35 @@ public class ClaimUtilTest {
             // Assert.
             Assert.assertTrue(userClaims.containsKey(FrameworkConstants.ROLES_CLAIM));
             Assert.assertEquals(userClaims.get(FrameworkConstants.ROLES_CLAIM), "roleA,roleB");
+        }
+    }
+
+    @Test
+    public void testGetClaimsFromUserStoreInactiveTokenRaceReturnsInvalidToken() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(mockedAuthzContextToken);
+            when(mockedAuthzContextToken.getTokenString()).thenReturn("race-token");
+
+            OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class);
+            DefaultTokenProvider tokenProvider = mock(DefaultTokenProvider.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
+            when(holderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken("race-token", false)).thenThrow(
+                    new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found."));
+
+            try {
+                ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);
+                Assert.fail("Expected UserInfoEndpointException with invalid_token errorCode "
+                        + "for race-window IllegalArgumentException.");
+            } catch (UserInfoEndpointException e) {
+                Assert.assertEquals(e.getErrorCode(), OAuthError.ResourceResponse.INVALID_TOKEN,
+                        "errorCode should be invalid_token");
+                Assert.assertEquals(e.getErrorMessage(), "Access token validation failed",
+                        "errorMessage should be the canonical 'Access token validation failed' string");
+            }
         }
     }
 }

@@ -107,10 +107,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setTokenId(tokenId);
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
-        String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
-        accessTokenDO.setAppResidentTenantId(StringUtils.isNotBlank(appResidentTenantDomain)
-                ? IdentityTenantUtil.getTenantId(appResidentTenantDomain)
-                : IdentityTenantUtil.getLoginTenantId());
+        int appTenantId = IdentityTenantUtil.getTenantId(tokenReq.getTenantDomain());
+        accessTokenDO.setAppResidentTenantId(appTenantId);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
 
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
@@ -124,9 +122,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             } else {
                 /* When previousGrantType == refresh_token, we need to check whether the original grant type
                  is consented or not. */
-                AccessTokenDO accessTokenDOFromTokenIdentifier = OAuth2Util.getAccessTokenDOFromTokenIdentifier(
-                        validationBean.getAccessToken(), false);
-                accessTokenDO.setIsConsentedToken(accessTokenDOFromTokenIdentifier.isConsentedToken());
+                accessTokenDO.setIsConsentedToken(validationBean.isConsented());
             }
 
             if (accessTokenDO.isConsentedToken()) {

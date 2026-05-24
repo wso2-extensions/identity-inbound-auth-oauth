@@ -373,6 +373,8 @@ public class JwksEndpointTest {
 
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(tokenPersistenceProcessor);
         lenient().when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA512withRSA");
         lenient().when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
         lenient().when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");

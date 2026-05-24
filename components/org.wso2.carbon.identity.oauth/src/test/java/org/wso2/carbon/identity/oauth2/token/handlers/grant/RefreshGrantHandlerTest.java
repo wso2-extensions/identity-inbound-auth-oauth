@@ -349,6 +349,8 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
             oAuth2UtilMockedStatic.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
                     .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isAccessTokenPersistenceEnabled)
+                    .thenReturn(true);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
@@ -382,6 +384,48 @@ public class RefreshGrantHandlerTest {
                     verify(revocationProcessor, never()).revokeAccessToken(any(), any());
                 }
             }
+        }
+    }
+
+    @Test
+    public void testValidateGrantRestoresTokenBindingForNonPersistentAccessToken() throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding("cookie", "binding-ref", null);
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getTokenBinding()).thenReturn(tokenBinding);
+        when(refreshTokenValidationDataDO.isWithNotPersistedAT()).thenReturn(true);
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
+        when(authorizationDetailsService.getAccessTokenAuthorizationDetails(anyString(), anyInt()))
+                .thenReturn(new AuthorizationDetails());
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
+                    .thenReturn(oAuthAppDO);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            assertTrue(refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext));
+            verify(oAuthTokenReqMessageContext).setTokenBinding(tokenBinding);
         }
     }
 
@@ -463,6 +507,7 @@ public class RefreshGrantHandlerTest {
             when(oAuthTokenReqMessageContext.getAuthorizedUser()).thenReturn(user1);
             when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
+            when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(tenantDomain);
             when(mockValidationBean.getAccessTokenValidityInMillis()).thenReturn(10000L);
             Timestamp currentTime = Timestamp.from(Instant.now());
             when(mockValidationBean.getIssuedTime()).thenReturn(currentTime);

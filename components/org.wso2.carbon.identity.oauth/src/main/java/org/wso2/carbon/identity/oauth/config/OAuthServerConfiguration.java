@@ -164,6 +164,9 @@ public class OAuthServerConfiguration {
     private boolean enablePasswordFlowEnhancements = false;
     private String tokenPersistenceProcessorClassName =
             "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
+    // Optional dedicated processor for client secret only. When unset, client-secret
+    // callers fall back to the shared token persistence processor for backward compatibility.
+    private String clientSecretPersistenceProcessorClassName = null;
     private String oauthTokenGeneratorClassName;
     private OAuthIssuer oauthTokenGenerator;
     private String oauthIdentityTokenGeneratorClassName;
@@ -171,6 +174,10 @@ public class OAuthServerConfiguration {
     private String persistAccessTokenAlias;
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
+    private int gracefulRefreshTokenRotationValidityPeriodMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE;
+    private int gracefulRefreshTokenReuseLimitMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
     private boolean globalRbacScopeIssuerEnabled = false;
@@ -193,6 +200,7 @@ public class OAuthServerConfiguration {
     private boolean useLegacyPermissionAccessForUserBasedAuth = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
+    private TokenPersistenceProcessor clientSecretPersistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
     private Map<String, String> supportedGrantTypeClassNames = new HashMap<>();
     private Map<String, Boolean> refreshTokenAllowedGrantTypes = new HashMap<>();
@@ -329,6 +337,7 @@ public class OAuthServerConfiguration {
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
+    private boolean isClientSecretHashOnlyEnabled = false;
 
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
@@ -464,6 +473,9 @@ public class OAuthServerConfiguration {
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
 
+        // read graceful refresh token rotation config
+        parseGracefulRefreshTokenRotationConfig(oauthElem);
+
         // read token persistence config
         parseTokenPersistenceConfiguration(oauthElem);
 
@@ -472,6 +484,9 @@ public class OAuthServerConfiguration {
 
         // read token persistence processor config
         parseTokenPersistenceProcessorConfig(oauthElem);
+
+        // read client-secret dedicated persistence processor config (optional)
+        parseClientSecretPersistenceProcessorConfig(oauthElem);
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
@@ -1136,6 +1151,16 @@ public class OAuthServerConfiguration {
         return Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable);
     }
 
+    public int getGracefulRefreshTokenRotationValidityPeriodMax() {
+
+        return gracefulRefreshTokenRotationValidityPeriodMax;
+    }
+
+    public int getGracefulRefreshTokenReuseLimitMax() {
+
+        return gracefulRefreshTokenReuseLimitMax;
+    }
+
     public String getOIDCConsentPageUrl() {
         return oidcConsentPageUrl;
     }
@@ -1499,6 +1524,10 @@ public class OAuthServerConfiguration {
         return isClientSecretHashEnabled;
     }
 
+    public boolean isClientSecretHashOnlyEnabled() {
+        return isClientSecretHashOnlyEnabled;
+    }
+
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
         if (requestObjectBuildersElem != null) {
             Iterator<OMElement> iterator = requestObjectBuildersElem
@@ -1848,6 +1877,49 @@ public class OAuthServerConfiguration {
             }
         }
         return persistenceProcessor;
+    }
+
+    /**
+     * Return the persistence processor dedicated for client secret operations.
+     *
+     * <p>If {@code ClientSecretPersistenceProcessor} is configured in identity.xml, an instance of that class is
+     * returned (lazily created, cached). Otherwise this falls back to {@link #getPersistenceProcessor()} so existing
+     * deployments that only configure {@code TokenPersistenceProcessor} continue to behave exactly as before.
+     *
+     * @return The processor to use for client secret pre/post-processing.
+     * @throws IdentityOAuth2Exception If the fallback processor cannot be instantiated.
+     */
+    public TokenPersistenceProcessor getClientSecretPersistenceProcessor() throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(clientSecretPersistenceProcessorClassName)) {
+            return getPersistenceProcessor();
+        }
+        if (clientSecretPersistenceProcessor == null) {
+            synchronized (this) {
+                if (clientSecretPersistenceProcessor == null) {
+                    try {
+                        Class clazz =
+                                this.getClass().getClassLoader()
+                                        .loadClass(clientSecretPersistenceProcessorClassName);
+                        clientSecretPersistenceProcessor = (TokenPersistenceProcessor) clazz.newInstance();
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("An instance of " + clientSecretPersistenceProcessorClassName +
+                                    " is created for client secret processing.");
+                        }
+
+                    } catch (Exception e) {
+                        String errorMsg =
+                                "Error when instantiating the ClientSecretPersistenceProcessor : " +
+                                        clientSecretPersistenceProcessorClassName +
+                                        ". Falling back to the shared TokenPersistenceProcessor.";
+                        log.error(errorMsg, e);
+                        return getPersistenceProcessor();
+                    }
+                }
+            }
+        }
+        return clientSecretPersistenceProcessor;
     }
 
     /**
@@ -2830,6 +2902,21 @@ public class OAuthServerConfiguration {
 
     }
 
+    private void parseClientSecretPersistenceProcessorConfig(OMElement oauthConfigElem) {
+
+        OMElement clientSecretProcessorElem =
+                oauthConfigElem
+                        .getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_PERSISTENCE_PROCESSOR));
+        if (clientSecretProcessorElem != null && StringUtils.isNotBlank(clientSecretProcessorElem.getText())) {
+            clientSecretPersistenceProcessorClassName = clientSecretProcessorElem.getText().trim();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Client Secret Persistence Processor was set to : " + clientSecretPersistenceProcessorClassName);
+        }
+    }
+
     /**
      * parse the configuration to load the class name of the OAuth 2.0 token generator.
      * this is a global configuration at the moment.
@@ -2918,6 +3005,39 @@ public class OAuthServerConfiguration {
         } else {
             tokenCleanupFeatureEnable = "false";
         }
+    }
+
+    private void parseGracefulRefreshTokenRotationConfig(OMElement oauthConfigElem) {
+
+        OMElement rootElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.GRACEFUL_REFRESH_TOKEN_ROTATION));
+        if (rootElem == null) {
+            return;
+        }
+        gracefulRefreshTokenRotationValidityPeriodMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_VALIDITY_PERIOD_MAX,
+                gracefulRefreshTokenRotationValidityPeriodMax);
+        gracefulRefreshTokenReuseLimitMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_REUSE_LIMIT_MAX,
+                gracefulRefreshTokenReuseLimitMax);
+    }
+
+    private int parsePositiveIntChild(OMElement parent, String childName, int fallback) {
+
+        OMElement child = parent.getFirstChildWithName(getQNameWithIdentityNS(childName));
+        if (child == null || !StringUtils.isNotBlank(child.getText())) {
+            return fallback;
+        }
+        try {
+            int value = Integer.parseInt(child.getText().trim());
+            if (value > 0) {
+                return value;
+            }
+            log.warn("Invalid value for " + childName + ": " + value + ". Using default: " + fallback);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid value for " + childName + ": " + child.getText() + ". Using default: " + fallback);
+        }
+        return fallback;
     }
 
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
@@ -3984,6 +4104,24 @@ public class OAuthServerConfiguration {
                 log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
             }
         }
+
+        try {
+            clientSecretPersistenceProcessor = getClientSecretPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting an instance of Client Secret Persistence Processor.");
+        }
+
+        if (clientSecretPersistenceProcessor instanceof HashingPersistenceProcessor) {
+
+            OMElement clientSecretHashOnlyElement = oauthConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH_ONLY));
+            if (clientSecretHashOnlyElement != null) {
+                isClientSecretHashOnlyEnabled = Boolean.parseBoolean(clientSecretHashOnlyElement.getText());
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Is client secret only hashing enabled: " + isClientSecretHashOnlyEnabled);
+            }
+        }
     }
 
     private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem) {
@@ -4607,6 +4745,8 @@ public class OAuthServerConfiguration {
         private static final String KEEP_REVOKED_ACCESS_TOKENS = "KeepRevokedAccessTokens";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
+        // Dedicated processor for client secrets (optional, falls back to TokenPersistenceProcessor).
+        private static final String CLIENT_SECRET_PERSISTENCE_PROCESSOR = "ClientSecretPersistenceProcessor";
         // Token issuer generator.
         private static final String OAUTH_TOKEN_GENERATOR = "OAuthTokenGenerator";
         private static final String IDENTITY_OAUTH_TOKEN_GENERATOR = "IdentityOAuthTokenGenerator";
@@ -4620,6 +4760,10 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_CLEANUP_FEATURE = "EnableTokenCleanup";
         // Enable/Disable retain old access token
         private static final String RETAIN_OLD_ACCESS_TOKENS = "RetainOldAccessToken";
+        // Graceful refresh token rotation config
+        private static final String GRACEFUL_REFRESH_TOKEN_ROTATION = "GracefulRefreshTokenRotation";
+        private static final String GRACEFUL_VALIDITY_PERIOD_MAX = "ValidityPeriodMax";
+        private static final String GRACEFUL_REUSE_LIMIT_MAX = "ReuseLimitMax";
 
         // Supported Grant Types
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
@@ -4691,6 +4835,7 @@ public class OAuthServerConfiguration {
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
+        private static final String ENABLE_CLIENT_SECRET_HASH_ONLY = "HashClientSecretOnly";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";

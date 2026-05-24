@@ -195,6 +195,7 @@ public final class OAuthConstants {
     public static final String ID_TOKEN_SUBJECT_TOKEN = "id_token subject_token";
     public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
+    public static final String IS_SHARED_USER = "IS_SHARED_USER";
     public static final String IDTOKEN_TOKEN = "id_token token";
     public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";
@@ -680,6 +681,25 @@ public final class OAuthConstants {
 
         public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
+
+        }
+    }
+
+    /**
+     * Graceful refresh token rotation constants.
+     */
+    public static class GracefulRefreshTokenRotation {
+
+        public static final String IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED = "isGracefulRefreshTokenRotationEnabled";
+        public static final String GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD =
+                "gracefulRefreshTokenRotationValidityPeriod";
+        public static final int DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE = 30;
+        public static final int GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE = 60;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT = "gracefulRefreshTokenReuseLimit";
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE = 5;
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE = 1;
+
+        private GracefulRefreshTokenRotation() {
 
         }
     }

@@ -569,6 +569,9 @@ public final class OAuthUtil {
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
+        dto.setGracefulRefreshTokenRotationEnabled(appDO.isGracefulRefreshTokenRotationEnabled());
+        dto.setGracefulRefreshTokenRotationValidityPeriod(appDO.getGracefulRefreshTokenRotationValidityPeriod());
+        dto.setGracefulRefreshTokenReuseLimit(appDO.getGracefulRefreshTokenReuseLimit());
         dto.setJwtScopeAsArrayEnabled(appDO.isJwtScopeAsArrayEnabled());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
         dto.setCibaNotificationChannels(appDO.getCibaNotificationChannels());
@@ -766,7 +769,7 @@ public final class OAuthUtil {
                         .isPrimaryOrganization(managedOrg)) {
                     userId = OAuthComponentServiceHolder.getInstance().getOrganizationUserSharingService()
                             .getUserAssociation(userId, accessingOrg).getAssociatedUserId();
-                    authenticatedUser.setUserName(userId);
+                    authenticatedUser.setUserId(userId);
                     setOrganizationSSOUserDetails(authenticatedUser);
                 } else {
                     UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
@@ -908,7 +911,7 @@ public final class OAuthUtil {
 
     /**
      * Initiate token revocation process for the associated clientIds for the given user.
-     * @param clientIds          Set of clientIds
+     * @param clientAppInfos     Set of clientIds
      * @param authenticatedUser  Authenticated User object of the user.
      * @param userStoreDomain    User store domain of the user.
      * @param username           Username.
@@ -1047,6 +1050,7 @@ public final class OAuthUtil {
         AuthenticatedUser authenticatedUser = buildAuthenticatedUser(userStoreManager, username, userStoreDomain,
                 tenantDomain);
         AuthenticatedUser authenticatedOrgUser = null;
+        AuthenticatedUser authenticatedSharedUser = null;
         if (authenticatedUser.getUserResidentOrganization() != null) {
             try {
                 String userResidentTenant = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
@@ -1071,7 +1075,7 @@ public final class OAuthUtil {
                         authenticatedOrgUser.setUserName(authenticatedUserName);
                         authenticatedOrgUser.setUserResidentOrganization(authenticatedUser.
                                 getUserResidentOrganization());
-                        authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getUserResidentOrganization());
+                        authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
                         authenticatedOrgUser.setFederatedUser(false);
                         authenticatedOrgUser.setUserStoreDomain(user.get().getUserStoreDomain());
                         String userTenantDomain = OAuthComponentServiceHolder.getInstance().
@@ -1142,6 +1146,13 @@ public final class OAuthUtil {
                             .getAllTimeAuthorizedClientIdsWithAppTenantDomain(authenticatedOrgUser));
                 }
 
+                authenticatedSharedUser =  resolveAuthenticatedSharedUser(authenticatedUser, tenantDomain);
+                if (authenticatedSharedUser != null) {
+                    clientAppInfos.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getTokenManagementDAO()
+                            .getAllTimeAuthorizedClientIdsWithAppTenantDomain(authenticatedSharedUser));
+                }
+
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
                     clientAppInfos = filterClientIdsWithOrganizationAudience(clientAppInfos);
                 }
@@ -1159,6 +1170,11 @@ public final class OAuthUtil {
         boolean isErrorOnRevokingTokens;
         isErrorOnRevokingTokens = processTokenRevocation(clientAppInfos, authenticatedUser,
                 userStoreDomain, username);
+
+        if (authenticatedSharedUser != null) {
+            isErrorOnRevokingTokens |= processTokenRevocation(clientAppInfos, authenticatedSharedUser,
+                    authenticatedSharedUser.getUserStoreDomain(), username);
+        }
 
         if (!isErrorOnRevokingTokens && !clientAppInfos.isEmpty()) {
             // Considering the root tenant revocation in current scope, will consider the sub organizations later.
@@ -1179,6 +1195,42 @@ public final class OAuthUtil {
             throw new UserStoreException("Error occurred while revoking Access Tokens of the user " + username);
         }
         return true;
+    }
+
+    /**
+     * Resolves the authenticated shared user representation used for token revocation.
+     * The resolved user is used to revoke tokens issued by shared applications when shared users
+     * log in to them via legacy federation-based organization login.
+     *
+     * @param authenticatedUser The authenticated user whose shared user representation needs to be resolved.
+     * @param tenantDomain      The tenant domain of the organization.
+     * @return The resolved {@link AuthenticatedUser} representing the shared user, or {@code null} if no
+     *         user association exists.
+     * @throws UserStoreException If an error occurs while resolving the user association or IDP details.
+     */
+    private static AuthenticatedUser resolveAuthenticatedSharedUser(
+            AuthenticatedUser authenticatedUser, String tenantDomain) throws UserStoreException {
+
+        try {
+            String accessingOrgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociation(
+                            authenticatedUser.getSharedUserId(), accessingOrgId);
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && userAssociation != null) {
+                AuthenticatedUser sharedUser = new AuthenticatedUser(authenticatedUser);
+                sharedUser.setUserName(userAssociation.getAssociatedUserId());
+                setOrganizationSSOUserDetails(sharedUser);
+                return sharedUser;
+            }
+            return null;
+        } catch (OrganizationManagementException e) {
+            throw new UserStoreException("Error while getting user associations for user: "
+                    + authenticatedUser.getLoggableMaskedUserId(), e);
+        } catch (IdentityProviderManagementException e) {
+            throw new UserStoreException("Error occurred while resolving IDP name of the organization login IDP in: "
+                    + tenantDomain, e);
+        }
     }
 
     /**

@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -122,6 +123,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -265,6 +268,14 @@ public class OAuthAdminServiceImpl {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
+                }
+                if (OAuth2Util.isClientSecretHashingEnabled()) {
+                    TokenPersistenceProcessor persistenceProcessor = OAuth2Util.getClientSecretPersistenceProcessor();
+                    if (persistenceProcessor != null) {
+                        if (!persistenceProcessor.isProcessed(app.getOauthConsumerSecret())) {
+                            AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+                        }
+                    }
                 }
             } else {
                 dto = new OAuthConsumerAppDTO();
@@ -584,6 +595,14 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        app.setGracefulRefreshTokenRotationEnabled(
+                                application.isGracefulRefreshTokenRotationEnabled());
+                        app.setGracefulRefreshTokenRotationValidityPeriod(
+                                application.getGracefulRefreshTokenRotationValidityPeriod());
+                        app.setGracefulRefreshTokenReuseLimit(
+                                application.getGracefulRefreshTokenReuseLimit());
+                        normalizeGracefulRotationValidityPeriod(app);
+                        normalizeGracefulReuseLimit(app);
                         app.setJwtScopeAsArrayEnabled(application.isJwtScopeAsArrayEnabled());
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
@@ -622,8 +641,14 @@ public class OAuthAdminServiceImpl {
                             app.setCallbackUrl(consoleCallBackURL);
                         }
                     }
-                    if (StringUtils.isNotBlank(app.getCallbackUrl()) &&
-                            !app.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                    String callbackUrl = app.getCallbackUrl();
+                    boolean containsUnresolvedPlaceholder = StringUtils.isNotBlank(callbackUrl) &&
+                            callbackUrl.contains(BASE_URL_PLACEHOLDER);
+
+                    // For apps shared with sub-organizations, the callback URL may contain a base URL
+                    // placeholder that is resolved only after DB retrieval.
+                    // Avoid caching entries with unresolved placeholders on app creation.
+                    if (!containsUnresolvedPlaceholder) {
                         AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     }
                     if (LOG.isDebugEnabled()) {
@@ -1082,6 +1107,13 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            oAuthAppDO.setGracefulRefreshTokenRotationEnabled(
+                    consumerAppDTO.isGracefulRefreshTokenRotationEnabled());
+            oAuthAppDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    consumerAppDTO.getGracefulRefreshTokenRotationValidityPeriod());
+            oAuthAppDO.setGracefulRefreshTokenReuseLimit(consumerAppDTO.getGracefulRefreshTokenReuseLimit());
+            normalizeGracefulRotationValidityPeriod(oAuthAppDO);
+            normalizeGracefulReuseLimit(oAuthAppDO);
             oAuthAppDO.setJwtScopeAsArrayEnabled(consumerAppDTO.isJwtScopeAsArrayEnabled());
 
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
@@ -2665,7 +2697,7 @@ public class OAuthAdminServiceImpl {
      */
     public boolean isHashDisabled() {
 
-        return OAuth2Util.isHashDisabled();
+        return OAuth2Util.isClientSecretHashingDisabled();
     }
 
     AuthenticatedUser getAppOwner(OAuthConsumerAppDTO application,
@@ -3270,5 +3302,41 @@ public class OAuthAdminServiceImpl {
                                 + consumerKey, e);
             }
         }
+    }
+
+    private void normalizeGracefulRotationValidityPeriod(OAuthAppDO appDO) {
+
+        int maxValidity = OAuthServerConfiguration.getInstance()
+                .getGracefulRefreshTokenRotationValidityPeriodMax();
+        int current = appDO.getGracefulRefreshTokenRotationValidityPeriod();
+        if (current <= 0) {
+            // Clamp default to the operator-configured ceiling so we never exceed it.
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    Math.min(DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE, maxValidity));
+        } else if (current > maxValidity) {
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(maxValidity);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token rotation validity period configured for the application: " +
+                        appDO.getApplicationName() + " is greater than the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxValidity + " seconds.");
+            }
+        }
+    }
+
+    private void normalizeGracefulReuseLimit(OAuthAppDO appDO) {
+
+        int maxLimit = OAuthServerConfiguration.getInstance().getGracefulRefreshTokenReuseLimitMax();
+        int limit = appDO.getGracefulRefreshTokenReuseLimit();
+        if (limit < GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE) {
+            limit = GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
+        } else if (limit > maxLimit) {
+            limit = maxLimit;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token reuse limit configured for the application: " +
+                        appDO.getApplicationName() + " exceeds the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxLimit + ".");
+            }
+        }
+        appDO.setGracefulRefreshTokenReuseLimit(limit);
     }
 }

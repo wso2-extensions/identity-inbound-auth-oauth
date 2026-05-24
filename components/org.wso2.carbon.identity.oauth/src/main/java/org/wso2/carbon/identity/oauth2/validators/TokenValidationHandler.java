@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -56,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
@@ -584,7 +586,8 @@ public class TokenValidationHandler {
                     // were not handled correctly. This check ensures that tokens issued for sub-organizations are
                     // validated properly, while preserving backward compatibility using
                     // allowCrossTenantIntrospectionForSubOrgTokens.
-                    validateIntrospectionForSubOrgTokens(tenantDomain, accessTokenDO);
+                    validateIntrospectionForSubOrgTokens(tenantDomain, accessTokenDO,
+                            messageContext.getRequestDTO().isIntrospectionRequest());
                 }
 
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
@@ -1045,19 +1048,75 @@ public class TokenValidationHandler {
         }
     }
 
-    private void validateIntrospectionForSubOrgTokens(String tenantDomain, AccessTokenDO accessTokenDO)
-            throws OrganizationManagementException {
+    private void validateIntrospectionForSubOrgTokens(String tenantDomain, AccessTokenDO accessTokenDO,
+                                                      boolean isIntrospectionRequest)
+            throws OrganizationManagementException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
         String accessingOrgID = accessTokenDO.getAuthzUser().getAccessingOrganization();
-        String orgIdOfIntrospectingTenant = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+        String introspectingTenantOrgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                 .resolveOrganizationId(tenantDomain);
+        boolean isValidToken = true;
 
-        if (!accessingOrgID.equalsIgnoreCase(orgIdOfIntrospectingTenant)) {
-            if (orgIdOfIntrospectingTenant != null && !orgIdOfIntrospectingTenant.equalsIgnoreCase(
+        if (!accessingOrgID.equalsIgnoreCase(introspectingTenantOrgId)) {
+            if (introspectingTenantOrgId != null && !introspectingTenantOrgId.equalsIgnoreCase(
                     OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                             .getPrimaryOrganizationId(accessingOrgID))) {
-                throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+                isValidToken = false;
             }
+        }
+
+        int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+        String accessingOrgIdFromPath = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getAccessingOrganizationId();
+
+        if (OrganizationManagementUtil.isOrganization(appResidentTenantId)) {
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(accessTokenDO.getConsumerKey(),
+                    IdentityTenantUtil.getTenantDomain(appResidentTenantId));
+            if (!isFragmentApp(serviceProvider.getSpProperties())) {
+                IssuerDetails orgAppIssuerDetails = OAuth2Util.getAppInformationByClientId(
+                        accessTokenDO.getConsumerKey(),
+                        IdentityTenantUtil.getTenantDomain(appResidentTenantId)).
+                        getIssuerDetails();
+                if (orgAppIssuerDetails != null &&
+                        StringUtils.isNotEmpty(orgAppIssuerDetails.getIssuerTenantDomain())) {
+                    // Considering the root organization as the issuer.
+                    if (!OrganizationManagementUtil.isOrganization(orgAppIssuerDetails.getIssuerTenantDomain())) {
+                        if (StringUtils.isNotEmpty(accessingOrgIdFromPath)) {
+                            if (!accessingOrgIdFromPath.equalsIgnoreCase(accessingOrgID)) {
+                                isValidToken = false;
+                            }
+                        } else if (!introspectingTenantOrgId.equalsIgnoreCase(orgAppIssuerDetails.getIssuerOrgId())) {
+                            isValidToken = false;
+                        }
+                    } else {
+                        // Considering the sub-organization as the issuer.
+                        if (StringUtils.isNotEmpty(accessingOrgIdFromPath)) {
+                            if (!accessingOrgIdFromPath.equalsIgnoreCase(orgAppIssuerDetails.getIssuerOrgId())) {
+                                isValidToken = false;
+                            }
+                        } else {
+                            if (isIntrospectionRequest) {
+                                if (!accessingOrgID.equalsIgnoreCase(introspectingTenantOrgId)) {
+                                    isValidToken = false;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (StringUtils.isNotEmpty(accessingOrgIdFromPath) &&
+                            !accessingOrgIdFromPath.equalsIgnoreCase(accessingOrgID)) {
+                        isValidToken = false;
+                    }
+                }
+            }
+        } else {
+            if (StringUtils.isNotEmpty(accessingOrgIdFromPath)) {
+                isValidToken = false;
+            }
+        }
+
+        if (!isValidToken) {
+            throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
         }
     }
 

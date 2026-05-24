@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,11 +30,13 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.Scope;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.agent.sharing.util.OrganizationSharedAgentUtil;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -196,6 +198,7 @@ public class AuthzUtil {
             throws IdentityOAuth2Exception {
 
         String associatedUserId;
+        String accessingOrganization = authenticatedUser.getAccessingOrganization();
         /* When user ID resolving for the organization SSO federated users, the associated user ID can be found from the
          userName of the authenticated user object. */
         if (authenticatedUser.isFederatedUser()) {
@@ -205,13 +208,31 @@ public class AuthzUtil {
         } else {
             associatedUserId = getUserId(authenticatedUser);
         }
-        try {
-            Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
-                    .getUserIdOfAssociatedUserByOrgId(associatedUserId, authenticatedUser.getAccessingOrganization());
-            return optionalOrganizationUserId.orElseThrow(() ->
-                    new IdentityOAuth2ClientException("User is not allowed to access the organization"));
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while resolving shared user ID" , e);
+        // For agents, perform the agent org association lookup instead of the user sharing lookup.
+        if (IdentityUtil.getAgentIdentityUserstoreName().equalsIgnoreCase(authenticatedUser.getUserStoreDomain())) {
+            try {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Looking up shared agent ID for agent in organization: " + accessingOrganization);
+                }
+                Optional<String> sharedAgentId = OrganizationSharedAgentUtil
+                        .getAgentIdOfAssociatedAgentByOrgId(associatedUserId, accessingOrganization);
+                return sharedAgentId.orElseThrow(() ->
+                        new IdentityOAuth2ClientException("Agent is not allowed to access the organization"));
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving shared agent ID", e);
+            }
+        } else {
+            try {
+                Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
+                        .getUserIdOfAssociatedUserByOrgId(associatedUserId, accessingOrganization);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Looking up shared user ID for user in organization: " + accessingOrganization);
+                }
+                return optionalOrganizationUserId.orElseThrow(() ->
+                        new IdentityOAuth2ClientException("User is not allowed to access the organization"));
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving shared user ID" , e);
+            }
         }
     }
 

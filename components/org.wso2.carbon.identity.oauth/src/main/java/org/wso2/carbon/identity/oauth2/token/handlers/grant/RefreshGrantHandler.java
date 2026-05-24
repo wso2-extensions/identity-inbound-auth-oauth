@@ -126,17 +126,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         validateRefreshTokenInRequest(tokenReq, validationBean);
 
-        TokenBinding tokenBinding = null;
-        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
-                .equals(validationBean.getTokenBindingReference())) {
-            Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
-                    .getTokenBindingMgtDAO()
-                    .getTokenBindingByBindingRef(validationBean.getTokenId(),
-                            validationBean.getTokenBindingReference());
-            if (tokenBindingOptional.isPresent()) {
-                tokenBinding = tokenBindingOptional.get();
-                tokReqMsgCtx.setTokenBinding(tokenBinding);
-            }
+        TokenBinding tokenBinding = resolveTokenBinding(validationBean);
+        if (tokenBinding != null) {
+            tokReqMsgCtx.setTokenBinding(tokenBinding);
         }
         validateTokenBindingReference(tokenReq, validationBean, tokenBinding);
         validateAuthenticatedUser(validationBean, tokReqMsgCtx);
@@ -148,6 +140,27 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         setPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
         return true;
+    }
+
+    private TokenBinding resolveTokenBinding(RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
+
+        if (validationBean.getTokenBinding() != null) {
+            TokenBinding tokenBinding = validationBean.getTokenBinding();
+            validationBean.setTokenBindingReference(tokenBinding.getBindingReference());
+            return tokenBinding;
+        }
+
+        if (StringUtils.isBlank(validationBean.getTokenBindingReference()) ||
+                NONE.equals(validationBean.getTokenBindingReference())) {
+            return null;
+        }
+
+        Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
+                .getTokenBindingMgtDAO()
+                .getTokenBindingByBindingRef(validationBean.getTokenId(),
+                        validationBean.getTokenBindingReference());
+        return tokenBindingOptional.orElse(null);
     }
 
     @Override
@@ -170,8 +183,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // on the app configuration. since we cannot retrieve the issued time and validity period of the previous
             // access token from the database.
             // Setting this value used for pre issue access token actions.
-            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
-                    getTenantDomain());
+            OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), tokenReq.getTenantDomain());
             tokReqMsgCtx.setValidityPeriod(getValidityPeriodInMillis(tokReqMsgCtx, oAuthAppDO));
         } else {
             tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
@@ -715,8 +727,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                               RefreshTokenValidationDataDO validationBean, OAuth2AccessTokenReqDTO tokenReq,
                               Timestamp timestamp) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
-                getTenantDomain());
+        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), tokenReq.getTenantDomain());
         createTokens(accessTokenDO, tokReqMsgCtx);
         setRefreshTokenData(accessTokenDO, tokenReq, validationBean, oAuthAppDO, accessTokenDO.getRefreshToken(),
                 timestamp, tokReqMsgCtx);
@@ -915,7 +926,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             throws IdentityOAuth2Exception {
 
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
-        String tenantDomain = refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain();
+        String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         OAuthAppDO oAuthAppBean = getOAuthApp(clientId, tenantDomain);
         String grantType = refreshTokenValidationDataDO.getGrantType();
 
@@ -1033,7 +1044,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
 
         // Validate SSO session bound token.
-        if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())) {
+        if (OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(oAuthAppDO.getTokenBindingType())
+            && OAuth2Util.isAccessTokenPersistenceEnabled()) {
 
             if (!OAuth2Util.isLegacySessionBoundTokenBehaviourEnabled()
                     || (oAuthAppDO.isTokenRevocationWithIDPSessionTerminationEnabled()

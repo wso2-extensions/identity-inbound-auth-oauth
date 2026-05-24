@@ -187,6 +187,22 @@ public class AuthorizationGrantCacheTest {
     }
 
     @Test
+    public void testAccessingOrganizationGetterAndSetter() {
+
+        AuthorizationGrantCacheEntry entry = new AuthorizationGrantCacheEntry();
+        // Default value should be null when not set.
+        assertEquals(entry.getAccessingOrganization(), null);
+
+        String accessingOrgId = "shared-user-accessing-org";
+        entry.setAccessingOrganization(accessingOrgId);
+        assertEquals(entry.getAccessingOrganization(), accessingOrgId);
+
+        // Setting to null should clear the value.
+        entry.setAccessingOrganization(null);
+        assertEquals(entry.getAccessingOrganization(), null);
+    }
+
+    @Test
     public void testGetValueFromCacheByCode() throws IdentityOAuth2Exception {
 
         String authCode = "authCode";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com)
+ * Copyright (c) 2023-2026, WSO2 LLC. (https://www.wso2.com)
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.cache;
 
+import org.nustaq.serialization.annotations.Version;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 
@@ -25,6 +26,14 @@ import java.util.Map;
 
 /**
  * Contains authenticated user attributes.
+ *
+ * <p><b>Serialization Compatibility Rules (FST):</b></p>
+ * <ul>
+ *   <li>New fields MUST be annotated with {@code @Version(n)} where n is incremented for each release.</li>
+ *   <li>New fields MUST be declared AFTER all existing fields.</li>
+ *   <li>NEVER remove, reorder, or change the type of existing fields.</li>
+ *   <li>Code must handle null/default values for versioned fields when deserializing old data.</li>
+ * </ul>
  */
 public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
 
@@ -33,6 +42,9 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     private Map<ClaimMapping, String> userAttributes;
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private String impersonator;
+
+    @Version(1)
+    private String sessionContextIdentifier;
 
     public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
 
@@ -78,5 +90,15 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     public void setImpersonator(String impersonator) {
 
         this.impersonator = impersonator;
+    }
+
+    public String getSessionContextIdentifier() {
+
+        return sessionContextIdentifier;
+    }
+
+    public void setSessionContextIdentifier(String sessionContextIdentifier) {
+
+        this.sessionContextIdentifier = sessionContextIdentifier;
     }
 }

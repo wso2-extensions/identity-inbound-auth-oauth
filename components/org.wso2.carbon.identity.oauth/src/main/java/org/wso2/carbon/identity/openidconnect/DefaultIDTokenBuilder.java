@@ -241,6 +241,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             AccessTokenExtendedAttributes accessTokenExtendedAttributes =
                     tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes();
             if (accessTokenExtendedAttributes != null && accessTokenExtendedAttributes.getParameters() != null) {
+                // This property should not be returned in the ID token.
+                accessTokenExtendedAttributes.getParameters().remove(OAuthConstants.IS_SHARED_USER);
                 for (Map.Entry<String, String> entry : accessTokenExtendedAttributes.getParameters().entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }

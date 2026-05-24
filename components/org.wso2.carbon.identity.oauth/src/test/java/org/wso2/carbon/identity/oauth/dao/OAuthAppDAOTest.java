@@ -46,7 +46,9 @@ import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -60,6 +62,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -73,6 +76,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -1091,13 +1095,15 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public Object[][] testGetAppInformationWithOIDCPropertiesForImpersonationData() {
 
         return new Object[][]{
-                {true, 3600},
-                {false, 600},
+                {true, 3600, true, 120, 3},
+                {false, 600, false, 30, 5},
         };
     }
     @Test(dataProvider = "testGetAppInformationWithOIDCPropertiesForImpersonationData")
     public void testGetAppInformationWithOIDCPropertiesForImpersonationTest
-            (boolean subjectTokenEnabled, int subjectTokenExpiryTime) throws Exception {
+            (boolean subjectTokenEnabled, int subjectTokenExpiryTime,
+             boolean gracefulRotationEnabled, int gracefulRotationValidity,
+             int gracefulReuseLimit) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -1117,6 +1123,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 // Add Impersonation OIDC properties.
                 defaultOAuthAppDO.setSubjectTokenEnabled(subjectTokenEnabled);
                 defaultOAuthAppDO.setSubjectTokenExpiryTime(subjectTokenExpiryTime);
+                defaultOAuthAppDO.setGracefulRefreshTokenRotationEnabled(gracefulRotationEnabled);
+                defaultOAuthAppDO.setGracefulRefreshTokenRotationValidityPeriod(gracefulRotationValidity);
+                defaultOAuthAppDO.setGracefulRefreshTokenReuseLimit(gracefulReuseLimit);
                 addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
 
                 OAuthAppDAO appDAO = new OAuthAppDAO();
@@ -1124,14 +1133,23 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertNotNull(oAuthAppDO);
                 assertEquals(oAuthAppDO.isSubjectTokenEnabled(), subjectTokenEnabled);
                 assertEquals(oAuthAppDO.getSubjectTokenExpiryTime(), subjectTokenExpiryTime);
+                assertEquals(oAuthAppDO.isGracefulRefreshTokenRotationEnabled(), gracefulRotationEnabled);
+                assertEquals(oAuthAppDO.getGracefulRefreshTokenRotationValidityPeriod(),
+                        gracefulRotationValidity);
+                assertEquals(oAuthAppDO.getGracefulRefreshTokenReuseLimit(), gracefulReuseLimit);
 
                 // Update Impersonation OIDC properties.
                 oAuthAppDO.setSubjectTokenEnabled(!subjectTokenEnabled);
+                oAuthAppDO.setGracefulRefreshTokenRotationEnabled(!gracefulRotationEnabled);
+                oAuthAppDO.setGracefulRefreshTokenReuseLimit(gracefulReuseLimit + 1 > 5 ? 1 : gracefulReuseLimit + 1);
 
                 appDAO.updateConsumerApplication(oAuthAppDO);
                 OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
                 assertNotNull(retrievedOAuthAppDO);
                 assertEquals(retrievedOAuthAppDO.isSubjectTokenEnabled(), !subjectTokenEnabled);
+                assertEquals(retrievedOAuthAppDO.isGracefulRefreshTokenRotationEnabled(), !gracefulRotationEnabled);
+                assertEquals(retrievedOAuthAppDO.getGracefulRefreshTokenReuseLimit(),
+                        gracefulReuseLimit + 1 > 5 ? 1 : gracefulReuseLimit + 1);
             }
         } finally {
             resetPrivilegedCarbonContext();
@@ -1579,7 +1597,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
 
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
-        when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
+        when(mockedServerConfig.getClientSecretPersistenceProcessor()).thenReturn(processor);
 
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
@@ -1719,5 +1737,83 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public static void resetPrivilegedCarbonContext() throws Exception {
         System.clearProperty(CarbonBaseConstants.CARBON_HOME);
         PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    // ---------- Constructor persistenceProcessor selection tests ----------
+
+    @DataProvider(name = "persistenceProcessorConfigs")
+    public Object[][] persistenceProcessorConfigs() {
+        String hashingClass = HashingPersistenceProcessor.class.getName();
+        String plainTextClass = PlainTextPersistenceProcessor.class.getName();
+        return new Object[][]{
+                // clientSecretClass, tokenClass, expectedType
+                // Case 1: ClientSecretPersistenceProcessor explicitly configured as Hashing.
+                {hashingClass, plainTextClass, HashingPersistenceProcessor.class},
+                // Case 2: ClientSecretPersistenceProcessor explicitly configured as PlainText.
+                {plainTextClass, hashingClass, PlainTextPersistenceProcessor.class},
+                // Case 3: ClientSecretPersistenceProcessor not configured; token processor = Hashing (fallback).
+                {null, hashingClass, HashingPersistenceProcessor.class},
+                // Case 4: ClientSecretPersistenceProcessor not configured; token processor = PlainText (fallback).
+                {null, plainTextClass, PlainTextPersistenceProcessor.class},
+                // Case 5: Neither configured; ultimate default resolves to PlainText.
+                {null, null, PlainTextPersistenceProcessor.class},
+                // Case 6: ClientSecretPersistenceProcessor configured with an uninstantiable class;
+                //         falls back to token processor = Hashing.
+                {"com.nonexistent.Processor", hashingClass, HashingPersistenceProcessor.class},
+        };
+    }
+
+    @Test(dataProvider = "persistenceProcessorConfigs")
+    public void testConstructorPicksCorrectPersistenceProcessor(
+            String clientSecretClass,
+            String tokenClass,
+            Class<? extends TokenPersistenceProcessor> expectedType) throws Exception {
+
+        OAuthServerConfiguration configInstance = mock(OAuthServerConfiguration.class);
+        setOAuthServerConfigField(configInstance, "clientSecretPersistenceProcessorClassName", clientSecretClass);
+        setOAuthServerConfigField(configInstance, "tokenPersistenceProcessorClassName", tokenClass);
+        setOAuthServerConfigField(configInstance, "persistenceProcessor", null);
+        setOAuthServerConfigField(configInstance, "clientSecretPersistenceProcessor", null);
+        doCallRealMethod().when(configInstance).getClientSecretPersistenceProcessor();
+        doCallRealMethod().when(configInstance).getPersistenceProcessor();
+
+        try (MockedStatic<OAuthServerConfiguration> mockedConfig = mockStatic(OAuthServerConfiguration.class)) {
+            mockedConfig.when(OAuthServerConfiguration::getInstance).thenReturn(configInstance);
+            OAuthAppDAO dao = new OAuthAppDAO();
+            TokenPersistenceProcessor actual = extractPersistenceProcessorFromDAO(dao);
+            assertNotNull(actual, "persistenceProcessor field should not be null");
+            assertTrue(expectedType.isInstance(actual),
+                    "Expected " + expectedType.getSimpleName() + " but got " + actual.getClass().getSimpleName());
+        }
+    }
+
+    @Test
+    public void testConstructorFallsBackToPlainTextWhenGetClientSecretProcessorThrows() throws Exception {
+
+        OAuthServerConfiguration configInstance = mock(OAuthServerConfiguration.class);
+        when(configInstance.getClientSecretPersistenceProcessor())
+                .thenThrow(new IdentityOAuth2Exception("Simulated config error"));
+
+        try (MockedStatic<OAuthServerConfiguration> mockedConfig = mockStatic(OAuthServerConfiguration.class)) {
+            mockedConfig.when(OAuthServerConfiguration::getInstance).thenReturn(configInstance);
+            OAuthAppDAO dao = new OAuthAppDAO();
+            TokenPersistenceProcessor actual = extractPersistenceProcessorFromDAO(dao);
+            assertNotNull(actual, "persistenceProcessor field should not be null");
+            assertTrue(actual instanceof PlainTextPersistenceProcessor,
+                    "Expected PlainTextPersistenceProcessor as fallback but got "
+                            + actual.getClass().getSimpleName());
+        }
+    }
+
+    private void setOAuthServerConfigField(Object target, String fieldName, Object value) throws Exception {
+        Field field = OAuthServerConfiguration.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private TokenPersistenceProcessor extractPersistenceProcessorFromDAO(OAuthAppDAO dao) throws Exception {
+        Field field = OAuthAppDAO.class.getDeclaredField("persistenceProcessor");
+        field.setAccessible(true);
+        return (TokenPersistenceProcessor) field.get(dao);
     }
 }

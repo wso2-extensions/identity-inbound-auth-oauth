@@ -94,6 +94,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
+import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -603,7 +604,7 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -614,7 +615,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
@@ -660,7 +661,7 @@ public class OAuth2Util {
         }
 
         // Cache miss
-        boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -671,7 +672,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
@@ -771,9 +772,30 @@ public class OAuth2Util {
         return persistenceProcessor;
     }
 
+    public static TokenPersistenceProcessor getClientSecretPersistenceProcessor() {
+
+        TokenPersistenceProcessor persistenceProcessor;
+        try {
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            String msg = "Error retrieving TokenPersistenceProcessor configured in " +
+                    "OAuth.ClientSecretPersistenceProcessor in identity.xml. " +
+                    "Defaulting to PlainTextPersistenceProcessor.";
+            log.warn(msg);
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            persistenceProcessor = getPersistenceProcessor();
+        }
+        return persistenceProcessor;
+    }
+
     /**
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is disabled or not in identity.xml file.
+     *
+     * <p>For client-secret-specific hashing decisions use {@link #isClientSecretHashingDisabled()} instead,
+     * as it also honours the newer {@code EnableClientSecretHashOnly} configuration.
      *
      * @return Whether hash feature is disabled or not.
      */
@@ -788,12 +810,41 @@ public class OAuth2Util {
      * Check whether hashing oauth keys (consumer secret, access token, refresh token and authorization code)
      * configuration is enabled or not in identity.xml file.
      *
+     * <p>For client-secret-specific hashing decisions use {@link #isClientSecretHashingEnabled()} instead,
+     * as it also honours the newer {@code EnableClientSecretHashOnly} configuration.
+     *
      * @return Whether hash feature is enable or not.
      */
     public static boolean isHashEnabled() {
 
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return isHashEnabled;
+    }
+
+    /**
+     * Check whether client secret hashing is effectively enabled — i.e., either the legacy
+     * {@code EnableClientSecretHash} flag (which hashes client secret, access token, refresh token and auth code)
+     * OR the newer {@code EnableClientSecretHashOnly} flag (which hashes ONLY the client secret) is turned on.
+     *
+     * <p>Use this for any client-secret-hashing decision. For token / auth-code decisions,
+     * keep using {@link #isHashEnabled()} / {@link #isHashDisabled()}.
+     *
+     * @return Whether client secret hashing is enabled.
+     */
+    public static boolean isClientSecretHashingEnabled() {
+
+        return isHashEnabled() || OAuthServerConfiguration.getInstance().isClientSecretHashOnlyEnabled();
+    }
+
+    /**
+     * Check whether client secret hashing is disabled.
+     *
+     * @return Whether client secret hashing is disabled.
+     * @see #isClientSecretHashingEnabled()
+     */
+    public static boolean isClientSecretHashingDisabled() {
+
+        return !isClientSecretHashingEnabled();
     }
 
     /**
@@ -4870,6 +4921,7 @@ public class OAuth2Util {
                         "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
+        authenticatedUser.setSharedUser(authzUser.isSharedUser());
         if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
             authenticatedUser.setAccessingOrganization(authzUser.getAccessingOrganization());
             authenticatedUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
@@ -4955,6 +5007,33 @@ public class OAuth2Util {
      * @param tenantDomain          Tenant domain.
      * @param idpName               Idp name.
      * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantID           The tenant ID of the application where user get authenticated.
+     * @param isSharedUser          Whether the user is a shared user.
+     * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
+     * @throws IdentityOAuth2Exception If an error occurred while creating the authenticated user.
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, int appTenantID, boolean isSharedUser)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        authenticatedUser.setSharedUser(isSharedUser);
+        // For organization bound access tokens, the authenticated user should be populated considering below factors.
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
+                    IdentityTenantUtil.getTenantDomain(appTenantID), authenticatedUser.isFederatedUser());
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username              Username of the user.
+     * @param userStoreDomain       User store domain.
+     * @param tenantDomain          Tenant domain.
+     * @param idpName               Idp name.
+     * @param accessingOrganization The organization where the user is authorized to access.
      * @param appTenantDomain       The tenant domain of the application where user get authenticated.
      * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
      */
@@ -5000,15 +5079,24 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
+        /*
+        If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
+        Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
+        it will be used as the issuer.
+         */
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+
+            String residentIdp =  getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdp)) {
+                return residentIdp;
+            }
+        }
+
         if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 if (isMtlsRequest) {
                     return OAuthURL.getOAuth2MTLSTokenEPUrl();
-                }
-
-                if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
-                    return getResidentIdpEntityId(tenantDomain);
                 }
 
                 return ServiceURLBuilder.create()
@@ -5028,6 +5116,20 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
+
+        /*
+        If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
+        Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
+        it will be used as the issuer. When resident idp is used as the issuer, application level config to select
+        issuer to be root or sub-org will not be applied as well.
+         */
+        if (OAuthServerConfiguration.getInstance().getIsUseEntityIDAsIssuerEnabled()) {
+
+            String residentIdp =  getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdp)) {
+                return residentIdp;
+            }
+        }
 
         String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
@@ -6060,9 +6162,14 @@ public class OAuth2Util {
         List<String> federatedRoleBasedAuthzApps = IdentityUtil.getPropertyAsList(FIDP_ROLE_BASED_AUTHZ_APP_CONFIG);
         boolean isFederatedRoleBasedAuthzEnabled = false;
         if (!federatedRoleBasedAuthzApps.isEmpty()) {
-            OAuthAppDO app = null;
+            OAuthAppDO app;
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
             try {
-                app = getAppInformationByClientId(clientId);
+                if (StringUtils.isNotEmpty(accessingOrgId)) {
+                    app = getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+                } else {
+                    app = getAppInformationByClientId(clientId);
+                }
             } catch (InvalidOAuthClientException e) {
                 if (log.isDebugEnabled()) {
                     log.debug("Error while retrieving the Application Information for client id: "
@@ -6123,6 +6230,36 @@ public class OAuth2Util {
         }
 
         return externalConsentPageUrl;
+    }
+
+    /**
+     * Check whether the external consent page is enforced at the organization level.
+     * When enforced, the external consent page is used regardless of the application-level configuration.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return True if the external consent page is enforced at the organization level.
+     */
+    public static boolean isExternalConsentPageEnforced(String tenantDomain) {
+
+        try {
+            ConsentServerConfigsManagementService consentServerConfigsManagementService =
+                    OAuth2ServiceComponentHolder.getConsentServerConfigsManagementService();
+            if (consentServerConfigsManagementService == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("ConsentServerConfigsManagementService is not available. " +
+                            "Skipping org-level external consent page enforcement check for tenant domain: " +
+                            tenantDomain);
+                }
+                return false;
+            }
+            return consentServerConfigsManagementService.isExternalConsentPageEnforced(tenantDomain);
+        } catch (ConsentServerConfigsMgtException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while checking external consent page enforcement for tenant domain: " +
+                        tenantDomain, e);
+            }
+            return false;
+        }
     }
 
     /**
@@ -6497,8 +6634,10 @@ public class OAuth2Util {
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
-        if  (isOrgSSOFederation) {
-            // Set authorized user tenant domain to the tenant domain of the application.
+        if  (isOrgSSOFederation && !authenticatedUser.isSharedUser()) {
+            /* Set authorized user tenant domain to the tenant domain of the application.
+             * For shared users, tenant domain of the user resident organization is already set.
+             */
             authenticatedUser.setTenantDomain(appTenantDomain);
         }
     }

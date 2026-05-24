@@ -1892,6 +1892,18 @@ public class EndpointUtil {
         if (serviceProvider == null) {
             return isEnabled;
         }
+
+        // Check org-level enforcement first. If enforced, external consent page is used regardless of app-level config.
+        if (OAuth2Util.isExternalConsentPageEnforced(serviceProvider.getTenantDomain())) {
+            if (log.isDebugEnabled()) {
+                log.debug("External consent page enforced at org level for tenant: " +
+                        serviceProvider.getTenantDomain() + ". Application-level config will be ignored for " +
+                        "application: " + serviceProvider.getApplicationName() + " with id: " +
+                        serviceProvider.getApplicationID());
+            }
+            return true;
+        }
+
         LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
 
         if (config != null) {

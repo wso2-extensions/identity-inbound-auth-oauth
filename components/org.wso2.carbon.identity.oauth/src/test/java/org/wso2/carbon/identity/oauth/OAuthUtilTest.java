@@ -30,6 +30,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -491,13 +492,28 @@ public class OAuthUtilTest {
     public void testAuthenticatedUserInSharedUserFlow(boolean isSSOLoginUser, boolean isUserAssociationFound,
                                                       boolean shouldThrowUserStoreException) throws Exception {
 
-        try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class)) {
+        try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(
+                    anyInt(), anyString(), anyString())).thenReturn("dummyUserId");
+
+            userCoreUtil.when(() -> UserCoreUtil.getDomainName(any())).thenReturn("dummyDomainName");
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
+                    .thenReturn("dummyTenantDomain");
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            when(organizationManager.resolveOrganizationId(anyString())).thenReturn("dummyOrgId");
+            when(organizationManager.getPrimaryOrganizationId(anyString())).thenReturn("dummyPrimaryOrgId");
+            when(organizationManager.resolveTenantDomain(anyString())).thenReturn("dummyTenantDomain");
 
             UniqueIDJDBCUserStoreManager userStoreManager = Mockito.spy(
                     new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
 
             org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
             doReturn(mockUser).when(userStoreManager).getUser(any(), eq(null));
+            lenient().doReturn(false).when(userStoreManager).isExistingUser(anyString());
 
             Map<String, String> claimsMap = new HashMap<>();
             claimsMap.put(MANAGED_ORG_CLAIM_URI, SAMPLE_ID);
@@ -515,7 +531,8 @@ public class OAuthUtilTest {
             if (isUserAssociationFound) {
                 UserAssociation userAssociation = new UserAssociation();
                 userAssociation.setAssociatedUserId(SAMPLE_ID);
-                when(organizationUserSharingService.getUserAssociation(null, null)).thenReturn(userAssociation);
+                when(organizationUserSharingService.getUserAssociation(isNull(), anyString()))
+                        .thenReturn(userAssociation);
             }
             if (shouldThrowUserStoreException) {
                 when(realmService.getTenantUserRealm(anyInt())).thenThrow(new UserStoreException());
