@@ -867,6 +867,11 @@ public final class OAuthConstants {
         public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
         public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
         public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
+        public static final String AUTHORIZED_SCOPES = "AUTHORIZED_SCOPES";
+        public static final String UNAUTHORIZED_SCOPES = "UNAUTHORIZED_SCOPES";
+        public static final String ACCESS_TOKEN_VALIDITY_MILLIS = "ACCESS_TOKEN_VALIDITY_MILLIS";
+        public static final String REFRESH_TOKEN_VALIDITY_MILLIS = "REFRESH_TOKEN_VALIDITY_MILLIS";
+        public static final String REMOTE_IP = "REMOTE_IP";
     }
 
     /**
