@@ -28,7 +28,13 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.GracefulRefreshTokenReuseCountCache;
+import org.wso2.carbon.identity.oauth.cache.GracefulRefreshTokenReuseCountCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.GracefulRefreshTokenReuseCountCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -47,6 +53,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -67,7 +74,91 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         RefreshTokenValidationDataDO validationBean = OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                 .validateRefreshToken(tokenReq.getClientId(), tokenReq.getRefreshToken());
         validatePersistedAccessToken(validationBean, tokenReq.getClientId());
+        validateReuseRefreshToken(validationBean, tokenReq.getClientId(), tokenReq.getTenantDomain());
         return validationBean;
+    }
+
+    /**
+     * When graceful refresh token rotation is enabled for the application:
+     * <ol>
+     *   <li>Flips the in-memory token state from {@code GRACEFULLY_ROTATED} back to {@code ACTIVE} so that
+     *       downstream validation (validateRefreshTokenStatus, setRefreshTokenData, etc.) sees {@code ACTIVE}.
+     *       The DB value stays {@code GRACEFULLY_ROTATED}.</li>
+     *   <li>Rejects the request if the reuse count has already reached the app-configured limit.
+     *       Missing or unparseable reuse-count attributes are treated as zero (covers first-time issuance,
+     *       legacy rows, and custom persistence implementations).</li>
+     * </ol>
+     * No-op when graceful rotation is disabled or the application cannot be resolved.
+     */
+    private void validateReuseRefreshToken(RefreshTokenValidationDataDO validationBean, String clientId,
+                                             String tenantDomain) throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = StringUtils.isNotBlank(tenantDomain)
+                    ? OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)
+                    : OAuth2Util.getAppInformationByClientIdOnly(clientId);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving OAuth application for client id: " + clientId, e);
+        }
+        if (oAuthAppDO == null || !oAuthAppDO.isGracefulRefreshTokenRotationEnabled()) {
+            return;
+        }
+        // (1) Normalise token state in-memory for downstream validation.
+        if (OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED.equals(
+                validationBean.getRefreshTokenState())) {
+            validationBean.setRefreshTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        }
+        // (1b) Reject the request if the grace window has already closed.
+        AccessTokenExtendedAttributes graceAttrs = validationBean.getAccessTokenExtendedAttributes();
+        if (graceAttrs != null && graceAttrs.getParameters() != null) {
+            String rawGrace = graceAttrs.getParameters()
+                    .get(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+            if (StringUtils.isNotBlank(rawGrace)) {
+                long graceValidity;
+                try {
+                    graceValidity = Long.parseLong(rawGrace);
+                } catch (NumberFormatException e) {
+                    log.warn("Unparseable graceful refresh token grace validity '" + rawGrace
+                            + "' for client: " + clientId + ". Rejecting refresh request as grace-expired.");
+                    throw new IdentityOAuth2Exception("Refresh token grace period has expired.");
+                }
+                long issuedTime = validationBean.getIssuedTime().getTime();
+                if (OAuth2Util.getTimeToExpire(issuedTime, graceValidity, true) < 0) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Refresh token grace window has closed for client: " + clientId
+                                + ". Grace validity (ms): " + graceValidity + ". Rejecting request.");
+                    }
+                    throw new IdentityOAuth2Exception("Refresh token grace period has expired.");
+                }
+            }
+        }
+        // (2) Enforce reuse limit.
+        AccessTokenExtendedAttributes extendedAttributes = validationBean.getAccessTokenExtendedAttributes();
+        if (extendedAttributes == null || extendedAttributes.getParameters() == null) {
+            return;
+        }
+        String rawReuseCount = extendedAttributes.getParameters()
+                .get(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        if (StringUtils.isBlank(rawReuseCount)) {
+            return;
+        }
+        int reuseCount;
+        try {
+            reuseCount = Integer.parseInt(rawReuseCount);
+        } catch (NumberFormatException e) {
+            log.warn("Unparseable graceful refresh token reuse count '" + rawReuseCount
+                    + "' for client: " + clientId + ". Treating as zero.");
+            return;
+        }
+        int reuseLimit = oAuthAppDO.getGracefulRefreshTokenReuseLimit();
+        if (reuseCount >= reuseLimit) {
+            if (log.isDebugEnabled()) {
+                log.debug("Refresh token reuse limit (" + reuseLimit + ") reached for client: " + clientId
+                        + ". Current reuse count: " + reuseCount + ". Rejecting refresh request.");
+            }
+            throw new IdentityOAuth2Exception("Refresh token has reached the configured graceful reuse limit.");
+        }
     }
 
     @Override
@@ -82,6 +173,99 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         oldAccessToken.getAccessToken())));
             }
         }
+
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+        if (oAuthAppDO != null && isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())
+                && oAuthAppDO.isGracefulRefreshTokenRotationEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Graceful refresh token rotation is enabled for client: " + clientId
+                        + ". Processing token with graceful rotation.");
+            }
+            int tenantId = IdentityTenantUtil.getTenantId(
+                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+            GracefulRefreshTokenReuseCountCacheKey reuseCountCacheKey =
+                    new GracefulRefreshTokenReuseCountCacheKey(oldAccessToken.getTokenId());
+            int reuseCount = getReuseCount(oldAccessToken.getTokenId(), clientId, reuseCountCacheKey, tenantId,
+                    userStoreDomain);
+            if (reuseCount >= oAuthAppDO.getGracefulRefreshTokenReuseLimit()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Fresh reuse count (" + reuseCount + ") has reached the configured limit ("
+                            + oAuthAppDO.getGracefulRefreshTokenReuseLimit() + ") for client: " + clientId
+                            + ". Rejecting refresh request.");
+                }
+                throw new IdentityOAuth2Exception(
+                        "Refresh token has reached the configured graceful reuse limit.");
+            }
+            // Write-through: stamp the reuse count on the old token's extended attributes before the DB write, so that
+            // any concurrent reuse attempts will see the updated count and get rejected when the limit is reached.
+            overlayReuseCountOnAccessToken(oldAccessToken, reuseCount);
+
+            // Revoke whichever token in the old↔successor pair is now stale: on reuse the successor
+            // is revoked; on the first rotation a predecessor (if any) is revoked via JOIN lookup.
+            // Returns true when a successor was found (= reuse), false for a fresh first-rotation.
+            boolean isRefreshTokenReuse = revokeOverlappingTokens(oldAccessToken, userStoreDomain, clientId);
+            // Derive the reuse count to stamp on the new token row: existing count + 1 on reuse,
+            // or the existing count unchanged for a fresh first rotation.
+            int newReuseCount = computeReuseCount(oldAccessToken, isRefreshTokenReuse);
+            if (log.isDebugEnabled()) {
+                log.debug((isRefreshTokenReuse
+                        ? "Refresh token reuse detected for client: " + clientId
+                        : "First graceful rotation for client: " + clientId)
+                        + ". New reuse count: " + newReuseCount + ".");
+            }
+            // Mirror the new reuse count onto the in-memory old-token object so that the value
+            // is available when the DAO assembles the extended-attributes JSON for the old row.
+            stampReuseCountOnOldAccessToken(oldAccessToken, newReuseCount);
+            Map<String, String> oldRowUpdates = new HashMap<>();
+            if (newReuseCount > 0) {
+                oldRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
+                        Integer.toString(newReuseCount));
+                oldRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID,
+                        accessTokenBean.getTokenId());
+            }
+
+            // On the first rotation, stamp the grace deadline (elapsed + grace period) as an extended attribute
+            // so that downstream expiry checks can detect when the grace window has closed.
+            // On subsequent reuses the deadline is already anchored; we skip updating the old row's state.
+            String oldTokenNewStateId = null;
+            String oldTokenNewState = null;
+            if (newReuseCount == 0) {
+                long elapsedSinceRefreshIssuedMillis =
+                        System.currentTimeMillis() - oldAccessToken.getIssuedTime().getTime();
+                long graceMillis =
+                        TimeUnit.SECONDS.toMillis(oAuthAppDO.getGracefulRefreshTokenRotationValidityPeriod());
+                long graceValidityMillis = elapsedSinceRefreshIssuedMillis + graceMillis;
+                oldTokenNewStateId = UUID.randomUUID().toString();
+                oldTokenNewState = OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED;
+                oldRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS,
+                        Long.toString(graceValidityMillis));
+                oldRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID,
+                        accessTokenBean.getTokenId());
+                if (log.isDebugEnabled()) {
+                    log.debug("Stamping grace deadline of " + graceValidityMillis + " ms on old token for client: "
+                            + clientId + ". Token id: " + oldAccessToken.getTokenId()
+                            + ". State will be set to GRACEFULLY_ROTATED.");
+                }
+            }
+
+            // Atomically mark the old token as GRACEFULLY_ROTATED (first rotation) or update its
+            // extended attributes (reuse), and insert the new access token — all in one DB transaction
+            // so a crash between the two writes cannot leave the token table in an inconsistent state.
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
+                    .gracefullyRotateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
+                            oldAccessToken.getIssuedTime(),
+                            oldTokenNewStateId, oldTokenNewState, clientId, accessTokenBean, userStoreDomain,
+                            oldAccessToken.getGrantType(), oldRowUpdates);
+            // Write-through: update cache with the new reuse count after the DB write succeeds.
+            GracefulRefreshTokenReuseCountCache.getInstance().addToCache(reuseCountCacheKey,
+                    new GracefulRefreshTokenReuseCountCacheEntry(newReuseCount), tenantId);
+            if (log.isDebugEnabled()) {
+                log.debug("Updated graceful reuse count cache to " + newReuseCount + " for token id: "
+                        + oldAccessToken.getTokenId() + " after DB write for client: " + clientId + ".");
+            }
+            return;
+        }
+
         // set the previous access token state to "INACTIVE" and store new access token in single db connection
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
                 .invalidateAndCreateNewAccessToken(oldAccessToken.getTokenId(),
@@ -135,9 +319,15 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         }
         if (tokenReq.getAccessTokenExtendedAttributes() != null &&
                 tokenReq.getAccessTokenExtendedAttributes().getParameters() != null) {
-            accessTokenDO.setAccessTokenExtendedAttributes(
-                    new AccessTokenExtendedAttributes(
-                            new HashMap<>(tokenReq.getAccessTokenExtendedAttributes().getParameters())));
+            HashMap<String, String> parameters =
+                    new HashMap<>(tokenReq.getAccessTokenExtendedAttributes().getParameters());
+            parameters.remove(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+            parameters.remove(
+                    GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+            parameters.remove(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+            if (!parameters.isEmpty()) {
+                accessTokenDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(parameters));
+            }
         }
         return accessTokenDO;
     }
@@ -185,6 +375,203 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             return false;
         }
         return true;
+    }
+
+    /**
+     * Revoke the stale partner of {@code oldAccessToken} using the {@code successorTokenId} linkage.
+     *
+     * <p>Case A (reuse): if {@code oldAccessToken} carries a {@code successorTokenId} extended attribute,
+     * the token it points to is stale and is revoked. Returns {@code true} to signal reuse so the
+     * caller increments the reuse counter.
+     *
+     * <p>Case B (fresh): if no such attribute is present, a JOIN-based DAO query looks for any token
+     * whose own {@code successorTokenId} attribute equals {@code oldAccessToken.tokenId} (i.e., a
+     * predecessor that still has an active row). If found it is revoked. Returns {@code false}.
+     */
+    private boolean revokeOverlappingTokens(RefreshTokenValidationDataDO oldAccessToken, String userStoreDomain,
+                                            String clientId) throws IdentityOAuth2Exception {
+
+        // Case A: old token already has a successor → this is a reuse.
+        String successorTokenId = readSuccessorTokenId(oldAccessToken);
+        if (StringUtils.isNotBlank(successorTokenId)) {
+            String successorAccessToken = OAuthTokenPersistenceFactory.getInstance()
+                    .getAccessTokenDAOImpl(clientId)
+                    .getAccessTokenByTokenId(successorTokenId);
+            if (StringUtils.isNotBlank(successorAccessToken)) {
+                revokeAndClearCache(successorAccessToken, successorTokenId, clientId);
+            } else if (log.isDebugEnabled()) {
+                log.debug("Successor token id " + successorTokenId
+                        + " has no active access token row for client: " + clientId
+                        + ". Treating as reuse anyway.");
+            }
+            return true;
+        }
+
+        // Case B: look for a predecessor whose successorTokenId points at the current old token.
+        AccessTokenDO predecessor = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(clientId)
+                .getActiveTokenByExtendedAttribute(
+                        GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID,
+                        oldAccessToken.getTokenId(), userStoreDomain);
+        if (predecessor != null) {
+            revokeAndClearCache(predecessor.getAccessToken(), predecessor.getTokenId(), clientId);
+        } else if (log.isDebugEnabled()) {
+            log.debug("No predecessor token referencing old token id "
+                    + oldAccessToken.getTokenId() + " for client: " + clientId
+                    + " during graceful rotation.");
+        }
+        return false;
+    }
+
+    private String readSuccessorTokenId(RefreshTokenValidationDataDO oldAccessToken) {
+
+        AccessTokenExtendedAttributes attrs = oldAccessToken.getAccessTokenExtendedAttributes();
+        if (attrs == null || attrs.getParameters() == null) {
+            return null;
+        }
+        return attrs.getParameters()
+                .get(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
+    }
+
+    private void revokeAndClearCache(String plainAccessToken, String tokenId, String clientId)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking stale token (hashed): " + DigestUtils.sha256Hex(plainAccessToken)
+                    + " tokenId: " + tokenId + " for client: " + clientId
+                    + " during graceful refresh token rotation.");
+        }
+        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
+                .revokeAccessTokens(new String[]{plainAccessToken});
+        AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(
+                new AuthorizationGrantCacheKey(plainAccessToken), tokenId);
+    }
+
+    /**
+     * Compute the reuse count to persist on the new token row. Reads the existing count from
+     * {@code oldAccessToken}'s extended attributes (defaulting to 0 when absent or unparseable)
+     * and increments by one only when this rotation is a reuse of an already-rotated row.
+     */
+    private int computeReuseCount(RefreshTokenValidationDataDO oldAccessToken, boolean isRefreshTokenReuse) {
+
+        int oldCount = readPersistedReuseCount(oldAccessToken);
+        return isRefreshTokenReuse ? oldCount + 1 : oldCount;
+    }
+
+    /**
+     * Read the graceful reuse count stored in {@code tokenData}'s extended attributes.
+     * Returns 0 when absent, blank, or unparseable.
+     */
+    private int readPersistedReuseCount(RefreshTokenValidationDataDO tokenData) {
+
+        AccessTokenExtendedAttributes attributes = tokenData.getAccessTokenExtendedAttributes();
+        if (attributes == null || attributes.getParameters() == null) {
+            return 0;
+        }
+        String rawCount = attributes.getParameters()
+                .get(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        return parseReuseCount(rawCount);
+    }
+
+    /**
+     * Returns the current graceful reuse count for the given token, checking the cache first and falling
+     * back to a DB read on a cache miss. Populates the cache from the DB value on miss.
+     */
+    private int getReuseCount(String tokenId, String clientId,
+                              GracefulRefreshTokenReuseCountCacheKey cacheKey,
+                              int tenantId, String userStoreDomain) throws IdentityOAuth2Exception {
+
+        GracefulRefreshTokenReuseCountCacheEntry cachedEntry =
+                GracefulRefreshTokenReuseCountCache.getInstance().getValueFromCache(cacheKey, tenantId);
+        if (cachedEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cache hit for graceful reuse count of token id: " + tokenId
+                        + ". Cached count: " + cachedEntry.getReuseCount() + ".");
+            }
+            return cachedEntry.getReuseCount();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Cache miss for graceful reuse count of token id: " + tokenId
+                    + ". Falling back to DB read for client: " + clientId + ".");
+        }
+        String freshRawCount = OAuthTokenPersistenceFactory.getInstance()
+                .getAccessTokenDAOImpl(clientId)
+                .getAccessTokenExtendedAttributeValue(
+                        tokenId, GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
+                        userStoreDomain);
+        int freshCount = parseReuseCount(freshRawCount);
+        if (log.isDebugEnabled()) {
+            log.debug("Loaded graceful reuse count " + freshCount + " from DB for token id: " + tokenId
+                    + ". Populating cache.");
+        }
+        GracefulRefreshTokenReuseCountCache.getInstance().addToCacheOnRead(cacheKey,
+                new GracefulRefreshTokenReuseCountCacheEntry(freshCount), tenantId);
+        return freshCount;
+    }
+
+    private int parseReuseCount(String raw) {
+
+        if (StringUtils.isBlank(raw)) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Update the in-memory extended attributes of the OLD token row with the new reuse count. When
+     * {@code newReuseCount} is zero and no attributes exist yet, this is a no-op (avoids creating
+     * empty attribute containers for the first-rotation case).
+     */
+    private void stampReuseCountOnOldAccessToken(RefreshTokenValidationDataDO oldAccessToken,
+                                                 int newReuseCount) {
+
+        if (newReuseCount == 0 && oldAccessToken.getAccessTokenExtendedAttributes() == null) {
+            return;
+        }
+        AccessTokenExtendedAttributes attributes = oldAccessToken.getAccessTokenExtendedAttributes();
+        if (attributes == null) {
+            attributes = new AccessTokenExtendedAttributes(new HashMap<>());
+            oldAccessToken.setAccessTokenExtendedAttributes(attributes);
+        } else if (attributes.getParameters() == null) {
+            attributes.setParameters(new HashMap<>());
+        }
+        attributes.getParameters().put(
+                GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
+                Integer.toString(newReuseCount));
+    }
+
+    private void overlayReuseCountOnAccessToken(RefreshTokenValidationDataDO oldAccessToken, int reuseCount) {
+
+        AccessTokenExtendedAttributes attributes = oldAccessToken.getAccessTokenExtendedAttributes();
+        if (attributes == null) {
+            attributes = new AccessTokenExtendedAttributes(new HashMap<>());
+            oldAccessToken.setAccessTokenExtendedAttributes(attributes);
+        } else if (attributes.getParameters() == null) {
+            attributes.setParameters(new HashMap<>());
+        }
+        attributes.getParameters().put(
+                GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
+                Integer.toString(reuseCount));
+    }
+
+    private boolean isRenewRefreshToken(String renewRefreshToken) {
+
+        if (StringUtils.isNotBlank(renewRefreshToken)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the Oauth application specific renew " +
+                        "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
+            }
+            return Boolean.parseBoolean(renewRefreshToken);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Reading the global renew refresh token value from the identity.xml");
+            }
+            return OAuthServerConfiguration.getInstance().isRefreshTokenRenewalEnabled();
+        }
     }
 
     private List<AccessTokenDO> getAccessTokenBeans(OAuth2AccessTokenReqDTO tokenReq,
@@ -258,6 +645,23 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
                     .getAccessToken());
 
+            // Pre-compute graceful rotation validity before mutating the entry.
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) msgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+            // Only restore the old cache entry with a grace TTL on the first rotation. On reuses the entry
+            // already carries the original deadline; recomputing elapsed would push it forward.
+            boolean isGracefulRotation = oAuthAppDO != null
+                    && isRenewRefreshToken(oAuthAppDO.getRenewRefreshTokenEnabled())
+                    && oAuthAppDO.isGracefulRefreshTokenRotationEnabled()
+                    && readPersistedReuseCount(oldAccessToken) == 0;
+            long gracefulValidityNanos = 0;
+            if (isGracefulRotation) {
+                long elapsedSinceRefreshIssuedMillis =
+                        System.currentTimeMillis() - oldAccessToken.getIssuedTime().getTime();
+                long graceMillis =
+                        TimeUnit.SECONDS.toMillis(oAuthAppDO.getGracefulRefreshTokenRotationValidityPeriod());
+                gracefulValidityNanos = TimeUnit.MILLISECONDS.toNanos(elapsedSinceRefreshIssuedMillis + graceMillis);
+            }
+
             if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
                 grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
             } else {
@@ -280,6 +684,21 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 grantCacheEntry.setUserAttributes(null);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+
+            // When graceful refresh token rotation is enabled, re-add the old cache entry under the old access
+            // token key with the graceful validity period so that the old refresh token remains usable within
+            // the grace window.
+            if (isGracefulRotation) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Re-adding authorization grant cache entry for old access token id: "
+                            + oldAccessToken.getTokenId() + " with grace validity: " + gracefulValidityNanos
+                            + " ns so the old refresh token remains usable within the grace window.");
+                }
+                grantCacheEntry.setTokenId(oldAccessToken.getTokenId());
+                grantCacheEntry.setValidityPeriod(gracefulValidityNanos);
+                AuthorizationGrantCache.getInstance().addToCacheByToken(oldAuthorizationGrantCacheKey,
+                        grantCacheEntry);
+            }
         }
     }
 }
