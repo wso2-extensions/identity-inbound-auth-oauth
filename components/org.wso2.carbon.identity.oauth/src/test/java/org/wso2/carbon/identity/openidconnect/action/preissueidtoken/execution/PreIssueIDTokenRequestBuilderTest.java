@@ -26,6 +26,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
+import org.wso2.carbon.identity.action.management.api.model.Action;
 import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
@@ -206,7 +208,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ID_TOKEN);
@@ -230,7 +232,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ID_TOKEN);
@@ -256,7 +258,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ID_TOKEN);
@@ -274,7 +276,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ID_TOKEN);
@@ -300,7 +302,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -322,7 +324,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
     }
@@ -349,7 +351,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -388,7 +390,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -422,7 +424,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -456,7 +458,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -472,7 +474,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(ID_TOKEN_DTO, getMockIDTokenDTO())
                 .add(REQUEST_TYPE, "invalid_type");
 
-        preIssueIDTokenRequestBuilder.buildActionExecutionRequest(flowContext, null);
+        preIssueIDTokenRequestBuilder.buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
     }
 
     @Test
@@ -498,7 +500,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertNotNull(actionExecutionRequest.getAllowedOperations());
@@ -513,7 +515,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ID_TOKEN);
@@ -551,7 +553,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -596,7 +598,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -636,7 +638,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -668,7 +670,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -701,7 +703,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -734,7 +736,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -756,7 +758,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -786,7 +788,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -816,7 +818,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -846,7 +848,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -871,7 +873,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         List<AllowedOperation> allowedOperations = actionExecutionRequest.getAllowedOperations();
@@ -889,7 +891,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         List<AllowedOperation> allowedOperations = actionExecutionRequest.getAllowedOperations();
@@ -931,7 +933,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -952,7 +954,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1225,7 +1227,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1255,7 +1257,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1292,7 +1294,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1322,7 +1324,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1361,7 +1363,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1394,7 +1396,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1439,7 +1441,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1472,7 +1474,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1511,7 +1513,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1552,7 +1554,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_TOKEN);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1603,7 +1605,7 @@ public class PreIssueIDTokenRequestBuilderTest {
                 .add(REQUEST_TYPE, REQUEST_TYPE_AUTHZ);
 
         ActionExecutionRequest actionExecutionRequest = preIssueIDTokenRequestBuilder
-                .buildActionExecutionRequest(flowContext, null);
+                .buildActionExecutionRequest(flowContext, mockActionExecutionRequestContext());
 
         Assert.assertNotNull(actionExecutionRequest);
         PreIssueIDTokenEvent event = (PreIssueIDTokenEvent) actionExecutionRequest.getEvent();
@@ -1612,5 +1614,15 @@ public class PreIssueIDTokenRequestBuilderTest {
         Assert.assertEquals(request.getAdditionalHeaders().size(), 2);
         Assert.assertNotNull(request.getAdditionalParams());
         Assert.assertEquals(request.getAdditionalParams().size(), 2);
+    }
+
+    private ActionExecutionRequestContext mockActionExecutionRequestContext() {
+
+        ActionExecutionRequestContext context = mock(ActionExecutionRequestContext.class);
+        Action action = mock(Action.class);
+        when(context.getAction()).thenReturn(action);
+        when(action.getAttributes()).thenReturn(Collections.emptyList());
+
+        return context;
     }
 }

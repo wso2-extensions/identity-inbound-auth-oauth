@@ -61,7 +61,6 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model.PreIs
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
-import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -494,8 +493,7 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         Map<String, String> claimValues = new HashMap<>();
         try {
             if (StringUtils.isNotEmpty(userId) && StringUtils.isNotEmpty(userTenantDomain)) {
-                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-                claimValues = RequestBuilderUtil.getClaimValues(userId, attributes, userTenantDomain, realmService);
+                claimValues = RequestBuilderUtil.getClaimValues(userId, attributes, userTenantDomain);
             }
         } catch (Exception e) {
             LOG.error("Error occurred while retrieving user claims from user store.", e);
