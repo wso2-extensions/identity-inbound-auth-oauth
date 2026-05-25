@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.fapi;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth2.fapi.cache.FapiConfigCache;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtServerException;
@@ -45,6 +47,7 @@ import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
@@ -73,10 +76,22 @@ public class FapiConfigMgtServiceImplTest {
     private final FapiConfigMgtServiceImpl fapiConfigMgtService = new FapiConfigMgtServiceImpl();
     private static final String TENANT_DOMAIN = "carbon.super";
 
+    private MockedStatic<FapiConfigCache> mockedFapiConfigCache;
+
     @BeforeMethod
     public void setUp() {
 
         OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
+        FapiConfigCache mockCache = mock(FapiConfigCache.class);
+        mockedFapiConfigCache = mockStatic(FapiConfigCache.class);
+        mockedFapiConfigCache.when(FapiConfigCache::getInstance).thenReturn(mockCache);
+        lenient().when(mockCache.getValueFromCache(any(), any())).thenReturn(null);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedFapiConfigCache.close();
     }
 
     @DataProvider(name = "GetFapiConfigData")

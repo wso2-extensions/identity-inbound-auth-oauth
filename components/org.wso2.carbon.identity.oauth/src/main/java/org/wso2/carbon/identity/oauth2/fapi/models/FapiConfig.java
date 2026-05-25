@@ -18,12 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.fapi.models;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * The FapiConfig class handles the configuration for Financial-grade API (FAPI) settings.
  */
-public class FapiConfig {
+public class FapiConfig implements Serializable {
+
+    private static final long serialVersionUID = -3812947265451286734L;
 
     private boolean enabled;
     private List<FapiProfileEnum> supportedProfiles;

@@ -264,8 +264,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
                         requestedProfile.value(), supportedProfileValues);
             }
         } catch (FapiConfigMgtException e) {
-            throw handleServerException(ERROR_CODE_UNSUPPORTED_FAPI_PROFILE, e,
-                    requestedProfile.value(), "");
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, requestedProfile.value());
         }
     }
 

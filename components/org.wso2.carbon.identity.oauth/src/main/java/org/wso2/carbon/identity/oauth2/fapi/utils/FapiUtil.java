@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -100,7 +101,8 @@ public class FapiUtil {
             return false;
         }
         return FapiUtil.getFapiConformantApp(clientId)
-                .map(oAuthAppDo -> fapiProfile.value().equals(oAuthAppDo.getFapiProfile()))
+                .map(oAuthAppDo -> oAuthAppDo.isFapiConformanceEnabled()
+                        && fapiProfile.value().equals(oAuthAppDo.getFapiProfile()))
                 .orElse(false);
     }
 
@@ -201,15 +203,19 @@ public class FapiUtil {
             Map<String, String> attributeMap = getAttributeMap(resource.getAttributes());
             fapiConfig.setEnabled(Boolean.parseBoolean(attributeMap.get(FAPI_ENABLED)));
             fapiConfig.setSupportedProfiles(fromCommaSeparated(attributeMap.get(FAPI_SUPPORTED_PROFILES))
-                    .stream().map(FapiProfileEnum::fromValue).collect(Collectors.toList()));
+                    .stream().map(FapiProfileEnum::fromValue)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
         }
         return fapiConfig;
     }
 
     /**
-     * Retrieves the default FAPI configuration.
+     * Returns the default FAPI configuration used when no tenant-specific configuration has been stored.
+     * FAPI enforcement is enabled by default with FAPI 1.0 Advanced as the sole supported profile,
+     * preserving backwards compatibility for tenants that already have FAPI applications.
      *
-     * @return The default FapiConfig object with enforcement disabled and empty profile lists.
+     * @return a FapiConfig with enabled=true and [FAPI1_ADVANCED] as supported profiles.
      */
     public static FapiConfig getDefaultConfiguration() {
 

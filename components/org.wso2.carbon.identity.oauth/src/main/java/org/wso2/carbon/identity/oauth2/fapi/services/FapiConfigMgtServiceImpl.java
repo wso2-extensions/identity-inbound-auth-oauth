@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationMa
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth2.fapi.cache.FapiConfigCache;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.utils.ErrorMessage;
@@ -45,6 +46,7 @@ import static org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil.handleServerEx
 public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
 
     private static final Log log = LogFactory.getLog(FapiConfigMgtServiceImpl.class);
+    private static final String FAPI_CONFIG_CACHE_KEY = "FAPI_CONFIG";
 
     /**
      * Retrieves the FAPI configuration for a given tenant domain.
@@ -56,14 +58,18 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
     @Override
     public FapiConfig getFapiConfig(String tenantDomain) throws FapiConfigMgtException {
 
+        FapiConfig cached = FapiConfigCache.getInstance().getValueFromCache(FAPI_CONFIG_CACHE_KEY, tenantDomain);
+        if (cached != null) {
+            return cached;
+        }
+
         try {
-            // Attempt to retrieve the resource containing FAPI configuration.
             final Resource resource = this.getFapiConfigResource();
-            // If the resource is null, persist and return the default configuration, otherwise parse the resource.
-            if (resource == null) {
-                return FapiUtil.getDefaultConfiguration();
-            }
-            return FapiUtil.parseResource(resource);
+            FapiConfig fapiConfig = (resource == null)
+                    ? FapiUtil.getDefaultConfiguration()
+                    : FapiUtil.parseResource(resource);
+            FapiConfigCache.getInstance().addToCacheOnRead(FAPI_CONFIG_CACHE_KEY, fapiConfig, tenantDomain);
+            return fapiConfig;
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_FAPI_CONFIG_RETRIEVE, e, tenantDomain);
         }
@@ -82,9 +88,9 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
         validateTenantDomain(tenantDomain);
         validateFapiConfig(fapiConfig);
         try {
-            // Parse the FAPI configuration and replace the existing resource with the updated configuration.
             ResourceAdd resourceAdd = FapiUtil.parseConfig(fapiConfig);
             getConfigurationManager().replaceResource(FAPI_RESOURCE_TYPE_NAME, resourceAdd);
+            FapiConfigCache.getInstance().clearCacheEntry(FAPI_CONFIG_CACHE_KEY, tenantDomain);
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_FAPI_CONFIG_UPDATE, e, tenantDomain);
         }

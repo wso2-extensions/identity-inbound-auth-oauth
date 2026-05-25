@@ -79,10 +79,10 @@ import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.FAPIProfiles.FAPI1_ADVANCED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.FAPIProfiles.FAPI1_ADVANCED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_ALLOW_FEDERATED_USERS;
@@ -1905,7 +1905,7 @@ public class OAuthAppDAO {
                         FAPI_PROFILE, FAPI1_ADVANCED);
             }
 
-            if (consumerAppDO.getFapiProfile() != null) {
+            if (consumerAppDO.isFapiConformanceEnabled() && consumerAppDO.getFapiProfile() != null) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         FAPI_PROFILE, consumerAppDO.getFapiProfile());
             }
