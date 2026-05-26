@@ -21,13 +21,13 @@ package org.wso2.carbon.identity.oauth.cache;
 /**
  * Cache key for graceful refresh token reuse count cache. Keyed by tokenId.
  */
-public class GracefulRefreshTokenReuseCountCacheKey extends CacheKey {
+public class RefreshTokenCacheKey extends CacheKey {
 
     private static final long serialVersionUID = 3812746901234567890L;
 
     private final String cacheKeyString;
 
-    public GracefulRefreshTokenReuseCountCacheKey(String tokenId) {
+    public RefreshTokenCacheKey(String tokenId) {
 
         this.cacheKeyString = tokenId;
     }
@@ -40,10 +40,10 @@ public class GracefulRefreshTokenReuseCountCacheKey extends CacheKey {
     @Override
     public boolean equals(Object o) {
 
-        if (!(o instanceof GracefulRefreshTokenReuseCountCacheKey)) {
+        if (!(o instanceof RefreshTokenCacheKey)) {
             return false;
         }
-        return this.cacheKeyString.equals(((GracefulRefreshTokenReuseCountCacheKey) o).getCacheKeyString());
+        return this.cacheKeyString.equals(((RefreshTokenCacheKey) o).getCacheKeyString());
     }
 
     @Override

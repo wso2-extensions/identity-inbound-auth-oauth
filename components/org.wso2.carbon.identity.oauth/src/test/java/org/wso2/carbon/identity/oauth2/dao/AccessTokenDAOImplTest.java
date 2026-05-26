@@ -66,6 +66,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -990,7 +991,7 @@ public class AccessTokenDAOImplTest {
             identityDatabaseUtil.verify(
                     () -> IdentityDatabaseUtil.rollbackTransaction(mockConnection), times(1));
             oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
-                    anyString(), anyString(), anyString(), any(Boolean.class)), never());
+                    anyString(), anyString(), anyString(), anyBoolean()), never());
         }
     }
 

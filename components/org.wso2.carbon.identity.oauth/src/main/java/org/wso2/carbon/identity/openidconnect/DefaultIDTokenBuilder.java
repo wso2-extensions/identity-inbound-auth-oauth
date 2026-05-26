@@ -243,7 +243,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             if (accessTokenExtendedAttributes != null && accessTokenExtendedAttributes.getParameters() != null) {
                 // This property should not be returned in the ID token.
                 accessTokenExtendedAttributes.getParameters().remove(OAuthConstants.IS_SHARED_USER);
-                for (Map.Entry<String, String> entry : accessTokenExtendedAttributes.getParameters().entrySet()) {
+                Map<String, String> filteredParams = new HashMap<>(accessTokenExtendedAttributes.getParameters());
+                removeInternalExtendedAttributes(filteredParams);
+                for (Map.Entry<String, String> entry : filteredParams.entrySet()) {
                     jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
                 }
             }
@@ -481,6 +483,14 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private String getSpTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+    }
+
+    private void removeInternalExtendedAttributes(Map<String, String> params) {
+
+        params.remove(OAuthConstants.IS_SHARED_USER);
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+        params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
     }
 
     private CustomClaimDTO handleOIDCCustomClaims(OAuthTokenReqMessageContext tokReqMsgCtx,

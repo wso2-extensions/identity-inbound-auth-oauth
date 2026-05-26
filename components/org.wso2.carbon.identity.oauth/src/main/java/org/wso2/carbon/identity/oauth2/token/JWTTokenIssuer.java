@@ -951,6 +951,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             if (customClaims != null && !customClaims.isEmpty()) {
                 customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
                 customClaims.remove(OAuthConstants.IS_SHARED_USER);
+                customClaims = new HashMap<>(customClaims);
+                removeInternalExtendedAttributes(customClaims);
                 if (log.isDebugEnabled()) {
                     log.debug("Processing custom claims for JWT token. Total claims count: " + customClaims.size());
                 }
@@ -968,6 +970,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    private void removeInternalExtendedAttributes(Map<String, String> customClaims) {
+
+        customClaims.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        customClaims.remove
+                (OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+        customClaims.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
     }
 
     /**

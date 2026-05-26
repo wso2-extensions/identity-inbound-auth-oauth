@@ -21,23 +21,23 @@ package org.wso2.carbon.identity.oauth.cache;
 /**
  * Cache entry holding the reuse count for a gracefully-rotated refresh token row.
  */
-public class GracefulRefreshTokenReuseCountCacheEntry extends CacheEntry {
+public class RefreshTokenCacheEntry extends CacheEntry {
 
     private static final long serialVersionUID = 7654321098765432101L;
-    private int reuseCount;
+    private int gracefulReuseCount;
 
-    public GracefulRefreshTokenReuseCountCacheEntry(int reuseCount) {
+    public RefreshTokenCacheEntry(int gracefulReuseCount) {
 
-        this.reuseCount = reuseCount;
+        this.gracefulReuseCount = gracefulReuseCount;
     }
 
-    public int getReuseCount() {
+    public int getGracefulReuseCount() {
 
-        return reuseCount;
+        return gracefulReuseCount;
     }
 
-    public void setReuseCount(int reuseCount) {
+    public void setGracefulReuseCount(int gracefulReuseCount) {
 
-        this.reuseCount = reuseCount;
+        this.gracefulReuseCount = gracefulReuseCount;
     }
 }

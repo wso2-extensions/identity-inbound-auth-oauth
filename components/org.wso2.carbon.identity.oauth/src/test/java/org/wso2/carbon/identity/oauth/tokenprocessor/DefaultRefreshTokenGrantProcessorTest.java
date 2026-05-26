@@ -32,8 +32,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.cache.GracefulRefreshTokenReuseCountCache;
-import org.wso2.carbon.identity.oauth.cache.GracefulRefreshTokenReuseCountCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.RefreshTokenCache;
+import org.wso2.carbon.identity.oauth.cache.RefreshTokenCacheEntry;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -74,6 +74,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Unit tests for {@link DefaultRefreshTokenGrantProcessor}, focused on the graceful
@@ -97,7 +98,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
     @Mock private OAuthTokenPersistenceFactory mockPersistenceFactory;
     @Mock private AccessTokenDAO mockAccessTokenDAO;
     @Mock private TokenManagementDAO mockTokenManagementDAO;
-    @Mock private GracefulRefreshTokenReuseCountCache mockReuseCountCache;
+    @Mock private RefreshTokenCache mockReuseCountCache;
     @Mock private AuthorizationGrantCache mockAuthGrantCache;
     @Mock private AuthorizationGrantCacheEntry mockGrantCacheEntry;
     @Mock private OAuthServerConfiguration mockServerConfig;
@@ -107,7 +108,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
     private MockedStatic<OAuthTokenPersistenceFactory> persistenceFactoryMockedStatic;
     private MockedStatic<OAuthServerConfiguration> serverConfigMockedStatic;
     private MockedStatic<OIDCClaimUtil> oidcClaimUtilMockedStatic;
-    private MockedStatic<GracefulRefreshTokenReuseCountCache> reuseCountCacheMockedStatic;
+    private MockedStatic<RefreshTokenCache> reuseCountCacheMockedStatic;
     private MockedStatic<AuthorizationGrantCache> authGrantCacheMockedStatic;
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
     private MockedStatic<IdentityUtil> identityUtilMockedStatic;
@@ -122,7 +123,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
         persistenceFactoryMockedStatic = mockStatic(OAuthTokenPersistenceFactory.class);
         serverConfigMockedStatic = mockStatic(OAuthServerConfiguration.class);
         oidcClaimUtilMockedStatic = mockStatic(OIDCClaimUtil.class);
-        reuseCountCacheMockedStatic = mockStatic(GracefulRefreshTokenReuseCountCache.class);
+        reuseCountCacheMockedStatic = mockStatic(RefreshTokenCache.class);
         authGrantCacheMockedStatic = mockStatic(AuthorizationGrantCache.class);
         identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
         identityUtilMockedStatic = mockStatic(IdentityUtil.class);
@@ -136,7 +137,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
         serverConfigMockedStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfig);
         lenient().when(mockServerConfig.isRefreshTokenRenewalEnabled()).thenReturn(true);
 
-        reuseCountCacheMockedStatic.when(GracefulRefreshTokenReuseCountCache::getInstance)
+        reuseCountCacheMockedStatic.when(RefreshTokenCache::getInstance)
                 .thenReturn(mockReuseCountCache);
         authGrantCacheMockedStatic.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthGrantCache);
 
@@ -345,8 +346,9 @@ public class DefaultRefreshTokenGrantProcessorTest {
         assertNotNull(result);
     }
 
-    @Test
-    public void testValidateRefreshToken_unparseableReuseCount_treatedAsZeroNoThrow() throws Exception {
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = ".*grace period has expired.*")
+    public void testValidateRefreshToken_unparseableReuseCount_rejectsRequest() throws Exception {
 
         when(mockOAuthAppDO.isGracefulRefreshTokenRotationEnabled()).thenReturn(true);
         when(mockOAuthAppDO.getGracefulRefreshTokenReuseLimit()).thenReturn(1);
@@ -359,10 +361,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
         validationBean.setAccessToken(OLD_ACCESS_TOKEN);
         when(mockTokenManagementDAO.validateRefreshToken(CLIENT_ID, REFRESH_TOKEN)).thenReturn(validationBean);
 
-        // Limit=1, effective count=0 → should not throw.
-        RefreshTokenValidationDataDO result =
-                processor.validateRefreshToken(buildTokenReqContext(CLIENT_ID, REFRESH_TOKEN, TENANT_DOMAIN));
-        assertNotNull(result);
+        processor.validateRefreshToken(buildTokenReqContext(CLIENT_ID, REFRESH_TOKEN, TENANT_DOMAIN));
     }
 
     @Test
@@ -469,7 +468,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
 
         // Cache hit: persisted reuse count is 1.
         when(mockReuseCountCache.getValueFromCache(any(), anyInt()))
-                .thenReturn(new GracefulRefreshTokenReuseCountCacheEntry(1));
+                .thenReturn(new RefreshTokenCacheEntry(1));
 
         // Old token has a successorTokenId → this is a reuse (Case A).
         String successorId = "successor_token_id";
@@ -510,8 +509,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
                 "State stamp should be null for subsequent reuses");
     }
 
-    @Test(expectedExceptions = IdentityOAuth2Exception.class,
-            expectedExceptionsMessageRegExp = ".*graceful reuse limit.*")
+    @Test
     public void testPersistNewToken_cachedCountAtLimit_rejectsBeforeDbCall() throws Exception {
 
         when(mockOAuthAppDO.isGracefulRefreshTokenRotationEnabled()).thenReturn(true);
@@ -519,14 +517,19 @@ public class DefaultRefreshTokenGrantProcessorTest {
         when(mockOAuthAppDO.getGracefulRefreshTokenReuseLimit()).thenReturn(3);
 
         when(mockReuseCountCache.getValueFromCache(any(), anyInt()))
-                .thenReturn(new GracefulRefreshTokenReuseCountCacheEntry(3));
+                .thenReturn(new RefreshTokenCacheEntry(3));
 
         RefreshTokenValidationDataDO oldToken = oldTokenDO(null);
         AccessTokenDO newToken = newAccessTokenDO();
         OAuthTokenReqMessageContext ctx = persistContext(oldToken, mockOAuthAppDO);
 
-        processor.persistNewToken(ctx, newToken, USER_STORE_DOMAIN, CLIENT_ID);
-
+        try {
+            processor.persistNewToken(ctx, newToken, USER_STORE_DOMAIN, CLIENT_ID);
+            fail("Expected IdentityOAuth2Exception to be thrown");
+        } catch (IdentityOAuth2Exception ex) {
+            assertTrue(ex.getMessage().matches(".*graceful reuse limit.*"),
+                    "Exception message must mention 'graceful reuse limit'");
+        }
         verify(mockAccessTokenDAO, never()).gracefullyRotateAndCreateNewAccessToken(
                 anyString(), any(), anyString(), anyString(), anyString(), any(), anyString(), anyString(), any());
     }
@@ -607,7 +610,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
 
         // Cache hit with count 1.
         when(mockReuseCountCache.getValueFromCache(any(), anyInt()))
-                .thenReturn(new GracefulRefreshTokenReuseCountCacheEntry(1));
+                .thenReturn(new RefreshTokenCacheEntry(1));
 
         // Old token has successorTokenId but the successor row is gone.
         String successorId = "gone_successor_id";

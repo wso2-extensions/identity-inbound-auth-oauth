@@ -2239,8 +2239,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 long validityPeriodMillis = rs.getLong(5);
                 long refreshTokenValidityPeriodMillis = rs.getLong(6);
                 if (rs.next()) {
-                    log.warn("Multiple predecessor tokens found for attribute '" + attributeName + "'='"
-                            + attributeValue + "'. Using the first match; data anomaly likely.");
+                    throw new IdentityOAuth2Exception(
+                            "Multiple active tokens found for extended attribute: " + attributeName);
                 }
                 AccessTokenDO tokenDO = new AccessTokenDO();
                 tokenDO.setAccessToken(accessToken);
