@@ -389,6 +389,8 @@ public class AccessTokenEventUtil {
                         tokReqMsgCtx.getAuthorizedUser().getUserName());
                 properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
                         tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain());
+                properties.put(IdentityEventConstants.EventProperty.IS_FEDERATED_USER,
+                        tokReqMsgCtx.getAuthorizedUser().isFederatedUser());
                 properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER,
                         tokReqMsgCtx.getAuthorizedUser().isOrganizationUser());
                 properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
