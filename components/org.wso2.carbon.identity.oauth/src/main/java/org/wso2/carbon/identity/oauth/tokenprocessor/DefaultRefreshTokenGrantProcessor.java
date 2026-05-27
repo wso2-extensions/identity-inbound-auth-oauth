@@ -28,6 +28,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.cache.RefreshTokenCache;
 import org.wso2.carbon.identity.oauth.cache.RefreshTokenCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.RefreshTokenCacheKey;
@@ -203,7 +205,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // Revoke whichever token in the old↔successor pair is now stale: on reuse the successor
             // is revoked; on the first rotation a predecessor (if any) is revoked via JOIN lookup.
             // Returns true when a successor was found (= reuse), false for a fresh first-rotation.
-            boolean isRefreshTokenReuse = revokeOverlappingTokens(oldAccessToken, userStoreDomain, clientId);
+            String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+            boolean isRefreshTokenReuse = revokeOverlappingTokens(oldAccessToken, userStoreDomain, clientId,
+                    tenantDomain);
             // Derive the reuse count to stamp on the new token row: existing count + 1 on reuse,
             // or the existing count unchanged for a fresh first rotation.
             int newReuseCount = computeReuseCount(oldAccessToken, isRefreshTokenReuse);
@@ -390,7 +394,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
      * predecessor that still has an active row). If found it is revoked. Returns {@code false}.
      */
     private boolean revokeOverlappingTokens(RefreshTokenValidationDataDO oldAccessToken, String userStoreDomain,
-                                            String clientId) throws IdentityOAuth2Exception {
+                                            String clientId, String tenantDomain) throws IdentityOAuth2Exception {
 
         // Case A: old token already has a successor → this is a reuse.
         String successorTokenId = readSuccessorTokenId(oldAccessToken);
@@ -399,7 +403,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                     .getAccessTokenDAOImpl(clientId)
                     .getAccessTokenByTokenId(successorTokenId);
             if (StringUtils.isNotBlank(successorAccessToken)) {
-                revokeAndClearCache(successorAccessToken, successorTokenId, clientId);
+                revokeAndClearCache(successorAccessToken, successorTokenId, clientId, tenantDomain);
             } else if (log.isDebugEnabled()) {
                 log.debug("Successor token id " + successorTokenId
                         + " has no active access token row for client: " + clientId
@@ -415,7 +419,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID,
                         oldAccessToken.getTokenId(), userStoreDomain);
         if (predecessor != null) {
-            revokeAndClearCache(predecessor.getAccessToken(), predecessor.getTokenId(), clientId);
+            revokeAndClearCache(predecessor.getAccessToken(), predecessor.getTokenId(), clientId, tenantDomain);
         } else if (log.isDebugEnabled()) {
             log.debug("No predecessor token referencing old token id "
                     + oldAccessToken.getTokenId() + " for client: " + clientId
@@ -434,7 +438,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 .get(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
     }
 
-    private void revokeAndClearCache(String plainAccessToken, String tokenId, String clientId)
+    private void revokeAndClearCache(String plainAccessToken, String tokenId, String clientId, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
@@ -446,6 +450,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                 .revokeAccessTokens(new String[]{plainAccessToken});
         AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(
                 new AuthorizationGrantCacheKey(plainAccessToken), tokenId);
+        OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(plainAccessToken), tenantDomain);
     }
 
     /**
