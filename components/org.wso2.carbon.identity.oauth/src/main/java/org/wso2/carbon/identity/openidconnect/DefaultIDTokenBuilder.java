@@ -492,7 +492,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      */
     private void removeInternalExtendedAttributes(Map<String, String> params) {
 
-        params.remove(OAuthConstants.IS_SHARED_USER);
         params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
         params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
         params.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);

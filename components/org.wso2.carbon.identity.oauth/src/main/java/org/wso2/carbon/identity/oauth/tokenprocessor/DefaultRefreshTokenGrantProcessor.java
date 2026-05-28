@@ -224,7 +224,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             }
             // Write-through: stamp the reuse count on the old token's extended attributes before the DB write, so that
             // any concurrent reuse attempts will see the updated count and get rejected when the limit is reached.
-            overlayReuseCountOnAccessToken(oldAccessToken, reuseCount);
+            updateRefreshGraceReuseLimit(oldAccessToken, reuseCount);
 
             // Revoke whichever token in the old↔successor pair is now stale: on reuse the successor
             // is revoked; on the first rotation a predecessor (if any) is revoked via JOIN lookup.
@@ -234,20 +234,20 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                     tenantDomain);
             // Derive the reuse count to stamp on the new token row: existing count + 1 on reuse,
             // or the existing count unchanged for a fresh first rotation.
-            int newReuseCount = computeReuseCount(oldAccessToken, isRefreshTokenReuse);
+            int updatedReuseCount = computeReuseCount(oldAccessToken, isRefreshTokenReuse);
             if (log.isDebugEnabled()) {
                 log.debug((isRefreshTokenReuse
                         ? "Refresh token reuse detected for client: " + clientId
                         : "First graceful rotation for client: " + clientId)
-                        + ". New reuse count: " + newReuseCount + ".");
+                        + ". New reuse count: " + updatedReuseCount + ".");
             }
             // Mirror the new reuse count onto the in-memory old-token object so that the value
             // is available when the DAO assembles the extended-attributes JSON for the old row.
-            stampReuseCountOnOldAccessToken(oldAccessToken, newReuseCount);
+            updateReuseCountOnOldAccessToken(oldAccessToken, updatedReuseCount);
             Map<String, String> toeknAttributeRowUpdates = new HashMap<>();
-            if (newReuseCount > 0) {
+            if (updatedReuseCount > 0) {
                 toeknAttributeRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
-                        Integer.toString(newReuseCount));
+                        Integer.toString(updatedReuseCount));
                 toeknAttributeRowUpdates.put(GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID,
                         accessTokenBean.getTokenId());
             }
@@ -257,7 +257,7 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // On subsequent reuses the deadline is already anchored; we skip updating the old row's state.
             String oldTokenStateId = null;
             String oldTokenNewState = null;
-            if (newReuseCount == 0) {
+            if (updatedReuseCount == 0) {
                 long elapsedSinceRefreshIssuedMillis =
                         System.currentTimeMillis() - oldAccessToken.getIssuedTime().getTime();
                 long graceMillis =
@@ -286,10 +286,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                             oldTokenStateId, oldTokenNewState, clientId, accessTokenBean, userStoreDomain,
                             oldAccessToken.getGrantType(), toeknAttributeRowUpdates);
             // Write-through: update cache with the new reuse count after the DB write succeeds.
-            RefreshTokenCache.getInstance().addToCache(reuseCountCacheKey, new RefreshTokenCacheEntry(newReuseCount),
-                    tenantId);
+            RefreshTokenCache.getInstance().addToCache(reuseCountCacheKey,
+                    new RefreshTokenCacheEntry(updatedReuseCount), tenantId);
             if (log.isDebugEnabled()) {
-                log.debug("Updated graceful reuse count cache to " + newReuseCount + " for token id: "
+                log.debug("Updated graceful reuse count cache to " + updatedReuseCount + " for token id: "
                         + oldAccessToken.getTokenId() + " after DB write for client: " + clientId + ".");
             }
             return;
@@ -509,32 +509,32 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                               RefreshTokenCacheKey cacheKey,
                               int tenantId, String userStoreDomain) throws IdentityOAuth2Exception {
 
-        RefreshTokenCacheEntry cachedEntry =
+        RefreshTokenCacheEntry cacheEntry =
                 RefreshTokenCache.getInstance().getValueFromCache(cacheKey, tenantId);
-        if (cachedEntry != null) {
+        if (cacheEntry != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Cache hit for graceful reuse count of token id: " + tokenId
-                        + ". Cached count: " + cachedEntry.getGracefulReuseCount() + ".");
+                        + ". Cached count: " + cacheEntry.getGracefulReuseCount() + ".");
             }
-            return cachedEntry.getGracefulReuseCount();
+            return cacheEntry.getGracefulReuseCount();
         }
         if (log.isDebugEnabled()) {
             log.debug("Cache miss for graceful reuse count of token id: " + tokenId
                     + ". Falling back to DB read for client: " + clientId + ".");
         }
-        String freshRawCount = OAuthTokenPersistenceFactory.getInstance()
+        String initialRawCount = OAuthTokenPersistenceFactory.getInstance()
                 .getAccessTokenDAOImpl(clientId)
                 .getAccessTokenExtendedAttributeValue(
                         tokenId, GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
                         userStoreDomain);
-        int freshCount = parseReuseCount(freshRawCount);
+        int initialCount = parseReuseCount(initialRawCount);
         if (log.isDebugEnabled()) {
-            log.debug("Loaded graceful reuse count " + freshCount + " from DB for token id: " + tokenId
+            log.debug("Loaded graceful reuse count " + initialCount + " from DB for token id: " + tokenId
                     + ". Populating cache.");
         }
         RefreshTokenCache.getInstance().addToCacheOnRead(cacheKey,
-                new RefreshTokenCacheEntry(freshCount), tenantId);
-        return freshCount;
+                new RefreshTokenCacheEntry(initialCount), tenantId);
+        return initialCount;
     }
 
     private int parseReuseCount(String raw) {
@@ -550,14 +550,14 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
     }
 
     /**
-     * Update the in-memory extended attributes of the OLD token row with the new reuse count. When
-     * {@code newReuseCount} is zero and no attributes exist yet, this is a no-op (avoids creating
+     * Update the in-memory extended attributes of the old token row with the new reuse count. When
+     * {@code updatedReuseCount} is zero and no attributes exist yet, this is a no-op (avoids creating
      * empty attribute containers for the first-rotation case).
      */
-    private void stampReuseCountOnOldAccessToken(RefreshTokenValidationDataDO oldAccessToken,
-                                                 int newReuseCount) {
+    private void updateReuseCountOnOldAccessToken(RefreshTokenValidationDataDO oldAccessToken,
+                                                  int updatedReuseCount) {
 
-        if (newReuseCount == 0 && oldAccessToken.getAccessTokenExtendedAttributes() == null) {
+        if (updatedReuseCount == 0 && oldAccessToken.getAccessTokenExtendedAttributes() == null) {
             return;
         }
         AccessTokenExtendedAttributes attributes = oldAccessToken.getAccessTokenExtendedAttributes();
@@ -569,10 +569,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         }
         attributes.getParameters().put(
                 GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT,
-                Integer.toString(newReuseCount));
+                Integer.toString(updatedReuseCount));
     }
 
-    private void overlayReuseCountOnAccessToken(RefreshTokenValidationDataDO oldAccessToken, int reuseCount) {
+    private void updateRefreshGraceReuseLimit(RefreshTokenValidationDataDO oldAccessToken, int reuseCount) {
 
         AccessTokenExtendedAttributes attributes = oldAccessToken.getAccessTokenExtendedAttributes();
         if (attributes == null) {

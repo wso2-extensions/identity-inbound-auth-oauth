@@ -295,6 +295,13 @@ public interface AccessTokenDAO {
         return null;
     }
 
+    default Set<AccessTokenDO> getGracefullyRotatedAccessTokensInGracePeriod(
+            String consumerKey, String appTenantDomain, AuthenticatedUser authenticatedUser,
+            String userStoreDomain) throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
+
     void updateUserStoreDomain(int tenantId, String currentUserStoreDomain,
                                String newUserStoreDomain) throws IdentityOAuth2Exception;
 
