@@ -75,6 +75,7 @@ import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
@@ -92,6 +93,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     private static final String ORG_NAME = "test.com";
     private static final String ORG_ID = "2364283-349o34nnv-92713972nx";
+    private static final String ACCESSING_ORG_ID = "accessing-org-id-123";
     private static final String ORG_HANDLE = "testhandle";
     private static final int ORG_DEPTH = 1;
     private PreIssueAccessTokenRequestBuilder preIssueAccessTokenRequestBuilder;
@@ -343,18 +345,36 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     /**
-     * Mock an authenticated user.
+     * Mock an authenticated user with a resident organization.
      *
      * @return AuthenticatedUser object containing mock user data.
      */
     private static AuthenticatedUser mockAuthenticatedUser() {
+
+        return mockAuthenticatedUser(ORG_ID, null, null);
+    }
+
+    /**
+     * Mock an authenticated user with the given organization details.
+     *
+     * @param residentOrganization  The resident organization id of the user (maybe null).
+     * @param accessingOrganization The accessing organization id of the user (maybe null).
+     * @param tenantDomain          The tenant domain of the user (maybe null).
+     * @return AuthenticatedUser object containing mock user data.
+     */
+    private static AuthenticatedUser mockAuthenticatedUser(String residentOrganization, String accessingOrganization,
+                                                           String tenantDomain) {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USERNAME_TEST);
         authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
         authenticatedUser.setUserId(USER_ID_TEST);
         authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
-        authenticatedUser.setAccessingOrganization(ORG_ID);
+        authenticatedUser.setUserResidentOrganization(residentOrganization);
+        authenticatedUser.setAccessingOrganization(accessingOrganization);
+        if (tenantDomain != null) {
+            authenticatedUser.setTenantDomain(tenantDomain);
+        }
         return authenticatedUser;
     }
 
@@ -485,6 +505,78 @@ public class PreIssueAccessTokenRequestBuilderTest {
             PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
             Assert.assertNotNull(event.getSession());
             Assert.assertEquals(event.getSession().getSessionDataKeyConsent(), sessionDataKeyConsent);
+        }
+    }
+
+    /**
+     * Verifies that when the authenticated user has no resident organization but has an accessing organization,
+     * the user's organization is resolved from the accessing organization.
+     */
+    @Test
+    public void testBuildActionExecutionRequestWithAccessingOrganization()
+            throws ActionExecutionRequestBuilderException, OrganizationManagementException {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.resolveTenantDomain(ACCESSING_ORG_ID)).thenReturn(TENANT_DOMAIN_TEST);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            AuthenticatedUser authenticatedUser = mockAuthenticatedUser(null, ACCESSING_ORG_ID, null);
+            OAuthTokenReqMessageContext tokenMessageContext =
+                    mockMessageContext(mockTokenRequestDTO(), authenticatedUser);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
+                    .buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+
+            Assert.assertNotNull(actionExecutionRequest);
+            assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
+            // The accessing organization should be used to resolve the user's tenant domain.
+            verify(mockOrganizationManager).resolveTenantDomain(ACCESSING_ORG_ID);
+        }
+    }
+
+    /**
+     * Verifies that when the authenticated user has neither a resident nor an accessing organization,
+     * the user's organization is resolved from the user's tenant domain.
+     */
+    @Test
+    public void testBuildActionExecutionRequestWithoutUserOrganization()
+            throws ActionExecutionRequestBuilderException, OrganizationManagementException {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.resolveOrganizationId(TENANT_DOMAIN_TEST)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            AuthenticatedUser authenticatedUser = mockAuthenticatedUser(null, null, TENANT_DOMAIN_TEST);
+            OAuthTokenReqMessageContext tokenMessageContext =
+                    mockMessageContext(mockTokenRequestDTO(), authenticatedUser);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder
+                    .buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+
+            Assert.assertNotNull(actionExecutionRequest);
+            assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
+            // The user's tenant domain should be used to resolve the user's organization.
+            verify(mockOrganizationManager).resolveOrganizationId(TENANT_DOMAIN_TEST);
         }
     }
 
