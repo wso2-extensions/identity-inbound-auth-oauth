@@ -168,6 +168,7 @@ public class OAuth2TokenUtil {
             properties.put(OLD_ACCESS_TOKEN, oldAcessTokenId);
             properties.put(NEW_ACCESS_TOKEN, acessTokenId);
             properties.put(IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
+            properties.put(TOKEN_STATE, tokenState);
         }
         eventName = OIDCConstants.Event.POST_REFRESH_TOKEN;
         triggerEvent(eventName, properties);

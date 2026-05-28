@@ -49,6 +49,8 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.RefreshTokenCache;
+import org.wso2.carbon.identity.oauth.cache.RefreshTokenCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -1018,6 +1020,49 @@ public final class OAuthUtil {
                         revokeTokens(accessTokens);
                     } catch (IdentityOAuth2Exception e) {
                         String errorMsg = "Error occurred while revoking Access Token";
+                        LOG.error(errorMsg, e);
+                        throw new UserStoreException(e);
+                    }
+                }
+
+                // Separately handle gracefully-rotated tokens still within their grace window.
+                Set<AccessTokenDO> gracefulTokens;
+                try {
+                    gracefulTokens = OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAOImpl(clientId)
+                            .getGracefullyRotatedAccessTokensInGracePeriod(clientId, appTenantDomain,
+                                    authenticatedUser, userStoreDomain);
+                } catch (IdentityOAuth2Exception e) {
+                    String errorMsg = "Error occurred while retrieving gracefully-rotated access tokens for " +
+                            "Client ID : " + clientId + ", User ID : " + authenticatedUser;
+                    LOG.error(errorMsg, e);
+                    throw new UserStoreException(e);
+                }
+                List<AccessTokenDO> gracefulTokensToRevoke = new ArrayList<>();
+                for (AccessTokenDO gracefulToken : gracefulTokens) {
+                    if (isOrganizationUserTokenRevocation
+                            && gracefulToken.getAuthzUser().getAccessingOrganization() == null) {
+                        continue;
+                    }
+                    if (isTokenPreservingAtPasswordUpdateEnabled
+                            && StringUtils.equals(gracefulToken.getTokenId(), currentTokenReference)) {
+                        continue;
+                    }
+                    OAuthUtil.clearOAuthCache(gracefulToken.getConsumerKey(), gracefulToken.getAuthzUser(),
+                            OAuth2Util.buildScopeString(gracefulToken.getScope()));
+                    OAuthUtil.clearOAuthCache(gracefulToken.getConsumerKey(), gracefulToken.getAuthzUser());
+                    OAuthUtil.clearOAuthCache(gracefulToken);
+                    RefreshTokenCache.getInstance().clearCacheEntry(
+                            new RefreshTokenCacheKey(gracefulToken.getTokenId()),
+                            IdentityTenantUtil.getTenantId(gracefulToken.getAuthzUser().getTenantDomain()));
+                    gracefulTokensToRevoke.add(gracefulToken);
+                }
+                if (!gracefulTokensToRevoke.isEmpty()) {
+                    try {
+                        revokeTokens(gracefulTokensToRevoke);
+                    } catch (IdentityOAuth2Exception e) {
+                        String errorMsg = "Error occurred while revoking gracefully-rotated access tokens for " +
+                                "Client ID : " + clientId;
                         LOG.error(errorMsg, e);
                         throw new UserStoreException(e);
                     }

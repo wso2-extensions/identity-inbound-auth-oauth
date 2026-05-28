@@ -951,6 +951,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             if (customClaims != null && !customClaims.isEmpty()) {
                 customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
                 customClaims.remove(OAuthConstants.IS_SHARED_USER);
+                customClaims = new HashMap<>(customClaims);
+                removeInternalExtendedAttributes(customClaims);
                 if (log.isDebugEnabled()) {
                     log.debug("Processing custom claims for JWT token. Total claims count: " + customClaims.size());
                 }
@@ -968,6 +970,22 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    /**
+     * Remove internal extended attributes from the custom claims map to avoid them being included as JWT claims.
+     * This method removes specific internal extended attributes related to graceful refresh token rotation from the
+     * provided custom claims map. These attributes are used internally for token management and should not be
+     * exposed as JWT claims in the issued tokens.
+     *
+     * @param customClaims the map of custom claims from which internal extended attributes should be removed
+     */
+    private void removeInternalExtendedAttributes(Map<String, String> customClaims) {
+
+        customClaims.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);
+        customClaims.remove
+                (OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS);
+        customClaims.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID);
     }
 
     /**

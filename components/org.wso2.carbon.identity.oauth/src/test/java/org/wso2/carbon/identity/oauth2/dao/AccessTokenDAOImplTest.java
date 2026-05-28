@@ -57,13 +57,16 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.EmptyStackException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,11 +74,13 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
@@ -112,6 +117,8 @@ public class AccessTokenDAOImplTest {
     private OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder;
     @Mock
     private OrganizationManager mockOrganizationManager;
+    @Mock
+    private TokenPersistenceProcessor mockTokenPersistenceProcessor;
 
     @BeforeClass
     public void initTest() throws Exception {
@@ -172,7 +179,6 @@ public class AccessTokenDAOImplTest {
         
         identityUtil.when(() -> IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
 
-        TokenPersistenceProcessor mockTokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
         when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(mockTokenPersistenceProcessor);
         lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
                 .thenReturn(mockTokenPersistenceProcessor);
@@ -703,5 +709,298 @@ public class AccessTokenDAOImplTest {
             assertEquals(accessTokenDO.getIssuedTime(), issuedTime);
             assertEquals(accessTokenDO.getValidityPeriod(), validityPeriod);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // getAccessTokenExtendedAttributeValue
+    // -------------------------------------------------------------------------
+
+
+    @Test
+    public void testGetAccessTokenExtendedAttributeValue_rowExists_returnsValue() throws Exception {
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        Connection mockConnection = mock(Connection.class);
+        PreparedStatement mockPrepStmt = mock(PreparedStatement.class);
+        ResultSet mockResultSet = mock(ResultSet.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(mockConnection);
+        when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
+        when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
+        when(mockResultSet.next()).thenReturn(true);
+        when(mockResultSet.getString(1)).thenReturn("42");
+
+        String result = accessTokenDAO.getAccessTokenExtendedAttributeValue("tid", "reuseCount", "PRIMARY");
+
+        assertEquals(result, "42");
+        verify(mockPrepStmt).setString(1, "tid");
+        verify(mockPrepStmt).setString(2, "reuseCount");
+    }
+
+    @Test
+    public void testGetAccessTokenExtendedAttributeValue_noRow_returnsNull() throws Exception {
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        Connection mockConnection = mock(Connection.class);
+        PreparedStatement mockPrepStmt = mock(PreparedStatement.class);
+        ResultSet mockResultSet = mock(ResultSet.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(mockConnection);
+        when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
+        when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
+        when(mockResultSet.next()).thenReturn(false);
+
+        String result = accessTokenDAO.getAccessTokenExtendedAttributeValue("tid", "reuseCount", "PRIMARY");
+
+        assertNull(result);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAccessTokenExtendedAttributeValue_sqlException_wrapsException() throws Exception {
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        Connection mockConnection = mock(Connection.class);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(mockConnection);
+        when(mockConnection.prepareStatement(anyString())).thenThrow(new SQLException("db failure"));
+
+        accessTokenDAO.getAccessTokenExtendedAttributeValue("tid", "reuseCount", "PRIMARY");
+    }
+
+    // -------------------------------------------------------------------------
+    // gracefullyRotateAndCreateNewAccessToken
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testGracefullyRotateAndCreate_firstRotation_stateUpdatedAndPostRefreshFiredWithTrue()
+            throws Exception {
+
+        String oldTokenId = "old-token-id";
+        String consumerKey = "test-consumer-key";
+
+        AccessTokenDO accessTokenDO = createMockAccessTokenDO("new-access-token", consumerKey);
+        accessTokenDO.setIsConsentedToken(false);
+        Timestamp oldRefreshTokenIssuedTime = new Timestamp(System.currentTimeMillis() - 5000);
+
+        Map<String, String> attrUpdates = new HashMap<>();
+        attrUpdates.put("gracefulRefreshTokenGraceValidityInMillis", "60000");
+
+        Connection mockConnection = mock(Connection.class);
+        PreparedStatement mockPrepStmt = mock(PreparedStatement.class);
+        ResultSet mockResultSet = mock(ResultSet.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(mockConnection);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.commitTransaction(mockConnection))
+                .then(invocation -> null);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.closeConnection(mockConnection))
+                .then(invocation -> null);
+
+        lenient().when(mockConnection.prepareStatement(anyString())).thenReturn(mockPrepStmt);
+        lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
+        lenient().when(mockResultSet.next()).thenReturn(false);
+        lenient().when(mockPrepStmt.executeUpdate()).thenReturn(1);
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
+                .thenReturn(false);
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        oAuth2Util.when(() -> OAuth2Util.getAppTenantId(anyString())).thenReturn(-1234);
+
+        oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
+                        eq(oldTokenId), anyString(),
+                        eq(OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED), eq(true)))
+                .then(invocation -> null);
+
+        accessTokenDAO.gracefullyRotateAndCreateNewAccessToken(
+                oldTokenId, oldRefreshTokenIssuedTime,
+                "new-state-uuid", OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED,
+                consumerKey, accessTokenDO, "PRIMARY",
+                OAuthConstants.GrantTypes.REFRESH_TOKEN, attrUpdates);
+
+        oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
+                eq(oldTokenId), anyString(),
+                eq(OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED), eq(true)), times(1));
+        verify(mockConnection, atLeastOnce()).prepareStatement(anyString());
+    }
+
+    @Test
+    public void testGracefullyRotateAndCreate_subsequentReuse_stateUpdateSkipped() throws Exception {
+
+        String oldTokenId = "old-token-id";
+        String consumerKey = "test-consumer-key";
+
+        AccessTokenDO accessTokenDO = createMockAccessTokenDO("new-access-token", consumerKey);
+        accessTokenDO.setIsConsentedToken(false);
+        Timestamp oldRefreshTokenIssuedTime = new Timestamp(System.currentTimeMillis() - 5000);
+
+        Map<String, String> attrUpdates = new HashMap<>();
+        attrUpdates.put("gracefulRefreshTokenReuseCount", "2");
+
+        List<String> capturedSqls = new ArrayList<>();
+        Connection mockConnection = mock(Connection.class);
+        PreparedStatement mockPrepStmt = mock(PreparedStatement.class);
+        ResultSet mockResultSet = mock(ResultSet.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(mockConnection);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.commitTransaction(mockConnection))
+                .then(invocation -> null);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.closeConnection(mockConnection))
+                .then(invocation -> null);
+
+        lenient().when(mockConnection.prepareStatement(anyString())).thenAnswer(invocation -> {
+            capturedSqls.add((String) invocation.getArgument(0));
+            return mockPrepStmt;
+        });
+        lenient().when(mockPrepStmt.executeQuery()).thenReturn(mockResultSet);
+        lenient().when(mockResultSet.next()).thenReturn(false);
+        lenient().when(mockPrepStmt.executeUpdate()).thenReturn(1);
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
+                .thenReturn(false);
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        oAuth2Util.when(() -> OAuth2Util.getAppTenantId(anyString())).thenReturn(-1234);
+
+        oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
+                        anyString(), anyString(), anyString(), eq(true)))
+                .then(invocation -> null);
+
+        // oldTokenNewStateId == null → state-update should be skipped.
+        accessTokenDAO.gracefullyRotateAndCreateNewAccessToken(
+                oldTokenId, oldRefreshTokenIssuedTime,
+                null, null,
+                consumerKey, accessTokenDO, "PRIMARY",
+                OAuthConstants.GrantTypes.REFRESH_TOKEN, attrUpdates);
+
+        boolean stateUpdateSqlFound = capturedSqls.stream()
+                .anyMatch(sql -> sql.contains("IDN_OAUTH2_ACCESS_TOKEN") && sql.toUpperCase().startsWith("UPDATE")
+                        && sql.contains("TOKEN_STATE"));
+        assertFalse(stateUpdateSqlFound,
+                "State-update SQL must NOT be issued when oldTokenNewStateId is null (subsequent reuse)");
+
+        boolean attrUpdateSqlFound = capturedSqls.stream()
+                .anyMatch(sql -> sql.contains("IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES"));
+        assertTrue(attrUpdateSqlFound, "Extended attribute upsert SQL must be issued");
+    }
+
+    @Test
+    public void testGracefullyRotateAndCreate_upsertInsertBranch_insertFiredWhenUpdateReturnsZero()
+            throws Exception {
+
+        String oldTokenId = "old-token-id";
+        String consumerKey = "test-consumer-key";
+
+        AccessTokenDO accessTokenDO = createMockAccessTokenDO("new-access-token", consumerKey);
+        accessTokenDO.setIsConsentedToken(false);
+        Timestamp oldRefreshTokenIssuedTime = new Timestamp(System.currentTimeMillis() - 5000);
+
+        Map<String, String> attrUpdates = new HashMap<>();
+        attrUpdates.put("gracefulRefreshTokenGraceValidityInMillis", "60000");
+
+        List<String> capturedSqls = new ArrayList<>();
+        Connection mockConnection = mock(Connection.class);
+        PreparedStatement mockUpdateStmt = mock(PreparedStatement.class);
+        PreparedStatement mockInsertOrOtherStmt = mock(PreparedStatement.class);
+        ResultSet mockResultSet = mock(ResultSet.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(mockConnection);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.commitTransaction(mockConnection))
+                .then(invocation -> null);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.closeConnection(mockConnection))
+                .then(invocation -> null);
+
+        lenient().when(mockConnection.prepareStatement(anyString())).thenAnswer(invocation -> {
+            String sql = invocation.getArgument(0);
+            capturedSqls.add(sql);
+            if (sql.contains("IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES") && sql.toUpperCase().startsWith("UPDATE")) {
+                return mockUpdateStmt;
+            }
+            return mockInsertOrOtherStmt;
+        });
+
+        // UPDATE returns 0 → triggers INSERT.
+        when(mockUpdateStmt.executeUpdate()).thenReturn(0);
+        lenient().when(mockInsertOrOtherStmt.executeUpdate()).thenReturn(1);
+        lenient().when(mockInsertOrOtherStmt.executeQuery()).thenReturn(mockResultSet);
+        lenient().when(mockResultSet.next()).thenReturn(false);
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
+                .thenReturn(false);
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isTokenExtendedTableExist)
+                .thenReturn(true);
+
+        oAuth2Util.when(() -> OAuth2Util.getAppTenantId(anyString())).thenReturn(-1234);
+
+        oauth2TokenUtil.when(() -> OAuth2TokenUtil.postRefreshAccessToken(
+                        anyString(), anyString(), anyString(), eq(true)))
+                .then(invocation -> null);
+
+        accessTokenDAO.gracefullyRotateAndCreateNewAccessToken(
+                oldTokenId, oldRefreshTokenIssuedTime,
+                "new-state-uuid", OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED,
+                consumerKey, accessTokenDO, "PRIMARY",
+                OAuthConstants.GrantTypes.REFRESH_TOKEN, attrUpdates);
+
+        boolean updateSqlFound = capturedSqls.stream()
+                .anyMatch(sql -> sql.contains("IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES")
+                        && sql.toUpperCase().startsWith("UPDATE"));
+        boolean insertSqlFound = capturedSqls.stream()
+                .anyMatch(sql -> sql.contains("IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES")
+                        && sql.toUpperCase().startsWith("INSERT"));
+        assertTrue(updateSqlFound, "UPDATE attribute SQL must be issued first");
+        assertTrue(insertSqlFound, "INSERT attribute SQL must be issued when UPDATE returns 0");
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGracefullyRotateAndCreate_sqlException_rollsBackAndThrows() throws Exception {
+
+        String oldTokenId = "old-token-id";
+        String consumerKey = "test-consumer-key";
+
+        AccessTokenDO accessTokenDO = createMockAccessTokenDO("new-access-token", consumerKey);
+        accessTokenDO.setIsConsentedToken(false);
+        Timestamp oldRefreshTokenIssuedTime = new Timestamp(System.currentTimeMillis() - 5000);
+
+        Connection mockConnection = mock(Connection.class);
+
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(mockConnection);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.rollbackTransaction(mockConnection))
+                .then(invocation -> null);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.closeConnection(mockConnection))
+                .then(invocation -> null);
+
+        when(mockConnection.prepareStatement(anyString())).thenThrow(new SQLException("db failure"));
+
+        oauth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::isConsentedTokenColumnEnabled)
+                .thenReturn(false);
+
+        try {
+            accessTokenDAO.gracefullyRotateAndCreateNewAccessToken(
+                    oldTokenId, oldRefreshTokenIssuedTime,
+                    "new-state-uuid", OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED,
+                    consumerKey, accessTokenDO, "PRIMARY",
+                    OAuthConstants.GrantTypes.REFRESH_TOKEN, new HashMap<>());
+        } finally {
+            identityDatabaseUtil.verify(
+                    () -> IdentityDatabaseUtil.rollbackTransaction(mockConnection), times(1));
+            oauth2TokenUtil.verify(() -> OAuth2TokenUtil.postRefreshAccessToken(
+                    anyString(), anyString(), anyString(), anyBoolean()), never());
+        }
+    }
+
+    private AuthenticatedUser buildTestUser(String username, String tenantDomain, String userStoreDomain) {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName(username);
+        user.setTenantDomain(tenantDomain);
+        user.setUserStoreDomain(userStoreDomain);
+        return user;
     }
 }

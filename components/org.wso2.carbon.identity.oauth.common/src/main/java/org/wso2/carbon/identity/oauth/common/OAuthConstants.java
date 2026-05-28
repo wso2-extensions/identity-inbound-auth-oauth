@@ -475,6 +475,7 @@ public final class OAuthConstants {
         public static final String TOKEN_STATE_REVOKED = "REVOKED";
         public static final String TOKEN_STATE_EXPIRED = "EXPIRED";
         public static final String TOKEN_STATE_INACTIVE = "INACTIVE";
+        public static final String TOKEN_STATE_GRACEFULLY_ROTATED = "GRACEFULLY_ROTATED";
 
         private TokenStates() {
 
@@ -698,6 +699,10 @@ public final class OAuthConstants {
         public static final String GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT = "gracefulRefreshTokenReuseLimit";
         public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE = 5;
         public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE = 1;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_COUNT = "gracefulRefreshTokenReuseCount";
+        public static final String GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS =
+                "gracefulRefreshTokenGraceValidityInMillis";
+        public static final String GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID = "successorTokenId";
 
         private GracefulRefreshTokenRotation() {
 
