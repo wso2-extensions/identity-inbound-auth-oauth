@@ -23,6 +23,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -50,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -82,14 +85,12 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
     /**
      * When graceful refresh token rotation is enabled for the application:
-     * <ol>
-     *   <li>Flips the in-memory token state from {@code GRACEFULLY_ROTATED} back to {@code ACTIVE} so that
-     *       downstream validation (validateRefreshTokenStatus, setRefreshTokenData, etc.) sees {@code ACTIVE}.
-     *       The DB value stays {@code GRACEFULLY_ROTATED}.</li>
-     *   <li>Rejects the request if the reuse count has already reached the app-configured limit.
-     *       Missing or unparseable reuse-count attributes are treated as zero (covers first-time issuance,
-     *       legacy rows, and custom persistence implementations).</li>
-     * </ol>
+     * Flips the in-memory token state from {@code GRACEFULLY_ROTATED} back to {@code ACTIVE} so that
+     * downstream validation (validateRefreshTokenStatus, setRefreshTokenData, etc.) sees {@code ACTIVE}.
+     * The DB value stays {@code GRACEFULLY_ROTATED}.
+     * Rejects the request if the reuse count has already reached the app-configured limit.
+     * Missing or unparseable reuse-count attributes are treated as zero (covers first-time issuance,
+     * legacy rows, and custom persistence implementations)
      * No-op when graceful rotation is disabled or the application cannot be resolved.
      */
     private void validateReuseRefreshToken(RefreshTokenValidationDataDO validationBean, String clientId,
@@ -106,12 +107,12 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         if (oAuthAppDO == null || !oAuthAppDO.isGracefulRefreshTokenRotationEnabled()) {
             return;
         }
-        // (1) Store the token status in memory in a consistent format so it can be validated easily later
+        //Store the token status in memory in a consistent format so it can be validated easily later
         if (OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED.equals(
                 validationBean.getRefreshTokenState())) {
             validationBean.setRefreshTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
         }
-        // (2a) Reject the request if the grace window has already closed.
+        //Reject the request if the grace window has already closed.
         AccessTokenExtendedAttributes extendedTokenAttributes = validationBean.getAccessTokenExtendedAttributes();
         if (extendedTokenAttributes != null && extendedTokenAttributes.getParameters() != null) {
             String allowedGracePeriod = extendedTokenAttributes.getParameters()
@@ -131,11 +132,22 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         log.debug("Refresh token grace window has closed for client: " + clientId
                                 + ". Grace validity (ms): " + allowedGracePeriodInLong + ". Rejecting request.");
                     }
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN)
+                                .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                                .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, tenantDomain)
+                                .inputParam("graceful grace validity (ms)", allowedGracePeriodInLong)
+                                .resultMessage("Refresh token grace period has expired.")
+                                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                                .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                    }
                     throw new IdentityOAuth2Exception("Refresh token grace period has expired.");
                 }
             }
         }
-        // (2b) Enforce reuse limit.
+        //Enforce reuse limit.
         AccessTokenExtendedAttributes extendedAttributes = validationBean.getAccessTokenExtendedAttributes();
         if (extendedAttributes == null || extendedAttributes.getParameters() == null) {
             return;
@@ -158,6 +170,18 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             if (log.isDebugEnabled()) {
                 log.debug("Refresh token reuse limit (" + allowedReUseLimit + ") reached for client: " + clientId
                         + ". Current reuse count: " + reuseCount + ". Rejecting refresh request.");
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, tenantDomain)
+                        .inputParam("graceful reuse count", reuseCount)
+                        .configParam("allowed graceful reuse limit", allowedReUseLimit)
+                        .resultMessage("Refresh token has reached the configured graceful reuse limit.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             throw new IdentityOAuth2Exception("Refresh token has reached the configured graceful reuse limit.");
         }
@@ -384,12 +408,10 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
 
     /**
      * Revoke the stale partner of {@code oldAccessToken} using the {@code successorTokenId} linkage.
-     *
-     * <p>Case A (reuse): if {@code oldAccessToken} carries a {@code successorTokenId} extended attribute,
+     * If {@code oldAccessToken} carries a {@code successorTokenId} extended attribute,
      * the token it points to is stale and is revoked. Returns {@code true} to signal reuse so the
      * caller increments the reuse counter.
-     *
-     * <p>Case B (fresh): if no such attribute is present, a JOIN-based DAO query looks for any token
+     * If no such attribute is present, a JOIN-based DAO query looks for any token
      * whose own {@code successorTokenId} attribute equals {@code oldAccessToken.tokenId} (i.e., a
      * predecessor that still has an active row). If found it is revoked. Returns {@code false}.
      */

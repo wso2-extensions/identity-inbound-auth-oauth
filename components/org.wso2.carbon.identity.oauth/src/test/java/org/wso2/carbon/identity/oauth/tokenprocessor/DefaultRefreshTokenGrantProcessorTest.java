@@ -26,6 +26,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -113,6 +114,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
     private MockedStatic<IdentityUtil> identityUtilMockedStatic;
     private MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolderMockedStatic;
+    private MockedStatic<LoggerUtils> loggerUtilsMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -128,6 +130,8 @@ public class DefaultRefreshTokenGrantProcessorTest {
         identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
         identityUtilMockedStatic = mockStatic(IdentityUtil.class);
         serviceComponentHolderMockedStatic = mockStatic(OAuth2ServiceComponentHolder.class);
+        loggerUtilsMockedStatic = mockStatic(LoggerUtils.class);
+        loggerUtilsMockedStatic.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
 
         persistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
                 .thenReturn(mockPersistenceFactory);
@@ -169,6 +173,7 @@ public class DefaultRefreshTokenGrantProcessorTest {
         identityTenantUtilMockedStatic.close();
         identityUtilMockedStatic.close();
         serviceComponentHolderMockedStatic.close();
+        loggerUtilsMockedStatic.close();
         closeable.close();
     }
 

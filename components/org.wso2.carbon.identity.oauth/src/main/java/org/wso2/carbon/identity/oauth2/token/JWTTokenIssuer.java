@@ -972,6 +972,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return jwtClaimsSet;
     }
 
+    /**
+     * Remove internal extended attributes from the custom claims map to avoid them being included as JWT claims.
+     * This method removes specific internal extended attributes related to graceful refresh token rotation from the
+     * provided custom claims map. These attributes are used internally for token management and should not be
+     * exposed as JWT claims in the issued tokens.
+     *
+     * @param customClaims the map of custom claims from which internal extended attributes should be removed
+     */
     private void removeInternalExtendedAttributes(Map<String, String> customClaims) {
 
         customClaims.remove(OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_COUNT);

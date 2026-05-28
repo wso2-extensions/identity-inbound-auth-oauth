@@ -485,6 +485,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
     }
 
+    /**
+     * Remove the internal extended attributes which should not be included in the ID token.
+     *
+     * @param params The map of extended attributes to be filtered.
+     */
     private void removeInternalExtendedAttributes(Map<String, String> params) {
 
         params.remove(OAuthConstants.IS_SHARED_USER);
