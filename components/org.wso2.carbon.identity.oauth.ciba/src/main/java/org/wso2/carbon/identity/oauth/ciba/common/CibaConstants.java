@@ -53,6 +53,12 @@ public class CibaConstants {
     public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_authorize";
     public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
 
+    // CIBA error constants.
+    public static final String CIBA_AUTH_FAILED_ERROR_CODE = "authentication.attempt.failed";
+    public static final String CIBA_USER_MISMATCH_ERROR_DESCRIPTION = "ciba.user.mismatch";
+    public static final String STATUS_PARAM = "status";
+    public static final String STATUS_MSG_PARAM = "statusMsg";
+
     private CibaConstants() {
 
     }
