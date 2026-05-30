@@ -86,6 +86,11 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
                                 CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE);
                         uriBuilder.addParameter(CibaConstants.STATUS_MSG_PARAM,
                                 CibaConstants.CIBA_USER_MISMATCH_ERROR_DESCRIPTION);
+                        String tenantDomain = authorizationReqDTO.getTenantDomain();
+                        if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()
+                                && isNotSuperTenant(tenantDomain)) {
+                            uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+                        }
                         respDTO.setCallbackURI(uriBuilder.build().toString());
                     } catch (URISyntaxException | URLBuilderException e) {
                         throw new IdentityOAuth2Exception("Error building CIBA retry page URL.", e);
