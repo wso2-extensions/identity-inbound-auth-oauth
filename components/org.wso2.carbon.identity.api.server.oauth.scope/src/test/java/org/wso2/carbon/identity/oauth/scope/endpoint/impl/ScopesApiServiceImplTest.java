@@ -102,13 +102,13 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
         if (Response.Status.OK.equals(expectation)) {
             when(ScopeUtils.getScopeDTO(any(Scope.class))).thenReturn(any(ScopeDTO.class));
-            assertEquals(scopesApiService.updateScope(scopeToUpdateDTO, someScopeName).getStatus(),
+            assertEquals(scopesApiService.updateScope(scopeToUpdateDTO, someScopeName, false).getStatus(),
                     Response.Status.OK.getStatusCode(), "Error occurred while updating scopes");
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
             when(oAuth2ScopeService.updateScope(any(Scope.class))).thenThrow(IdentityOAuth2ScopeClientException.class);
             callRealMethod();
             try {
-                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName);
+                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
                         "Cannot find HTTP Response, Bad Request in Case of " +
@@ -125,7 +125,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             when(oAuth2ScopeService.updateScope(any(Scope.class))).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName);
+                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode(),
                         "Cannot find HTTP Response, Not Found in Case of " +
@@ -140,7 +140,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             when(oAuth2ScopeService.updateScope(any(Scope.class))).thenThrow(IdentityOAuth2ScopeException.class);
             callRealMethod();
             try {
-                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName);
+                scopesApiService.updateScope(scopeToUpdateDTO, someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                         "Cannot find HTTP Response, Internal Server Error in case of " +
@@ -174,13 +174,14 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.getScope(someScopeName))
                     .thenReturn(new Scope(someScopeName, someScopeName, someScopeDescription));
-            assertEquals(scopesApiService.getScope(someScopeName).getStatus(), Response.Status.OK.getStatusCode(),
+            assertEquals(scopesApiService.getScope(someScopeName, false).getStatus(),
+                    Response.Status.OK.getStatusCode(),
                     "Error occurred while getting a scope");
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
             when(oAuth2ScopeService.getScope(someScopeName)).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.getScope(someScopeName);
+                scopesApiService.getScope(someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
                         "Cannot find HTTP Response, Bad Request in Case of " +
@@ -197,7 +198,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             when(oAuth2ScopeService.getScope(someScopeName)).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.getScope(someScopeName);
+                scopesApiService.getScope(someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode(),
                         "Cannot find HTTP Response, Not Found in Case of " +
@@ -212,7 +213,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             when(oAuth2ScopeService.getScope(someScopeName)).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.getScope(someScopeName);
+                scopesApiService.getScope(someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                         "Cannot find HTTP Response, Internal Server Error in case of " +
@@ -284,13 +285,13 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
         if (Response.Status.OK.equals(expectation)) {
             doNothing().when(oAuth2ScopeService).deleteScope(any(String.class));
-            assertEquals(scopesApiService.deleteScope(any(String.class)).getStatus(),
+            assertEquals(scopesApiService.deleteScope(any(String.class), false).getStatus(),
                     Response.Status.OK.getStatusCode());
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
             doThrow(throwable).when(oAuth2ScopeService).deleteScope(any(String.class));
             callRealMethod();
             try {
-                scopesApiService.deleteScope(someScopeName);
+                scopesApiService.deleteScope(someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
                         "Cannot find HTTP Response, Bad Request in Case of " +
@@ -307,7 +308,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             doThrow(throwable).when(oAuth2ScopeService).deleteScope(any(String.class));
             callRealMethod();
             try {
-                scopesApiService.deleteScope(someScopeName);
+                scopesApiService.deleteScope(someScopeName, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode(),
                         "Cannot find HTTP Response, Not Found in Case of " +
@@ -417,19 +418,19 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.isScopeExists(someScopeName, false)).thenReturn(Boolean.TRUE);
-            assertEquals(scopesApiService.isScopeExists(someScopeName,
-                            false).getStatus(), Response.Status.OK.getStatusCode(),
+            assertEquals(scopesApiService.isScopeExists(someScopeName, false, false).getStatus(),
+                    Response.Status.OK.getStatusCode(),
                     "Error occurred while checking is scope exist");
         } else if (Response.Status.NOT_FOUND.equals(expectation)) {
             when(oAuth2ScopeService.isScopeExists(someScopeName, false)).thenReturn(Boolean.FALSE);
-            assertEquals(scopesApiService.isScopeExists(someScopeName, false).getStatus(),
+            assertEquals(scopesApiService.isScopeExists(someScopeName, false, false).getStatus(),
                     Response.Status.NOT_FOUND.getStatusCode(),
                     "Given scope does not exist but error while checking isExist");
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
             when(oAuth2ScopeService.isScopeExists(someScopeName, false)).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.isScopeExists(someScopeName, false);
+                scopesApiService.isScopeExists(someScopeName, false, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
                         "Cannot find HTTP Response, Bad Request in Case of " +
@@ -444,7 +445,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
             when(oAuth2ScopeService.isScopeExists("scope", false)).thenThrow(throwable);
             callRealMethod();
             try {
-                scopesApiService.isScopeExists(someScopeName, false);
+                scopesApiService.isScopeExists(someScopeName, false, false);
             } catch (ScopeEndpointException e) {
                 assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                         "Cannot find HTTP Response, Internal Server Error in case of " +
@@ -455,6 +456,56 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
                 reset(oAuth2ScopeService);
             }
         }
+    }
+
+    @Test
+    public void testGetScopeWithEncodedName() throws Exception {
+
+        String encodedScopeName = "dGVzdC9zY29wZQ";
+        String decodedScopeName = "test/scope";
+
+        when(oAuth2ScopeService.getScope(decodedScopeName)).thenReturn(
+                new Scope(decodedScopeName, decodedScopeName, someScopeDescription));
+
+        assertEquals(scopesApiService.getScope(encodedScopeName, true).getStatus(), Response.Status.OK.getStatusCode(),
+                "Error occurred while getting a scope with encoded name");
+    }
+
+    @Test
+    public void testUpdateScopeWithEncodedName() throws Exception {
+
+        String encodedScopeName = "dGVzdC9zY29wZQ";
+        String decodedScopeName = "test/scope";
+
+        ScopeToUpdateDTO scopeToUpdateDTO = new ScopeToUpdateDTO();
+        scopeToUpdateDTO.setDescription("updated description");
+        scopeToUpdateDTO.setBindings(Collections.emptyList());
+
+        when(ScopeUtils.getScopeDTO(any(Scope.class))).thenReturn(any(ScopeDTO.class));
+        assertEquals(scopesApiService.updateScope(scopeToUpdateDTO, encodedScopeName, true).getStatus(),
+                Response.Status.OK.getStatusCode(), "Error occurred while updating scope with encoded name");
+    }
+
+    @Test
+    public void testDeleteScopeWithEncodedName() throws Exception {
+
+        String encodedScopeName = "dGVzdC9zY29wZQ";
+        String decodedScopeName = "test/scope";
+
+        doNothing().when(oAuth2ScopeService).deleteScope(decodedScopeName);
+        assertEquals(scopesApiService.deleteScope(encodedScopeName, true).getStatus(),
+                Response.Status.OK.getStatusCode(), "Error occurred while deleting scope with encoded name");
+    }
+
+    @Test
+    public void testIsScopeExistsWithEncodedName() throws Exception {
+
+        String encodedScopeName = "dGVzdC9zY29wZQ";
+        String decodedScopeName = "test/scope";
+
+        when(oAuth2ScopeService.isScopeExists(decodedScopeName, false)).thenReturn(Boolean.TRUE);
+        assertEquals(scopesApiService.isScopeExists(encodedScopeName, false, true).getStatus(),
+                Response.Status.OK.getStatusCode(), "Error occurred while checking scope existence with encoded name");
     }
 
     private void callRealMethod() throws Exception {

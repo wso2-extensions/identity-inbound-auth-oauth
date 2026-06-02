@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.oauth.scope.endpoint.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
@@ -38,6 +39,8 @@ import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Set;
 
 import javax.ws.rs.core.Response;
@@ -100,11 +103,12 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * @return Response with the retrieved scope/ retrieval status.
      */
     @Override
-    public Response getScope(String name) {
+    public Response getScope(String name, Boolean encoded) {
 
         Scope scope = null;
 
         try {
+            name = decodeScopeName(name, encoded);
             scope = ScopeUtils.getOAuth2ScopeService().getScope(name);
         } catch (IdentityOAuth2ScopeClientException e) {
             if (LOG.isDebugEnabled()) {
@@ -175,11 +179,12 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * @return Response with the indication whether the scope exists or not.
      */
     @Override
-    public Response isScopeExists(String name, Boolean includeOIDCScopes) {
+    public Response isScopeExists(String name, Boolean includeOIDCScopes, Boolean encoded) {
 
         boolean isScopeExists = false;
 
         try {
+            name = decodeScopeName(name, encoded);
             isScopeExists = ScopeUtils.getOAuth2ScopeService().isScopeExists(name, includeOIDCScopes);
         } catch (IdentityOAuth2ScopeClientException e) {
             if (LOG.isDebugEnabled()) {
@@ -210,10 +215,11 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * @return
      */
     @Override
-    public Response updateScope(ScopeToUpdateDTO scope, String name) {
+    public Response updateScope(ScopeToUpdateDTO scope, String name, Boolean encoded) {
 
         ScopeDTO updatedScope = null;
         try {
+            name = decodeScopeName(name, encoded);
             validateUpdateRequest(name);
             updatedScope = ScopeUtils.getScopeDTO(ScopeUtils.getOAuth2ScopeService()
                     .updateScope(ScopeUtils.getUpdatedScope(scope, name)));
@@ -250,9 +256,10 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      * @return Response with the status of scope deletion.
      */
     @Override
-    public Response deleteScope(String name) {
+    public Response deleteScope(String name, Boolean encoded) {
 
         try {
+            name = decodeScopeName(name, encoded);
             validateDeleteRequest(name);
             ScopeUtils.getOAuth2ScopeService().deleteScope(name);
         } catch (IdentityOAuth2ScopeClientException e) {
@@ -373,5 +380,33 @@ public class ScopesApiServiceImpl extends ScopesApiService {
             LOG.error("Error while validating user authorization of user: " + authenticatedUser, e);
         }
         return false;
+    }
+
+    /**
+     * Decode the scope name if it is Base64 URL-encoded.
+     *
+     * @param name    The scope name to decode
+     * @param encoded Flag indicating if the name is encoded
+     * @return Decoded scope name if encoded is true, otherwise returns the original name
+     */
+    private String decodeScopeName(String name, Boolean encoded) {
+        if (name == null || StringUtils.isBlank(name)) {
+            LOG.debug("Scope name is null, empty, or blank");
+            return name;
+        }
+        if (encoded != null && encoded) {
+            try {
+                return new String(
+                        Base64.getUrlDecoder().decode(name),
+                        StandardCharsets.UTF_8
+                );
+            } catch (IllegalArgumentException e) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error decoding scope name: " + name, e);
+                }
+                return name;
+            }
+        }
+        return name;
     }
 }
