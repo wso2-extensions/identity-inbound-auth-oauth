@@ -475,6 +475,7 @@ public final class OAuthConstants {
         public static final String TOKEN_STATE_REVOKED = "REVOKED";
         public static final String TOKEN_STATE_EXPIRED = "EXPIRED";
         public static final String TOKEN_STATE_INACTIVE = "INACTIVE";
+        public static final String TOKEN_STATE_GRACEFULLY_ROTATED = "GRACEFULLY_ROTATED";
 
         private TokenStates() {
 
@@ -686,6 +687,29 @@ public final class OAuthConstants {
     }
 
     /**
+     * Graceful refresh token rotation constants.
+     */
+    public static class GracefulRefreshTokenRotation {
+
+        public static final String IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED = "isGracefulRefreshTokenRotationEnabled";
+        public static final String GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD =
+                "gracefulRefreshTokenRotationValidityPeriod";
+        public static final int DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE = 30;
+        public static final int GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE = 60;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT = "gracefulRefreshTokenReuseLimit";
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE = 5;
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE = 1;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_COUNT = "gracefulRefreshTokenReuseCount";
+        public static final String GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS =
+                "gracefulRefreshTokenGraceValidityInMillis";
+        public static final String GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID = "successorTokenId";
+
+        private GracefulRefreshTokenRotation() {
+
+        }
+    }
+
+    /**
      * Signature algorithms constants.
      */
     public static class SignatureAlgorithms {
@@ -867,6 +891,11 @@ public final class OAuthConstants {
         public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
         public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
         public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
+        public static final String AUTHORIZED_SCOPES = "AUTHORIZED_SCOPES";
+        public static final String UNAUTHORIZED_SCOPES = "UNAUTHORIZED_SCOPES";
+        public static final String ACCESS_TOKEN_VALIDITY_MILLIS = "ACCESS_TOKEN_VALIDITY_MILLIS";
+        public static final String REFRESH_TOKEN_VALIDITY_MILLIS = "REFRESH_TOKEN_VALIDITY_MILLIS";
+        public static final String REMOTE_IP = "REMOTE_IP";
     }
 
     /**

@@ -1095,13 +1095,15 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public Object[][] testGetAppInformationWithOIDCPropertiesForImpersonationData() {
 
         return new Object[][]{
-                {true, 3600},
-                {false, 600},
+                {true, 3600, true, 120, 3},
+                {false, 600, false, 30, 5},
         };
     }
     @Test(dataProvider = "testGetAppInformationWithOIDCPropertiesForImpersonationData")
     public void testGetAppInformationWithOIDCPropertiesForImpersonationTest
-            (boolean subjectTokenEnabled, int subjectTokenExpiryTime) throws Exception {
+            (boolean subjectTokenEnabled, int subjectTokenExpiryTime,
+             boolean gracefulRotationEnabled, int gracefulRotationValidity,
+             int gracefulReuseLimit) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -1121,6 +1123,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 // Add Impersonation OIDC properties.
                 defaultOAuthAppDO.setSubjectTokenEnabled(subjectTokenEnabled);
                 defaultOAuthAppDO.setSubjectTokenExpiryTime(subjectTokenExpiryTime);
+                defaultOAuthAppDO.setGracefulRefreshTokenRotationEnabled(gracefulRotationEnabled);
+                defaultOAuthAppDO.setGracefulRefreshTokenRotationValidityPeriod(gracefulRotationValidity);
+                defaultOAuthAppDO.setGracefulRefreshTokenReuseLimit(gracefulReuseLimit);
                 addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
 
                 OAuthAppDAO appDAO = new OAuthAppDAO();
@@ -1128,14 +1133,23 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertNotNull(oAuthAppDO);
                 assertEquals(oAuthAppDO.isSubjectTokenEnabled(), subjectTokenEnabled);
                 assertEquals(oAuthAppDO.getSubjectTokenExpiryTime(), subjectTokenExpiryTime);
+                assertEquals(oAuthAppDO.isGracefulRefreshTokenRotationEnabled(), gracefulRotationEnabled);
+                assertEquals(oAuthAppDO.getGracefulRefreshTokenRotationValidityPeriod(),
+                        gracefulRotationValidity);
+                assertEquals(oAuthAppDO.getGracefulRefreshTokenReuseLimit(), gracefulReuseLimit);
 
                 // Update Impersonation OIDC properties.
                 oAuthAppDO.setSubjectTokenEnabled(!subjectTokenEnabled);
+                oAuthAppDO.setGracefulRefreshTokenRotationEnabled(!gracefulRotationEnabled);
+                oAuthAppDO.setGracefulRefreshTokenReuseLimit(gracefulReuseLimit + 1 > 5 ? 1 : gracefulReuseLimit + 1);
 
                 appDAO.updateConsumerApplication(oAuthAppDO);
                 OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
                 assertNotNull(retrievedOAuthAppDO);
                 assertEquals(retrievedOAuthAppDO.isSubjectTokenEnabled(), !subjectTokenEnabled);
+                assertEquals(retrievedOAuthAppDO.isGracefulRefreshTokenRotationEnabled(), !gracefulRotationEnabled);
+                assertEquals(retrievedOAuthAppDO.getGracefulRefreshTokenReuseLimit(),
+                        gracefulReuseLimit + 1 > 5 ? 1 : gracefulReuseLimit + 1);
             }
         } finally {
             resetPrivilegedCarbonContext();

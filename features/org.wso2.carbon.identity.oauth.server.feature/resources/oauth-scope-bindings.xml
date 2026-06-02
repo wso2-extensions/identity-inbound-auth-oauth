@@ -1076,4 +1076,24 @@
             <Permission>/permission/admin/manage/identity/apiresourcemgt/delete</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_moesif_config_view" displayName="View Moesif Configurations">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/moesifconfig/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_moesif_config_create" displayName="Create Moesif Configurations">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/moesifconfig/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_moesif_config_update" displayName="Update Moesif Configurations">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/moesifconfig/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_moesif_config_delete" displayName="Delete Moesif Configurations">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/moesifconfig/delete</Permission>
+        </Permissions>
+    </Scope>
 </Scopes>

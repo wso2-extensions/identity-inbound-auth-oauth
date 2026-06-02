@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.model;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
 import java.util.Properties;
@@ -46,6 +47,8 @@ public class RefreshTokenValidationDataDO {
     private long validityPeriodInMillis;
 
     private String tokenBindingReference;
+
+    private TokenBinding tokenBinding;
 
     private Timestamp accessTokenIssuedTime;
 
@@ -131,6 +134,16 @@ public class RefreshTokenValidationDataDO {
     public void setTokenBindingReference(String tokenBindingReference) {
 
         this.tokenBindingReference = tokenBindingReference;
+    }
+
+    public TokenBinding getTokenBinding() {
+
+        return tokenBinding;
+    }
+
+    public void setTokenBinding(TokenBinding tokenBinding) {
+
+        this.tokenBinding = tokenBinding;
     }
 
     public Timestamp getAccessTokenIssuedTime() {

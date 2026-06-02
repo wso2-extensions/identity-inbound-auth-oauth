@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
@@ -47,8 +48,11 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -389,6 +393,8 @@ public class AccessTokenEventUtil {
                         tokReqMsgCtx.getAuthorizedUser().getUserName());
                 properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
                         tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain());
+                properties.put(IdentityEventConstants.EventProperty.IS_FEDERATED_USER,
+                        tokReqMsgCtx.getAuthorizedUser().isFederatedUser());
                 properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER,
                         tokReqMsgCtx.getAuthorizedUser().isOrganizationUser());
                 properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
@@ -428,10 +434,49 @@ public class AccessTokenEventUtil {
                 LOG.error("Error while retrieving the Service Provider for client ID: " +
                         tokenReqDTO.getClientId(), e);
             }
+
+            properties.put(OAuthConstants.EventProperty.REFRESH_TOKEN_VALIDITY_MILLIS,
+                    tokReqMsgCtx.getRefreshTokenvalidityPeriod());
+            // Resolve the client IP via IdentityUtil so X-Forwarded-For etc. are honoured when the
+            // server sits behind a proxy/load balancer — same source as the rest of the handlers.
+            if (tokenReqDTO.getHttpServletRequestWrapper() != null) {
+                properties.put(OAuthConstants.EventProperty.REMOTE_IP,
+                        IdentityUtil.getClientIpAddress(tokenReqDTO.getHttpServletRequestWrapper()));
+            }
         }
 
         if (tokenRespDTO != null) {
             properties.put(OAuthConstants.EventProperty.TOKEN_ID, tokenRespDTO.getTokenId());
+            properties.put(OAuthConstants.EventProperty.ACCESS_TOKEN_VALIDITY_MILLIS,
+                    tokenRespDTO.getExpiresInMillis());
+
+            String grantedScopes = tokenRespDTO.getAuthorizedScopes();
+            properties.put(OAuthConstants.EventProperty.AUTHORIZED_SCOPES,
+                    grantedScopes != null ? grantedScopes : StringUtils.EMPTY);
+
+            // Unauthorized scopes = requested scopes - granted scopes.
+            String unauthorizedScopes = StringUtils.EMPTY;
+            if (tokenReqDTO != null && tokenReqDTO.getScope() != null) {
+                List<String> requestedScopes = new LinkedList<>(Arrays.asList(tokenReqDTO.getScope()));
+                List<String> grantedScopeList = StringUtils.isNotBlank(grantedScopes)
+                        ? Arrays.asList(grantedScopes.split(" "))
+                        : Collections.emptyList();
+                requestedScopes.removeAll(grantedScopeList);
+                if (!requestedScopes.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String scope : requestedScopes) {
+                        sb.append(scope).append(" ");
+                    }
+                    unauthorizedScopes = sb.toString().trim();
+                }
+            }
+            properties.put(OAuthConstants.EventProperty.UNAUTHORIZED_SCOPES, unauthorizedScopes);
+
+            // Error code / message — null on success, populated when tokenRespDTO carries an error.
+            properties.put(IdentityEventConstants.EventProperty.ERROR_CODE,
+                    tokenRespDTO.getErrorCode() != null ? tokenRespDTO.getErrorCode() : StringUtils.EMPTY);
+            properties.put(IdentityEventConstants.EventProperty.ERROR_MESSAGE,
+                    tokenRespDTO.getErrorMsg() != null ? tokenRespDTO.getErrorMsg() : StringUtils.EMPTY);
         }
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();

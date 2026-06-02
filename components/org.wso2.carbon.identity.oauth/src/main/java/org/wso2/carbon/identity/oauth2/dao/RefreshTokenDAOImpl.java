@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.dao.SQLQueries.RefreshTokenPersistenceSQL
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -147,6 +148,14 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
     public AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser,
                                                String userStoreDomain, String scope) throws IdentityOAuth2Exception {
 
+        return getActiveRefreshToken(consumerKey, authzUser, userStoreDomain, scope, null);
+    }
+
+    @Override
+    public AccessTokenDO getActiveRefreshToken(String consumerKey, AuthenticatedUser authzUser,
+                                               String userStoreDomain, String scope, TokenBinding tokenBinding)
+            throws IdentityOAuth2Exception {
+
         if (!isEnabled()) {
             return null;
         }
@@ -165,12 +174,12 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = createPreparedStatementGetActiveRefreshToken(connection, consumerKey,
                      tenantAwareUsername,
-                     tenantId, userDomain, scope, authenticatedIDP, isUsernameCaseSensitive);
+                     tenantId, userDomain, scope, authenticatedIDP, isUsernameCaseSensitive, tokenBinding);
              ResultSet resultSet = prepStmt.executeQuery()) {
 
             if (resultSet.next()) {
                 return buildAccessTokenDO(resultSet, consumerKey, tenantAwareUsername, userDomain, tenantDomain,
-                        scope, authzUser);
+                        scope, authzUser, tokenBinding);
             }
             return null;
 
@@ -191,13 +200,15 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
      * @param tenantDomain        The tenant domain of the authenticated user.
      * @param scope               The scope of the access token.
      * @param authzUser           The authenticated user.
+     * @param tokenBinding        The token binding used to retrieve the refresh token.
      * @return An AccessTokenDO object containing the token data.
      * @throws SQLException If an error occurs while accessing the ResultSet.
      * @throws IdentityOAuth2Exception If an error occurs while creating the AccessTokenDO object.
      */
     private AccessTokenDO buildAccessTokenDO(ResultSet resultSet, String consumerKey, String tenantAwareUsername,
                                              String userDomain, String tenantDomain, String scope,
-                                             AuthenticatedUser authzUser) throws SQLException, IdentityOAuth2Exception {
+                                             AuthenticatedUser authzUser, TokenBinding tokenBinding)
+            throws SQLException, IdentityOAuth2Exception {
 
         String refreshToken = getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(1));
         long refreshTokenIssuedTime = resultSet.getTimestamp(2,
@@ -222,6 +233,7 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
         accessTokenDO.setNotPersisted(true);
         accessTokenDO.setRefreshToken(refreshToken);
         accessTokenDO.setTokenId(tokenId);
+        accessTokenDO.setTokenBinding(tokenBinding);
         if (StringUtils.isNotEmpty(isConsentedToken)) {
             accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
         }
@@ -255,31 +267,53 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
                                                                            String tenantAwareUsername, int tenantId,
                                                                            String userDomain,
                                                                            String scope, String authenticatedIDP,
-                                                                           boolean isUsernameCaseSensitive)
+                                                                           boolean isUsernameCaseSensitive,
+                                                                           TokenBinding tokenBinding)
             throws SQLException, IdentityOAuth2Exception {
 
-        String sql = RefreshTokenPersistenceSQLQueries.RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE;
+        boolean isBoundRequest = isTokenBindingAvailable(tokenBinding);
+        String sql =
+                RefreshTokenPersistenceSQLQueries.RETRIEVE_LATEST_ACTIVE_REFRESH_TOKEN_BY_CLIENT_ID_USER_SCOPE_BINDING;
         if (!isUsernameCaseSensitive) {
             sql = sql.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
         }
 
         String hashedScope = OAuth2Util.hashScopes(scope);
         if (hashedScope == null) {
-            sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH IS NULL");
+            sql = sql.replace("REFRESH_TOKEN_TABLE.TOKEN_SCOPE_HASH=?",
+                    "REFRESH_TOKEN_TABLE.TOKEN_SCOPE_HASH IS NULL");
+        }
+
+        if (!isBoundRequest) {
+            sql = sql.replace("REFRESH_TOKEN_BINDING_TABLE.TOKEN_BINDING_TYPE = ? AND " +
+                            "REFRESH_TOKEN_BINDING_TABLE.TOKEN_BINDING_REF = ?",
+                    "REFRESH_TOKEN_BINDING_TABLE.REFRESH_TOKEN_ID IS NULL");
         }
 
         PreparedStatement prepStmt = connection.prepareStatement(sql);
-        prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-        prepStmt.setString(2, isUsernameCaseSensitive ? tenantAwareUsername : tenantAwareUsername.toLowerCase());
-        prepStmt.setInt(3, tenantId);
-        prepStmt.setString(4, userDomain);
+        int parameterIndex = 1;
+        prepStmt.setString(parameterIndex++, getPersistenceProcessor().getProcessedClientId(consumerKey));
+        prepStmt.setString(parameterIndex++,
+                isUsernameCaseSensitive ? tenantAwareUsername : tenantAwareUsername.toLowerCase());
+        prepStmt.setInt(parameterIndex++, tenantId);
+        prepStmt.setString(parameterIndex++, userDomain);
         if (hashedScope == null) {
-            prepStmt.setString(5, authenticatedIDP);
+            prepStmt.setString(parameterIndex++, authenticatedIDP);
         } else {
-            prepStmt.setString(5, hashedScope);
-            prepStmt.setString(6, authenticatedIDP);
+            prepStmt.setString(parameterIndex++, hashedScope);
+            prepStmt.setString(parameterIndex++, authenticatedIDP);
+        }
+        if (isBoundRequest) {
+            prepStmt.setString(parameterIndex++, tokenBinding.getBindingType());
+            prepStmt.setString(parameterIndex, tokenBinding.getBindingReference());
         }
         return prepStmt;
+    }
+
+    private boolean isTokenBindingAvailable(TokenBinding tokenBinding) {
+
+        return tokenBinding != null && StringUtils.isNotBlank(tokenBinding.getBindingType()) &&
+                StringUtils.isNotBlank(tokenBinding.getBindingReference());
     }
 
     @Override
@@ -391,10 +425,33 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
                             scopes.toArray(new String[0])));
                 }
             }
+            setRefreshTokenBinding(connection, validationDataDO);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error occurred while validating the refresh token", e);
         }
         return validationDataDO;
+    }
+
+    private void setRefreshTokenBinding(Connection connection, RefreshTokenValidationDataDO validationDataDO)
+            throws SQLException {
+
+        if (validationDataDO == null || StringUtils.isBlank(validationDataDO.getTokenId())) {
+            return;
+        }
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                RefreshTokenPersistenceSQLQueries.RETRIEVE_REFRESH_TOKEN_BINDING_BY_REFRESH_TOKEN_ID)) {
+            prepStmt.setString(1, validationDataDO.getTokenId());
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                if (!resultSet.next()) {
+                    return;
+                }
+                TokenBinding tokenBinding = new TokenBinding(resultSet.getString(1), resultSet.getString(2),
+                        resultSet.getString(3));
+                validationDataDO.setTokenBinding(tokenBinding);
+                validationDataDO.setTokenBindingReference(tokenBinding.getBindingReference());
+            }
+        }
     }
 
     private RefreshTokenValidationDataDO buildValidationDataDO(ResultSet resultSet, String refreshToken)
@@ -576,6 +633,8 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
             insertTokenStmt.executeUpdate();
             // Insert token scopes if available
             insertScopesForToken(addScopeStmt, accessTokenDO);
+            // Insert token binding
+            insertTokenBindingForRefreshToken(connection, accessTokenDO);
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLIntegrityConstraintViolationException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -901,5 +960,26 @@ public class RefreshTokenDAOImpl extends AbstractOAuthDAO implements RefreshToke
     private boolean isEnabled() {
 
         return !OAuth2Util.isAccessTokenPersistenceEnabled() && OAuth2Util.isRefreshTokenPersistenceEnabled();
+    }
+
+    private void insertTokenBindingForRefreshToken(Connection connection, AccessTokenDO accessTokenDO)
+            throws SQLException, IdentityOAuth2Exception {
+
+        TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+        if (tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingType()) ||
+                StringUtils.isBlank(tokenBinding.getBindingReference())) {
+            return;
+        }
+
+        int tenantId = OAuth2Util.getTenantId(accessTokenDO.getAuthzUser().getTenantDomain());
+        try (PreparedStatement stmt = connection.prepareStatement(
+                RefreshTokenPersistenceSQLQueries.STORE_REFRESH_TOKEN_BINDING)) {
+            stmt.setString(1, accessTokenDO.getTokenId());
+            stmt.setString(2, tokenBinding.getBindingType());
+            stmt.setString(3, tokenBinding.getBindingReference());
+            stmt.setString(4, tokenBinding.getBindingValue());
+            stmt.setInt(5, tenantId);
+            stmt.executeUpdate();
+        }
     }
 }

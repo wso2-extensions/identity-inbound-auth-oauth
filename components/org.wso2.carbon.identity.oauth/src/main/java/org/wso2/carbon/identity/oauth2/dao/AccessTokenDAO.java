@@ -19,12 +19,16 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Access token related data access interface.
@@ -226,6 +230,78 @@ public interface AccessTokenDAO {
                 userStoreDomain);
     }
 
+    /**
+     * Performs a graceful rotation of the refresh token: instead of marking the previous token INACTIVE, the
+     * previous row is set to {@code oldTokenNewState} with a fresh TOKEN_STATE_ID assigned to avoid the unique
+     * constraint conflict with the new ACTIVE token row that is inserted in the same transaction. The grace deadline
+     * is persisted as an extended attribute in {@code oldTokenExtendedAttributeUpdates}. Additionally, upserts the
+     * provided key/value pairs onto the old token row's extended-attribute store within the same transaction.
+     *
+     * <p><b>Default fallback behaviour for custom DAO implementations that have not overridden this method:</b>
+     * <ul>
+     *   <li><b>First rotation</b> ({@code oldTokenNewStateId} is non-null): delegates to
+     *       {@link #invalidateAndCreateNewAccessToken} using the caller-supplied {@code oldTokenNewState}
+     *       (typically {@code GRACEFULLY_ROTATED}). Extended-attribute updates are silently dropped because
+     *       the legacy method has no attribute-store path.</li>
+     *   <li><b>Reuse rotation</b> ({@code oldTokenNewStateId} is {@code null}): degrades to a standard
+     *       (non-graceful) rotation — the old token is marked {@code INACTIVE} and a new token is created via
+     *       {@link #invalidateAndCreateNewAccessToken}. The grace window and extended-attribute updates are
+     *       silently dropped. Custom DAO implementations should override this method to support true graceful
+     *       refresh token reuse.</li>
+     * </ul>
+     *
+     * @param oldAccessTokenId                 old access token id
+     * @param oldRefreshTokenIssuedTime        refresh token issued time of the previous token
+     * @param oldTokenNewStateId               new TOKEN_STATE_ID for the previous token row; pass {@code null}
+     *                                         on graceful reuses (newReuseCount &gt; 0) to skip updating the old
+     *                                         row's state (preserves the original grace deadline)
+     * @param oldTokenNewState                 new TOKEN_STATE for the previous token row; only applied when
+     *                                         {@code oldTokenNewStateId} is non-null
+     * @param consumerKey                      consumer key
+     * @param accessTokenDO                    new access token to persist
+     * @param userStoreDomain                  user store domain
+     * @param grantType                        grant type of the previous token
+     * @param oldTokenExtendedAttributeUpdates key/value pairs to upsert on the old token row
+     * @throws IdentityOAuth2Exception on persistence failure
+     */
+    default void gracefullyRotateAndCreateNewAccessToken(String oldAccessTokenId,
+                                                         Timestamp oldRefreshTokenIssuedTime,
+                                                         String oldTokenNewStateId, String oldTokenNewState,
+                                                         String consumerKey,
+                                                         AccessTokenDO accessTokenDO, String userStoreDomain,
+                                                         String grantType,
+                                                         Map<String, String> oldTokenExtendedAttributeUpdates)
+            throws IdentityOAuth2Exception {
+
+        if (oldTokenNewStateId == null) {
+            // Reuse path: graceful semantics unsupported in the legacy DAO path. Degrade to a standard
+            // rotation so the flow still produces a valid new token. Grace window and attribute updates
+            // are silently dropped — override this method for full graceful reuse support.
+            invalidateAndCreateNewAccessToken(oldAccessTokenId,
+                    OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE, consumerKey,
+                    UUID.randomUUID().toString(), accessTokenDO, userStoreDomain, grantType);
+            return;
+        }
+        // First-rotation fallback: honour the caller's state (typically GRACEFULLY_ROTATED) instead of
+        // hardcoding INACTIVE. Extended-attribute updates are silently dropped — the legacy method has
+        // no path for them; this is documented in the javadoc.
+        invalidateAndCreateNewAccessToken(oldAccessTokenId, oldTokenNewState, consumerKey,
+                oldTokenNewStateId, accessTokenDO, userStoreDomain, grantType);
+    }
+
+    default String getAccessTokenExtendedAttributeValue(String tokenId, String attributeName,
+            String userStoreDomain) throws IdentityOAuth2Exception {
+
+        return null;
+    }
+
+    default Set<AccessTokenDO> getGracefullyRotatedAccessTokensInGracePeriod(
+            String consumerKey, String appTenantDomain, AuthenticatedUser authenticatedUser,
+            String userStoreDomain) throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
+
     void updateUserStoreDomain(int tenantId, String currentUserStoreDomain,
                                String newUserStoreDomain) throws IdentityOAuth2Exception;
 
@@ -253,6 +329,13 @@ public interface AccessTokenDAO {
             throws IdentityOAuth2Exception {
 
         return getLatestAccessTokens(consumerKey, authzUser, userStoreDomain, scope, includeExpiredTokens, limit);
+    }
+
+    default AccessTokenDO getActiveTokenByExtendedAttribute(String attributeName, String attributeValue,
+                                                            String userStoreDomain)
+            throws IdentityOAuth2Exception {
+
+        return null;
     }
 
     /**

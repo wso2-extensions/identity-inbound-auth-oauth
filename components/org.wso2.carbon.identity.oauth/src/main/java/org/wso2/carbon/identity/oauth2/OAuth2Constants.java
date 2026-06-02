@@ -32,6 +32,7 @@ public class OAuth2Constants {
         public static final String COOKIE_BASED_TOKEN_BINDER = "cookie";
         public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
         public static final String CLIENT_REQUEST = "client-request";
+        public static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
 
     }
 
@@ -69,6 +70,9 @@ public class OAuth2Constants {
     public static final int MAX_ALLOWED_LENGTH = 256;
     public static final String REFRESH_TOKEN_SCOPE_CLAIM_KEY = "rt_scope";
     public static final String TOKEN_ID = "token_id";
+    public static final String JWK_THUMBPRINT = "jkt";
+    public static final String TOKEN_BINDING_REF = "binding_ref";
+    public static final String TOKEN_BINDING_TYPE = "binding_type";
 
     /**
      * Constants for global role based scope issuer.

@@ -207,11 +207,18 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         try {
             String organizationId;
-            String tenantDomain = authenticatedUser.getTenantDomain();
-            if (authenticatedUser.getAccessingOrganization() == null) {
-                organizationId = resolveOrganizationId(tenantDomain);
-            } else {
+            String tenantDomain;
+            if (authenticatedUser.getUserResidentOrganization() != null) {
+                organizationId = authenticatedUser.getUserResidentOrganization();
+                tenantDomain = resolveTenantDomain(organizationId).orElse(authenticatedUser.getTenantDomain());
+            } else if (authenticatedUser.getAccessingOrganization() != null) {
+                // Fall back to the accessing organization when the user's resident organization is not populated.
                 organizationId = authenticatedUser.getAccessingOrganization();
+                tenantDomain = resolveTenantDomain(organizationId).orElse(authenticatedUser.getTenantDomain());
+            } else {
+                // B2C login: user belongs directly to the authenticated tenant.
+                tenantDomain = authenticatedUser.getTenantDomain();
+                organizationId = resolveOrganizationId(tenantDomain);
             }
             Organization organization = buildOrganization(organizationId, tenantDomain);
 
@@ -487,5 +494,17 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     "Error while retrieving organization Id with tenant: " + tenantDomain, e);
         }
         return null;
+    }
+
+    private Optional<String> resolveTenantDomain(String organizationId) {
+
+        OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+        try {
+            return Optional.ofNullable(organizationManager.resolveTenantDomain(organizationId));
+        } catch (OrganizationManagementException e) {
+            LOG.error(
+                    "Error while retrieving tenant domain for organization: " + organizationId, e);
+        }
+        return Optional.empty();
     }
 }

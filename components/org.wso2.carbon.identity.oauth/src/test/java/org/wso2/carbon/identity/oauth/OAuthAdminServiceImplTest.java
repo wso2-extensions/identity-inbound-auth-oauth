@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -2061,5 +2062,347 @@ public class OAuthAdminServiceImplTest {
         oAuthConsumerAppDTO.setOauthConsumerKey(consumerKey);
         oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
         return oAuthConsumerAppDTO;
+    }
+
+    @DataProvider(name = "gracefulRotationValidityPeriodNormalizationData")
+    public Object[][] gracefulRotationValidityPeriodNormalizationData() {
+
+        // rotationEnabled, inputPeriod, expectedPeriod
+        // Default validity period = 30, sealing value = 60.
+        return new Object[][] {
+                // Rotation disabled + invalid (<=0): should still be set to default (30).
+                {false, 0, 30},
+                // Rotation enabled + invalid (<=0): should be set to default (30).
+                {true, 0, 30},
+                {true, -1, 30},
+                // Rotation enabled + exceeds sealing value (60): should be clamped.
+                {true, 9999, 60},
+                {true, 61, 60},
+                // Rotation enabled + valid range: should be preserved.
+                {true, 30, 30},
+                {true, 60, 60},
+        };
+    }
+
+    @Test(dataProvider = "gracefulRotationValidityPeriodNormalizationData")
+    public void testNormalizeGracefulRotationValidityPeriod(boolean rotationEnabled, int inputPeriod,
+                                                            int expectedPeriod) throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(60);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(5);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenRotationEnabled(rotationEnabled);
+                dto.setGracefulRefreshTokenRotationValidityPeriod(inputPeriod);
+                dto.setGracefulRefreshTokenReuseLimit(3);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenRotationValidityPeriod(),
+                        expectedPeriod,
+                        "Rotation validity period not normalized correctly for rotationEnabled=" + rotationEnabled
+                                + ", input=" + inputPeriod);
+            }
+        }
+    }
+
+    @DataProvider(name = "gracefulReuseLimitNormalizationData")
+    public Object[][] gracefulReuseLimitNormalizationData() {
+
+        // inputLimit, expectedLimit
+        // Min = 1, default = 3, max = 5.
+        return new Object[][] {
+                // Below min (1): should be clamped to min (1).
+                {0, 1},
+                {-5, 1},
+                // Above max (5): should be clamped.
+                {6, 5},
+                {99, 5},
+                // Within valid range: preserved.
+                {1, 1},
+                {3, 3},
+                {5, 5},
+        };
+    }
+
+    @Test(dataProvider = "gracefulReuseLimitNormalizationData")
+    public void testNormalizeGracefulReuseLimit(int inputLimit, int expectedLimit) throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(60);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(5);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenReuseLimit(inputLimit);
+                dto.setGracefulRefreshTokenRotationEnabled(false);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenReuseLimit(), expectedLimit,
+                        "Reuse limit not normalized correctly for input=" + inputLimit);
+            }
+        }
+    }
+
+    @Test
+    public void testNormalizeGracefulRotationValidityPeriodWithConfiguredMax() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(90);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(5);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenRotationEnabled(true);
+                dto.setGracefulRefreshTokenRotationValidityPeriod(200);
+                dto.setGracefulRefreshTokenReuseLimit(3);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenRotationValidityPeriod(), 90,
+                        "Validity period should be clamped to the configured max (90), not the hardcoded default.");
+            }
+        }
+    }
+
+    @Test
+    public void testNormalizeGracefulReuseLimitWithConfiguredMax() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(60);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(7);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenReuseLimit(99);
+                dto.setGracefulRefreshTokenRotationEnabled(false);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenReuseLimit(), 7,
+                        "Reuse limit should be clamped to the configured max (7), not the hardcoded default.");
+            }
+        }
+    }
+
+    @Test
+    public void testNormalizeGracefulRotationValidityPeriodWhenDefaultExceedsConfiguredMax() throws Exception {
+
+        OAuthAdminServiceImpl.allowedGrants = null;
+        String consumerKey = UUID.randomUUID().toString();
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            // Configure a max (10) that is less than the compile-time default (30).
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenRotationValidityPeriodMax()).thenReturn(10);
+            when(mockOAuthServerConfiguration.getGracefulRefreshTokenReuseLimitMax()).thenReturn(5);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuthAppDO existingApp = buildDummyOAuthAppDO(USER_NAME);
+            existingApp.setOauthConsumerKey(consumerKey);
+
+            ArgumentCaptor<OAuthAppDO> captor = ArgumentCaptor.forClass(OAuthAppDO.class);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(consumerKey, SUPER_TENANT_ID)).thenReturn(existingApp);
+                        doNothing().when(mock).updateConsumerApplication(captor.capture());
+                    })) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString()))
+                        .thenCallRealMethod();
+
+                OAuthConsumerAppDTO dto = getoAuthConsumerAppDTO(USER_NAME, consumerKey,
+                        "consumer-secret", OAuthConstants.OAuthVersions.VERSION_2);
+                dto.setGracefulRefreshTokenRotationEnabled(true);
+                dto.setGracefulRefreshTokenRotationValidityPeriod(0);
+                dto.setGracefulRefreshTokenReuseLimit(3);
+                dto.setOauthConsumerSecret("some-consumer-secret");
+
+                new OAuthAdminServiceImpl().updateConsumerApplication(dto);
+
+                Assert.assertEquals(captor.getValue().getGracefulRefreshTokenRotationValidityPeriod(), 10,
+                        "When the configured max (10) is less than the default (30), the default path must "
+                                + "be clamped to the max, not set to 30.");
+            }
+        }
     }
 }
