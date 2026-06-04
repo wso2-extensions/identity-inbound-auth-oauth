@@ -1555,8 +1555,14 @@ public class AccessTokenIssuer {
                 idTokenDTO.setIdTokenClaimsSet(null);
                 authorizationGrantCacheEntry.setPreIssueIDTokenActionDTO(idTokenDTO);
                 authorizationGrantCacheEntry.setPreIssueIDTokenActionsExecuted(true);
-                log.debug("Customized audience list and ID token attributes from pre issue ID token actions are" +
-                        "persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
+                if (log.isDebugEnabled()) {
+                    log.debug("Customized audience list and ID token attributes from pre issue ID token actions are " +
+                            "persisted in the AuthorizationGrantCache against the token id: "
+                            + tokenRespDTO.getTokenId());
+                }
+            } else {
+                log.warn("Pre issue ID token actions were marked as executed but the IDTokenDTO is null. " +
+                        "ID token customizations will not be persisted for the token id: " + tokenRespDTO.getTokenId());
             }
         }
 
