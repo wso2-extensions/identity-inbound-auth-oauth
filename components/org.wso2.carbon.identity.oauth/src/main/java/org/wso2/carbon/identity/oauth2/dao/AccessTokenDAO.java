@@ -111,10 +111,20 @@ public interface AccessTokenDAO {
 
     Set<String> getAccessTokensByUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception;
 
+    /**
+     * @deprecated Use {@link #getAccessTokensByUserForOpenidScope(AuthenticatedUser, boolean)} instead.
+     */
+    @Deprecated
     default Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
 
         return null;
+    }
+
+    default Set<AccessTokenDO> getAccessTokensByUserForOpenidScope(AuthenticatedUser authenticatedUser,
+           boolean includeExpiredAccessTokensWithActiveRefreshToken) throws IdentityOAuth2Exception {
+
+        return getAccessTokensByUserForOpenidScope(authenticatedUser);
     }
 
     Set<String> getActiveTokensByConsumerKey(String consumerKey) throws IdentityOAuth2Exception;
