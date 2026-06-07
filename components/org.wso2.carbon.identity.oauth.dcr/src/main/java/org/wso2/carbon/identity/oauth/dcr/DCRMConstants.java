@@ -41,6 +41,7 @@ public class DCRMConstants {
         FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s"),
         FAILED_TO_CREATE_CLIENT_SECRET("Error occurred while creating secret of client: %s"),
         FAILED_TO_DELETE_CLIENT_SECRET("Error occurred while deleting secret"),
+        NOT_FOUND_CLIENT_SECRET("Secret not found for the given secret ID: %s"),
         FAILED_TO_GET_CLIENT_SECRETS("Error occurred while retrieving secrets of client: %s"),
         FAILED_TO_GET_CLIENT_SECRET("Error occurred while retrieving specified secret: %s of client"),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
