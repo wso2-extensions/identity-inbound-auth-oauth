@@ -152,6 +152,7 @@ import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
 import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -5103,7 +5104,7 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
-            final String oidcIssuerEpUrl =  buildBaseIssuerUrl(tenantDomain);
+            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
             if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
                 return oidcIssuerEpUrl;
             }
@@ -5149,7 +5150,7 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
-            final String oidcIssuerEpUrl =  buildBaseIssuerUrl(tenantDomain);
+            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
             if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
                 return oidcIssuerEpUrl;
             }
@@ -6328,6 +6329,21 @@ public class OAuth2Util {
             }
             return false;
         }
+    }
+
+    /**
+     * Check whether the application should be FAPI conformant.
+     *
+     * @param clientId Client ID of the application.
+     * @return Whether the application should be FAPI conformant.
+     * @throws IdentityOAuth2Exception InvalidOAuthClientException
+     * @deprecated Use {@link org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil#isFapiConformantApp(String)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public static boolean isFapiConformantApp(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        return FapiUtil.isFapiConformantApp(clientId);
     }
 
     /**

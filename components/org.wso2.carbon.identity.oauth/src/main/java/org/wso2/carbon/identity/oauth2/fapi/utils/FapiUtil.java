@@ -57,8 +57,8 @@ import static org.wso2.carbon.identity.oauth2.fapi.utils.Constants.FAPI_SUPPORTE
  */
 public class FapiUtil {
 
-    public static final String COMMA_SEPARATOR = ",";
-    private static final Log log = LogFactory.getLog(FapiUtil.class);
+    private static final String COMMA_SEPARATOR = ",";
+    private static final Log LOG = LogFactory.getLog(FapiUtil.class);
 
     private FapiUtil() {
 
@@ -111,8 +111,8 @@ public class FapiUtil {
         try {
             return FapiUtil.isFapiConformantApp(clientId, FapiProfileEnum.FAPI1_ADVANCED);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while checking FAPI conformance for clientId: " + clientId, e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while checking FAPI conformance for clientId: " + clientId, e);
             }
         }
         return false;
@@ -123,8 +123,8 @@ public class FapiUtil {
         try {
             return FapiUtil.isFapiConformantApp(clientId, FapiProfileEnum.FAPI2_SECURITY);
         } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while checking FAPI conformance for clientId: " + clientId, e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while checking FAPI conformance for clientId: " + clientId, e);
             }
         }
         return false;

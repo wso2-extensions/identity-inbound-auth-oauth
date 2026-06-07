@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
@@ -43,7 +42,6 @@ import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -419,20 +417,6 @@ public class OAuth2ParEndpoint {
                     e.getMessage(), e);
         }
     }
-
-    private boolean isFapiConformant(String clientId) throws ParCoreException {
-
-        try {
-            return FapiUtil.isFapiConformantApp(clientId);
-        } catch (InvalidOAuthClientException e) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
-                    "clientId: " + clientId, e);
-        } catch (IdentityOAuth2Exception e) {
-            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
-                    "provider for clientId: " + clientId, e);
-        }
-    }
-
 
     /**
      * Validate PKCE parameters for PAR requests.

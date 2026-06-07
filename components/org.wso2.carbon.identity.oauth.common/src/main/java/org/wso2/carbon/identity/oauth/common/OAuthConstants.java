@@ -343,19 +343,6 @@ public final class OAuthConstants {
     }
 
     /**
-     * Define FAPI profiles.
-     */
-    public static class FAPIProfiles {
-
-        public static final String FAPI1_ADVANCED = "FAPI1_ADVANCED";
-        public static final String FAPI2_SECURITY = "FAPI2_SECURITY";
-
-        private FAPIProfiles() {
-
-        }
-    }
-
-    /**
      * Define OAuth1.0a request parameters.
      */
     public static class OAuth10AParams {

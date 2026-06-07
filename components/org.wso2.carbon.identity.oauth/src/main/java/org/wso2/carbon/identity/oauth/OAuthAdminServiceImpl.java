@@ -828,12 +828,6 @@ public class OAuthAdminServiceImpl {
     private void validateFAPIBindingType(String bindingType)
             throws IdentityOAuthAdminException {
 
-        // No token binding type configured. Nothing to validate.
-        if (bindingType == null) {
-            return;
-        }
-
-        final boolean isFapi2Enabled = OAuth2Util.isFapi2Enabled(getAppTenantDomain());
         // Supported token binding types.
         final boolean isMtls = OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType);
         final boolean isDpop = DPOP_TOKEN_BINDER.equals(bindingType);
@@ -846,7 +840,7 @@ public class OAuthAdminServiceImpl {
          *  * MTLS as described in [RFC8705],
          *  * DPoP as described in [RFC9449];"
          */
-        if (isFapi2Enabled) {
+        if (OAuth2Util.isFapi2Enabled(getAppTenantDomain())) {
             if (isMtls || isDpop) {
                 return;
             }

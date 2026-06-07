@@ -45,7 +45,7 @@ import static org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil.handleServerEx
  */
 public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
 
-    private static final Log log = LogFactory.getLog(FapiConfigMgtServiceImpl.class);
+    private static final Log LOG = LogFactory.getLog(FapiConfigMgtServiceImpl.class);
     private static final String FAPI_CONFIG_CACHE_KEY = "FAPI_CONFIG";
 
     /**
@@ -104,7 +104,8 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
      */
     private void validateFapiConfig(FapiConfig fapiConfig) throws FapiConfigMgtException {
 
-        if (fapiConfig.isEnabled() && CollectionUtils.isEmpty(fapiConfig.getSupportedProfiles())) {
+        if (fapiConfig == null ||
+                (fapiConfig.isEnabled() && CollectionUtils.isEmpty(fapiConfig.getSupportedProfiles()))) {
             throw handleClientException(ErrorMessage.ERROR_CODE_FAPI_ENABLED_WITH_EMPTY_PROFILES, null);
         }
     }
@@ -146,8 +147,8 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
             return this.getConfigurationManager().getResource(FAPI_RESOURCE_TYPE_NAME, FAPI_RESOURCE_NAME, true);
         } catch (ConfigurationManagementException e) {
             if (isResourceNotExistsError(e)) {
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Resource does not exist. Caused by, %s", e.getMessage()));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(String.format("Resource does not exist. Caused by, %s", e.getMessage()));
                 }
                 return null;
             }

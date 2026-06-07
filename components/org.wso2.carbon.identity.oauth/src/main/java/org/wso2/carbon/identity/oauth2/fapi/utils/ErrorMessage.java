@@ -31,11 +31,11 @@ public enum ErrorMessage {
             "Invalid input.",
             "FAPI enforcement cannot be enabled without at least one supported profile."),
 
-    ERROR_CODE_FAPI_CONFIG_RETRIEVE("65023",
+    ERROR_CODE_FAPI_CONFIG_RETRIEVE("65024",
             "Unable to retrieve FAPI configuration.",
             "Server encountered an error while retrieving the FAPI configuration of %s."),
 
-    ERROR_CODE_FAPI_CONFIG_UPDATE("65024",
+    ERROR_CODE_FAPI_CONFIG_UPDATE("65025",
             "Unable to update FAPI configuration.",
             "Server encountered an error while updating the FAPI configuration of %s.");
 

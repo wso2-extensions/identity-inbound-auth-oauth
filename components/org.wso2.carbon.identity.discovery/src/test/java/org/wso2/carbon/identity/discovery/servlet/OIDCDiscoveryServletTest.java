@@ -21,18 +21,15 @@ package org.wso2.carbon.identity.discovery.servlet;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.io.PrintWriter;
 
@@ -43,7 +40,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,129 +59,55 @@ public class OIDCDiscoveryServletTest {
     @Mock
     private PrintWriter printWriter;
 
-    @AfterMethod
-    public void tearDown() {
-
-        IdentityUtil.threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
-    }
-
     @Test
-    public void testDoGet_nullPathInfo_returnsSuperTenantDiscovery() throws Exception {
+    public void testDoGet_resolvedTenantDomain_returnsDiscovery() throws Exception {
 
-        when(request.getPathInfo()).thenReturn(null);
         when(response.getWriter()).thenReturn(printWriter);
 
-        OIDProviderConfigResponse configResponse = buildMockConfigResponse();
-        DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
-        when(mockProcessor.getResponse(eq(request), eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)))
-                .thenReturn(configResponse);
-
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
-            processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
-
-            new OIDCDiscoveryServlet().doGet(request, response);
-
-            verify(response).setStatus(HttpServletResponse.SC_OK);
-            verify(response).setContentType("application/json");
-            verify(mockProcessor).getResponse(request, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        }
-    }
-
-    @Test
-    public void testDoGet_rootPathInfo_returnsSuperTenantDiscovery() throws Exception {
-
-        when(request.getPathInfo()).thenReturn("/");
-        when(response.getWriter()).thenReturn(printWriter);
-
-        OIDProviderConfigResponse configResponse = buildMockConfigResponse();
-        DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
-        when(mockProcessor.getResponse(eq(request), eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)))
-                .thenReturn(configResponse);
-
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
-            processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
-
-            new OIDCDiscoveryServlet().doGet(request, response);
-
-            verify(response).setStatus(HttpServletResponse.SC_OK);
-            verify(response).setContentType("application/json");
-            verify(mockProcessor).getResponse(request, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        }
-    }
-
-    @Test
-    public void testDoGet_tenantInThreadLocal_usesThatTenant() throws Exception {
-
-        IdentityUtil.threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, "test.com");
-        when(request.getPathInfo()).thenReturn(null);
-        when(response.getWriter()).thenReturn(printWriter);
-
-        OIDProviderConfigResponse configResponse = buildMockConfigResponse();
+        OIDProviderConfigResponse configResponse = new OIDProviderConfigResponse();
         DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
         when(mockProcessor.getResponse(eq(request), eq("test.com"))).thenReturn(configResponse);
 
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class);
+             MockedStatic<OAuth2Util> oauth2UtilStatic = mockStatic(OAuth2Util.class)) {
             processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+            oauth2UtilStatic.when(() -> OAuth2Util.resolveTenantDomain(request)).thenReturn("test.com");
 
             new OIDCDiscoveryServlet().doGet(request, response);
 
             verify(response).setStatus(HttpServletResponse.SC_OK);
+            verify(response).setContentType("application/json");
             verify(mockProcessor).getResponse(request, "test.com");
         }
     }
 
     @Test
-    public void testDoGet_tenantFromPathInfo_usesTenantName() throws Exception {
+    public void testDoGet_superTenantDomain_returnsDiscovery() throws Exception {
 
-        when(request.getPathInfo()).thenReturn("/t/xyz.com");
         when(response.getWriter()).thenReturn(printWriter);
 
-        OIDProviderConfigResponse configResponse = buildMockConfigResponse();
+        OIDProviderConfigResponse configResponse = new OIDProviderConfigResponse();
         DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
-        when(mockProcessor.getResponse(eq(request), eq("xyz.com"))).thenReturn(configResponse);
+        when(mockProcessor.getResponse(eq(request), eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)))
+                .thenReturn(configResponse);
 
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class);
+             MockedStatic<OAuth2Util> oauth2UtilStatic = mockStatic(OAuth2Util.class)) {
             processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+            oauth2UtilStatic.when(() -> OAuth2Util.resolveTenantDomain(request))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             new OIDCDiscoveryServlet().doGet(request, response);
 
             verify(response).setStatus(HttpServletResponse.SC_OK);
-            verify(mockProcessor).getResponse(request, "xyz.com");
-        }
-    }
-
-    @DataProvider(name = "invalidPaths")
-    public Object[][] invalidPaths() {
-
-        return new Object[][]{
-                {"/bad"},
-                {"/t/a/b"},
-                {"/t/"},
-                {"/t"}
-        };
-    }
-
-    @Test(dataProvider = "invalidPaths")
-    public void testDoGet_invalidPathInfo_returns404(String pathInfo) throws Exception {
-
-        when(request.getPathInfo()).thenReturn(pathInfo);
-
-        DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
-
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
-            processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
-
-            new OIDCDiscoveryServlet().doGet(request, response);
-
-            verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-            verify(mockProcessor, never()).getResponse(eq(request), anyString());
+            verify(response).setContentType("application/json");
+            verify(mockProcessor).getResponse(request, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         }
     }
 
     @Test
     public void testDoGet_oidcDiscoveryEndPointException_returnsErrorStatus() throws Exception {
 
-        when(request.getPathInfo()).thenReturn(null);
         when(response.getWriter()).thenReturn(printWriter);
 
         OIDCDiscoveryEndPointException exception = new OIDCDiscoveryEndPointException("Discovery error");
@@ -193,40 +115,40 @@ public class OIDCDiscoveryServletTest {
         when(mockProcessor.getResponse(eq(request), anyString())).thenThrow(exception);
         when(mockProcessor.handleError(exception)).thenReturn(HttpServletResponse.SC_BAD_REQUEST);
 
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class);
+             MockedStatic<OAuth2Util> oauth2UtilStatic = mockStatic(OAuth2Util.class)) {
             processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+            oauth2UtilStatic.when(() -> OAuth2Util.resolveTenantDomain(request))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             new OIDCDiscoveryServlet().doGet(request, response);
 
             verify(response).setStatus(HttpServletResponse.SC_BAD_REQUEST);
             verify(response).setContentType("application/json");
-            verify(printWriter).print("Discovery error");
+            verify(printWriter).print("{\"error\":\"Discovery error\"}");
         }
     }
 
     @Test
     public void testDoGet_serverConfigurationException_returns500() throws Exception {
 
-        when(request.getPathInfo()).thenReturn(null);
         when(response.getWriter()).thenReturn(printWriter);
 
         DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
         when(mockProcessor.getResponse(eq(request), anyString()))
                 .thenThrow(new ServerConfigurationException("Config error"));
 
-        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class);
+             MockedStatic<OAuth2Util> oauth2UtilStatic = mockStatic(OAuth2Util.class)) {
             processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+            oauth2UtilStatic.when(() -> OAuth2Util.resolveTenantDomain(request))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             new OIDCDiscoveryServlet().doGet(request, response);
 
             verify(response).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             verify(response).setContentType("application/json");
-            verify(printWriter).print("Error in reading configuration.");
+            verify(printWriter).print("{\"error\":\"Error in reading configuration.\"}");
         }
-    }
-
-    private OIDProviderConfigResponse buildMockConfigResponse() {
-
-        return new OIDProviderConfigResponse();
     }
 }

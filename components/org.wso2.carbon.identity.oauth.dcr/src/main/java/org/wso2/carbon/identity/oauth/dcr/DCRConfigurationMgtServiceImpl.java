@@ -196,8 +196,8 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
             if (mandateSSA != null) {
                 dcrConfiguration.setMandateSSA(mandateSSA);
             }
-            if (fapiProfile == null) {
-                if (Boolean.TRUE.equals(enableFapiEnforcement)) {
+            if (StringUtils.isEmpty(fapiProfile)) {
+                if (Boolean.TRUE.equals(dcrConfiguration.getEnableFapiEnforcement())) {
                     dcrConfiguration.setFapiProfile(FapiProfileEnum.FAPI1_ADVANCED);
                 }
             } else {
@@ -253,10 +253,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         try {
             FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
             List<FapiProfileEnum> supportedProfiles = fapiConfig.getSupportedProfiles();
-            if (CollectionUtils.isEmpty(supportedProfiles)) {
-                return;
-            }
-            if (!supportedProfiles.contains(requestedProfile)) {
+            if (CollectionUtils.isNotEmpty(supportedProfiles) && !supportedProfiles.contains(requestedProfile)) {
                 String supportedProfileValues = supportedProfiles.stream()
                         .map(FapiProfileEnum::value)
                         .collect(Collectors.joining(", "));

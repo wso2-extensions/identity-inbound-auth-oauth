@@ -141,7 +141,7 @@ public class DCRMConstants {
         /**
          * Unsupported FAPI profile error.
          */
-        ERROR_CODE_UNSUPPORTED_FAPI_PROFILE("65025",
+        ERROR_CODE_UNSUPPORTED_FAPI_PROFILE("65023",
                 "Unsupported FAPI profile.",
                 "The FAPI profile '%s' is not supported by this organization. Supported profiles: %s.");
 

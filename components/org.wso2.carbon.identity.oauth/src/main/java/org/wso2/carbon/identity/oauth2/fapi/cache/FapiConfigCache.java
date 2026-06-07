@@ -34,10 +34,12 @@ public class FapiConfigCache extends AuthenticationBaseCache<String, FapiConfig>
     private static volatile FapiConfigCache instance;
 
     private FapiConfigCache() {
+
         super(FAPI_CONFIG_CACHE_NAME);
     }
 
     public static FapiConfigCache getInstance() {
+        
         CarbonUtils.checkSecurity();
         if (instance == null) {
             synchronized (FapiConfigCache.class) {

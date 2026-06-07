@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.fapi.models;
 
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-
 /**
  * Enum representing supported FAPI profiles.
  * <p>
@@ -27,8 +25,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
  */
 public enum FapiProfileEnum {
 
-    FAPI1_ADVANCED(OAuthConstants.FAPIProfiles.FAPI1_ADVANCED),
-    FAPI2_SECURITY(OAuthConstants.FAPIProfiles.FAPI2_SECURITY);
+    FAPI1_ADVANCED("FAPI1_ADVANCED"),
+    FAPI2_SECURITY("FAPI2_SECURITY");
 
     private final String value;
 
@@ -38,6 +36,7 @@ public enum FapiProfileEnum {
      * @param value the string value for the enum constant
      */
     FapiProfileEnum(String value) {
+
         this.value = value;
     }
 
@@ -47,6 +46,7 @@ public enum FapiProfileEnum {
      * @return the enum string value
      */
     public String value() {
+
         return value;
     }
 
@@ -57,6 +57,7 @@ public enum FapiProfileEnum {
      */
     @Override
     public String toString() {
+
         return String.valueOf(value);
     }
 
@@ -67,6 +68,7 @@ public enum FapiProfileEnum {
      * @return matching FapiProfileEnum constant, or null if no match is found
      */
     public static FapiProfileEnum fromValue(String value) {
+
         for (FapiProfileEnum profileEnum : FapiProfileEnum.values()) {
             if (profileEnum.value().equals(value)) {
                 return profileEnum;
