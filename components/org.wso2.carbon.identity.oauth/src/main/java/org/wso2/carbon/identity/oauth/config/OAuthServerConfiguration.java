@@ -294,6 +294,8 @@ public class OAuthServerConfiguration {
     private boolean enableIntrospectionDataProviders = false;
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
+    // Property to define the default requested scopes.
+    private List<String> defaultRequestedScopes = new ArrayList<>();
 
     // Property to define the filtered claims.
     private List<String> filteredIntrospectionClaims = new ArrayList<>();
@@ -475,6 +477,9 @@ public class OAuthServerConfiguration {
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
 
+        // Read config for default requested scopes.
+        parseDefaultRequestedScopesConfiguration(oauthElem);
+
         // Read config for filtered claims for introspection response.
         parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
 
@@ -508,6 +513,35 @@ public class OAuthServerConfiguration {
                 allowedScopes.add(scopeElement.getText());
             }
         }
+    }
+
+    /**
+     * Parse default requested scopes configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseDefaultRequestedScopesConfiguration(OMElement oauthConfigElem) {
+
+        OMElement defaultRequestedScopesElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.DEFAULT_REQUESTED_SCOPES_ELEMENT));
+        if (defaultRequestedScopesElem != null) {
+            Iterator scopeIterator = defaultRequestedScopesElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.SCOPES_ELEMENT));
+            while (scopeIterator.hasNext()) {
+                OMElement scopeElement = (OMElement) scopeIterator.next();
+                defaultRequestedScopes.add(scopeElement.getText());
+            }
+        }
+    }
+
+    /**
+     * Get the list of default requested scopes.
+     *
+     * @return String returns a list of default requested scope string.
+     */
+    public List<String> getDefaultRequestedScopes() {
+
+        return defaultRequestedScopes;
     }
 
     /**
@@ -3636,6 +3670,8 @@ public class OAuthServerConfiguration {
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
+        // Allowed Default Requested Scopes Config.
+        private static final String DEFAULT_REQUESTED_SCOPES_ELEMENT = "DefaultRequestedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";

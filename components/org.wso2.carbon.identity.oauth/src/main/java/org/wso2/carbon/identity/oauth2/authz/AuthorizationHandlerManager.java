@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -272,6 +273,22 @@ public class AuthorizationHandlerManager {
         return authorizeRespDTO;
     }
 
+    /**
+     * Adds default requested scopes to the authorization request's scope list.
+     * The default scopes are retrieved from the configuration.
+     *
+     * @param authzReqMsgCtx The OAuth authorization request message context.
+     */
+    private void addDefaultRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+
+        List<String> defaultRequestedScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
+        String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
+        if (ArrayUtils.isEmpty(requestedScopes) && CollectionUtils.isNotEmpty(defaultRequestedScopes)) {
+            authzReqMsgCtx.setRequestedScopes(defaultRequestedScopes.toArray(new String[0]));
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(defaultRequestedScopes.toArray(new String[0]));
+        }
+    }
+
 
     /**
      * validated requested scopes.
@@ -282,7 +299,8 @@ public class AuthorizationHandlerManager {
     private void validateRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx,
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2UnauthorizedScopeException {
-
+        // Get default requested scopes that are specified in the configuration.
+        addDefaultRequestedScopes(authzReqMsgCtx);
         // Get scopes that specified in the allowed scopes list.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
         // If it is management app, we validate internal scopes in the requested scopes.
