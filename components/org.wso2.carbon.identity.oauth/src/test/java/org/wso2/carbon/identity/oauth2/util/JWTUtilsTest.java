@@ -26,18 +26,30 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -78,6 +90,9 @@ public class JWTUtilsTest {
             "3pDI4B+vQipcfTjJqgPAWvUz903z61lRuAlJFPPD69l+IQ15z1Mfc7rgl0wmZLBU\n" +
             "HjVlGsFGQX6e10Rx/msN+NWxKJGf7Z6vxS8Qoc4nddUBnndCOvCVvgI9BThNv0cG\n" +
             "e3hB2nvCQvUJ/wfuj6i1PNfoM81nA2qEQfjY/QWuF4Ex/RYWBfASNU35TBRVc26R";
+
+    private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
+    private static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
 
     private PrivilegedCarbonContext privilegedCarbonContext;
 
@@ -127,6 +142,126 @@ public class JWTUtilsTest {
         certificate = JWTUtils.resolveSignerCertificate(identityProvider);
         assertEquals(certificate.getIssuerDN().getName(),
                 "CN=Intermediate CA, OU=IAM, O=WSO2, L=Colombo, ST=Western, C=LK");
+    }
+
+    @Test(description = "getIDPForIssuer returns the resident IDP when the issuer is built with hostname")
+    public void testGetIDPForIssuerWithHostnameBuiltIssuer() throws Exception {
+
+        String hostnameIssuer = "https://localhost:9443/oauth2/token";
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("true");
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(SUPER_TENANT_DOMAIN_NAME)).thenReturn(hostnameIssuer);
+
+            IdentityProvider result =
+                    JWTUtils.getIDPForIssuer(hostnameIssuer, SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
+            assertEquals(result, residentIdP);
+        }
+    }
+
+    @Test(description = "getResidentIDPIssuer returns the resident IDP when the issuer is built with hostname")
+    public void testGetResidentIDPIssuerWithHostnameBuiltIssuer() throws Exception {
+
+        String hostnameIssuer = "https://localhost:9443/oauth2/token";
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("true");
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(SUPER_TENANT_DOMAIN_NAME)).thenReturn(hostnameIssuer);
+
+            IdentityProvider result = JWTUtils.getResidentIDPIssuer(hostnameIssuer, "client-id",
+                    SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
+            assertEquals(result, residentIdP);
+        }
+    }
+
+    @Test(description = "getIDPForIssuer throws when the organization IDs cannot be resolved",
+            expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetIDPForIssuerWithUnresolvableOrgIds() throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementConfigUtil> configUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("false");
+            mockOrganizationManager(holder, configUtil);
+
+            JWTUtils.getIDPForIssuer("https://some-issuer", SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
+        }
+    }
+
+    @Test(description = "getResidentIDPIssuer throws when the organization IDs cannot be resolved",
+            expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetResidentIDPIssuerWithUnresolvableOrgIds() throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OrganizationManagementConfigUtil> configUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("false");
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(false);
+            mockOrganizationManager(holder, configUtil);
+
+            JWTUtils.getResidentIDPIssuer("https://some-issuer", "client-id", SUPER_TENANT_DOMAIN_NAME,
+                    "switched-org-id");
+        }
+    }
+
+    private void mockResidentIdP(MockedStatic<IdentityProviderManager> identityProviderManager,
+                                 IdentityProvider residentIdP) throws Exception {
+
+        IdentityProviderManager identityProviderManagerInstance = mock(IdentityProviderManager.class);
+        identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(identityProviderManagerInstance);
+        when(identityProviderManagerInstance.getResidentIdP(SUPER_TENANT_DOMAIN_NAME)).thenReturn(residentIdP);
+    }
+
+    private void mockOrganizationManager(MockedStatic<OAuth2ServiceComponentHolder> holder,
+                                         MockedStatic<OrganizationManagementConfigUtil> configUtil) throws Exception {
+
+        OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class);
+        holder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
+        when(holderInstance.isOrganizationManagementEnabled()).thenReturn(true);
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        when(holderInstance.getOrganizationManager()).thenReturn(organizationManager);
+        when(organizationManager.resolveOrganizationId(SUPER_TENANT_DOMAIN_NAME)).thenReturn("jwt-issuer-org-id");
+        when(organizationManager.getAncestorOrganizationIds(anyString()))
+                .thenReturn(Arrays.asList("root-org-id", "child-org-id"));
+        configUtil.when(() -> OrganizationManagementConfigUtil.getProperty(anyString())).thenReturn("2");
+    }
+
+    private IdentityProvider buildResidentIdP(String entityId) {
+
+        Property entityIdProperty = new Property();
+        entityIdProperty.setName("IdPEntityId");
+        entityIdProperty.setValue(entityId);
+        FederatedAuthenticatorConfig oidcConfig = new FederatedAuthenticatorConfig();
+        oidcConfig.setName(IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        oidcConfig.setProperties(new Property[]{entityIdProperty});
+        IdentityProvider residentIdP = new IdentityProvider();
+        residentIdP.setFederatedAuthenticatorConfigs(new FederatedAuthenticatorConfig[]{oidcConfig});
+        return residentIdP;
     }
 
     private void mockKeystores() throws Exception {
