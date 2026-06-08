@@ -205,6 +205,13 @@ public class JWTUtils {
                     jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
                 return residentIdentityProvider;
             }
+            // When the issuer is built with hostname (and tenant qualified URLs disabled), compare against the
+            // recomputed hostname based issuer instead of the stale entity ID stored in the database.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME)) &&
+                    !IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
+                    jwtIssuer.equals(OAuth2Util.getIssuerLocation(tenantDomain))) {
+                return residentIdentityProvider;
+            }
             // Check for organization management enablement.
             if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
                 throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
@@ -221,6 +228,11 @@ public class JWTUtils {
             }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+            // Bail out early if the organization IDs could not be resolved to avoid a NullPointerException.
+            if (jwtIssuerOrgId == null || resourceResidentOrgId == null) {
+                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
+                        + jwtIssuer);
+            }
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
                 throw new IdentityOAuth2ClientException("No registered IDP found for the token with issuer name : "
@@ -276,6 +288,13 @@ public class JWTUtils {
                     jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
                 return residentIdentityProvider;
             }
+            // When the issuer is built with hostname (and tenant qualified URLs disabled), compare against the
+            // recomputed hostname based issuer instead of the stale entity ID stored in the database.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME)) &&
+                    !IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
+                    jwtIssuer.equals(OAuth2Util.getIssuerLocation(tenantDomain))) {
+                return residentIdentityProvider;
+            }
             // Check for organization management enablement.
             if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
                 throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
@@ -321,6 +340,11 @@ public class JWTUtils {
                         "Ancestor list size is insufficient for the organization ID: " + switchedOrgId);
             }
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+            // Bail out early if the organization IDs could not be resolved to avoid a NullPointerException.
+            if (jwtIssuerOrgId == null || resourceResidentOrgId == null) {
+                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
+                        + jwtIssuer);
+            }
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
                 throw new IdentityOAuth2ClientException("No registered IDP found for the token with issuer name : "
