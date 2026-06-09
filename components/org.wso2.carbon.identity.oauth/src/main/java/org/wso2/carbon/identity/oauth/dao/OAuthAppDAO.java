@@ -90,6 +90,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_SKIP_USER_VALIDATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FAPI_PROFILE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
@@ -120,6 +121,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
+import static org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum.FAPI1_ADVANCED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getConsoleCallbackFromServerConfig;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getMyAccountCallbackFromServerConfig;
@@ -1179,6 +1181,12 @@ public class OAuthAppDAO {
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
+        if (oauthAppDO.isFapiConformanceEnabled()) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    FAPI_PROFILE, StringUtils.defaultIfBlank(oauthAppDO.getFapiProfile(), FAPI1_ADVANCED.value()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1891,6 +1899,12 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
+            if (consumerAppDO.isFapiConformanceEnabled()) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, FAPI_PROFILE,
+                        StringUtils.isBlank(consumerAppDO.getFapiProfile()) ?
+                                FAPI1_ADVANCED.value() : consumerAppDO.getFapiProfile());
+            }
+
             if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(consumerAppDO.isJwtScopeAsArrayEnabled()));
@@ -2119,6 +2133,12 @@ public class OAuthAppDAO {
         String isFAPI = getFirstPropertyValue(spOIDCProperties, IS_FAPI_CONFORMANT_APP);
         if (isFAPI != null) {
             oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
+        }
+        // Read back the FAPI security profile. This value is non-null only for applications
+        // where a profile was explicitly configured via the management API.
+        String fapiProfile = getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE);
+        if (Boolean.parseBoolean(isFAPI)) {
+            oauthApp.setFapiProfile(StringUtils.isBlank(fapiProfile) ? FAPI1_ADVANCED.value() : fapiProfile);
         }
 
         String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);

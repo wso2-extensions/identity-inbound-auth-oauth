@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
@@ -43,10 +42,10 @@ import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
@@ -324,7 +323,7 @@ public class OAuth2ParEndpoint {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
             RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
             Map<String, String> oauthParams = overrideRequestObjectParams(request, requestObject);
-            if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+            if (FapiUtil.isFapi1AdvancedProfileCompliant(oAuthAuthzRequest.getClientId())) {
                 EndpointUtil.validateFAPIAllowedResponseTypeAndMode(oauthParams.get(RESPONSE_TYPE),
                         oauthParams.get(RESPONSE_MODE));
                 validatePKCEParameters(oauthParams);
@@ -403,8 +402,8 @@ public class OAuth2ParEndpoint {
                         throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                                 ParConstants.INVALID_REQUEST_OBJECT);
                     }
-                } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
-                    /* Mandate request object for FAPI requests
+                } else if (FapiUtil.isFapi1AdvancedProfileCompliant(oAuthAuthzRequest.getClientId())) {
+                    /* Mandate request object for FAPI 1.0 Advanced requests
                     https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
                     throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
                 }
@@ -418,20 +417,6 @@ public class OAuth2ParEndpoint {
                     e.getMessage(), e);
         }
     }
-
-    private boolean isFapiConformant(String clientId) throws ParCoreException {
-
-        try {
-            return OAuth2Util.isFapiConformantApp(clientId);
-        } catch (InvalidOAuthClientException e) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
-                    "clientId: " + clientId, e);
-        } catch (IdentityOAuth2Exception e) {
-            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
-                    "provider for clientId: " + clientId, e);
-        }
-    }
-
 
     /**
      * Validate PKCE parameters for PAR requests.

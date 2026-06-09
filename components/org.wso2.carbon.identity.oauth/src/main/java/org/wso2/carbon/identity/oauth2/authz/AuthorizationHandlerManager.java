@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -41,6 +42,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -636,7 +639,18 @@ public class AuthorizationHandlerManager {
             throws IdentityOAuth2Exception {
         boolean isAuthorizedClient = authzHandler.isAuthorizedClient(authzReqMsgCtx);
         if (!isAuthorizedClient) {
-            handleErrorRequest(authorizeRespDTO, UNAUTHORIZED_CLIENT,
+            String errorCode;
+            try {
+                if (FapiUtil.isFapiConformantApp(authzReqDTO.getConsumerKey(), FapiProfileEnum.FAPI2_SECURITY)) {
+                    errorCode = OAuth2ErrorCodes.INVALID_REQUEST;
+                } else {
+                    errorCode = UNAUTHORIZED_CLIENT;
+                }
+            } catch (InvalidOAuthClientException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving the fapi conformance of the " +
+                        "application.", e);
+            }
+            handleErrorRequest(authorizeRespDTO, errorCode,
                     "The authenticated client is not authorized to use this authorization grant type");
             authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             if (log.isDebugEnabled()) {

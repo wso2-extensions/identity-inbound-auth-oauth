@@ -166,6 +166,10 @@ public class ProviderConfigBuilder {
             providerConfig
                     .setAuthorizationDetailsTypesSupported(authorizationDetailTypes.stream().toArray(String[]::new));
         }
+        // `authorization_response_iss` should be true for FAPI 2.0 compliance.
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            providerConfig.setAuthorizationResponseIssParameterSupported(Boolean.TRUE);
+        }
         return providerConfig;
     }
 }

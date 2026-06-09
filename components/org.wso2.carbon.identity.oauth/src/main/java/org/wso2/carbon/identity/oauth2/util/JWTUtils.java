@@ -198,6 +198,10 @@ public class JWTUtils {
                     OIDC_IDP_ENTITY_ID).getValue();
         }
 
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            resourceIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
+        }
+
         // Compare JWT issuer with the resource issuer.
         if (!jwtIssuer.equals(resourceIssuer)) {
             // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
@@ -267,6 +271,10 @@ public class JWTUtils {
         if (oauthAuthenticatorConfig != null) {
             resourceIssuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
+        }
+
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            resourceIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
         }
 
         // Compare JWT issuer with the resource issuer.

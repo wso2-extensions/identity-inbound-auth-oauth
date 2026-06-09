@@ -148,6 +148,11 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -260,7 +265,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgo
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.RESPONSE_TYPE_DEVICE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
 
 /**
  * Utility methods for OAuth 2.0 implementation.
@@ -1572,6 +1576,25 @@ public class OAuth2Util {
             return user;
         }
         throw new IllegalArgumentException("Cannot create user from empty user name");
+    }
+
+    /**
+     * Builds the server base URL for use as the OIDC issuer identifier. The URL is
+     * {@code https://host:port} for the super-tenant, or {@code https://host:port/t/{tenant}} for
+     * other tenants.
+     *
+     * @param tenantDomain tenant domain for which the issuer URL is required.
+     * @return absolute public base URL for the given tenant.
+     * @throws IdentityOAuth2Exception if the URL cannot be constructed.
+     */
+    public static String buildBaseIssuerUrl(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return ServiceURLBuilder.create().setTenant(tenantDomain).build().getAbsolutePublicURL();
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while building base issuer URL for tenant: " + tenantDomain, e);
+        }
     }
 
     public static String getIDTokenIssuer() {
@@ -5079,6 +5102,14 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+
+            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                return oidcIssuerEpUrl;
+            }
+        }
+
         /*
         If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
         Regardless of the request type (mtls or non-mtls), if the resident IdP entity id is available,
@@ -5116,6 +5147,14 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
+
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+
+            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                return oidcIssuerEpUrl;
+            }
+        }
 
         /*
         If the useEntityIDAsIssuerEnabled config is enabled, then the issuer will be the resident IdP entity id.
@@ -6263,27 +6302,48 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether FAPI 2.0 is enabled in the organization.
+     *
+     * @param tenantDomain The tenant domain of the organization.
+     * @return Whether FAPI 2.0 is enabled for the given tenant.
+     */
+    public static boolean isFapi2Enabled(String tenantDomain) {
+
+        FapiConfigMgtService fapiConfigMgtService =
+                OAuth2ServiceComponentHolder.getInstance().getFapiConfigMgtService();
+        if (fapiConfigMgtService == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("FapiConfigMgtService is not available. Treating FAPI 2.0 as disabled for tenant: "
+                        + tenantDomain);
+            }
+            return false;
+        }
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            return fapiConfig.isEnabled() && CollectionUtils.isNotEmpty(fapiConfig.getSupportedProfiles())
+                    && fapiConfig.getSupportedProfiles().contains(FapiProfileEnum.FAPI2_SECURITY);
+        } catch (FapiConfigMgtException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error retrieving FAPI configuration for tenant: " + tenantDomain
+                        + ". Treating FAPI 2.0 as disabled.", e);
+            }
+            return false;
+        }
+    }
+
+    /**
      * Check whether the application should be FAPI conformant.
      *
      * @param clientId Client ID of the application.
      * @return Whether the application should be FAPI conformant.
      * @throws IdentityOAuth2Exception InvalidOAuthClientException
+     * @deprecated Use {@link org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil#isFapiConformantApp(String)} instead.
      */
+    @Deprecated(forRemoval = true)
     public static boolean isFapiConformantApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
-            return false;
-        }
-        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
-        OAuthAppDO oAuthAppDO;
-        if (StringUtils.isNotBlank(accessingOrgId)) {
-            oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
-        } else {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
-        }
-        return oAuthAppDO.isFapiConformanceEnabled();
+        return FapiUtil.isFapiConformantApp(clientId);
     }
 
     /**

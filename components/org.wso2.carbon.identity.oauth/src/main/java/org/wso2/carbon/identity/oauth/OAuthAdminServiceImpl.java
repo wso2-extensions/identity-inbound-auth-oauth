@@ -154,6 +154,7 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static final String BINDING_TYPE_NONE = "None";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String DPOP_TOKEN_BINDER = "DPoP";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
 
@@ -593,6 +594,9 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
+                        if (isFAPIConformanceEnabled) {
+                            app.setFapiProfile(application.getFapiProfile());
+                        }
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                         app.setGracefulRefreshTokenRotationEnabled(
@@ -805,21 +809,58 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * FAPI validation to restrict the token binding type to ensure MTLS sender constrained access tokens.
-     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
-     * @param bindingType Token binding type.
-     * @throws IdentityOAuthClientException if binding type is not 'certificate'.
+     * Validates whether the configured token binding type satisfies the
+     * Financial-grade API (FAPI) security requirements.
+     *
+     * <p>FAPI mandates sender-constrained access tokens. The allowed token binding
+     * mechanisms depend on the enabled FAPI version:
+     *
+     * <ul>
+     *     <li><b>FAPI 2.0</b>: MTLS (RFC8705) or DPoP (RFC9449)</li>
+     *     <li><b>FAPI 1.0 Advanced</b>: MTLS only</li>
+     * </ul>
+     *
+     * <p>If {@code bindingType} is {@code null}, validation is skipped.
+     *
+     * @param bindingType token binding type configured for the application
+     * @throws IdentityOAuthAdminException if the configured binding type is not permitted for the active FAPI version
      */
     private void validateFAPIBindingType(String bindingType)
-            throws IdentityOAuthClientException {
+            throws IdentityOAuthAdminException {
 
-        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) || bindingType == null) {
-            return;
-        } else {
-            String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",
-                    bindingType);
-            throw handleClientError(INVALID_REQUEST, msg);
+        // Supported token binding types.
+        final boolean isMtls = OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType);
+        final boolean isDpop = DPOP_TOKEN_BINDER.equals(bindingType);
+
+        /*
+         * FAPI 2.0 Security Profile
+         * Spec: https://openid.net/specs/fapi-security-profile-2_0.html#section-5.3.2.1-2.5.1
+         *
+         * "shall use one of the following methods for sender-constrained access tokens:
+         *  * MTLS as described in [RFC8705],
+         *  * DPoP as described in [RFC9449];"
+         */
+        if (OAuth2Util.isFapi2Enabled(getAppTenantDomain())) {
+            if (isMtls || isDpop) {
+                return;
+            }
+            throw handleClientError(INVALID_REQUEST,
+                    String.format("Certificate bound or DPoP access tokens is required. '%s' binding type is found",
+                    bindingType));
         }
+
+        /*
+         * FAPI 1.0 Advanced Security Profile
+         * Spec: https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
+         *
+         * "shall support MTLS as mechanism for constraining the legitimate senders of access tokens;"
+         */
+        if (isMtls) {
+            return;
+        }
+
+        throw handleClientError(INVALID_REQUEST,
+                String.format("Certificate bound access tokens is required. '%s' binding type is found.", bindingType));
     }
 
     private IdentityOAuthClientException handleClientError(Error errorMessage, String msg) {
@@ -1155,6 +1196,10 @@ public class OAuthAdminServiceImpl {
             if (oAuthAppDO.isCibaAllowFederatedUsers() && !oAuthAppDO.isCibaSkipUserValidation()) {
                 throw handleClientError(INVALID_REQUEST,
                         "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
+            }
+
+            if (isFAPIConformanceEnabled) {
+                oAuthAppDO.setFapiProfile(consumerAppDTO.getFapiProfile());
             }
 
             try {

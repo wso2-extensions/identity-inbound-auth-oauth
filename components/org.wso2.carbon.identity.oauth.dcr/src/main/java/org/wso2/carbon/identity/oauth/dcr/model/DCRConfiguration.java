@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+
 /**
  * DCR Configuration model.
  */
@@ -27,6 +29,7 @@ public class DCRConfiguration {
     private Boolean authenticationRequired;
     private Boolean mandateSSA;
     private String ssaJwks;
+    private FapiProfileEnum fapiProfile;
 
     /**
      * Get the value of enableFapiEnforcement.
@@ -106,5 +109,25 @@ public class DCRConfiguration {
     public void setSsaJwks(String ssaJwks) {
 
         this.ssaJwks = ssaJwks;
+    }
+
+    /**
+     * Get the value of fapiProfile.
+     *
+     * @return FapiProfileEnum instance.
+     */
+    public FapiProfileEnum getFapiProfile() {
+
+        return this.fapiProfile;
+    }
+
+    /**
+     * Set the value of fapiProfile.
+     *
+     * @param fapiProfile The value to set.
+     */
+    public void setFapiProfile(FapiProfileEnum fapiProfile) {
+
+        this.fapiProfile = fapiProfile;
     }
 }
