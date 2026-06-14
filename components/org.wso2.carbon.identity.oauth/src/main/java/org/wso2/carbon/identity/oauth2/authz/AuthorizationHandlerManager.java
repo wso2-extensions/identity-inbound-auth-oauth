@@ -432,14 +432,29 @@ public class AuthorizationHandlerManager {
      *
      * @param authzReqMsgCtx The OAuth authorization request message context.
      */
-    private void addDefaultRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {
+    private void addDefaultRequestedScopes(OAuthAuthzReqMessageContext authzReqMsgCtx)
+            throws IdentityOAuth2Exception {
 
-        List<String> defaultRequestedScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
         String[] requestedScopes = authzReqMsgCtx.getAuthorizationReqDTO().getScopes();
-        if (ArrayUtils.isEmpty(requestedScopes) && CollectionUtils.isNotEmpty(defaultRequestedScopes)) {
-            authzReqMsgCtx.setRequestedScopes(defaultRequestedScopes.toArray(new String[0]));
-            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(defaultRequestedScopes.toArray(new String[0]));
+        if (ArrayUtils.isNotEmpty(requestedScopes)) {
+            return;
         }
+
+        OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
+        List<String> defaultRequestedScopes;
+        if (oAuthServerConfiguration.isUseAppAuthorizedScopesAsDefault()) {
+            defaultRequestedScopes = AuthzUtil.getAppAuthorizedScopes(
+                    authzReqMsgCtx.getAuthorizationReqDTO().getConsumerKey(),
+                    authzReqMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+        } else {
+            defaultRequestedScopes = oAuthServerConfiguration.getDefaultRequestedScopes();
+        }
+
+        if (CollectionUtils.isEmpty(defaultRequestedScopes)) {
+            return;
+        }
+        authzReqMsgCtx.setRequestedScopes(defaultRequestedScopes.toArray(new String[0]));
+        authzReqMsgCtx.getAuthorizationReqDTO().setScopes(defaultRequestedScopes.toArray(new String[0]));
     }
 
     /**

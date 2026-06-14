@@ -1057,17 +1057,29 @@ public class AccessTokenIssuer {
         return isValidScope;
     }
 
-    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext) {
+    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
 
         String[] requestedScopes = tokenReqMessageContext.getScope();
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
             return requestedScopes;
         }
 
-        boolean isDefaultScopeForBackChannelGrantEnabled =
-                OAuthServerConfiguration.getInstance().isDefaultScopeForBackChannelGrantEnabled();
-        List<String> defaultScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
-        if (!isDefaultScopeForBackChannelGrantEnabled || CollectionUtils.isEmpty(defaultScopes)) {
+        OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
+        List<String> defaultScopes;
+        if (oAuthServerConfiguration.isDefaultScopeForBackChannelGrantEnabled()) {
+            if (oAuthServerConfiguration.isUseAppAuthorizedScopesAsDefault()) {
+                defaultScopes = AuthzUtil.getAppAuthorizedScopes(
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+            } else {
+                defaultScopes = oAuthServerConfiguration.getDefaultRequestedScopes();
+            }
+        } else {
+            return requestedScopes;
+        }
+
+        if (CollectionUtils.isEmpty(defaultScopes)) {
             return requestedScopes;
         }
 

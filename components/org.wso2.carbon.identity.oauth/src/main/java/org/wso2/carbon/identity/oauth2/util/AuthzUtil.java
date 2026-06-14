@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,9 +29,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.Scope;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -51,6 +55,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -603,5 +608,41 @@ public class AuthzUtil {
             throw new IdentityOAuth2Exception("Error occurred while getting tenant domain from org ids.");
         }
         return new ArrayList<>(mainAppUserRolesMappings.values());
+    }
+
+    /**
+     * Resolve the authorized scopes of the OAuth application identified by the given client id.
+     *
+     * @param clientId     OAuth2 client id (consumer key) of the application.
+     * @param tenantDomain Tenant domain the application belongs to.
+     * @return Distinct list of the application's authorized scopes, or an empty list if none.
+     * @throws IdentityOAuth2Exception If resolving the application or its authorized scopes fails.
+     */
+    public static List<String> getAppAuthorizedScopes(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ApplicationManagementService applicationMgtService =
+                    OAuth2ServiceComponentHolder.getApplicationMgtService();
+            String appId = applicationMgtService.getApplicationResourceIDByInboundKey(clientId,
+                    OAuthConstants.Scope.OAUTH2, tenantDomain);
+            if (StringUtils.isBlank(appId)) {
+                return Collections.emptyList();
+            }
+            List<AuthorizedScopes> authorizedScopesList = OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizedAPIManagementService()
+                    .getAuthorizedScopes(appId, tenantDomain);
+            if (CollectionUtils.isEmpty(authorizedScopesList)) {
+                return Collections.emptyList();
+            }
+            return authorizedScopesList.stream()
+                    .filter(authorizedScopes -> authorizedScopes.getScopes() != null)
+                    .flatMap(authorizedScopes -> authorizedScopes.getScopes().stream())
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error resolving authorized scopes for clientId: " + clientId, e);
+        }
     }
 }
