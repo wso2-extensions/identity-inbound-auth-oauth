@@ -627,7 +627,7 @@ public class AuthzUtil {
             String appId = applicationMgtService.getApplicationResourceIDByInboundKey(clientId,
                     OAuthConstants.Scope.OAUTH2, tenantDomain);
             if (StringUtils.isBlank(appId)) {
-                return Collections.emptyList();
+                throw new IdentityOAuth2ClientException("No OAuth application found for clientId: " + clientId);
             }
             List<AuthorizedScopes> authorizedScopesList = OAuth2ServiceComponentHolder.getInstance()
                     .getAuthorizedAPIManagementService()
