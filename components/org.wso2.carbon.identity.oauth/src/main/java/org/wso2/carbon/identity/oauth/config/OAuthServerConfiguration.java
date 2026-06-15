@@ -356,6 +356,7 @@ public class OAuthServerConfiguration {
     private List<String> defaultRequestedScopes = new ArrayList<>();
     // Property to define whether the default scope for back-channel grant is enabled or not.
     private boolean isDefaultScopeForBackChannelGrantEnabled = false;
+    private boolean useAppAuthorizedScopesAsDefault = false;
 
     // Property to define the filtered claims.
     private List<String> filteredIntrospectionClaims = new ArrayList<>();
@@ -581,6 +582,9 @@ public class OAuthServerConfiguration {
         // Read default requested scopes for back-channel grant from config.
         parseDefaultScopeForBackChannelConfig(oauthElem);
 
+        // Read config for using the application's authorized scopes as the default requested scopes.
+        parseUseAppAuthorizedScopesAsDefaultConfig(oauthElem);
+
         // Read config for filtered claims for introspection response.
         parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
 
@@ -772,6 +776,17 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseUseAppAuthorizedScopesAsDefaultConfig(OMElement oauthElem) {
+
+        OMElement useAppAuthorizedScopesAsDefaultElem = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                        USE_APP_AUTHORIZED_SCOPES_AS_DEFAULT));
+        if (useAppAuthorizedScopesAsDefaultElem != null) {
+            useAppAuthorizedScopesAsDefault = Boolean.parseBoolean(
+                    useAppAuthorizedScopesAsDefaultElem.getText().trim());
+        }
+    }
+
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
         OMElement showApplicationNameInConsentPageElement = oauthElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
@@ -853,6 +868,17 @@ public class OAuthServerConfiguration {
     public boolean isDefaultScopeForBackChannelGrantEnabled() {
 
         return isDefaultScopeForBackChannelGrantEnabled;
+    }
+
+    /**
+     * Returns whether the application's authorized scopes should be used as the default requested
+     * scopes when a request carries no scope.
+     *
+     * @return boolean value of the UseAppAuthorizedScopesAsDefault configuration.
+     */
+    public boolean isUseAppAuthorizedScopesAsDefault() {
+
+        return useAppAuthorizedScopesAsDefault;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -4850,6 +4876,9 @@ public class OAuthServerConfiguration {
         // Enable Default Requested Scopes For Back Channel Grant Config.
         private static final String ENABLE_DEFAULT_REQUESTED_SCOPES_FOR_BACK_CHANNEL_GRANT =
                 "EnableDefaultRequestedScopesForBackChannelGrant";
+        // Use the application's authorized scopes as the default requested scopes when no scope is requested.
+        private static final String USE_APP_AUTHORIZED_SCOPES_AS_DEFAULT =
+                "UseAppAuthorizedScopesAsDefault";
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";
