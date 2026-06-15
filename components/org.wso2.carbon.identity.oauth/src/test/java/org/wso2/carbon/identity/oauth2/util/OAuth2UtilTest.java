@@ -65,6 +65,8 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -3103,6 +3105,106 @@ public class OAuth2UtilTest {
             OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
             verify(log, times(1))
                     .error(claimMetadataException.getMessage(), claimMetadataException);
+        }
+    }
+
+    @Test(description = "Issue #7138: getMultiValuedClaimUris returns both the local claim URIs flagged "
+            + "multiValued=true and their mapped OIDC claim URIs.")
+    public void testGetMultiValuedClaimUris() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+
+            LocalClaim multiValuedClaim = new LocalClaim("http://wso2.org/claims/multiTest");
+            multiValuedClaim.setClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY, "true");
+            LocalClaim singleValuedClaim = new LocalClaim("http://wso2.org/claims/givenname");
+            singleValuedClaim.setClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY, "false");
+            LocalClaim noPropertyClaim = new LocalClaim("http://wso2.org/claims/lastname");
+
+            List<LocalClaim> localClaims = new ArrayList<>();
+            localClaims.add(multiValuedClaim);
+            localClaims.add(singleValuedClaim);
+            localClaims.add(noPropertyClaim);
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME)).thenReturn(localClaims);
+
+            ExternalClaim multiTestOidc =
+                    new ExternalClaim(OIDC_DIALECT, "multi_test", "http://wso2.org/claims/multiTest");
+            ExternalClaim givenNameOidc =
+                    new ExternalClaim(OIDC_DIALECT, "given_name", "http://wso2.org/claims/givenname");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Arrays.asList(multiTestOidc, givenNameOidc));
+
+            Set<String> result = OAuth2Util.getMultiValuedClaimUris(SUPER_TENANT_DOMAIN_NAME);
+
+            assertNotNull(result, "Expected a non-null set when claim metadata is resolved.");
+            assertEquals(result.size(), 2, "The multiValued local claim URI and its mapped OIDC URI should be "
+                    + "returned.");
+            assertTrue(result.contains("http://wso2.org/claims/multiTest"), "Local multiValued claim URI expected.");
+            assertTrue(result.contains("multi_test"), "Mapped OIDC claim URI expected.");
+            assertFalse(result.contains("http://wso2.org/claims/givenname"));
+            assertFalse(result.contains("given_name"));
+            assertFalse(result.contains("http://wso2.org/claims/lastname"));
+        }
+    }
+
+    @Test(description = "Issue #7138: getMultiValuedClaimUris falls back to null (legacy behaviour) when the "
+            + "ClaimMetadataManagementService is unavailable.")
+    public void testGetMultiValuedClaimUrisWithNullService() {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(null);
+
+            Set<String> result = OAuth2Util.getMultiValuedClaimUris(SUPER_TENANT_DOMAIN_NAME);
+
+            assertNull(result, "Expected null (legacy fallback) when the claim metadata service is unavailable.");
+        }
+    }
+
+    @Test(description = "Issue #7138: getMultiValuedClaimUris falls back to null (legacy behaviour) when the local "
+            + "claim lookup returns null.")
+    public void testGetMultiValuedClaimUrisWithNullLocalClaims() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME)).thenReturn(null);
+
+            Set<String> result = OAuth2Util.getMultiValuedClaimUris(SUPER_TENANT_DOMAIN_NAME);
+
+            assertNull(result, "Expected null (graceful legacy fallback) when getLocalClaims returns null.");
+        }
+    }
+
+    @Test(description = "Issue #7138: getMultiValuedClaimUris falls back to null (legacy behaviour) and does not "
+            + "fail token issuance when claim metadata lookup throws.")
+    public void testGetMultiValuedClaimUrisWithClaimMetadataException() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(new ClaimMetadataException("error while reading claim metadata"));
+
+            Set<String> result = OAuth2Util.getMultiValuedClaimUris(SUPER_TENANT_DOMAIN_NAME);
+
+            assertNull(result, "Expected null (graceful legacy fallback) on ClaimMetadataException.");
         }
     }
 

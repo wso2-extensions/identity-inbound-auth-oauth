@@ -93,6 +93,8 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
@@ -2317,6 +2319,78 @@ public class OAuth2Util {
             }
         } catch (IdentityOAuth2Exception | ClaimMetadataException | OrganizationManagementException e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Build the set of claim URIs that should be treated as multi-valued when the
+     * {@code ClaimMetadata.HonourMultiValued} configuration is enabled, using the claim metadata service
+     * registered with the OAuth2 service component holder.
+     *
+     * @param tenantDomain Tenant domain to resolve claim metadata for.
+     * @return Set of multi-valued claim URIs (local claim URIs plus their mapped OIDC dialect claim URIs), or
+     * {@code null} if the metadata could not be resolved (so that callers fall back to legacy separator-based
+     * multi-valued claim handling).
+     */
+    public static Set<String> getMultiValuedClaimUris(String tenantDomain) {
+
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        return getMultiValuedClaimUris(claimMetadataManagementService, tenantDomain);
+    }
+
+    /**
+     * Build the set of claim URIs that should be treated as multi-valued when the
+     * {@code ClaimMetadata.HonourMultiValued} configuration is enabled. The returned set contains both the local
+     * claim URIs flagged {@code multiValued=true} and their mapped OIDC dialect claim URIs, so callers keyed on
+     * either match.
+     *
+     * @param claimMetadataManagementService Claim metadata service used to resolve claims.
+     * @param tenantDomain                   Tenant domain to resolve claim metadata for.
+     * @return Set of multi-valued claim URIs (local + mapped OIDC), or {@code null} if the metadata could not be
+     * resolved (so that callers fall back to legacy separator-based multi-valued claim handling).
+     */
+    public static Set<String> getMultiValuedClaimUris(ClaimMetadataManagementService claimMetadataManagementService,
+                                                      String tenantDomain) {
+
+        if (claimMetadataManagementService == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("ClaimMetadataManagementService unavailable; legacy multi-valued handling for tenant: "
+                        + tenantDomain);
+            }
+            return null;
+        }
+        try {
+            List<LocalClaim> localClaims = claimMetadataManagementService.getLocalClaims(tenantDomain);
+            if (localClaims == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("No local claims for tenant: " + tenantDomain + "; legacy multi-valued handling.");
+                }
+                return null;
+            }
+            Set<String> multiValuedLocalClaimUris = new HashSet<>();
+            for (LocalClaim localClaim : localClaims) {
+                if (Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY))) {
+                    multiValuedLocalClaimUris.add(localClaim.getClaimURI());
+                }
+            }
+            // Set spans both dialects: UserInfo keys claims by local URI; token maps key them by OIDC URI (filtered)
+            // or local URI (preserved/non-OIDC). Including both lets one membership check serve every caller.
+            Set<String> multiValuedClaimUris = new HashSet<>(multiValuedLocalClaimUris);
+            List<ExternalClaim> oidcClaims =
+                    claimMetadataManagementService.getExternalClaims(OAuthConstants.OIDC_DIALECT, tenantDomain);
+            if (oidcClaims != null) {
+                for (ExternalClaim oidcClaim : oidcClaims) {
+                    if (multiValuedLocalClaimUris.contains(oidcClaim.getMappedLocalClaim())) {
+                        multiValuedClaimUris.add(oidcClaim.getClaimURI());
+                    }
+                }
+            }
+            return multiValuedClaimUris;
+        } catch (ClaimMetadataException e) {
+            log.error("Error reading claim metadata for multi-valued claims; tenant: " + tenantDomain
+                    + ". Falling back to legacy handling.", e);
+            return null;
         }
     }
 
