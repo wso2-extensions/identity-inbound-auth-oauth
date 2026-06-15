@@ -29,6 +29,8 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HttpMethod;
@@ -47,6 +49,8 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     private static final String DPOP = "DPoP";
     private static final String CONTENT_TYPE_HEADER_VALUE = "application/x-www-form-urlencoded";
     public static final String CHARSET = "charset=";
+
+    private static final Pattern AUTHZ_HEADER_PATTERN = Pattern.compile("(\\S+)(?: +(\\S+))?");
 
     @Override
     public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
@@ -111,32 +115,45 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     /**
      * Handles Header parsing
      */
-    private String extractTokenFromHeader(String authzHeaders, HttpServletRequest request) throws UserInfoEndpointException {
-        String[] authzHeaderInfo = authzHeaders.trim().split(" ");
+    private String extractTokenFromHeader(String authzHeaders, HttpServletRequest request)
+            throws UserInfoEndpointException {
+        Matcher matcher = AUTHZ_HEADER_PATTERN.matcher(authzHeaders.trim());
 
-        if (authzHeaderInfo.length < 2) {
+        if (!matcher.matches()) {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Invalid Authorization header format"
             );
         }
 
-        String authScheme = authzHeaderInfo[0];
+        String authScheme = matcher.group(1);
+        String accessToken = matcher.group(2);
 
         if (BEARER.equalsIgnoreCase(authScheme)) {
             // Bearer token. For a Bearer token no additional DPoP header is expected.
-            return authzHeaderInfo[1];
+            if (StringUtils.isBlank(accessToken)) {
+                throw new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                );
+            }
+            return accessToken;
         } else if (DPOP.equals(authScheme)) {
-            // DPoP token: the request MUST include a DPoP header
+            // DPoP token: the request MUST include a DPoP header.
+            if (StringUtils.isBlank(accessToken)) {
+                throw new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP token missing"
+                );
+            }
+
             String dpopHeader = request.getHeader(DPOP);
             if (StringUtils.isBlank(dpopHeader)) {
                 throw new UserInfoEndpointException(
                         OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP header is required with DPoP tokens"
                 );
             }
-            return authzHeaderInfo[1];
+            return accessToken;
         } else {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Invalid Authorization header format"
             );
         }
     }
