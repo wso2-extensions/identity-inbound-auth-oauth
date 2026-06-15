@@ -47,6 +47,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -134,6 +136,24 @@ public class UserInfoISAccessTokenValidatorTest {
         prepareHttpServletRequest(bearerAuthHeader, null);
         assertEquals(bearerAuthHeader.split(" ")[1], userInforRequestDefaultValidator.validateRequest
                 (httpServletRequest));
+    }
+
+    @Test(expectedExceptions = UserInfoEndpointException.class)
+    public void testValidateRequestRejectsMultipleAuthorizationHeaders() throws Exception {
+
+        when(httpServletRequest.getHeaders(HttpHeaders.AUTHORIZATION)).thenReturn(
+                Collections.enumeration(Arrays.asList("Bearer " + token, "Bearer invalid_token")));
+        userInforRequestDefaultValidator.validateRequest(httpServletRequest);
+    }
+
+    @Test
+    public void testValidateRequestAllowsSingleAuthorizationHeader() throws Exception {
+
+        String bearerAuthHeader = "Bearer " + token;
+        when(httpServletRequest.getHeaders(HttpHeaders.AUTHORIZATION)).thenReturn(
+                Collections.enumeration(Collections.singletonList(bearerAuthHeader)));
+        when(httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(bearerAuthHeader);
+        assertEquals(userInforRequestDefaultValidator.validateRequest(httpServletRequest), token);
     }
 
     @DataProvider
