@@ -37,7 +37,7 @@ import javax.ws.rs.core.HttpHeaders;
 /**
  * Validates the schema and authorization header according to the specification
  *
- * @see http://openid.net/specs/openid-connect-basic-1_0-22.html#anchor6
+ * @see <a href="http://openid.net/specs/openid-connect-basic-1_0-22.html#anchor6">OpenID Connect Basic 1.0</a>
  */
 public class UserInforRequestDefaultValidator implements UserInfoRequestValidator {
 
@@ -52,51 +52,66 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
 
         String authzHeaders = request.getHeader(HttpHeaders.AUTHORIZATION);
+
         if (authzHeaders == null) {
-            String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
-            // To validate the Content_Type header.
-            if (StringUtils.isBlank(contentTypeHeaders)) {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Authorization or Content-Type header is missing");
-            }
-
-            // Restricting passing the access token via request body in GET requests.
-            if (HttpMethod.GET.equals(request.getMethod())) {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Authorization header is missing");
-            }
-            if (contentTypeHeaders.trim().startsWith(CONTENT_TYPE_HEADER_VALUE)) {
-                String charset = getCharsetFromContentType(contentTypeHeaders);
-
-                // Use a default charset if none is provided
-                Charset encodingCharset;
-                try {
-                    encodingCharset = charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
-                } catch (IllegalArgumentException e) {
-                    encodingCharset = StandardCharsets.UTF_8;
-                }
-                String[] arrAccessToken = new String[2];
-                String requestBody = EndpointUtil.readRequestBody(request, encodingCharset);
-                String[] arrAccessTokenNew;
-                // To check whether the entity-body consist entirely of ASCII [USASCII] characters.
-                if (!isPureAscii(requestBody)) {
-                    throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                            "Body contains non ASCII characters");
-                }
-                if (requestBody.contains(ACCESS_TOKEN_PARAM)) {
-                    arrAccessToken = requestBody.trim().split(ACCESS_TOKEN_PARAM);
-                    if (arrAccessToken[1].contains("&")) {
-                        arrAccessTokenNew = arrAccessToken[1].split("&", 2);
-                        return arrAccessTokenNew[0];
-                    }
-                }
-                return arrAccessToken[1];
-            } else {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Content-Type header is wrong");
-            }
+            return extractTokenFromBody(request);
         }
 
+        return extractTokenFromHeader(authzHeaders, request);
+    }
+
+    /**
+     * Handles the legacy Request Body token extraction
+     */
+    private String extractTokenFromBody(HttpServletRequest request) throws UserInfoEndpointException {
+        String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
+        // To validate the Content_Type header.
+        if (StringUtils.isBlank(contentTypeHeaders)) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Authorization or Content-Type header is missing");
+        }
+
+        // Restricting passing the access token via request body in GET requests.
+        if (HttpMethod.GET.equals(request.getMethod())) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Authorization header is missing");
+        }
+        if (contentTypeHeaders.trim().startsWith(CONTENT_TYPE_HEADER_VALUE)) {
+            String charset = getCharsetFromContentType(contentTypeHeaders);
+
+            // Use a default charset if none is provided
+            Charset encodingCharset;
+            try {
+                encodingCharset = charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
+            } catch (IllegalArgumentException e) {
+                encodingCharset = StandardCharsets.UTF_8;
+            }
+            String[] arrAccessToken = new String[2];
+            String requestBody = EndpointUtil.readRequestBody(request, encodingCharset);
+            String[] arrAccessTokenNew;
+            // To check whether the entity-body consist entirely of ASCII [USASCII] characters.
+            if (!isPureAscii(requestBody)) {
+                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                        "Body contains non ASCII characters");
+            }
+            if (requestBody.contains(ACCESS_TOKEN_PARAM)) {
+                arrAccessToken = requestBody.trim().split(ACCESS_TOKEN_PARAM);
+                if (arrAccessToken[1].contains("&")) {
+                    arrAccessTokenNew = arrAccessToken[1].split("&", 2);
+                    return arrAccessTokenNew[0];
+                }
+            }
+            return arrAccessToken[1];
+        } else {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Content-Type header is wrong");
+        }
+    }
+
+    /**
+     * Handles Header parsing
+     */
+    private String extractTokenFromHeader(String authzHeaders, HttpServletRequest request) throws UserInfoEndpointException {
         String[] authzHeaderInfo = authzHeaders.trim().split(" ");
 
         if (authzHeaderInfo.length < 2) {
