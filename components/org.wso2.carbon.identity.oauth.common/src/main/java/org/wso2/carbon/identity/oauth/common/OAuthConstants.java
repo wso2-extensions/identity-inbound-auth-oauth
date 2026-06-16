@@ -300,6 +300,7 @@ public final class OAuthConstants {
             "OAuth.AllowDisabledApplicationCredentialsForAuthentication";
 
     public static final String REQUESTED_ACTOR = "requested_actor";
+    public static final String REQUESTED_ACTOR_NAME = "requestedActorName";
 
     private OAuthConstants() {
 

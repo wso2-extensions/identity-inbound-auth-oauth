@@ -159,6 +159,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -3013,6 +3014,19 @@ public class AuthzUtil {
         params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
         params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
+
+        // For agent OBO requests, check whether the requested_actor is a valid agent.
+        if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
+            try {
+                if (!OAuth2Util.isExistingAgent(params.getTenantDomain(), params.getRequestedActor())) {
+                    return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                            OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                                    "Invalid requested_actor."), params);
+                }
+            } catch (UserStoreException e) {
+                throw new OAuthSystemException("Error while validating requested_actor.", e);
+            }
+        }
 
         return null;
     }
