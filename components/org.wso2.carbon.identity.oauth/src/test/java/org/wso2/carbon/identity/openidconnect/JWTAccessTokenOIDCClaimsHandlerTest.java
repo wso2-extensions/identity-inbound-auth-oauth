@@ -103,6 +103,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR_DEFAULT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
@@ -557,6 +558,110 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 assertEquals(jwtClaimsSet.getClaim("email"), TestConstants.CLAIM_VALUE2,
                         "OIDC claim email is not added with the JWT token");
             }
+        }
+    }
+
+    @Test(description = "When RestrictAssertionClaimsToConfiguredAttributes is enabled, federated assertion claims " +
+            "are restricted to the application's configured access token attributes (refs wso2/product-is#27611).")
+    public void testFederatedAssertionClaimsRestrictedWhenConfigEnabled() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class)) {
+
+            identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+            authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+            // Only "email" is configured as an access token attribute; "country" is not.
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any()))
+                    .thenReturn(getoAuthAppDO(new String[]{EMAIL}));
+            claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+            lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                    anyString(), isNull(), anyString(), anyBoolean())).thenReturn(getOIDCtoLocalClaimsMapping());
+
+            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(new HashMap<>());
+            requestMsgCtx.addProperty("AuthorizationCode", "dummyAuthorizationCode");
+            Map<ClaimMapping, String> federatedUserAttributes = new HashMap<>();
+            federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("country"),
+                    TestConstants.CLAIM_VALUE1);
+            federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("email"),
+                    TestConstants.CLAIM_VALUE2);
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry();
+            authorizationGrantCacheEntry.setMappedRemoteClaims(federatedUserAttributes);
+            mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
+
+            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+
+            JWTAccessTokenOIDCClaimsHandler handler =
+                    getJwtAccessTokenOIDCClaimsHandler(jdbcPersistenceManager, oAuthServerConfiguration);
+            OAuthServerConfiguration serverConfig = mock(OAuthServerConfiguration.class);
+            lenient().when(serverConfig.isRestrictAssertionClaimsToConfiguredAttributes()).thenReturn(true);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfig);
+
+            JWTClaimsSet jwtClaimsSet = handler.handleCustomClaims(new JWTClaimsSet.Builder(), requestMsgCtx);
+            assertNotNull(jwtClaimsSet);
+            assertEquals(jwtClaimsSet.getClaim(EMAIL), TestConstants.CLAIM_VALUE2,
+                    "Configured access token attribute must be present.");
+            assertNull(jwtClaimsSet.getClaim("country"),
+                    "Unconfigured assertion claim must be restricted when the config is enabled.");
+        }
+    }
+
+    @Test(description = "When RestrictAssertionClaimsToConfiguredAttributes is disabled (default), federated " +
+            "assertion claims are propagated unfiltered, preserving existing behaviour (refs wso2/product-is#27611).")
+    public void testFederatedAssertionClaimsNotRestrictedWhenConfigDisabled() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class)) {
+
+            identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+            authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any()))
+                    .thenReturn(getoAuthAppDO(new String[]{EMAIL}));
+            claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+            lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                    anyString(), isNull(), anyString(), anyBoolean())).thenReturn(getOIDCtoLocalClaimsMapping());
+
+            OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(new HashMap<>());
+            requestMsgCtx.addProperty("AuthorizationCode", "dummyAuthorizationCode");
+            Map<ClaimMapping, String> federatedUserAttributes = new HashMap<>();
+            federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("country"),
+                    TestConstants.CLAIM_VALUE1);
+            federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("email"),
+                    TestConstants.CLAIM_VALUE2);
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry();
+            authorizationGrantCacheEntry.setMappedRemoteClaims(federatedUserAttributes);
+            mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
+
+            UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+            mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+
+            JWTAccessTokenOIDCClaimsHandler handler =
+                    getJwtAccessTokenOIDCClaimsHandler(jdbcPersistenceManager, oAuthServerConfiguration);
+            OAuthServerConfiguration serverConfig = mock(OAuthServerConfiguration.class);
+            lenient().when(serverConfig.isRestrictAssertionClaimsToConfiguredAttributes()).thenReturn(false);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfig);
+
+            JWTClaimsSet jwtClaimsSet = handler.handleCustomClaims(new JWTClaimsSet.Builder(), requestMsgCtx);
+            assertNotNull(jwtClaimsSet);
+            assertEquals(jwtClaimsSet.getClaim("country"), TestConstants.CLAIM_VALUE1,
+                    "Assertion claim must be propagated unfiltered when the config is disabled.");
+            assertEquals(jwtClaimsSet.getClaim(EMAIL), TestConstants.CLAIM_VALUE2);
         }
     }
 
