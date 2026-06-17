@@ -25,6 +25,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -35,7 +36,6 @@ import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandler;
@@ -75,8 +75,27 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
                 String authenticatedUserId = cibaAuthenticatedUser.getUserId();
                 boolean isValidUser = validateResolvedUser(authCodeKey, authenticatedUserId);
                 if (!isValidUser) {
-                    throw new IdentityOAuth2ClientException("The authenticated user: " + authenticatedUserId
-                            + " is not the same as the resolved user for the auth_req_id: " + authRequestId);
+                    log.warn("CIBA user validation failed for auth_req_id: " + authRequestId
+                            + ". The authenticated user does not match the user specified in the login_hint.");
+                    try {
+                        String retryPageUrl = ServiceURLBuilder.create()
+                                .addPath(FrameworkConstants.DefaultUrlContexts.AUTHENTICATION_ENDPOINT_RETRY)
+                                .build().getAbsolutePublicURL();
+                        URIBuilder uriBuilder = new URIBuilder(retryPageUrl);
+                        uriBuilder.addParameter(CibaConstants.STATUS_PARAM,
+                                CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE);
+                        uriBuilder.addParameter(CibaConstants.STATUS_MSG_PARAM,
+                                CibaConstants.CIBA_USER_MISMATCH_ERROR_DESCRIPTION);
+                        String tenantDomain = authorizationReqDTO.getTenantDomain();
+                        if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()
+                                && isNotSuperTenant(tenantDomain)) {
+                            uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+                        }
+                        respDTO.setCallbackURI(uriBuilder.build().toString());
+                    } catch (URISyntaxException | URLBuilderException e) {
+                        throw new IdentityOAuth2Exception("Error building CIBA retry page URL.", e);
+                    }
+                    return respDTO;
                 }
             }
 

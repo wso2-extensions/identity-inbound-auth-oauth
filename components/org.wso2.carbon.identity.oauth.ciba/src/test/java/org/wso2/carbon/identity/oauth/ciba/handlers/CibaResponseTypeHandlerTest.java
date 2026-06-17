@@ -32,14 +32,15 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -198,14 +199,16 @@ public class CibaResponseTypeHandlerTest {
         }
     }
 
-    @Test(expectedExceptions = IdentityOAuth2ClientException.class)
-    public void testIssueFailsWhenUserMismatchAndValidationEnabled()
+    @Test
+    public void testIssueReturnsAccessDeniedWhenUserMismatchAndValidationEnabled()
             throws Exception {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil =
                      mockStatic(IdentityTenantUtil.class);
                 MockedStatic<FrameworkUtils> frameworkUtils =
-                        mockStatic(FrameworkUtils.class)) {
+                        mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic =
+                        mockStatic(ServiceURLBuilder.class)) {
             CibaResponseTypeHandler cibaResponseTypeHandler =
                     new CibaResponseTypeHandler();
 
@@ -225,13 +228,155 @@ public class CibaResponseTypeHandlerTest {
                             anyInt(), anyString(), anyString()))
                     .thenReturn("testUser");
 
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create)
+                    .thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
+
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setApplicationName("testApp");
             oAuthAppDO.setCibaSkipUserValidation(false);
             authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
 
-            // Should throw because users don't match.
-            cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+            // Should redirect to retry page with CIBA user mismatch error when users don't match.
+            OAuth2AuthorizeRespDTO respDTO =
+                    cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+            Assert.assertNull(respDTO.getErrorCode());
+            Assert.assertNotNull(respDTO.getCallbackURI());
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("status=" + CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE));
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("statusMsg=" + CibaConstants.CIBA_USER_MISMATCH_ERROR_DESCRIPTION));
+        }
+    }
+
+    @Test
+    public void testIssueAppendsRetryTenantDomainForNonSuperTenantWhenTenantQualifiedUrlsDisabled()
+            throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic =
+                        mockStatic(ServiceURLBuilder.class)) {
+            CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString())).thenReturn("authCodeKey");
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString())).thenReturn("differentUser");
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(
+                    anyInt(), anyString(), anyString())).thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(false);
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
+            authorizationReqDTO.setTenantDomain("test.com");
+
+            OAuth2AuthorizeRespDTO respDTO =
+                    cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+            Assert.assertNull(respDTO.getErrorCode());
+            Assert.assertNotNull(respDTO.getCallbackURI());
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("status=" + CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE));
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("statusMsg=" + CibaConstants.CIBA_USER_MISMATCH_ERROR_DESCRIPTION));
+            Assert.assertTrue(respDTO.getCallbackURI().contains("tenantDomain=test.com"));
+        }
+    }
+
+    @Test
+    public void testIssueOmitsRetryTenantDomainWhenTenantQualifiedUrlsEnabled() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic =
+                        mockStatic(ServiceURLBuilder.class)) {
+            CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString())).thenReturn("authCodeKey");
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString())).thenReturn("differentUser");
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(true);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(
+                    anyInt(), anyString(), anyString())).thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(false);
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
+            authorizationReqDTO.setTenantDomain("test.com");
+
+            OAuth2AuthorizeRespDTO respDTO =
+                    cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+            Assert.assertNull(respDTO.getErrorCode());
+            Assert.assertNotNull(respDTO.getCallbackURI());
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("status=" + CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE));
+            Assert.assertFalse(respDTO.getCallbackURI().contains("tenantDomain="));
+        }
+    }
+
+    @Test
+    public void testIssueOmitsRetryTenantDomainForSuperTenantWhenTenantQualifiedUrlsDisabled()
+            throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+                MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic =
+                        mockStatic(ServiceURLBuilder.class)) {
+            CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
+
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(cibaAuthMgtDAO.getCibaAuthCodeKey(anyString())).thenReturn("authCodeKey");
+            when(cibaAuthMgtDAO.getResolvedUserId(anyString())).thenReturn("differentUser");
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(
+                    anyInt(), anyString(), anyString())).thenReturn("testUser");
+
+            ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+            ServiceURL serviceURL = mock(ServiceURL.class);
+            serviceURLBuilderMockedStatic.when(ServiceURLBuilder::create).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.addPath(anyString())).thenReturn(serviceURLBuilder);
+            when(serviceURLBuilder.build()).thenReturn(serviceURL);
+            when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_CALLBACK_URL);
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setApplicationName("testApp");
+            oAuthAppDO.setCibaSkipUserValidation(false);
+            authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
+            authorizationReqDTO.setTenantDomain("carbon.super");
+
+            OAuth2AuthorizeRespDTO respDTO =
+                    cibaResponseTypeHandler.issue(authAuthzReqMessageContext);
+            Assert.assertNull(respDTO.getErrorCode());
+            Assert.assertNotNull(respDTO.getCallbackURI());
+            Assert.assertTrue(respDTO.getCallbackURI()
+                    .contains("status=" + CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE));
+            Assert.assertFalse(respDTO.getCallbackURI().contains("tenantDomain="));
         }
     }
 
