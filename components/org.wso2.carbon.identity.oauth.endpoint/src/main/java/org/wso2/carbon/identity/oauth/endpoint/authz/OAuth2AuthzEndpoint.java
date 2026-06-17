@@ -2470,14 +2470,16 @@ public class OAuth2AuthzEndpoint {
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(authzReqMsgCtx);
             if (ArrayUtils.isEmpty(authzReqMsgCtx.getApprovedScope())) {
                 oauth2Params.setScopes(new HashSet<>(Collections.emptyList()));
-            } else {
-                // Exclude default scopes mentioned in the configuration from consent flow
+            } else if (CollectionUtils.isEmpty(oauth2Params.getScopes())) {
+                // Exclude default requested scopes from the consent flow when no scopes are requested
                 List<String> defaultRequestedScopes = OAuthServerConfiguration.getInstance()
                         .getDefaultRequestedScopes();
                 Set<String> approvedScopes = new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope()));
-                log.debug("Removing default scopes from approved scopes.");
+                log.debug("Removing internally added default scopes from consent flow.");
                 approvedScopes.removeAll(defaultRequestedScopes);
                 oauth2Params.setScopes(approvedScopes);
+            } else {
+                oauth2Params.setScopes(new HashSet<>(Arrays.asList(authzReqMsgCtx.getApprovedScope())));
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             log.error("Error occurred while validating requested scopes.", e);
