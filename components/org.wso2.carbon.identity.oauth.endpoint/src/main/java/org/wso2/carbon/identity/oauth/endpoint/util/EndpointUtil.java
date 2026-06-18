@@ -100,6 +100,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -787,8 +788,12 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
+            // For externally managed agents the display name cannot be resolved from the local agent user store.
+            if (OAuth2Util.isAgentExternallyManaged(tenantDomain)) {
+                return null;
+            }
             return OAuth2Util.resolveAgentNameFromAgentId(tenantDomain, requestedActor);
-        } catch (UserStoreException e) {
+        } catch (UserStoreException | AgentConfigMgtException e) {
             throw new OAuthSystemException("Error while resolving agent display name for requested_actor: "
                     + requestedActor, e);
         }

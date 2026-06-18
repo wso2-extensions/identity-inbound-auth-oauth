@@ -133,6 +133,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
+import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -6160,6 +6162,18 @@ public class OAuth2Util {
         AbstractUserStoreManager userStoreManager
                 = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.getUserClaimValueWithID(agentId, OAuth2Constants.AGENT_NAME_CLAIM_URI, null);
+    }
+
+    /**
+     * Check whether the tenant's agents are managed in an external system.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return {@code true} if the tenant's agents are externally managed, {@code false} otherwise (default).
+     * @throws AgentConfigMgtException If a failure occurs while resolving the tenant agent configuration.
+     */
+    public static boolean isAgentExternallyManaged(String tenantDomain) throws AgentConfigMgtException {
+
+        return new AgentConfigMgtServiceImpl().getAgentConfig(tenantDomain).isAgentsExternallyManaged();
     }
 
     /**

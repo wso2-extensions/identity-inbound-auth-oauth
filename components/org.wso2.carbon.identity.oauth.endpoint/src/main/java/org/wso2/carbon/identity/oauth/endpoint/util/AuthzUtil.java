@@ -150,6 +150,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationRespon
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.JarmResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
@@ -3016,14 +3017,16 @@ public class AuthzUtil {
         params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
 
         // For agent OBO requests, check whether the requested_actor is a valid agent.
+        // Skip the check when the tenant's agents are managed externally.
         if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
             try {
-                if (!OAuth2Util.isExistingAgent(params.getTenantDomain(), params.getRequestedActor())) {
+                if (!OAuth2Util.isAgentExternallyManaged(params.getTenantDomain())
+                        && !OAuth2Util.isExistingAgent(params.getTenantDomain(), params.getRequestedActor())) {
                     return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
                             OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
                                     "Invalid requested_actor."), params);
                 }
-            } catch (UserStoreException e) {
+            } catch (UserStoreException | AgentConfigMgtException e) {
                 throw new OAuthSystemException("Error while validating requested_actor.", e);
             }
         }
