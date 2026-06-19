@@ -177,10 +177,28 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
         if (isPreserverClaimUrisInAssertion(requestMsgCtx) || (hasNonOIDCClaimsProperty != null
                 && (Boolean) hasNonOIDCClaimsProperty)) {
+            if (OAuthServerConfiguration.getInstance().isRestrictAssertionClaimsToConfiguredAttributes()) {
+                return filterRequestedClaims(userClaimsInOIDCDialect, allowedClaims);
+            }
             return userClaimsInOIDCDialect;
         } else {
             return filterClaims(userClaimsInOIDCDialect, requestMsgCtx);
         }
+    }
+
+    /**
+     * Restrict the federated user's assertion claims to the application's configured access token attributes.
+     *
+     * @param userClaimsInOIDCDialect User claims in OIDC dialect.
+     * @param allowedClaims           Configured access token attributes.
+     * @return Claims restricted to the configured access token attributes.
+     */
+    private Map<String, Object> filterRequestedClaims(Map<String, Object> userClaimsInOIDCDialect,
+                                                      List<String> allowedClaims) {
+
+        return userClaimsInOIDCDialect.entrySet().stream()
+                .filter(entry -> allowedClaims.contains(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private void setOrganizationSwitchAttributes(OAuthTokenReqMessageContext requestMsgCtx)

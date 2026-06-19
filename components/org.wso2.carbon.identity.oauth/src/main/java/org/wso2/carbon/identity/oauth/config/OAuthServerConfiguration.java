@@ -303,6 +303,9 @@ public class OAuthServerConfiguration {
 
     // Property added to preserve the backward compatibility to send the original claim uris comes in the assertion.
     private boolean convertOriginalClaimsFromAssertionsToOIDCDialect = false;
+    // When enabled, claims taken from the assertion for a federated user are restricted to the application's
+    // configured access token attributes. Default false to preserve backward compatibility.
+    private boolean restrictAssertionClaimsToConfiguredAttributes = false;
     // This property will decide whether to send only mapped roles received from the federated IdP
     private boolean returnOnlyMappedLocalRoles = false;
 
@@ -2173,6 +2176,10 @@ public class OAuthServerConfiguration {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
     }
 
+    public boolean isRestrictAssertionClaimsToConfiguredAttributes() {
+        return restrictAssertionClaimsToConfiguredAttributes;
+    }
+
     public boolean isReturnOnlyMappedLocalRoles() {
         return returnOnlyMappedLocalRoles;
     }
@@ -3990,6 +3997,14 @@ public class OAuthServerConfiguration {
                 convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean
                         .parseBoolean(convertOriginalClaimsFromAssertionsToOIDCDialectElement.getText().trim());
             }
+
+            OMElement restrictAssertionClaimsToConfiguredAttributesElement = openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.OPENID_CONNECT_RESTRICT_ASSERTION_CLAIMS_TO_CONFIGURED_ATTRIBUTES));
+            if (restrictAssertionClaimsToConfiguredAttributesElement != null) {
+                restrictAssertionClaimsToConfiguredAttributes = Boolean
+                        .parseBoolean(restrictAssertionClaimsToConfiguredAttributesElement.getText().trim());
+            }
             OMElement addUnmappedUserAttributesElement = openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES));
             if (addUnmappedUserAttributesElement != null) {
@@ -4692,6 +4707,8 @@ public class OAuthServerConfiguration {
                 "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        public static final String OPENID_CONNECT_RESTRICT_ASSERTION_CLAIMS_TO_CONFIGURED_ATTRIBUTES =
+                "RestrictAssertionClaimsToConfiguredAttributes";
         // Property to decide whether to add tenant domain to id_token.
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
