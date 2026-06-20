@@ -65,7 +65,11 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     }
 
     /**
-     * Handles the legacy Request Body token extraction
+     * Extracts the access token from the HTTP request body for form-urlencoded requests.
+     *
+     * @param request The HttpServletRequest.
+     * @return The extracted access token.
+     * @throws UserInfoEndpointException If the request body is malformed or the token is missing.
      */
     private String extractTokenFromBody(HttpServletRequest request) throws UserInfoEndpointException {
         String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
@@ -80,6 +84,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
                     "Authorization header is missing");
         }
+
         if (contentTypeHeaders.trim().startsWith(CONTENT_TYPE_HEADER_VALUE)) {
             String charset = getCharsetFromContentType(contentTypeHeaders);
 
@@ -90,6 +95,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             } catch (IllegalArgumentException e) {
                 encodingCharset = StandardCharsets.UTF_8;
             }
+
             String[] arrAccessToken = new String[2];
             String requestBody = EndpointUtil.readRequestBody(request, encodingCharset);
             String[] arrAccessTokenNew;
@@ -98,13 +104,21 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                 throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
                         "Body contains non ASCII characters");
             }
+
             if (requestBody.contains(ACCESS_TOKEN_PARAM)) {
                 arrAccessToken = requestBody.trim().split(ACCESS_TOKEN_PARAM);
+
+                if (arrAccessToken.length < 2 || StringUtils.isBlank(arrAccessToken[1])) {
+                    throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                            "Access token value is missing in request body");
+                }
+
                 if (arrAccessToken[1].contains("&")) {
                     arrAccessTokenNew = arrAccessToken[1].split("&", 2);
                     return arrAccessTokenNew[0];
                 }
             }
+
             return arrAccessToken[1];
         } else {
             throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
@@ -113,7 +127,12 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     }
 
     /**
-     * Handles Header parsing
+     * Extracts the access token from the HTTP Authorization header.
+     *
+     * @param authzHeaders The Authorization header string.
+     * @param request      The HttpServletRequest.
+     * @return The extracted access token.
+     * @throws UserInfoEndpointException If the header format is invalid or the token is missing.
      */
     private String extractTokenFromHeader(String authzHeaders, HttpServletRequest request)
             throws UserInfoEndpointException {
