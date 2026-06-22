@@ -661,9 +661,7 @@ public class DCRMService {
         application.setClientId(createdApp.getOauthConsumerKey());
         application.setClientSecret(createdApp.getOauthConsumerSecret());
 
-        List<String> redirectUrisList = new ArrayList<>();
-        redirectUrisList.add(createdApp.getCallbackUrl());
-        application.setRedirectUris(redirectUrisList);
+        application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl()));
 
         List<String> grantTypesList = new ArrayList<>();
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
@@ -1296,5 +1294,37 @@ public class DCRMService {
             }
         }
         return tenantDomain;
+    }
+
+    private List<String> buildRedirectUrisResponse(String callbackUrl) {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                && isEncodedMultiUriCallback(callbackUrl)) {
+            return decodeRedirectUris(callbackUrl);
+        }
+        List<String> redirectUrisList = new ArrayList<>();
+        redirectUrisList.add(callbackUrl);
+        return redirectUrisList;
+    }
+
+    private boolean isEncodedMultiUriCallback(String callbackUrl) {
+
+        if (StringUtils.isBlank(callbackUrl)) {
+            return false;
+        }
+        String prefix = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+        return callbackUrl.startsWith(prefix) && callbackUrl.endsWith(")");
+    }
+
+    private List<String> decodeRedirectUris(String callbackUrl) {
+
+        String prefix = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+        String inner = callbackUrl.substring(prefix.length(), callbackUrl.length() - 1);
+        String[] parts = inner.split("(?<!\\\\)\\|");
+        List<String> uris = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            uris.add(part.replace("\\?", "?"));
+        }
+        return uris;
     }
 }
