@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -1287,6 +1288,163 @@ public class DCRMServiceTest {
                 Assert.assertEquals(((DCRMClientException) e).getErrorCode(),
                         DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT);
             }
+        }
+    }
+
+    private String encodeCallback(List<String> redirectUris) throws Exception {
+
+        return OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + dcrmService.createRegexPattern(redirectUris);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> invokeBuildRedirectUrisResponse(String callbackUrl) throws Exception {
+
+        Method method = DCRMService.class.getDeclaredMethod("buildRedirectUrisResponse", String.class);
+        method.setAccessible(true);
+        try {
+            return (List<String>) method.invoke(dcrmService, callbackUrl);
+        } catch (InvocationTargetException e) {
+            throw (Exception) e.getTargetException();
+        }
+    }
+
+    @Test(description = "#7314: knob ON — a multi-URI regexp callback is decoded back into the original array")
+    public void buildRedirectUrisResponseDecodesMultiUriWhenKnobEnabled() throws Exception {
+
+        List<String> redirectUris = Arrays.asList(
+                "https://localhost:9443/devportal/", "https://test.com:9443/devportal/");
+        String callbackUrl = encodeCallback(redirectUris);
+        assertTrue(callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "("));
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result, redirectUris,
+                    "redirect_uris must be decoded back to the original array when the knob is on");
+        }
+    }
+
+    @Test(description = "#7314: knob OFF (default) — multi-URI regexp callback is returned verbatim (legacy behavior)")
+    public void buildRedirectUrisResponsePreservesRegexpWhenKnobDisabled() throws Exception {
+
+        List<String> redirectUris = Arrays.asList(
+                "https://localhost:9443/devportal/", "https://test.com:9443/devportal/");
+        String callbackUrl = encodeCallback(redirectUris);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("false");
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result.size(), 1, "Legacy behavior returns a single-element list");
+            assertEquals(result.get(0), callbackUrl,
+                    "Knob off must preserve the raw regexp string byte-for-byte (no behavior change on update)");
+        }
+    }
+
+    @Test(description = "#7314: property absent — defaults to OFF, multi-URI regexp returned verbatim")
+    public void buildRedirectUrisResponseDefaultsToDisabledWhenPropertyAbsent() throws Exception {
+
+        List<String> redirectUris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+        String callbackUrl = encodeCallback(redirectUris);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn(null);
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result.size(), 1);
+            assertEquals(result.get(0), callbackUrl,
+                    "Absent property must behave as OFF (Boolean.parseBoolean(null) == false)");
+        }
+    }
+
+    @Test(description = "#7314: knob ON — three registered URIs are all decoded in registration order")
+    public void buildRedirectUrisResponseDecodesThreeUris() throws Exception {
+
+        List<String> redirectUris = Arrays.asList(
+                "https://a.com/cb", "https://b.com/cb", "https://c.com/cb");
+        String callbackUrl = encodeCallback(redirectUris);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result, redirectUris, "All three URIs must round-trip in order");
+        }
+    }
+
+    @Test(description = "#7314: knob ON — query-param URI round-trips byte-exact (escapeQueryParamsIfPresent reversed)")
+    public void buildRedirectUrisResponseRestoresQueryParamUriExactly() throws Exception {
+
+        List<String> redirectUris = Arrays.asList(
+                "https://wso2.com?dummy1=1&dummy=2", "https://test.com/cb");
+        String callbackUrl = encodeCallback(redirectUris);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result, redirectUris,
+                    "Query-param URI must be restored byte-exact (no '\\?' escape leak into the response)");
+        }
+    }
+
+    @Test(description = "#7314: single URI stays a plain array regardless of knob state (no regexp prefix applied)")
+    public void buildRedirectUrisResponseSingleUriUnaffectedByKnob() throws Exception {
+
+        String singleUri = "https://single.example.com/cb";
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
+            List<String> onResult = invokeBuildRedirectUrisResponse(singleUri);
+            assertEquals(onResult.size(), 1);
+            assertEquals(onResult.get(0), singleUri);
+
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("false");
+            List<String> offResult = invokeBuildRedirectUrisResponse(singleUri);
+            assertEquals(offResult, onResult, "Single-URI apps must be identical in both gate states");
+        }
+    }
+
+    @DataProvider(name = "nonEncodedCallbackProvider")
+    public Object[][] getNonEncodedCallbacks() {
+
+        return new Object[][]{
+                {null},
+                {""},
+                {"https://plain.example.com/cb"},
+                {"regexp=https://no-parens.com"},
+                {"regexp=(https://no-close.com"},
+                {"(https://a.com|https://b.com)"}
+        };
+    }
+
+    @Test(dataProvider = "nonEncodedCallbackProvider",
+            description = "#7314: knob ON — non-conforming callbacks pass through untouched (never corrupts)")
+    public void buildRedirectUrisResponseDefensivePassThrough(String callbackUrl) throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE)).thenReturn("true");
+
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+
+            assertEquals(result.size(), 1,
+                    "A value not matching the strict regexp=(...) shape must be wrapped as-is, not decoded");
+            assertEquals(result.get(0), callbackUrl,
+                    "Non-encoded callback must be returned verbatim (defensive: never throws, never corrupts)");
         }
     }
 

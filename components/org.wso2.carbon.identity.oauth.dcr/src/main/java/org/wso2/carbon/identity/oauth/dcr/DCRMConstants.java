@@ -103,6 +103,8 @@ public class DCRMConstants {
         public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     }
 
+    public static final String DECODE_DCR_REDIRECT_URIS_IN_RESPONSE = "OAuth.DCRM.DecodeRedirectUrisInResponse";
+
     public static final String OAUTH2 = "oauth2";
     public static final String DCR_CONFIG_RESOURCE_TYPE_NAME = "DCR_CONFIGURATION";
     public static final String DCR_CONFIG_RESOURCE_NAME = "TENANT_DCR_CONFIGURATION";
