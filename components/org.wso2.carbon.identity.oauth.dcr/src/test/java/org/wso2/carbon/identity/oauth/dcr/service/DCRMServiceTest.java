@@ -1241,15 +1241,19 @@ public class DCRMServiceTest {
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
 
-        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
-        assertEquals(application.getClientName(), dummyClientName);
-        String regexp = application.getRedirectUris().get(0)
-                .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-        for (String validCallback : validCallbackList) {
-            assertTrue(validCallback.matches(regexp));
-        }
-        for (String invalidCallback : invalidCallbackList) {
-            assertFalse(invalidCallback.matches(regexp));
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("false");
+            Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+            assertEquals(application.getClientName(), dummyClientName);
+            String regexp = application.getRedirectUris().get(0)
+                    .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            for (String validCallback : validCallbackList) {
+                assertTrue(validCallback.matches(regexp));
+            }
+            for (String invalidCallback : invalidCallbackList) {
+                assertFalse(invalidCallback.matches(regexp));
+            }
         }
     }
 
@@ -1348,7 +1352,7 @@ public class DCRMServiceTest {
     }
 
     @Test
-    public void buildRedirectUrisResponseDefaultsToDisabledWhenPropertyAbsent() throws Exception {
+    public void buildRedirectUrisResponseDefaultsToEnabledWhenPropertyAbsent() throws Exception {
 
         List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
         String encoded = encodeCallback(uris);
@@ -1356,7 +1360,7 @@ public class DCRMServiceTest {
             identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
                     .thenReturn(null);
             List<String> result = invokeBuildRedirectUrisResponse(encoded);
-            assertEquals(result, List.of(encoded), "Absent property should behave as disabled");
+            assertEquals(result, uris, "Absent property should default to enabled (decode)");
         }
     }
 
