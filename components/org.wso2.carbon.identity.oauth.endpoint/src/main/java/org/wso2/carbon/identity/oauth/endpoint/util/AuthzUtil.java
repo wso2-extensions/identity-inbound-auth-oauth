@@ -3016,8 +3016,6 @@ public class AuthzUtil {
 
         params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
 
-        // For agent OBO requests, check whether the requested_actor is a valid agent.
-        // Skip the check when the tenant's agents are managed externally.
         if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
             try {
                 if (!OAuth2Util.isAgentExternallyManaged(params.getTenantDomain())

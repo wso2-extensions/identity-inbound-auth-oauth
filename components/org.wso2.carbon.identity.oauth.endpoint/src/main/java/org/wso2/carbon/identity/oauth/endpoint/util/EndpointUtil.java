@@ -788,7 +788,6 @@ public class EndpointUtil {
             throws OAuthSystemException {
 
         try {
-            // For externally managed agents the display name cannot be resolved from the local agent user store.
             if (OAuth2Util.isAgentExternallyManaged(tenantDomain)) {
                 return null;
             }

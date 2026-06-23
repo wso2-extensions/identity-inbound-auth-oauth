@@ -6133,17 +6133,13 @@ public class OAuth2Util {
      *
      * @param tenantDomain Tenant domain the agent belongs to.
      * @param agentId      Agent's id.
-     * @return {@code true} if the id resolves to a user in the agent user store, {@code false} otherwise.
+     * @return {@code true} if the id resolves to an existing user, {@code false} otherwise.
      * @throws UserStoreException If a failure occurs while accessing the user store.
      */
     public static boolean isExistingAgent(String tenantDomain, String agentId) throws UserStoreException {
 
         String domainQualifiedUsername = resolveUsernameFromUserId(tenantDomain, agentId);
-        if (StringUtils.isBlank(domainQualifiedUsername)) {
-            return false;
-        }
-        String userStoreDomain = UserCoreUtil.extractDomainFromName(domainQualifiedUsername);
-        return IdentityUtil.getAgentIdentityUserstoreName().equalsIgnoreCase(userStoreDomain);
+        return StringUtils.isNotBlank(domainQualifiedUsername);
     }
 
     /**
