@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeValidationResult;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -58,6 +59,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.HashMap;
@@ -678,6 +680,14 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             String actorSub = ActorTokenValidator.validateAndGetSubject(actorToken, tenantDomain);
             if (!StringUtils.equals(actorSub, requestedActor)) {
                 throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor.");
+            }
+            try {
+                if (!OAuth2Util.isAgentExternallyManaged(tenantDomain)
+                        && !OAuth2Util.isAgentEnabled(tenantDomain, actorSub)) {
+                    throw new IdentityOAuth2Exception("Requested actor is not active.");
+                }
+            } catch (AgentConfigMgtException | UserStoreException e) {
+                throw new IdentityOAuth2Exception("Error while validating the requested actor.", e);
             }
             tokReqMsgCtx.setRequestedActor(requestedActor);
         }

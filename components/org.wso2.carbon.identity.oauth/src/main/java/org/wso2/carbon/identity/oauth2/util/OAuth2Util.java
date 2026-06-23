@@ -6143,6 +6143,26 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the agent is in a usable state.
+     *
+     * @param tenantDomain Tenant domain the agent belongs to.
+     * @param agentId      Agent's id.
+     * @return {@code true} if the agent exists and is active, {@code false} otherwise.
+     * @throws UserStoreException If a failure occurs while accessing the user store.
+     */
+    public static boolean isAgentEnabled(String tenantDomain, String agentId) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+
+        String accountLocked = userStoreManager.getUserClaimValueWithID(agentId,
+                OAuth2Constants.ACCOUNT_LOCKED_CLAIM_URI, null);
+        return !Boolean.parseBoolean(accountLocked);
+    }
+
+    /**
      * Resolve the display name of an agent from its agent id.
      *
      * @param tenantDomain Tenant domain the agent belongs to.
