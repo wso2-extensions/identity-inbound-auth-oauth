@@ -37,6 +37,10 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
@@ -661,7 +665,7 @@ public class DCRMService {
         application.setClientId(createdApp.getOauthConsumerKey());
         application.setClientSecret(createdApp.getOauthConsumerSecret());
 
-        application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl()));
+        application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl(), tenantDomain));
 
         List<String> grantTypesList = new ArrayList<>();
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
@@ -1296,16 +1300,41 @@ public class DCRMService {
         return tenantDomain;
     }
 
-    private List<String> buildRedirectUrisResponse(String callbackUrl) {
+    private List<String> buildRedirectUrisResponse(String callbackUrl, String tenantDomain) {
 
-        String propValue = IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE);
-        boolean decodeEnabled = propValue == null || Boolean.parseBoolean(propValue);
-        if (decodeEnabled && isEncodedMultiUriCallback(callbackUrl)) {
+        if (isDecodeRedirectUrisEnabled(tenantDomain) && isEncodedMultiUriCallback(callbackUrl)) {
             return decodeRedirectUris(callbackUrl);
         }
         List<String> redirectUrisList = new ArrayList<>();
         redirectUrisList.add(callbackUrl);
         return redirectUrisList;
+    }
+
+    private boolean isDecodeRedirectUrisEnabled(String tenantDomain) {
+
+        CompatibilitySettingsManager manager =
+                DCRDataHolder.getInstance().getCompatibilitySettingsManager();
+        if (manager != null && StringUtils.isNotBlank(tenantDomain)) {
+            try {
+                CompatibilitySetting setting = manager.getCompatibilitySettingsByGroupAndSetting(
+                        tenantDomain,
+                        DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP,
+                        DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY);
+                CompatibilitySettingGroup group =
+                        setting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP);
+                if (group != null) {
+                    return Boolean.parseBoolean(
+                            group.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY));
+                }
+            } catch (CompatibilitySettingException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Could not evaluate compatibility setting for tenant: " + tenantDomain +
+                            ". Falling back to server-level config.", e);
+                }
+            }
+        }
+        String propValue = IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE);
+        return propValue == null || Boolean.parseBoolean(propValue);
     }
 
     private boolean isEncodedMultiUriCallback(String callbackUrl) {
