@@ -104,6 +104,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -3246,7 +3247,7 @@ public class OAuthAdminServiceImpl {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
                 .getApplicationMgtService();
         try {
-            List<String> jwtAccessTokenClaims = new ArrayList<>();
+            Set<String> jwtAccessTokenClaims = new LinkedHashSet<>();
             ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
                     tenantDomain);
             if (serviceProvider != null) {
