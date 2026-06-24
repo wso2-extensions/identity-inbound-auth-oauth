@@ -125,6 +125,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
@@ -1724,6 +1725,16 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 invocation -> invocation.getArguments()[0]);
         when(mockOAuthServerConfiguration.getOAuthAuthzRequestClassName())
                 .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
+
+        Map<String, ResponseTypeHandler> supportedResponseTypes = new HashMap<>();
+        supportedResponseTypes.put(ResponseType.CODE.toString(), mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(ResponseType.TOKEN.toString(), mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.ID_TOKEN, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.IDTOKEN_TOKEN, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.CODE_TOKEN, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.CODE_IDTOKEN, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.CODE_IDTOKEN_TOKEN, mock(ResponseTypeHandler.class));
+        when(mockOAuthServerConfiguration.getSupportedResponseTypes()).thenReturn(supportedResponseTypes);
     }
 
     @DataProvider(name = "provideFailedAuthenticationErrorInfo")

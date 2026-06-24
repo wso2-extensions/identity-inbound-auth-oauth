@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -530,6 +531,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         responseTypeValidators.put(OAuthConstants.CODE_IDTOKEN, CodeTokenResponseValidator.class);
         lenient().when(mockOAuthServerConfiguration.getSupportedResponseTypeValidators())
                 .thenReturn(responseTypeValidators);
+
+        Map<String, ResponseTypeHandler> supportedResponseTypes = new HashMap<>();
+        supportedResponseTypes.put(OAuthConstants.CODE, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.CODE_IDTOKEN, mock(ResponseTypeHandler.class));
+        lenient().when(mockOAuthServerConfiguration.getSupportedResponseTypes()).thenReturn(supportedResponseTypes);
 
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
         lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
