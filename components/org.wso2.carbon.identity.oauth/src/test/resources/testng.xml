@@ -266,6 +266,12 @@
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenRequestBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.rule.PreIssueIDTokenRuleEvaluationDataProviderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.action.preissueidtoken.execution.PreIssueIDTokenResponseProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtServiceImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.utils.UtilTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.utils.ErrorMessageTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.cache.AgentConfigCacheTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtExceptionTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.agent.models.AgentConfigTest"/>
         </classes>
     </test>
 </suite>
