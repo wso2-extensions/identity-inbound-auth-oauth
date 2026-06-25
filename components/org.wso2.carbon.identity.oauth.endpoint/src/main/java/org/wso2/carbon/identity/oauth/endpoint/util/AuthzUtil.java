@@ -127,6 +127,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
@@ -150,7 +151,6 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationRespon
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.JarmResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
-import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
