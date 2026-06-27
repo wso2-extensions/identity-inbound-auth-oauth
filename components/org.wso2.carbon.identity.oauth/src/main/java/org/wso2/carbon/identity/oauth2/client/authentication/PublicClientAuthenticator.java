@@ -196,6 +196,11 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                 return canBypassClientCredentialsForSharedApp(clientId, tenantDomain);
             }
         }
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getAccessingOrganizationId();
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            return OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId).isBypassClientCredentials();
+        }
         return OAuth2Util.getAppInformationByClientId(clientId, tenantDomain).isBypassClientCredentials();
     }
 
