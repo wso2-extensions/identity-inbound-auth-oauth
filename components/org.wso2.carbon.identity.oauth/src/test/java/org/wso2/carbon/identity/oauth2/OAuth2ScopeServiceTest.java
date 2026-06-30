@@ -129,9 +129,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {"invalid Scope Name", Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage()},
-                {"invalid?scopeName", Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX.getMessage()}
+                        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_CONTAINS_WHITESPACES.getMessage()}
         };
     }
 

@@ -196,6 +196,12 @@ paths:
           description: Name of the scope that is to be retrieved
           required: true
           type: string
+        - name: encoded
+          in: query
+          description: Used to check whether the scope name is URL encoded.
+          required: false
+          type: boolean
+          default: false
 
       responses:
         200:
@@ -242,6 +248,12 @@ paths:
           description: Name of the scope that is to be deleted
           required: true
           type: string
+        - name: encoded
+          in: query
+          description: Used to check whether the scope name is URL encoded.
+          required: false
+          type: boolean
+          default: false
 
       responses:
         204:
@@ -296,6 +308,12 @@ paths:
           description: Name of the scope that is to be updated
           required: true
           type: string
+        - name: encoded
+          in: query
+          description: Used to check whether the scope name is URL encoded.
+          required: false
+          type: boolean
+          default: false
 
       responses:
         200:
@@ -345,9 +363,16 @@ paths:
         - name: includeOIDCScopes
           in: query
           description: Used to check existence of OIDC scopes as well via OAuth2 scopes endpoint.
-          schema:
-            type: boolean
-            default: false
+          required: false
+          type: boolean
+          default: false
+        - name: encoded
+          in: query
+          description: Used to check whether the scope name is URL encoded.
+          required: false
+          type: boolean
+          default: false
+
       responses:
         200:
           description: Scope Exists
