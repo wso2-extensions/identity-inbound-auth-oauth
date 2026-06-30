@@ -46,6 +46,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.List;
 import java.util.TimeZone;
 
 import javax.servlet.http.HttpServletRequest;
@@ -121,7 +122,11 @@ public class CibaUserAuthenticationEndpoint {
                 }
                 return buildErrorResponse(INVALID_AUTH_CODE_KEY);
             }
-            
+
+            // Load scopes from database
+            List<String> scopeList = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getScopes(authCodeKey);
+            cibaAuthCodeDO.setScopes(scopeList.toArray(new String[0]));
+
             // Build the authentication request wrapper with CIBA session details
             // Override content type and method since CarbonOAuthAuthzRequest expects POST with form-urlencoded
             CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request) {
