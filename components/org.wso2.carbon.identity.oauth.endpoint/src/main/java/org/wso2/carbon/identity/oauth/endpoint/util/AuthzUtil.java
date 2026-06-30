@@ -3015,18 +3015,10 @@ public class AuthzUtil {
         params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
         params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
-
-        if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
-            try {
-                if (!OAuth2Util.isAgentExternallyManaged(params.getTenantDomain())
-                        && !OAuth2Util.isExistingAgent(params.getTenantDomain(), params.getRequestedActor())) {
-                    return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
-                            OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                                    "Invalid requested_actor."), params);
-                }
-            } catch (UserStoreException | AgentConfigMgtException e) {
-                throw new OAuthSystemException("Error while validating requested_actor.", e);
-            }
+        if (!isValidActor(params.getTenantDomain(), params.getRequestedActor())) {
+            return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                    OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid requested_actor."), params);
         }
 
         return null;
@@ -3091,6 +3083,20 @@ public class AuthzUtil {
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
+        }
+    }
+
+    private static boolean isValidActor(String tenantDomain, String requestedActor)
+            throws OAuthSystemException {
+
+        if (!IdentityUtil.isAgentIdentityEnabled() || StringUtils.isBlank(requestedActor)) {
+            return true;
+        }
+        try {
+            return OAuth2Util.isAgentExternallyManaged(tenantDomain)
+                    || OAuth2Util.isExistingAgent(tenantDomain, requestedActor);
+        } catch (UserStoreException | AgentConfigMgtException e) {
+            throw new OAuthSystemException("Error while validating requested_actor.", e);
         }
     }
 

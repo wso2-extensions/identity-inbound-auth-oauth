@@ -134,7 +134,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
-import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -6170,7 +6169,7 @@ public class OAuth2Util {
      * @return The agent's display name, or {@code null} if it cannot be resolved.
      * @throws UserStoreException If a failure occurs while accessing the user store.
      */
-    public static String resolveAgentNameFromAgentId(String tenantDomain, String agentId) throws UserStoreException {
+    public static String resolveAgentName(String tenantDomain, String agentId) throws UserStoreException {
 
         RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
         int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
@@ -6189,7 +6188,8 @@ public class OAuth2Util {
      */
     public static boolean isAgentExternallyManaged(String tenantDomain) throws AgentConfigMgtException {
 
-        return new AgentConfigMgtServiceImpl().getAgentConfig(tenantDomain).isAgentsExternallyManaged();
+        return OAuth2ServiceComponentHolder.getInstance().getAgentConfigMgtService().getAgentConfig(tenantDomain)
+                .isAgentsExternallyManaged();
     }
 
     /**

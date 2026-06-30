@@ -438,7 +438,9 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ImpersonationValidator.class, new ResidentOrganizationValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
-            bundleContext.registerService(AgentConfigMgtService.class, new AgentConfigMgtServiceImpl(), null);
+            final AgentConfigMgtService agentConfigMgtService = new AgentConfigMgtServiceImpl();
+            OAuth2ServiceComponentHolder.getInstance().setAgentConfigMgtService(agentConfigMgtService);
+            bundleContext.registerService(AgentConfigMgtService.class, agentConfigMgtService, null);
             bundleContext.registerService(ImpersonationNotificationMgtService.class,
                     new ImpersonationNotificationMgtServiceImpl(), null);
             final FapiConfigMgtService fapiConfigMgtService = new FapiConfigMgtServiceImpl();

@@ -791,7 +791,7 @@ public class EndpointUtil {
             if (OAuth2Util.isAgentExternallyManaged(tenantDomain)) {
                 return null;
             }
-            return OAuth2Util.resolveAgentNameFromAgentId(tenantDomain, requestedActor);
+            return OAuth2Util.resolveAgentName(tenantDomain, requestedActor);
         } catch (UserStoreException | AgentConfigMgtException e) {
             throw new OAuthSystemException("Error while resolving agent display name for requested_actor: "
                     + requestedActor, e);

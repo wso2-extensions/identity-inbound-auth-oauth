@@ -41,6 +41,8 @@ import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOUR
  */
 public class Util {
 
+    private static final boolean AGENTS_EXTERNALLY_MANAGED_DEFAULT = false;
+
     /**
      * Handles server exceptions by creating an instance of AgentConfigMgtServerException.
      *
@@ -119,7 +121,7 @@ public class Util {
     public static AgentConfig getDefaultConfiguration() {
 
         AgentConfig agentConfig = new AgentConfig();
-        agentConfig.setAgentsExternallyManaged(false);
+        agentConfig.setAgentsExternallyManaged(AGENTS_EXTERNALLY_MANAGED_DEFAULT);
         return agentConfig;
     }
 }

@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
+import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtService;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
@@ -149,6 +150,7 @@ public class OAuth2ServiceComponentHolder {
     private OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigOrgUsageScopeMgtService;
     private OrganizationDiscoveryHandler organizationDiscoveryHandler;
     private FapiConfigMgtService fapiConfigMgtService;
+    private AgentConfigMgtService agentConfigMgtService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1185,6 +1187,26 @@ public class OAuth2ServiceComponentHolder {
     public void setFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
 
         this.fapiConfigMgtService = fapiConfigMgtService;
+    }
+
+    /**
+     * Get the AgentConfigMgtService instance.
+     *
+     * @return AgentConfigMgtService instance.
+     */
+    public AgentConfigMgtService getAgentConfigMgtService() {
+
+        return agentConfigMgtService;
+    }
+
+    /**
+     * Set the AgentConfigMgtService instance.
+     *
+     * @param agentConfigMgtService AgentConfigMgtService instance.
+     */
+    public void setAgentConfigMgtService(AgentConfigMgtService agentConfigMgtService) {
+
+        this.agentConfigMgtService = agentConfigMgtService;
     }
 }
 
