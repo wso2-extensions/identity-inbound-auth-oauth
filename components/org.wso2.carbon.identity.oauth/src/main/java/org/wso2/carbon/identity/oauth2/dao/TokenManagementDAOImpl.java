@@ -63,7 +63,6 @@ import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getUserResidentTenantDomain;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /*
 NOTE
@@ -106,13 +105,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         String sql;
+        boolean isTokenExtendedTableExist = OAuth2ServiceComponentHolder.isTokenExtendedTableExist();
 
         try {
             String driverName = connection.getMetaData().getDriverName();
             boolean isMysqlOrMarinaDBOrH2 =
                     driverName.contains("MySQL") || driverName.contains("MariaDB") || driverName.contains("H2");
 
-            if (isAccessTokenExtendedTableExist()) {
+            if (isTokenExtendedTableExist) {
                 if (isMysqlOrMarinaDBOrH2) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_CONSENTED_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
@@ -195,7 +195,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                    if (isTokenExtendedTableExist && resultSet.getString(17) != null &&
                             resultSet.getString(18) != null) {
                         extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
@@ -222,7 +222,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                             !validationDataDO.getScope()[0].equals(resultSet.getString(5))) {
                         scopes.add(resultSet.getString(5));
                     }
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                    if (isTokenExtendedTableExist && resultSet.getString(17) != null &&
                             resultSet.getString(18) != null) {
                         extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
