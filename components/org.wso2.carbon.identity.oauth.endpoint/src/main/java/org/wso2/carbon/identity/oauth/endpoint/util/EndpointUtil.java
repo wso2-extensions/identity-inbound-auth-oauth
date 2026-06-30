@@ -90,6 +90,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -108,6 +109,7 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -145,6 +147,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_ACTOR_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory.getOAuthAdminService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory.getOAuthServerConfiguration;
@@ -715,6 +718,16 @@ public class EndpointUtil {
                 }
                 consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(clientId);
 
+                // Surface the requesting agent's display name on the consent screen for OBO requests.
+                if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
+                    String agentDisplayName = resolveAgentDisplayName(params.getRequestedActor(),
+                            params.getTenantDomain());
+                    if (StringUtils.isNotBlank(agentDisplayName)) {
+                        consentPageUrl += "&" + REQUESTED_ACTOR_NAME + "="
+                                + URLEncoder.encode(agentDisplayName, UTF_8);
+                    }
+                }
+
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
@@ -769,6 +782,20 @@ public class EndpointUtil {
         }
 
         return consentPageUrl;
+    }
+
+    private static String resolveAgentDisplayName(String requestedActor, String tenantDomain)
+            throws OAuthSystemException {
+
+        try {
+            if (OAuth2Util.isAgentExternallyManaged(tenantDomain)) {
+                return null;
+            }
+            return OAuth2Util.resolveAgentName(tenantDomain, requestedActor);
+        } catch (UserStoreException | AgentConfigMgtException e) {
+            throw new OAuthSystemException("Error while resolving agent display name for requested_actor: "
+                    + requestedActor, e);
+        }
     }
 
     protected static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,

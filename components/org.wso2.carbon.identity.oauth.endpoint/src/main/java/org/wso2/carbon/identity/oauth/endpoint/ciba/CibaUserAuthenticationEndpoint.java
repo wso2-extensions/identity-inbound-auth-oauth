@@ -27,6 +27,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -163,7 +164,14 @@ public class CibaUserAuthenticationEndpoint {
             commonAuthRequestWrapper.setParameter(
                     org.wso2.carbon.identity.openidconnect.model.Constants.NONCE,
                     cibaAuthCodeDO.getAuthReqId());
-            
+
+            // Set the requested_actor so it is validated and surfaced on the consent screen.
+            if (IdentityUtil.isAgentIdentityEnabled()
+                    && StringUtils.isNotBlank(cibaAuthCodeDO.getRequestedActor())) {
+                commonAuthRequestWrapper.setParameter(
+                        OAuthConstants.REQUESTED_ACTOR, cibaAuthCodeDO.getRequestedActor());
+            }
+
             // Mark PKCE as unsupported for CIBA flow
             commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
             

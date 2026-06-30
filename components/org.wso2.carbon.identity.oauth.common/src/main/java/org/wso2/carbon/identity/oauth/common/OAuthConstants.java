@@ -82,6 +82,7 @@ public final class OAuthConstants {
     public static final String SESSION_DATA_KEY = "sessionDataKey";
     public static final String SESSION_DATA_KEY_CONSENT = "sessionDataKeyConsent";
     public static final String OAUTH_CACHE_MANAGER = "OAuthCacheManager";
+    public static final String REQUESTED_ACTOR_NAME = "requestedActorName";
 
     // For storing SAML2 assertion in OAuthTokenReqMgtCtx
     public static final String OAUTH_SAML2_ASSERTION = "SAML2Assertion";

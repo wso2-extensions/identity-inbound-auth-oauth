@@ -127,6 +127,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
@@ -159,6 +160,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -3013,6 +3015,11 @@ public class AuthzUtil {
         params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
         params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
+        if (!isValidActor(params.getTenantDomain(), params.getRequestedActor())) {
+            return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(),
+                    OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid requested_actor."), params);
+        }
 
         return null;
     }
@@ -3076,6 +3083,20 @@ public class AuthzUtil {
                 throw new InvalidRequestException("Invalid max_age parameter value sent in the authorization request" +
                         ".", OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_PARAMETERS);
             }
+        }
+    }
+
+    private static boolean isValidActor(String tenantDomain, String requestedActor)
+            throws OAuthSystemException {
+
+        if (!IdentityUtil.isAgentIdentityEnabled() || StringUtils.isBlank(requestedActor)) {
+            return true;
+        }
+        try {
+            return OAuth2Util.isAgentExternallyManaged(tenantDomain)
+                    || OAuth2Util.isExistingAgent(tenantDomain, requestedActor);
+        } catch (UserStoreException | AgentConfigMgtException e) {
+            throw new OAuthSystemException("Error while validating requested_actor.", e);
         }
     }
 

@@ -133,6 +133,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -6124,6 +6125,71 @@ public class OAuth2Util {
         AbstractUserStoreManager userStoreManager
                 = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
         return userStoreManager.getUserNameFromUserID(userId);
+    }
+
+    /**
+     * Check whether the given id resolves to an existing agent.
+     *
+     * @param tenantDomain Tenant domain the agent belongs to.
+     * @param agentId      Agent's id.
+     * @return {@code true} if the id resolves to an existing user, {@code false} otherwise.
+     * @throws UserStoreException If a failure occurs while accessing the user store.
+     */
+    public static boolean isExistingAgent(String tenantDomain, String agentId) throws UserStoreException {
+
+        String domainQualifiedUsername = resolveUsernameFromUserId(tenantDomain, agentId);
+        return StringUtils.isNotBlank(domainQualifiedUsername);
+    }
+
+    /**
+     * Check whether the agent is in a usable state.
+     *
+     * @param tenantDomain Tenant domain the agent belongs to.
+     * @param agentId      Agent's id.
+     * @return {@code true} if the agent exists and is active, {@code false} otherwise.
+     * @throws UserStoreException If a failure occurs while accessing the user store.
+     */
+    public static boolean isAgentEnabled(String tenantDomain, String agentId) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+
+        String accountLocked = userStoreManager.getUserClaimValueWithID(agentId,
+                OAuth2Constants.ACCOUNT_LOCKED_CLAIM_URI, null);
+        return !Boolean.parseBoolean(accountLocked);
+    }
+
+    /**
+     * Resolve the display name of an agent from its agent id.
+     *
+     * @param tenantDomain Tenant domain the agent belongs to.
+     * @param agentId      Agent's id.
+     * @return The agent's display name, or {@code null} if it cannot be resolved.
+     * @throws UserStoreException If a failure occurs while accessing the user store.
+     */
+    public static String resolveAgentName(String tenantDomain, String agentId) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+
+        AbstractUserStoreManager userStoreManager
+                = (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+        return userStoreManager.getUserClaimValueWithID(agentId, OAuth2Constants.AGENT_NAME_CLAIM_URI, null);
+    }
+
+    /**
+     * Check whether the tenant's agents are managed in an external system.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return {@code true} if the tenant's agents are externally managed, {@code false} otherwise (default).
+     * @throws AgentConfigMgtException If a failure occurs while resolving the tenant agent configuration.
+     */
+    public static boolean isAgentExternallyManaged(String tenantDomain) throws AgentConfigMgtException {
+
+        return OAuth2ServiceComponentHolder.getInstance().getAgentConfigMgtService().getAgentConfig(tenantDomain)
+                .isAgentsExternallyManaged();
     }
 
     /**
