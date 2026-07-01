@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
+import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceTypeAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth2.agent.cache.AgentConfigCache;
 import org.wso2.carbon.identity.oauth2.agent.cache.AgentConfigCacheEntry;
@@ -34,7 +35,9 @@ import org.wso2.carbon.identity.oauth2.agent.utils.Util;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_TYPE_DESCRIPTION;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Util.handleClientException;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Util.handleServerException;
@@ -86,7 +89,7 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
         validateTenantDomain(tenantDomain);
         try {
             ResourceAdd resourceAdd = Util.parseConfig(agentConfig);
-            getConfigurationManager().replaceResource(AGENT_RESOURCE_TYPE_NAME, resourceAdd);
+            replaceResource(resourceAdd);
             clearAgentConfigCache(tenantDomain);
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_AGENT_CONFIG_UPDATE, e, tenantDomain);
@@ -156,11 +159,45 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
             }
             return null;
         } catch (ConfigurationManagementException e) {
-            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
+                    ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
                 return null;
             }
             throw e;
         }
+    }
+
+    /**
+     * Persists the agent configuration resource, creating the resource type on demand if it does not yet exist.
+     *
+     * @param resourceAdd The resource to persist.
+     * @throws ConfigurationManagementException If there is an error in the configuration management process.
+     */
+    private void replaceResource(ResourceAdd resourceAdd) throws ConfigurationManagementException {
+
+        try {
+            getConfigurationManager().replaceResource(AGENT_RESOURCE_TYPE_NAME, resourceAdd);
+        } catch (ConfigurationManagementException e) {
+            if (ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+                createResourceType();
+                getConfigurationManager().replaceResource(AGENT_RESOURCE_TYPE_NAME, resourceAdd);
+                return;
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Creates the agent configuration resource type.
+     *
+     * @throws ConfigurationManagementException If there is an error in creating the resource type.
+     */
+    private void createResourceType() throws ConfigurationManagementException {
+
+        ResourceTypeAdd resourceType = new ResourceTypeAdd();
+        resourceType.setName(AGENT_RESOURCE_TYPE_NAME);
+        resourceType.setDescription(AGENT_RESOURCE_TYPE_DESCRIPTION);
+        getConfigurationManager().addResourceType(resourceType);
     }
 
     private AgentConfig getAgentConfigFromCache(String tenantDomain) {

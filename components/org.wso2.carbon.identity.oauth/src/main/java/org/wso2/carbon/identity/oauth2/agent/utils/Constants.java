@@ -24,6 +24,8 @@ package org.wso2.carbon.identity.oauth2.agent.utils;
 public class Constants {
 
     public static final String AGENT_RESOURCE_TYPE_NAME = "AGENT_CONFIGURATION";
+    public static final String AGENT_RESOURCE_TYPE_DESCRIPTION = "A resource type to keep the tenant agent " +
+            "configurations.";
     public static final String AGENT_RESOURCE_NAME = "TENANT_AGENT_CONFIGURATION";
     public static final String AGENTS_EXTERNALLY_MANAGED = "agentsExternallyManaged";
 }
