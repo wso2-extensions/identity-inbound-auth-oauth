@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth2.agent.utils.Util;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_TYPE_DESCRIPTION;
@@ -194,10 +195,16 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
      */
     private void createResourceType() throws ConfigurationManagementException {
 
-        ResourceTypeAdd resourceType = new ResourceTypeAdd();
-        resourceType.setName(AGENT_RESOURCE_TYPE_NAME);
-        resourceType.setDescription(AGENT_RESOURCE_TYPE_DESCRIPTION);
-        getConfigurationManager().addResourceType(resourceType);
+        try {
+            ResourceTypeAdd resourceType = new ResourceTypeAdd();
+            resourceType.setName(AGENT_RESOURCE_TYPE_NAME);
+            resourceType.setDescription(AGENT_RESOURCE_TYPE_DESCRIPTION);
+            getConfigurationManager().addResourceType(resourceType);
+        } catch (ConfigurationManagementException e) {
+            if (!ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS.getCode().equals(e.getErrorCode())) {
+                throw e;
+            }
+        }
     }
 
     private AgentConfig getAgentConfigFromCache(String tenantDomain) {
