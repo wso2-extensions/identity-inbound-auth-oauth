@@ -160,8 +160,7 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
             }
             return null;
         } catch (ConfigurationManagementException e) {
-            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
-                    ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+            if (isResourceNotFound(e) || isResourceTypeNotFound(e)) {
                 return null;
             }
             throw e;
@@ -179,7 +178,7 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
         try {
             getConfigurationManager().replaceResource(AGENT_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
-            if (ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+            if (isResourceTypeNotFound(e)) {
                 createResourceType();
                 getConfigurationManager().replaceResource(AGENT_RESOURCE_TYPE_NAME, resourceAdd);
                 return;
@@ -201,7 +200,7 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
             resourceType.setDescription(AGENT_RESOURCE_TYPE_DESCRIPTION);
             getConfigurationManager().addResourceType(resourceType);
         } catch (ConfigurationManagementException e) {
-            if (!ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS.getCode().equals(e.getErrorCode())) {
+            if (!isResourceTypeAlreadyExists(e)) {
                 throw e;
             }
         }
@@ -228,5 +227,20 @@ public class AgentConfigMgtServiceImpl implements AgentConfigMgtService {
 
         AgentConfigCacheKey cacheKey = new AgentConfigCacheKey(tenantDomain);
         AgentConfigCache.getInstance().clearCacheEntry(cacheKey, tenantDomain);
+    }
+
+    private boolean isResourceNotFound(ConfigurationManagementException e) {
+
+        return ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode());
+    }
+
+    private boolean isResourceTypeNotFound(ConfigurationManagementException e) {
+
+        return ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode());
+    }
+
+    private boolean isResourceTypeAlreadyExists(ConfigurationManagementException e) {
+
+        return ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS.getCode().equals(e.getErrorCode());
     }
 }
