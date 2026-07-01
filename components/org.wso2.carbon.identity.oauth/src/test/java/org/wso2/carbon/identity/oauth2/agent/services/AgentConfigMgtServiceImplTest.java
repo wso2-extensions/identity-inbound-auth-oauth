@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationMa
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
+import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceTypeAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth2.agent.cache.AgentConfigCache;
 import org.wso2.carbon.identity.oauth2.agent.cache.AgentConfigCacheEntry;
@@ -51,6 +52,8 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENTS_EXTERNALLY_MANAGED;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth2.agent.utils.Constants.AGENT_RESOURCE_TYPE_NAME;
@@ -219,6 +222,115 @@ public class AgentConfigMgtServiceImplTest {
             fail("Expected AgentConfigMgtServerException.");
         } catch (AgentConfigMgtException e) {
             assertTrue(e instanceof AgentConfigMgtServerException);
+        }
+    }
+
+    @Test
+    public void testSetAgentConfigCreatesResourceTypeOnDemand() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> tenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AgentConfigCache> cacheStatic = mockStatic(AgentConfigCache.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holderStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            tenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(-1234);
+            AgentConfigCache cache = mock(AgentConfigCache.class);
+            cacheStatic.when(AgentConfigCache::getInstance).thenReturn(cache);
+            ConfigurationManager configurationManager = mock(ConfigurationManager.class);
+            mockHolder(holderStatic, configurationManager);
+            // The first write fails because the resource type is not registered; the retry succeeds.
+            when(configurationManager.replaceResource(eq(AGENT_RESOURCE_TYPE_NAME), any(ResourceAdd.class)))
+                    .thenThrow(new ConfigurationManagementException("no type",
+                            ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode()))
+                    .thenReturn(new Resource());
+
+            service.setAgentConfig(new AgentConfig(), TENANT_DOMAIN);
+
+            verify(configurationManager).addResourceType(any(ResourceTypeAdd.class));
+            verify(configurationManager, times(2))
+                    .replaceResource(eq(AGENT_RESOURCE_TYPE_NAME), any(ResourceAdd.class));
+            verify(cache).clearCacheEntry(any(AgentConfigCacheKey.class), eq(TENANT_DOMAIN));
+        }
+    }
+
+    @Test
+    public void testSetAgentConfigWhenResourceTypeCreatedConcurrently() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> tenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AgentConfigCache> cacheStatic = mockStatic(AgentConfigCache.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holderStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            tenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(-1234);
+            AgentConfigCache cache = mock(AgentConfigCache.class);
+            cacheStatic.when(AgentConfigCache::getInstance).thenReturn(cache);
+            ConfigurationManager configurationManager = mock(ConfigurationManager.class);
+            mockHolder(holderStatic, configurationManager);
+            when(configurationManager.replaceResource(eq(AGENT_RESOURCE_TYPE_NAME), any(ResourceAdd.class)))
+                    .thenThrow(new ConfigurationManagementException("no type",
+                            ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode()))
+                    .thenReturn(new Resource());
+            // A concurrent writer already created the type; this is treated as success.
+            when(configurationManager.addResourceType(any(ResourceTypeAdd.class)))
+                    .thenThrow(new ConfigurationManagementException("exists",
+                            ERROR_CODE_RESOURCE_TYPE_ALREADY_EXISTS.getCode()));
+
+            service.setAgentConfig(new AgentConfig(), TENANT_DOMAIN);
+
+            verify(configurationManager, times(2))
+                    .replaceResource(eq(AGENT_RESOURCE_TYPE_NAME), any(ResourceAdd.class));
+            verify(cache).clearCacheEntry(any(AgentConfigCacheKey.class), eq(TENANT_DOMAIN));
+        }
+    }
+
+    @Test
+    public void testSetAgentConfigWrapsResourceTypeCreationFailure() throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> tenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AgentConfigCache> cacheStatic = mockStatic(AgentConfigCache.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holderStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            tenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(-1234);
+            cacheStatic.when(AgentConfigCache::getInstance).thenReturn(mock(AgentConfigCache.class));
+            ConfigurationManager configurationManager = mock(ConfigurationManager.class);
+            mockHolder(holderStatic, configurationManager);
+            when(configurationManager.replaceResource(eq(AGENT_RESOURCE_TYPE_NAME), any(ResourceAdd.class)))
+                    .thenThrow(new ConfigurationManagementException("no type",
+                            ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode()));
+            // Resource type creation fails for a reason other than "already exists" and must propagate.
+            when(configurationManager.addResourceType(any(ResourceTypeAdd.class)))
+                    .thenThrow(new ConfigurationManagementException("boom", "OTHER-ERROR"));
+
+            service.setAgentConfig(new AgentConfig(), TENANT_DOMAIN);
+            fail("Expected AgentConfigMgtServerException.");
+        } catch (AgentConfigMgtException e) {
+            assertTrue(e instanceof AgentConfigMgtServerException);
+        }
+    }
+
+    @Test
+    public void testGetAgentConfigReturnsDefaultWhenResourceTypeMissing() throws Exception {
+
+        try (MockedStatic<AgentConfigCache> cacheStatic = mockStatic(AgentConfigCache.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holderStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            AgentConfigCache cache = mock(AgentConfigCache.class);
+            cacheStatic.when(AgentConfigCache::getInstance).thenReturn(cache);
+            when(cache.getValueFromCache(any(AgentConfigCacheKey.class), eq(TENANT_DOMAIN))).thenReturn(null);
+
+            ConfigurationManager configurationManager = mock(ConfigurationManager.class);
+            mockHolder(holderStatic, configurationManager);
+            // A "resource type does not exist" error also maps to the default configuration.
+            when(configurationManager.getResource(AGENT_RESOURCE_TYPE_NAME, AGENT_RESOURCE_NAME, true))
+                    .thenThrow(new ConfigurationManagementException("no type",
+                            ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode()));
+
+            AgentConfig result = service.getAgentConfig(TENANT_DOMAIN);
+
+            assertNotNull(result);
+            assertFalse(result.isAgentsExternallyManaged());
         }
     }
 
