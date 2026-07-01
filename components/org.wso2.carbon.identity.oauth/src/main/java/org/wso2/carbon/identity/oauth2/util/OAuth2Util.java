@@ -6128,11 +6128,11 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the given id resolves to an existing agent.
+     * Check whether the given agent exists.
      *
      * @param tenantDomain Tenant domain the agent belongs to.
      * @param agentId      Agent's id.
-     * @return {@code true} if the id resolves to an existing user, {@code false} otherwise.
+     * @return {@code true} if the given agent id exists in user store, {@code false} otherwise.
      * @throws UserStoreException If a failure occurs while accessing the user store.
      */
     public static boolean isExistingAgent(String tenantDomain, String agentId) throws UserStoreException {
