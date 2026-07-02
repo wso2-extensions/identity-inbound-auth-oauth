@@ -18,9 +18,18 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,17 +62,9 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This class is responsible for processing the response received from the action execution
@@ -116,9 +117,6 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
         if (operationsToPerform != null) {
-            LOG.info("[TEMP-DEBUG] processSuccessResponse received " + operationsToPerform.size() +
-                    " operation(s): " + operationsToPerform.stream()
-                    .map(op -> op.getOp() + " " + op.getPath()).collect(java.util.stream.Collectors.joining(", ")));
             for (PerformableOperation operation : operationsToPerform) {
                 switch (operation.getOp()) {
                     case ADD:
@@ -309,12 +307,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
         tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
 
-        LOG.info("[TEMP-DEBUG] updateTokenMessageContext: responseTokenResponse.params=" +
-                responseTokenResponse.getParams());
         if (!responseTokenResponse.getParams().isEmpty()) {
             tokenMessageContext.setAdditionalTokenResponseParams(responseTokenResponse.getParams());
-            LOG.info("[TEMP-DEBUG] setAdditionalTokenResponseParams called with " +
-                    responseTokenResponse.getParams());
         }
 
         tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
@@ -324,36 +318,28 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             PerformableOperation operation, TokenResponse.Builder responseTokenResponseBuilder) {
 
         String paramName = operation.getPath().substring(RESPONSE_PARAMS_PATH_PREFIX.length());
-        LOG.info("[TEMP-DEBUG] Handling ADD on response.params. path=" + operation.getPath() +
-                " paramName=" + paramName + " value=" + operation.getValue());
         if (paramName.isEmpty()) {
-            LOG.info("[TEMP-DEBUG] Rejected: parameter name is empty.");
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "Parameter name is required.");
         }
 
         if (RESERVED_TOKEN_RESPONSE_PARAM_NAMES.contains(paramName.toLowerCase(Locale.ROOT))) {
-            LOG.info("[TEMP-DEBUG] Rejected: parameter name is reserved.");
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "Parameter name is reserved for a standard token response attribute.");
         }
 
         if (responseTokenResponseBuilder.getParams().containsKey(paramName)) {
-            LOG.info("[TEMP-DEBUG] Rejected: duplicate parameter name.");
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "A token response parameter already exists with the given name.");
         }
 
         Object paramValue = operation.getValue();
         if (!isValidPrimitiveValue(paramValue) && !isValidListValue(paramValue)) {
-            LOG.info("[TEMP-DEBUG] Rejected: invalid value type " +
-                    (paramValue == null ? "null" : paramValue.getClass()));
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "Invalid parameter value.");
         }
 
         responseTokenResponseBuilder.addParam(paramName, paramValue);
-        LOG.info("[TEMP-DEBUG] Added response param: " + paramName + "=" + paramValue);
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
                 "Token response parameter added.");
     }
