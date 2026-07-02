@@ -63,7 +63,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequestWrapper;
 
@@ -207,24 +206,45 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
 
     private List<String> getRemoveOrReplacePaths(Map<String, Object> oidcClaims) {
 
-        List<String> removeOrReplacePaths =  oidcClaims.entrySet().stream()
-                .filter(entry -> entry.getValue() instanceof String ||
-                        entry.getValue() instanceof Number ||
-                        entry.getValue() instanceof Boolean || entry.getValue() instanceof List ||
-                        entry.getValue() instanceof String[])
-                .map(this::generatePathForClaim)
-                .collect(Collectors.toList());
+        List<String> removeOrReplacePaths = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : oidcClaims.entrySet()) {
+
+            String basePath = CLAIMS_PATH_PREFIX + entry.getKey();
+            Object value = entry.getValue();
+
+            removeOrReplacePaths.add(basePath);
+            if (value instanceof String || value instanceof Number || value instanceof Boolean) {
+                continue;
+            }
+            if (value instanceof List || value instanceof String[]) {
+                removeOrReplacePaths.add(basePath + "/");
+                continue;
+            }
+
+            // Handle nested objects
+            if (value instanceof Map) {
+                collectNestedClaimPaths(basePath, value, removeOrReplacePaths);
+            }
+        }
         removeOrReplacePaths.add(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/");
         return removeOrReplacePaths;
     }
 
-    private String generatePathForClaim(Map.Entry<String, Object> entry) {
+    private void collectNestedClaimPaths(String basePath, Object value, List<String> paths) {
 
-        String basePath = CLAIMS_PATH_PREFIX + entry.getKey();
-        if (entry.getValue() instanceof List || entry.getValue() instanceof String[]) {
-            basePath += "/";
+        if (value instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) value;
+
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (!(entry.getKey() instanceof String)) {
+                    continue;
+                }
+                String childPath = basePath + "/" + entry.getKey();
+                paths.add(childPath);
+
+                collectNestedClaimPaths(childPath, entry.getValue(), paths);
+            }
         }
-        return basePath;
     }
 
     private AllowedOperation createAllowedOperation(Operation op, List<String> paths) {
@@ -298,8 +318,17 @@ public class PreIssueIDTokenRequestBuilder implements ActionExecutionRequestBuil
         userBuilder.organization(resolveUserAuthenticatedOrganization(authenticatedUser));
 
         if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType)) {
-            userBuilder.accessingOrganization(buildOrganization(authenticatedUser.getAccessingOrganization(),
-                    authenticatedUser.getTenantDomain()));
+            Organization accessingOrg;
+            if (authenticatedUser.getAccessingOrganization() != null) {
+                accessingOrg = buildOrganization(authenticatedUser.getAccessingOrganization(),
+                        authenticatedUser.getTenantDomain());
+                // In case of org switch, if accessing org is not set, it means user is switching to root org.
+            } else {
+                accessingOrg = buildOrganization(
+                        resolveOrganizationId(authenticatedUser.getTenantDomain()),
+                        authenticatedUser.getTenantDomain());
+            }
+            userBuilder.accessingOrganization(accessingOrg);
         }
         return userBuilder.build();
     }
