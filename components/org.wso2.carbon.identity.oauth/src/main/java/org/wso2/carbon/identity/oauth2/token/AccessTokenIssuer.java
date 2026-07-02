@@ -712,6 +712,15 @@ public class AccessTokenIssuer {
             }
         }
 
+        // Add custom token response parameters set by the pre issue access token action.
+        Map<String, Object> additionalTokenResponseParams = tokReqMsgCtx.getAdditionalTokenResponseParams();
+        log.info("[TEMP-DEBUG] AccessTokenIssuer merging additionalTokenResponseParams=" +
+                additionalTokenResponseParams);
+        if (additionalTokenResponseParams != null) {
+            additionalTokenResponseParams.forEach(tokenRespDTO::addParameterObject);
+            log.info("[TEMP-DEBUG] tokenRespDTO.parameterObjects after merge=" + tokenRespDTO.getParameterObjects());
+        }
+
         if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
             Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
             if (deviceCodeOptional.isPresent()) {

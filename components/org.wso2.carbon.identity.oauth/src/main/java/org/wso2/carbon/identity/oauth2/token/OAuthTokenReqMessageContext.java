@@ -71,6 +71,8 @@ public class OAuthTokenReqMessageContext {
 
     private Map<String, Object> additionalAccessTokenClaims;
 
+    private Map<String, Object> additionalTokenResponseParams;
+
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
     private String jwtID;
@@ -242,6 +244,26 @@ public class OAuthTokenReqMessageContext {
     public void setAdditionalAccessTokenClaims(Map<String, Object> additionalAccessTokenClaims) {
 
         this.additionalAccessTokenClaims = additionalAccessTokenClaims;
+    }
+
+    /**
+     * Get the additional custom parameters to be added to the token endpoint response.
+     *
+     * @return additional token response parameters.
+     */
+    public Map<String, Object> getAdditionalTokenResponseParams() {
+
+        return additionalTokenResponseParams;
+    }
+
+    /**
+     * Set the additional custom parameters to be added to the token endpoint response.
+     *
+     * @param additionalTokenResponseParams additional token response parameters.
+     */
+    public void setAdditionalTokenResponseParams(Map<String, Object> additionalTokenResponseParams) {
+
+        this.additionalTokenResponseParams = additionalTokenResponseParams;
     }
 
     /**
