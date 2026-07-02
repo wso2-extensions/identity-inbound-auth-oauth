@@ -145,6 +145,11 @@
                 <artifactId>org.wso2.carbon.identity.event</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.compatibility.settings.core</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
 
             <!-- Commons dependencies -->
             <dependency>

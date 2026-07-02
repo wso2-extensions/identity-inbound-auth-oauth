@@ -40,7 +40,12 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -1240,15 +1245,19 @@ public class DCRMServiceTest {
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
 
-        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
-        assertEquals(application.getClientName(), dummyClientName);
-        String regexp = application.getRedirectUris().get(0)
-                .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-        for (String validCallback : validCallbackList) {
-            assertTrue(validCallback.matches(regexp));
-        }
-        for (String invalidCallback : invalidCallbackList) {
-            assertFalse(invalidCallback.matches(regexp));
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("false");
+            Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+            assertEquals(application.getClientName(), dummyClientName);
+            String regexp = application.getRedirectUris().get(0)
+                    .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            for (String validCallback : validCallbackList) {
+                assertTrue(validCallback.matches(regexp));
+            }
+            for (String invalidCallback : invalidCallbackList) {
+                assertFalse(invalidCallback.matches(regexp));
+            }
         }
     }
 
@@ -1287,6 +1296,216 @@ public class DCRMServiceTest {
                 Assert.assertEquals(((DCRMClientException) e).getErrorCode(),
                         DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT);
             }
+        }
+    }
+
+    // ── buildRedirectUrisResponse helpers ───────────────────────────────
+
+    private String encodeCallback(List<String> redirectUris) {
+
+        if (redirectUris.size() == 1) {
+            return redirectUris.get(0);
+        }
+        StringBuilder sb = new StringBuilder(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(");
+        for (int i = 0; i < redirectUris.size(); i++) {
+            if (i > 0) {
+                sb.append("|");
+            }
+            sb.append(redirectUris.get(i).replace("?", "\\?"));
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> invokeBuildRedirectUrisResponse(String callbackUrl) throws Exception {
+
+        return invokeBuildRedirectUrisResponse(callbackUrl, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> invokeBuildRedirectUrisResponse(String callbackUrl, String tenantDomain) throws Exception {
+
+        Method method = dcrmService.getClass().getDeclaredMethod("buildRedirectUrisResponse",
+                String.class, String.class);
+        method.setAccessible(true);
+        try {
+            return (List<String>) method.invoke(dcrmService, callbackUrl, tenantDomain);
+        } catch (InvocationTargetException e) {
+            throw (Exception) e.getTargetException();
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDecodesMultiUriWhenKnobEnabled() throws Exception {
+
+        List<String> uris = Arrays.asList("https://example.com/cb", "https://example.org/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Should decode multi-URI regexp callback when knob enabled");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponsePreservesRegexpWhenKnobDisabled() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("false");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, List.of(encoded), "Should preserve raw regexp when knob disabled");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDefaultsToEnabledWhenPropertyAbsent() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn(null);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Absent property should default to enabled (decode)");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDecodesThreeUris() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb", "https://c.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Should decode all three URIs");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseRestoresQueryParamUriExactly() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb?foo=bar", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Query-param URI should be restored with literal '?'");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseSingleUriUnaffectedByKnob() throws Exception {
+
+        String single = "https://example.com/cb";
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(single);
+            assertEquals(result, List.of(single), "Single plain URI should always be wrapped as-is");
+        }
+    }
+
+    @DataProvider(name = "nonEncodedCallbackProvider")
+    public Object[][] nonEncodedCallbackProvider() {
+
+        return new Object[][]{
+                {null},
+                {""},
+                {"https://example.com/cb"},
+                {"regexp=https://example.com/cb"},
+                {OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(https://a.com/cb"},
+                {OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "https://a.com/cb)"},
+        };
+    }
+
+    @Test(dataProvider = "nonEncodedCallbackProvider")
+    public void buildRedirectUrisResponseDefensivePassThrough(String callbackUrl) throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+            assertEquals(result, Arrays.asList(callbackUrl),
+                    "Non-encoded callback should be wrapped as-is regardless of knob");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingDecodes() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        CompatibilitySetting mockSetting = mock(CompatibilitySetting.class);
+        CompatibilitySettingGroup mockGroup = mock(CompatibilitySettingGroup.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenReturn(mockSetting);
+        when(mockSetting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP))
+                .thenReturn(mockGroup);
+        when(mockGroup.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY))
+                .thenReturn("true");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try {
+            List<String> uris = Arrays.asList("https://example.com/cb", "https://example.org/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, uris, "CompatibilitySetting=true should decode multi-URI callback");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingPreservesRaw() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        CompatibilitySetting mockSetting = mock(CompatibilitySetting.class);
+        CompatibilitySettingGroup mockGroup = mock(CompatibilitySettingGroup.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenReturn(mockSetting);
+        when(mockSetting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP))
+                .thenReturn(mockGroup);
+        when(mockGroup.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY))
+                .thenReturn("false");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try {
+            List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, List.of(encoded), "CompatibilitySetting=false should preserve raw regexp");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingFallsBackOnException() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenThrow(new CompatibilitySettingException("unsupported setting group"));
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, uris, "Should fall back to IdentityUtil on CompatibilitySettingException");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
         }
     }
 
