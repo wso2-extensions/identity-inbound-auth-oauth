@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.action.execution.api.model.Success;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
+import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -53,6 +54,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.ACCESS_TOKEN_CLAIMS_PATH_PREFIX;
+import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_PARAMS_PATH_PREFIX;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.SCOPES_PATH_PREFIX;
 
 public class PreIssueAccessTokenResponseProcessorTest {
@@ -193,6 +195,31 @@ public class PreIssueAccessTokenResponseProcessorTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
 
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
+    }
+
+    @Test
+    void testProcessSuccessResponseAddTokenResponseParamValid() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                RESPONSE_PARAMS_PATH_PREFIX + "custom_param", "custom_value"));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNotNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
+        assertEquals(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams().get("custom_param"),
+                "custom_value");
+    }
+
+    @Test
+    void testProcessSuccessResponseAddTokenResponseParamReservedNameInvalid()
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                RESPONSE_PARAMS_PATH_PREFIX + "access_token", "malicious_value"));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
     }
 
     @DataProvider(name = "scopeRemovalTestData")
@@ -349,7 +376,8 @@ public class PreIssueAccessTokenResponseProcessorTest {
                 .build();
 
         PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
-                .accessToken(requestAccessTokenBuilder.build());
+                .accessToken(requestAccessTokenBuilder.build())
+                .response(new TokenResponse.Builder().build());
         ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
                 ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), successResponse);
 

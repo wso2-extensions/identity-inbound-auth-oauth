@@ -18,7 +18,15 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import com.nimbusds.jwt.JWTClaimsSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,6 +53,7 @@ import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
 import org.wso2.carbon.identity.oauth.action.model.Session;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
+import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
 import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -65,14 +74,7 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import com.nimbusds.jwt.JWTClaimsSet;
 
 /**
  * This class is responsible for building the action execution request for the pre issue access token action.
@@ -82,6 +84,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
+    public static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/params/";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
     @Override
@@ -105,8 +108,10 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
         actionRequestBuilder.event(event);
-        actionRequestBuilder.allowedOperations(
-                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null));
+        List<AllowedOperation> allowedOperations =
+                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null);
+
+        actionRequestBuilder.allowedOperations(allowedOperations);
 
         return actionRequestBuilder.build();
     }
@@ -137,6 +142,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
         eventBuilder.request(getRequest(tokenReqDTO));
+        eventBuilder.response(new TokenResponse.Builder().build());
 
         String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
                 OAuthConstants.SESSION_DATA_KEY_CONSENT);
@@ -408,7 +414,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         AllowedOperation addOperation =
                 createAllowedOperation(Operation.ADD, Arrays.asList(ACCESS_TOKEN_CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
-                        ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/"));
+                        ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/",
+                        RESPONSE_PARAMS_PATH_PREFIX));
         AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removeOrReplacePaths);
         AllowedOperation replaceOperation = createAllowedOperation(Operation.REPLACE, replacePaths);
 

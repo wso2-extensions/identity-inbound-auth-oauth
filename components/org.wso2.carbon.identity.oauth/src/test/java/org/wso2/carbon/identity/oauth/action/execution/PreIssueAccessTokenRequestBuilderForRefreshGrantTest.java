@@ -165,6 +165,8 @@ public class PreIssueAccessTokenRequestBuilderForRefreshGrantTest {
         assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
         assertRefreshToken(actualEvent.getRefreshToken(), expectedEvent.getRefreshToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
+        Assert.assertNotNull(actualEvent.getResponse());
+        Assert.assertTrue(actualEvent.getResponse().getParams().isEmpty());
     }
 
     private void assertAccessToken(AccessToken actualAccessToken, AccessToken expectedAccessToken) {
@@ -332,7 +334,8 @@ public class PreIssueAccessTokenRequestBuilderForRefreshGrantTest {
         addOperation.setPaths(Arrays.asList(
                 "/accessToken/claims/",
                 "/accessToken/scopes/",
-                "/accessToken/claims/aud/"));
+                "/accessToken/claims/aud/",
+                "/response/params/"));
         AllowedOperation removeOperation = new AllowedOperation();
         removeOperation.setOp(Operation.REMOVE);
         removeOperation.setPaths(Arrays.asList(

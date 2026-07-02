@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.wso2.carbon.identity.action.execution.api.model.Event;
 import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
@@ -35,12 +36,14 @@ public class PreIssueAccessTokenEvent extends Event {
     private final AccessToken accessToken;
     private final RefreshToken refreshToken;
     private final Session session;
+    private final TokenResponse response;
 
     private PreIssueAccessTokenEvent(Builder builder) {
 
         this.accessToken = builder.accessToken;
         this.refreshToken = builder.refreshToken;
         this.session = builder.session;
+        this.response = builder.response;
         this.request = builder.request;
         this.organization = builder.organization;
         this.tenant = builder.tenant;
@@ -63,6 +66,12 @@ public class PreIssueAccessTokenEvent extends Event {
         return session;
     }
 
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public TokenResponse getResponse() {
+
+        return response;
+    }
+
     /**
      * Builder for the PreIssueAccessTokenEvent.
      */
@@ -71,6 +80,7 @@ public class PreIssueAccessTokenEvent extends Event {
         private AccessToken accessToken;
         private RefreshToken refreshToken;
         private Session session;
+        private TokenResponse response;
         private Request request;
         private Organization organization;
         private Tenant tenant;
@@ -93,6 +103,12 @@ public class PreIssueAccessTokenEvent extends Event {
         public Builder session(Session session) {
 
             this.session = session;
+            return this;
+        }
+
+        public Builder response(TokenResponse response) {
+
+            this.response = response;
             return this;
         }
 
