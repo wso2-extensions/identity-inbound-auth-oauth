@@ -352,12 +352,24 @@ public class CibaGrantHandler extends AbstractAuthorizationGrantHandler {
                 String userName = authenticatedUser.getUserName();
                 String userDomain = OAuth2Util.getUserStoreDomain(authenticatedUser);
 
-                String subjectIdentifier = UserSessionStore.getInstance()
-                        .getUserId(userName, tenantId, userDomain, idpId);
-
                 ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
                         .getServiceProviderByClientId(consumerKey, OAuthConstants.Scope.OAUTH2, tenantDomain);
-                authenticatedUser.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+
+                if (authenticatedUser.isFederatedUser()) {
+                    // For federated users, the IDN_AUTH_USER row holds a transient session-tracking UUID as the
+                    // stored userId, not the meaningful subject identifier from the federated IdP. Use the
+                    // userName field instead, which carries the federated subject (or its claim-mapped equivalent)
+                    // as persisted by CibaMgtDAOImpl.persistAuthenticationSuccess().
+                    if (log.isDebugEnabled()) {
+                        log.debug("Resolving subject identifier for federated user in CIBA flow from the " +
+                                "federated subject stored at authentication time (userName field).");
+                    }
+                    authenticatedUser.setAuthenticatedSubjectIdentifier(userName, serviceProvider);
+                } else {
+                    String subjectIdentifier = UserSessionStore.getInstance()
+                            .getUserId(userName, tenantId, userDomain, idpId);
+                    authenticatedUser.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+                }
                 cibaAuthCodeDO.setAuthenticatedUser(authenticatedUser);
             }
             return cibaAuthCodeDO;

@@ -344,6 +344,14 @@ public class CibaGrantHandlerTest {
         oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
         oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
 
+        // SP must be resolved before UserSessionStore is called — mock it to succeed.
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenReturn(new ServiceProvider());
+
         // Mock UserSessionStore to throw UserSessionException.
         UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
         userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
@@ -554,6 +562,95 @@ public class CibaGrantHandlerTest {
                 tokReqMsgCtx, cibaAuthCodeDO);
 
         verify(tokReqMsgCtx, never()).setRequestedActor(any());
+    }
+
+    @Test
+    public void testValidateGrantFederatedUserResolvesSubjectFromUserName() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(true);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        // Federated user: subject identifier comes from the persisted federated subject (userName),
+        // NOT the transient UUID from UserSessionStore, which must not be queried.
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "testUser");
+        verify(mockUserSessionStore, never()).getUserId(any(), Mockito.anyInt(), any(), Mockito.anyInt());
+    }
+
+    @Test
+    public void testValidateGrantLocalUserUsesUserSessionStore() throws Exception {
+
+        AuthenticatedUser user = buildAuthenticatedUser(false);
+        UserSessionStore mockUserSessionStore = setUpGrantFlow(user);
+
+        Assert.assertTrue(new CibaGrantHandler().validateGrant(buildTokenReqMsgCtx()));
+
+        // Local user: subject identifier is resolved via UserSessionStore as before.
+        verify(mockUserSessionStore).getUserId("testUser", -1234, "PRIMARY", 1);
+        Assert.assertEquals(user.getAuthenticatedSubjectIdentifier(), "test-subject-id");
+    }
+
+    private UserSessionStore setUpGrantFlow(AuthenticatedUser user) throws Exception {
+
+        when(cibaMgtDAO.getCibaAuthCodeKey("auth-req-id")).thenReturn("auth-code-key");
+
+        CibaAuthCodeDO cibaAuthCodeDO = new CibaAuthCodeDO();
+        cibaAuthCodeDO.setCibaAuthCodeKey("auth-code-key");
+        cibaAuthCodeDO.setConsumerKey("client-id");
+        cibaAuthCodeDO.setAuthReqStatus(AuthReqStatus.AUTHENTICATED);
+        cibaAuthCodeDO.setExpiresIn(3600);
+        cibaAuthCodeDO.setIssuedTime(new Timestamp(System.currentTimeMillis()));
+        cibaAuthCodeDO.setLastPolledTime(new Timestamp(System.currentTimeMillis() - 10000));
+        cibaAuthCodeDO.setInterval(2);
+        cibaAuthCodeDO.setIdpId(1);
+
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        when(cibaMgtDAO.getScopes("auth-code-key")).thenReturn(scopes);
+        when(cibaMgtDAO.getAuthenticatedUser("auth-code-key")).thenReturn(user);
+        when(cibaMgtDAO.getCibaAuthCode("auth-code-key")).thenReturn(cibaAuthCodeDO);
+
+        oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuth2Util.when(() -> OAuth2Util.getUserStoreDomain(user)).thenReturn("PRIMARY");
+
+        ApplicationManagementService mockAppMgtService = mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(mockAppMgtService);
+        when(mockAppMgtService.getServiceProviderByClientId(
+                "client-id", OAuthConstants.Scope.OAUTH2, "carbon.super"))
+                .thenReturn(new ServiceProvider());
+
+        UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
+        userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
+        when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+                .thenReturn("test-subject-id");
+
+        identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(false);
+
+        return mockUserSessionStore;
+    }
+
+    private AuthenticatedUser buildAuthenticatedUser(boolean federated) {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("testUser");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+        user.setFederatedUser(federated);
+        return user;
+    }
+
+    private OAuthTokenReqMessageContext buildTokenReqMsgCtx() {
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO reqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(reqDTO);
+        RequestParameter[] parameters = new RequestParameter[1];
+        parameters[0] = new RequestParameter(AUTH_REQ_ID, new String[]{"auth-req-id"});
+        when(reqDTO.getRequestParameters()).thenReturn(parameters);
+        when(reqDTO.getClientId()).thenReturn("client-id");
+        return tokReqMsgCtx;
     }
 
     private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
