@@ -75,9 +75,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
-    private static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/params/";
+    private static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/";
     private static final List<String> RESERVED_TOKEN_RESPONSE_PARAM_NAMES = Arrays.asList(
-            "access_token", "refresh_token", "expires_in", "token_type", "scope", "id_token");
+            "access_token", "expires_in", "token_type", "scope");
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
