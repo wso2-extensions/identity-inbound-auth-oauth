@@ -29,6 +29,9 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HttpMethod;
@@ -51,7 +54,21 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     @Override
     public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
 
-        String authzHeaders = request.getHeader(HttpHeaders.AUTHORIZATION);
+        // A request must not carry more than one Authorization header (RFC 6750 / RFC 7230).
+        // Using getHeaders() to detect duplicates; getHeader() would silently return only the first.
+        Enumeration<String> authorizationHeaders = request.getHeaders(HttpHeaders.AUTHORIZATION);
+        String authzHeaders = null;
+        if (authorizationHeaders != null) {
+            List<String> headerList = Collections.list(authorizationHeaders);
+            if (headerList.size() > 1) {
+                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                        "Multiple Authorization headers found in the request");
+            }
+            if (!headerList.isEmpty()) {
+                authzHeaders = headerList.get(0);
+            }
+        }
+
         if (authzHeaders == null) {
             String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
             // To validate the Content_Type header.
