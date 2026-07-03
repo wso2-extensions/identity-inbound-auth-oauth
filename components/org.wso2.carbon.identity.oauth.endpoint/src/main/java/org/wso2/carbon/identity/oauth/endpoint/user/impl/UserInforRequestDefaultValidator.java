@@ -57,7 +57,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
         // A request must not carry more than one Authorization header (RFC 6750 / RFC 7230).
         // Using getHeaders() to detect duplicates; getHeader() would silently return only the first.
         Enumeration<String> authorizationHeaders = request.getHeaders(HttpHeaders.AUTHORIZATION);
-        String authzHeaders = null;
+        String authzHeader = null;
         if (authorizationHeaders != null) {
             List<String> headerList = Collections.list(authorizationHeaders);
             if (headerList.size() > 1) {
@@ -65,11 +65,11 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                         "Multiple Authorization headers found in the request");
             }
             if (!headerList.isEmpty()) {
-                authzHeaders = headerList.get(0);
+                authzHeader = headerList.get(0);
             }
         }
 
-        if (authzHeaders == null) {
+        if (authzHeader == null) {
             String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
             // To validate the Content_Type header.
             if (StringUtils.isBlank(contentTypeHeaders)) {
@@ -114,7 +114,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             }
         }
 
-        String[] authzHeaderInfo = authzHeaders.trim().split(" ");
+        String[] authzHeaderInfo = authzHeader.trim().split(" ");
 
         if (authzHeaderInfo.length < 2) {
             throw new UserInfoEndpointException(

@@ -22,10 +22,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
@@ -69,5 +72,46 @@ public class UserInforRequestDefaultValidatorTest {
 
         String token = validator.validateRequest(request);
         assertEquals(token, "token1", "Validator should return the token from a single Authorization header.");
+    }
+
+    @Test
+    public void testNoAuthorizationHeaderFallsBackToBody() throws Exception {
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+
+        // No Authorization header -> empty enumeration
+        when(request.getHeaders(HttpHeaders.AUTHORIZATION))
+                .thenReturn(Collections.emptyEnumeration());
+
+        // Form-encoded content type so it enters the body-parsing path
+        when(request.getHeader(HttpHeaders.CONTENT_TYPE))
+                .thenReturn("application/x-www-form-urlencoded");
+
+        // Non-GET method (GET is rejected on this path)
+        when(request.getMethod()).thenReturn("POST");
+
+        // Body carrying the access token
+        String body = "access_token=token1";
+        when(request.getInputStream()).thenReturn(toServletInputStream(body));
+
+        String token = validator.validateRequest(request);
+        assertEquals(token, "token1",
+                "Validator should extract the token from the body when no Authorization header is present.");
+    }
+
+    /**
+     * Wraps a string in a ServletInputStream for mocking request bodies.
+     */
+    private ServletInputStream toServletInputStream(String content) {
+
+        ByteArrayInputStream byteStream =
+                new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+        return new ServletInputStream() {
+            @Override
+            public int read() {
+
+                return byteStream.read();
+            }
+        };
     }
 }
