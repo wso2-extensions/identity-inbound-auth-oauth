@@ -18,17 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.logging.Log;
@@ -62,9 +54,17 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class is responsible for processing the response received from the action execution
@@ -154,10 +154,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 .map(RefreshToken.Builder::build)
                 .orElse(null);
 
-        TokenResponse responseTokenResponse = responseTokenResponseBuilder.build();
+        TokenResponse tokenResponse = responseTokenResponseBuilder.build();
 
         updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken,
-                responseTokenResponse);
+                tokenResponse);
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
     }

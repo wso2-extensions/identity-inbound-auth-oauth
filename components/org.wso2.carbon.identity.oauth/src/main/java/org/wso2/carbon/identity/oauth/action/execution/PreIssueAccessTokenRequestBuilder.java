@@ -18,15 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,7 +66,14 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
-import com.nimbusds.jwt.JWTClaimsSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This class is responsible for building the action execution request for the pre issue access token action.
@@ -108,10 +107,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
         actionRequestBuilder.event(event);
-        List<AllowedOperation> allowedOperations =
-                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null);
-
-        actionRequestBuilder.allowedOperations(allowedOperations);
+        actionRequestBuilder.allowedOperations(
+                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null));
 
         return actionRequestBuilder.build();
     }
