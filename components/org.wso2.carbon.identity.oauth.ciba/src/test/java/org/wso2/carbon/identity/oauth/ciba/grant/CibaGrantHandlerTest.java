@@ -623,9 +623,11 @@ public class CibaGrantHandlerTest {
 
         UserSessionStore mockUserSessionStore = mock(UserSessionStore.class);
         userSessionStore.when(UserSessionStore::getInstance).thenReturn(mockUserSessionStore);
-        when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
+        // lenient: only called for local users, not federated users
+        Mockito.lenient().when(mockUserSessionStore.getUserId("testUser", -1234, "PRIMARY", 1))
                 .thenReturn("test-subject-id");
 
+        // lenient: only reached if setPropertiesForTokenGeneration inspects actor; not relevant to subject tests
         identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(false);
 
         return mockUserSessionStore;
