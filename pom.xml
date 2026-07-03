@@ -1128,7 +1128,7 @@
 
         <!-- Log4j -->
         <log4j.api.version>2.17.1</log4j.api.version>
-        <log4j.core.version>2.17.1</log4j.core.version>
+        <log4j.core.version>2.25.3</log4j.core.version>
         <log4j.verison>1.2.17</log4j.verison>
 
         <maven.checkstyleplugin.version>3.1.0</maven.checkstyleplugin.version>
