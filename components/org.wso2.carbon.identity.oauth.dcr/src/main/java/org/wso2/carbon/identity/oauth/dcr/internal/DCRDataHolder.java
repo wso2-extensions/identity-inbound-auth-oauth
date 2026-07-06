@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
@@ -47,6 +48,7 @@ public class DCRDataHolder {
     private ConfigurationManager configurationManager;
     private OrganizationManager organizationManager;
     private FapiConfigMgtService fapiConfigMgtService;
+    private CompatibilitySettingsManager compatibilitySettingsManager;
 
     private DCRDataHolder() {
 
@@ -135,6 +137,16 @@ public class DCRDataHolder {
     public void setFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
 
         this.fapiConfigMgtService = fapiConfigMgtService;
+    }
+
+    public CompatibilitySettingsManager getCompatibilitySettingsManager() {
+
+        return compatibilitySettingsManager;
+    }
+
+    public void setCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        this.compatibilitySettingsManager = compatibilitySettingsManager;
     }
 
     public AdditionalAttributeFilter getAdditionalAttributeFilter() {

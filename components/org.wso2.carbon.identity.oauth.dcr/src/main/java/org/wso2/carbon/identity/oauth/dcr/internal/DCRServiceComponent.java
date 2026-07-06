@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Htt
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtService;
@@ -318,5 +319,24 @@ public class DCRServiceComponent {
 
         log.debug("Unsetting FapiConfigMgtService in DCR Service Component.");
         DCRDataHolder.getInstance().setFapiConfigMgtService(null);
+    }
+
+    @Reference(
+            name = "compatibility.settings.manager",
+            service = CompatibilitySettingsManager.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCompatibilitySettingsManager"
+    )
+    protected void setCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        log.debug("Setting CompatibilitySettingsManager in DCR Service Component.");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(compatibilitySettingsManager);
+    }
+
+    protected void unsetCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        log.debug("Unsetting CompatibilitySettingsManager in DCR Service Component.");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
     }
 }
