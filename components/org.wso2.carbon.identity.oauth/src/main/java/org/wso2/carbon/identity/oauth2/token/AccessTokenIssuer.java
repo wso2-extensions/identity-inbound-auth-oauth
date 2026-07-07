@@ -717,6 +717,9 @@ public class AccessTokenIssuer {
         if (additionalTokenResponseParams != null) {
             additionalTokenResponseParams.forEach(tokenRespDTO::addParameterObject);
         }
+        if (tokReqMsgCtx.getSuppressedTokenResponseFields() != null) {
+            tokenRespDTO.setSuppressedResponseFields(tokReqMsgCtx.getSuppressedTokenResponseFields());
+        }
 
         if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
             Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);

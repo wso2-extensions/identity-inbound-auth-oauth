@@ -82,6 +82,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -496,7 +497,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         ActionExecutionStatus<?> executionStatus = executePreIssueAccessTokenActions(tokReqMsgCtx);
         if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
                 executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
-            return getFailureOrErrorResponseDTO(executionStatus);
+            return getFailureOrErrorResponseDTO(executionStatus, tokReqMsgCtx);
         }
         AccessTokenDO newTokenBean = createNewTokenBean(tokReqMsgCtx, existingTokenBean, oauthTokenIssuer);
 
@@ -518,7 +519,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return createResponseWithTokenBean(tokReqMsgCtx, newTokenBean, newTokenBean.getValidityPeriodInMillis(), scope);
     }
 
-    private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus) {
+    private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus,
+                                                                  OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         OAuth2AccessTokenRespDTO accessTokenResponse = new OAuth2AccessTokenRespDTO();
         accessTokenResponse.setError(true);
@@ -530,6 +532,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             Error errorResponse = (Error) executionStatus.getResponse();
             accessTokenResponse.setErrorCode(errorResponse.getErrorMessage());
             accessTokenResponse.setErrorMsg(errorResponse.getErrorDescription());
+        }
+        Map<String, Object> additionalTokenResponseParams = tokReqMsgCtx.getAdditionalTokenResponseParams();
+        if (additionalTokenResponseParams != null) {
+            additionalTokenResponseParams.forEach(accessTokenResponse::addParameterObject);
         }
         return accessTokenResponse;
     }
