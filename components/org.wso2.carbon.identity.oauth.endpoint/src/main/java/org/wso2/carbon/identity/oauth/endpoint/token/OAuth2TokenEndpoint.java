@@ -310,7 +310,14 @@ public class OAuth2TokenEndpoint {
 
             if (MapUtils.isNotEmpty(oauth2AccessTokenResp.getErrorParameterMap())) {
                 for (Map.Entry<String, Object> entry: oauth2AccessTokenResp.getErrorParameterMap().entrySet()) {
-                    oAuthErrorResponseBuilder.setParam(entry.getKey(), entry.getValue().toString());
+                    if (entry.getValue() != null) {
+                        oAuthErrorResponseBuilder.setParam(entry.getKey(), entry.getValue().toString());
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Skipping custom OAuth error parameter '" + entry.getKey()
+                                    + "' as its value is null.");
+                        }
+                    }
                 }
             }
 
