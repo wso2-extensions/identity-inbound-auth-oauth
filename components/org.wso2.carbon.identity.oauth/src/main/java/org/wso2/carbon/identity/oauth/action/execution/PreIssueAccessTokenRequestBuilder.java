@@ -83,7 +83,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
-    public static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/";
+    public static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/params/";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
     @Override
