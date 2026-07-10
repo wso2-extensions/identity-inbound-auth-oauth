@@ -224,10 +224,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
         assertNotNull(actualEvent.getResponse());
-        assertEquals(actualEvent.getResponse().getFields().getSuccess(),
-                Arrays.asList("access_token", "scope", "expires_in"));
-        assertEquals(actualEvent.getResponse().getFields().getFailure(),
-                Arrays.asList("error", "error_description"));
+        Assert.assertTrue(actualEvent.getResponse().getParams().isEmpty());
     }
 
     private void assertOrganization(Organization expectedOrg, Organization actualOrg) {
@@ -459,8 +456,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
                 "/accessToken/claims/",
                 "/accessToken/scopes/",
                 "/accessToken/claims/aud/",
-                "/response/fields/success/",
-                "/response/fields/failure/"));
+                "/response/params/"));
         AllowedOperation removeOperation = new AllowedOperation();
         removeOperation.setOp(Operation.REMOVE);
         removeOperation.setPaths(Arrays.asList(

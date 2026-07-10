@@ -83,15 +83,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
-    public static final String RESPONSE_SUCCESS_FIELDS_PATH_PREFIX = "/response/fields/success/";
-    public static final String RESPONSE_FAILURE_FIELDS_PATH_PREFIX = "/response/fields/failure/";
-    private static final String FIELD_ACCESS_TOKEN = "access_token";
-    private static final String FIELD_SCOPE = "scope";
-    private static final String FIELD_EXPIRES_IN = "expires_in";
-    private static final String FIELD_REFRESH_TOKEN = "refresh_token";
-    private static final String FIELD_ID_TOKEN = "id_token";
-    private static final String FIELD_ERROR = "error";
-    private static final String FIELD_ERROR_DESCRIPTION = "error_description";
+    public static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
     @Override
@@ -115,10 +107,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
         actionRequestBuilder.event(event);
-        List<String> successFields = event.getResponse().getFields().getSuccess();
         actionRequestBuilder.allowedOperations(
-                getAllowedOperations(additionalClaimsToAddToToken, successFields.contains(FIELD_REFRESH_TOKEN),
-                        successFields.contains(FIELD_ID_TOKEN)));
+                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null));
 
         return actionRequestBuilder.build();
     }
@@ -149,9 +139,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
         eventBuilder.request(getRequest(tokenReqDTO));
-        eventBuilder.response(new TokenResponse.Builder()
-                .fields(getTokenResponseFields(tokenMessageContext, oAuthAppDO))
-                .build());
+        eventBuilder.response(new TokenResponse.Builder().build());
 
         String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
                 OAuthConstants.SESSION_DATA_KEY_CONSENT);
@@ -166,24 +154,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
 
         return eventBuilder.build();
-    }
-
-    private TokenResponse.Fields getTokenResponseFields(OAuthTokenReqMessageContext tokenMessageContext,
-                                                         OAuthAppDO oAuthAppDO) {
-
-        List<String> successFields = new ArrayList<>(Arrays.asList(FIELD_ACCESS_TOKEN, FIELD_SCOPE,
-                FIELD_EXPIRES_IN));
-        if (isRefreshTokenAllowed(oAuthAppDO)) {
-            successFields.add(FIELD_REFRESH_TOKEN);
-        }
-        if (OAuth2Util.isOIDCAuthzRequest(tokenMessageContext.getScope())) {
-            successFields.add(FIELD_ID_TOKEN);
-        }
-
-        return new TokenResponse.Fields.Builder()
-                .success(successFields)
-                .failure(Arrays.asList(FIELD_ERROR, FIELD_ERROR_DESCRIPTION))
-                .build();
     }
 
     private boolean isRefreshTokenAllowed(OAuthAppDO oAuthAppDO) {
@@ -428,29 +398,22 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims, boolean isRefreshTokenAllowed,
-                                                       boolean isIdTokenApplicable) {
+    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims, boolean isRefreshTokenAllowed) {
 
         List<String> removeOrReplacePaths = getRemoveOrReplacePaths(oidcClaims);
 
         List<String> replacePaths = new ArrayList<>(removeOrReplacePaths);
         replacePaths.add(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName());
 
-        List<String> removePaths = new ArrayList<>(removeOrReplacePaths);
-
         if (isRefreshTokenAllowed) {
             replacePaths.add(REFRESH_TOKEN_CLAIMS_PATH_PREFIX + RefreshToken.ClaimNames.EXPIRES_IN.getName());
-            removePaths.add(RESPONSE_SUCCESS_FIELDS_PATH_PREFIX + FIELD_REFRESH_TOKEN);
-        }
-        if (isIdTokenApplicable) {
-            removePaths.add(RESPONSE_SUCCESS_FIELDS_PATH_PREFIX + FIELD_ID_TOKEN);
         }
 
         AllowedOperation addOperation =
                 createAllowedOperation(Operation.ADD, Arrays.asList(ACCESS_TOKEN_CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
                         ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/",
-                        RESPONSE_SUCCESS_FIELDS_PATH_PREFIX, RESPONSE_FAILURE_FIELDS_PATH_PREFIX));
-        AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removePaths);
+                        RESPONSE_PARAMS_PATH_PREFIX));
+        AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removeOrReplacePaths);
         AllowedOperation replaceOperation = createAllowedOperation(Operation.REPLACE, replacePaths);
 
         return Arrays.asList(addOperation, removeOperation, replaceOperation);

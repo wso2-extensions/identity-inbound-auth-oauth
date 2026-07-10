@@ -27,10 +27,8 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionResponseContext;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
-import org.wso2.carbon.identity.action.execution.api.model.ActionInvocationFailureResponse;
 import org.wso2.carbon.identity.action.execution.api.model.ActionInvocationResponse;
 import org.wso2.carbon.identity.action.execution.api.model.ActionInvocationSuccessResponse;
-import org.wso2.carbon.identity.action.execution.api.model.Failure;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
 import org.wso2.carbon.identity.action.execution.api.model.PerformableOperation;
@@ -56,8 +54,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.ACCESS_TOKEN_CLAIMS_PATH_PREFIX;
-import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_FAILURE_FIELDS_PATH_PREFIX;
-import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_SUCCESS_FIELDS_PATH_PREFIX;
+import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_PARAMS_PATH_PREFIX;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.SCOPES_PATH_PREFIX;
 
 public class PreIssueAccessTokenResponseProcessorTest {
@@ -205,8 +202,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_SUCCESS_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("custom_param", "custom_value")));
+                RESPONSE_PARAMS_PATH_PREFIX + "custom_param", "custom_value"));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
@@ -220,92 +216,10 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_SUCCESS_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("access_token", "malicious_value")));
+                RESPONSE_PARAMS_PATH_PREFIX + "access_token", "malicious_value"));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
-    }
-
-    @Test
-    void testProcessSuccessResponseAddFailureFieldRejected() throws ActionExecutionResponseProcessorException {
-
-        List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_FAILURE_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("error_code", "ABC-001")));
-
-        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
-        assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
-    }
-
-    @Test
-    void testProcessSuccessResponseRemoveResponseFieldValid() throws ActionExecutionResponseProcessorException {
-
-        List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                RESPONSE_SUCCESS_FIELDS_PATH_PREFIX + "refresh_token", null));
-
-        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
-        assertNotNull(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields());
-        assertTrue(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields().contains("refresh_token"));
-    }
-
-    @Test
-    void testProcessFailureResponseAddFieldValid() throws ActionExecutionResponseProcessorException {
-
-        List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_FAILURE_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("error_code", "ABC-001")));
-
-        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessFailureResponse(operationsToPerform);
-        assertNotNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
-        assertEquals(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams().get("error_code"), "ABC-001");
-    }
-
-    @Test
-    void testProcessFailureResponseNonAddOperationRejected() throws ActionExecutionResponseProcessorException {
-
-        List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                RESPONSE_FAILURE_FIELDS_PATH_PREFIX + "error", null));
-
-        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessFailureResponse(operationsToPerform);
-        assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
-    }
-
-    private OAuthTokenReqMessageContext executeProcessFailureResponse(List<PerformableOperation> operationsToPerform)
-            throws ActionExecutionResponseProcessorException {
-
-        ActionInvocationFailureResponse failureResponse = new ActionInvocationFailureResponse.Builder()
-                .actionStatus(ActionInvocationResponse.Status.FAILED)
-                .failureReason("Error_reason")
-                .failureDescription("Error_description")
-                .operations(operationsToPerform)
-                .build();
-
-        PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
-                .accessToken(requestAccessTokenBuilder.build())
-                .response(new TokenResponse.Builder()
-                        .fields(new TokenResponse.Fields.Builder()
-                                .success(Arrays.asList("access_token", "scope", "expires_in"))
-                                .failure(Arrays.asList("error", "error_description"))
-                                .build())
-                        .build());
-        ActionExecutionResponseContext<ActionInvocationFailureResponse> responseContext =
-                ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), failureResponse);
-
-        PreIssueAccessTokenResponseProcessor processor = new PreIssueAccessTokenResponseProcessor();
-        FlowContext flowContext = FlowContext.create();
-        OAuthTokenReqMessageContext tokenMessageContext =
-                new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
-        flowContext.add("tokenMessageContext", tokenMessageContext);
-
-        ActionExecutionStatus<Failure> result = processor.processFailureResponse(flowContext, responseContext);
-        assertNotNull(result);
-
-        return tokenMessageContext;
     }
 
     @DataProvider(name = "scopeRemovalTestData")
@@ -463,13 +377,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
                 .accessToken(requestAccessTokenBuilder.build())
-                .response(new TokenResponse.Builder()
-                        .fields(new TokenResponse.Fields.Builder()
-                                .success(Arrays.asList("access_token", "scope", "expires_in", "refresh_token",
-                                        "id_token"))
-                                .failure(Arrays.asList("error", "error_description"))
-                                .build())
-                        .build());
+                .response(new TokenResponse.Builder().build());
         ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
                 ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), successResponse);
 

@@ -42,7 +42,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
@@ -165,12 +164,7 @@ public class PreIssueAccessTokenResponseProcessorWithRefreshTokenTest {
 
         PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
                 .accessToken(requestAccessTokenBuilder.build()).refreshToken(requestRefreshTokenBuilder.build())
-                .response(new TokenResponse.Builder()
-                        .fields(new TokenResponse.Fields.Builder()
-                                .success(Arrays.asList("access_token", "scope", "expires_in", "refresh_token"))
-                                .failure(Arrays.asList("error", "error_description"))
-                                .build())
-                        .build());
+                .response(new TokenResponse.Builder().build());
         ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
                 ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), successResponse);
 

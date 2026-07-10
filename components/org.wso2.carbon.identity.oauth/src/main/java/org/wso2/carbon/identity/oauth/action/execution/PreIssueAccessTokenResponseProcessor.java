@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.action.execution.api.model.ErrorStatus;
 import org.wso2.carbon.identity.action.execution.api.model.FailedStatus;
 import org.wso2.carbon.identity.action.execution.api.model.Failure;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
-import org.wso2.carbon.identity.action.execution.api.model.Operation;
 import org.wso2.carbon.identity.action.execution.api.model.PerformableOperation;
 import org.wso2.carbon.identity.action.execution.api.model.Success;
 import org.wso2.carbon.identity.action.execution.api.model.SuccessStatus;
@@ -49,18 +48,19 @@ import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
+import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -75,8 +75,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
-    private static final String RESPONSE_SUCCESS_FIELDS_PATH_PREFIX = "/response/fields/success/";
-    private static final String RESPONSE_FAILURE_FIELDS_PATH_PREFIX = "/response/fields/failure/";
+    private static final String RESPONSE_PARAMS_PATH_PREFIX = "/response/";
+    private static final List<String> RESERVED_TOKEN_RESPONSE_PARAM_NAMES = Arrays.asList(
+            "access_token", "expires_in", "token_type", "scope");
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
@@ -110,9 +111,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         Optional<RefreshToken.Builder> optionalResponseRefreshTokenBuilder =
                 optionalRequestRefreshToken.map(RefreshToken::copy);
 
-        List<String> successFields = preIssueAccessTokenEvent.getResponse().getFields().getSuccess();
-        Map<String, Object> additionalSuccessFields = new HashMap<>();
-        Set<String> suppressedSuccessFields = new HashSet<>();
+        TokenResponse.Builder responseTokenResponseBuilder = preIssueAccessTokenEvent.getResponse().copy();
 
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
@@ -120,26 +119,17 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             for (PerformableOperation operation : operationsToPerform) {
                 switch (operation.getOp()) {
                     case ADD:
-                        if (operation.getPath().startsWith(RESPONSE_SUCCESS_FIELDS_PATH_PREFIX)) {
-                            operationExecutionResultList.add(handleAddResponseFieldOperation(operation,
-                                    successFields, additionalSuccessFields));
-                        } else if (operation.getPath().startsWith(RESPONSE_FAILURE_FIELDS_PATH_PREFIX)) {
-                            operationExecutionResultList.add(new OperationExecutionResult(operation,
-                                    OperationExecutionResult.Status.FAILURE,
-                                    "Failure response fields cannot be modified for a successful token issuance."));
+                        if (operation.getPath().startsWith(RESPONSE_PARAMS_PATH_PREFIX)) {
+                            operationExecutionResultList.add(
+                                    handleAddTokenResponseParamOperation(operation, responseTokenResponseBuilder));
                         } else {
                             operationExecutionResultList.add(
                                     handleAddOperation(operation, requestAccessToken, responseAccessTokenBuilder));
                         }
                         break;
                     case REMOVE:
-                        if (operation.getPath().startsWith(RESPONSE_SUCCESS_FIELDS_PATH_PREFIX)) {
-                            operationExecutionResultList.add(
-                                    handleRemoveResponseFieldOperation(operation, suppressedSuccessFields));
-                        } else {
-                            operationExecutionResultList.add(
-                                    handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder));
-                        }
+                        operationExecutionResultList.add(
+                                handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder));
                         break;
                     case REPLACE:
                         operationExecutionResultList.add(
@@ -163,8 +153,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 .map(RefreshToken.Builder::build)
                 .orElse(null);
 
+        TokenResponse tokenResponse = responseTokenResponseBuilder.build();
+
         updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken,
-                additionalSuccessFields, suppressedSuccessFields);
+                tokenResponse);
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
     }
@@ -218,36 +210,6 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         ActionInvocationFailureResponse failureResponse = responseContext.getActionInvocationResponse();
         handleInvalidErrorCodes(failureResponse.getFailureReason());
-
-        List<PerformableOperation> operationsToPerform = failureResponse.getOperations();
-        if (operationsToPerform != null && !operationsToPerform.isEmpty()) {
-            OAuthTokenReqMessageContext tokenMessageContext =
-                    flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
-            PreIssueAccessTokenEvent preIssueAccessTokenEvent =
-                    (PreIssueAccessTokenEvent) responseContext.getActionEvent();
-            List<String> failureFields = preIssueAccessTokenEvent.getResponse().getFields().getFailure();
-            Map<String, Object> additionalFailureFields = new HashMap<>();
-            List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
-
-            for (PerformableOperation operation : operationsToPerform) {
-                if (Operation.ADD.equals(operation.getOp()) &&
-                        operation.getPath().startsWith(RESPONSE_FAILURE_FIELDS_PATH_PREFIX)) {
-                    operationExecutionResultList.add(handleAddResponseFieldOperation(operation,
-                            failureFields, additionalFailureFields));
-                } else {
-                    operationExecutionResultList.add(new OperationExecutionResult(operation,
-                            OperationExecutionResult.Status.FAILURE,
-                            "Only add operations on failure response fields are allowed."));
-                }
-            }
-
-            logOperationExecutionResults(getSupportedActionType(), operationExecutionResultList);
-
-            if (!additionalFailureFields.isEmpty()) {
-                tokenMessageContext.setAdditionalTokenResponseParams(additionalFailureFields);
-            }
-        }
-
         return new FailedStatus(new Failure(failureResponse.getFailureReason(),
                 failureResponse.getFailureDescription()));
     }
@@ -304,8 +266,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
                                            AccessToken responseAccessToken, RefreshToken responseRefreshToken,
-                                           Map<String, Object> additionalSuccessFields,
-                                           Set<String> suppressedSuccessFields) {
+                                           TokenResponse responseTokenResponse) {
 
         tokenMessageContext.setScope(responseAccessToken.getScopes().toArray(new String[0]));
 
@@ -345,57 +306,41 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
         tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
 
-        if (!additionalSuccessFields.isEmpty()) {
-            tokenMessageContext.setAdditionalTokenResponseParams(additionalSuccessFields);
-        }
-        if (!suppressedSuccessFields.isEmpty()) {
-            tokenMessageContext.setSuppressedTokenResponseFields(suppressedSuccessFields);
+        if (!responseTokenResponse.getParams().isEmpty()) {
+            tokenMessageContext.setAdditionalTokenResponseParams(responseTokenResponse.getParams());
         }
 
         tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
     }
 
-    private OperationExecutionResult handleAddResponseFieldOperation(PerformableOperation operation,
-                                                                     List<String> standardFields,
-                                                                     Map<String, Object> additionalFields) {
+    private OperationExecutionResult handleAddTokenResponseParamOperation(
+            PerformableOperation operation, TokenResponse.Builder responseTokenResponseBuilder) {
 
-        int index = validateIndex(operation.getPath(), additionalFields.size());
-        if (index == -1) {
+        String paramName = operation.getPath().substring(RESPONSE_PARAMS_PATH_PREFIX.length());
+        if (paramName.isEmpty()) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                    "Invalid index.");
+                    "Parameter name is required.");
         }
 
-        Object fieldToAdd = operation.getValue();
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            AccessToken.Claim field = objectMapper.convertValue(fieldToAdd, AccessToken.Claim.class);
-            if (standardFields.contains(field.getName()) || additionalFields.containsKey(field.getName())) {
-                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                        "A response field already exists with the given name.");
-            }
-
-            Object fieldValue = field.getValue();
-            if (isValidPrimitiveValue(fieldValue) || isValidListValue(fieldValue)) {
-                additionalFields.put(field.getName(), fieldValue);
-                return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
-                        "Response field added.");
-            } else {
-                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                        "Invalid field value.");
-            }
-        } catch (IllegalArgumentException e) {
+        if (RESERVED_TOKEN_RESPONSE_PARAM_NAMES.contains(paramName.toLowerCase(Locale.ROOT))) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                    "Invalid field.");
+                    "Parameter name is reserved for a standard token response attribute.");
         }
-    }
 
-    private OperationExecutionResult handleRemoveResponseFieldOperation(PerformableOperation operation,
-                                                                        Set<String> suppressedFields) {
+        if (responseTokenResponseBuilder.getParams().containsKey(paramName)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "A token response parameter already exists with the given name.");
+        }
 
-        String fieldName = operation.getPath().substring(RESPONSE_SUCCESS_FIELDS_PATH_PREFIX.length());
-        suppressedFields.add(fieldName);
+        Object paramValue = operation.getValue();
+        if (!isValidPrimitiveValue(paramValue) && !isValidListValue(paramValue)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid parameter value.");
+        }
+
+        responseTokenResponseBuilder.addParam(paramName, paramValue);
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
-                "Response field removed.");
+                "Token response parameter added.");
     }
 
     private OperationExecutionResult handleAddOperation(PerformableOperation operation, AccessToken requestAccessToken,

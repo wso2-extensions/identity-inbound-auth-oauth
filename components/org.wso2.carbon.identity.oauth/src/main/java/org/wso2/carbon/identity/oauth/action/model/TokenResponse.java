@@ -18,28 +18,35 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class represents the token endpoint response sent in the event payload
  * of the pre issue access token action.
- * It models the manifest of top level field names present on the token endpoint's success and
- * failure responses, so that an external service can add custom fields to either response, and
- * remove optional standard fields from the success response.
+ * It models the custom, top level parameters that can be added to the token endpoint response,
+ * in addition to the access token and refresh token content.
  */
 public class TokenResponse {
 
-    private final Fields fields;
+    private final Map<String, Object> params;
 
     private TokenResponse(Builder builder) {
 
-        this.fields = builder.fields;
+        this.params = builder.params;
     }
 
-    public Fields getFields() {
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Map<String, Object> getParams() {
 
-        return fields;
+        return params;
+    }
+
+    public Builder copy() {
+
+        return new Builder().params(new HashMap<>(this.params));
     }
 
     /**
@@ -47,68 +54,28 @@ public class TokenResponse {
      */
     public static class Builder {
 
-        private Fields fields;
+        private Map<String, Object> params = new HashMap<>();
 
-        public Builder fields(Fields fields) {
+        public Builder params(Map<String, Object> params) {
 
-            this.fields = fields;
+            this.params = params;
             return this;
+        }
+
+        public Builder addParam(String name, Object value) {
+
+            this.params.put(name, value);
+            return this;
+        }
+
+        public Map<String, Object> getParams() {
+
+            return params;
         }
 
         public TokenResponse build() {
 
             return new TokenResponse(this);
-        }
-    }
-
-    /**
-     * Represents the field name manifests for the success and failure token responses.
-     */
-    public static class Fields {
-
-        private final List<String> success;
-        private final List<String> failure;
-
-        private Fields(Builder builder) {
-
-            this.success = builder.success;
-            this.failure = builder.failure;
-        }
-
-        public List<String> getSuccess() {
-
-            return success;
-        }
-
-        public List<String> getFailure() {
-
-            return failure;
-        }
-
-        /**
-         * Builder for Fields.
-         */
-        public static class Builder {
-
-            private List<String> success = new ArrayList<>();
-            private List<String> failure = new ArrayList<>();
-
-            public Builder success(List<String> success) {
-
-                this.success = success;
-                return this;
-            }
-
-            public Builder failure(List<String> failure) {
-
-                this.failure = failure;
-                return this;
-            }
-
-            public Fields build() {
-
-                return new Fields(this);
-            }
         }
     }
 }

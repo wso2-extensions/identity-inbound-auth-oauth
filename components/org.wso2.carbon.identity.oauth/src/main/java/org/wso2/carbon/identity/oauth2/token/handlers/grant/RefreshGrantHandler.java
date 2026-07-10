@@ -86,7 +86,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -199,7 +198,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
                 executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
-            return getFailureOrErrorResponseDTO(executionStatus, tokReqMsgCtx);
+            return getFailureOrErrorResponseDTO(executionStatus);
         }
 
         AccessTokenDO accessTokenBean;
@@ -248,8 +247,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
 
-    private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus,
-                                                                  OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus) {
 
         OAuth2AccessTokenRespDTO accessTokenResponse = new OAuth2AccessTokenRespDTO();
         accessTokenResponse.setError(true);
@@ -261,10 +259,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             Error errorResponse = (Error) executionStatus.getResponse();
             accessTokenResponse.setErrorCode(errorResponse.getErrorMessage());
             accessTokenResponse.setErrorMsg(errorResponse.getErrorDescription());
-        }
-        Map<String, Object> additionalTokenResponseParams = tokReqMsgCtx.getAdditionalTokenResponseParams();
-        if (additionalTokenResponseParams != null) {
-            additionalTokenResponseParams.forEach(accessTokenResponse::addParameterObject);
         }
         return accessTokenResponse;
     }
