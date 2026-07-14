@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.listener;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -153,6 +155,15 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
                         " Agent may be left in an inconsistent state.", deleteException);
             }
 
+            if (e instanceof IdentityApplicationManagementClientException) {
+                // Client errors (e.g. application limit reached) should surface as a client
+                // exception so the SCIM layer returns a 4xx with the actual error instead of
+                // a generic 500. The cause is intentionally not chained: the SCIM layer
+                // resolves the root cause of the exception chain, and it must resolve to
+                // this UserStoreClientException. The full stack trace is already logged above.
+                throw new UserStoreClientException(
+                        "Agent application creation failed: " + e.getMessage(), e.getErrorCode());
+            }
             throw new UserStoreException(
                     "Agent application creation failed for agent ", e);
         }
