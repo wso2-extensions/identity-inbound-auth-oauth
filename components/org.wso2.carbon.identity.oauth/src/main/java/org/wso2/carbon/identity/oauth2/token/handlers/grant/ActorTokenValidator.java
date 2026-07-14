@@ -74,7 +74,6 @@ public class ActorTokenValidator {
         }
     }
 
-
     /**
      * Validates the actor token JWT and returns the actor's subject claim.
      *
@@ -151,5 +150,4 @@ public class ActorTokenValidator {
                 existingActClaim
         );
     }
-
 }

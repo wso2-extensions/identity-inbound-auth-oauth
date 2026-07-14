@@ -692,8 +692,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             }
 
             tokReqMsgCtx.setImpersonationRequest(false);
-            tokReqMsgCtx.addProperty(OAuthConstants.IS_DELEGATION_REQUEST, true);
-            tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_SUBJECT, claims.getSubject());
             if (claims.getAzp() != null) {
                 tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_AZP, claims.getAzp());
                 if (log.isDebugEnabled()) {

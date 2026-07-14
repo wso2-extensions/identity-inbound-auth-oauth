@@ -701,7 +701,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
         tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
 
-        tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
+        updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, existingTokenBean, tokReqMsgCtx);
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean,
