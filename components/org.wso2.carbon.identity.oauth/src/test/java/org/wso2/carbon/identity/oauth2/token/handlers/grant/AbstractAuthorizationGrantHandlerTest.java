@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -72,6 +73,7 @@ import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -564,6 +566,36 @@ public class AbstractAuthorizationGrantHandlerTest {
             assertNotNull(tokenRespDTO.getAccessToken());
             assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
         }
+    }
+
+    /**
+     * Verifies that when isDelegationRequest is true and DELEGATING_ACTOR is set on the context,
+     * getAccessTokenExtendedAttributes persists the DELEGATING_ACTOR in the extended attributes.
+     */
+    @Test
+    public void testGetAccessTokenExtendedAttributesWithDelegatingActor() throws Exception {
+
+        OAuth2AccessTokenReqDTO reqDTO = new OAuth2AccessTokenReqDTO();
+        reqDTO.setClientId(clientId);
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(reqDTO);
+        tokReqMsgCtx.setDelegationRequest(true);
+        tokReqMsgCtx.addProperty(OAuthConstants.DELEGATING_ACTOR, "delegating-actor-id");
+
+        Method method = AbstractAuthorizationGrantHandler.class.getDeclaredMethod(
+                "getAccessTokenExtendedAttributes",
+                AccessTokenExtendedAttributes.class,
+                OAuthTokenReqMessageContext.class);
+        method.setAccessible(true);
+
+        AccessTokenExtendedAttributes result =
+                (AccessTokenExtendedAttributes) method.invoke(handler, null, tokReqMsgCtx);
+
+        assertNotNull(result, "Extended attributes should not be null for a delegation request");
+        assertNotNull(result.getParameters(), "Parameters map should not be null");
+        assertTrue(result.getParameters().containsKey(OAuthConstants.DELEGATING_ACTOR),
+                "DELEGATING_ACTOR key should be present in extended attributes");
+        assertEquals(result.getParameters().get(OAuthConstants.DELEGATING_ACTOR), "delegating-actor-id",
+                "DELEGATING_ACTOR value should match the property set on the token request context");
     }
 
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {

@@ -677,17 +677,34 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throw new IdentityOAuth2Exception("Actor token is not provided in the request.");
         } else if (StringUtils.isNotBlank(requestedActor) && StringUtils.isNotBlank(actorToken)) {
             String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-            String actorSub = ActorTokenValidator.validateAndGetSubject(actorToken, tenantDomain);
-            if (!StringUtils.equals(actorSub, requestedActor)) {
+            ActorTokenValidator.ActorTokenClaims claims =
+                    ActorTokenValidator.validateAndExtractClaims(actorToken, tenantDomain);
+            if (!StringUtils.equals(claims.getSubject(), requestedActor)) {
                 throw new IdentityOAuth2Exception("Actor token subject does not match the requested actor.");
             }
             try {
                 if (!OAuth2Util.isAgentExternallyManaged(tenantDomain)
-                        && !OAuth2Util.isAgentEnabled(tenantDomain, actorSub)) {
+                        && !OAuth2Util.isAgentEnabled(tenantDomain, claims.getSubject())) {
                     throw new IdentityOAuth2Exception("Requested actor is not active.");
                 }
             } catch (AgentConfigMgtException | UserStoreException e) {
                 throw new IdentityOAuth2Exception("Error while validating the requested actor.", e);
+            }
+
+            tokReqMsgCtx.setImpersonationRequest(false);
+            tokReqMsgCtx.addProperty(OAuthConstants.IS_DELEGATION_REQUEST, true);
+            tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_SUBJECT, claims.getSubject());
+            if (claims.getAzp() != null) {
+                tokReqMsgCtx.addProperty(OAuthConstants.ACTOR_AZP, claims.getAzp());
+                if (log.isDebugEnabled()) {
+                    log.debug("Actor AZP extracted from actor token: " + claims.getAzp());
+                }
+            }
+            if (claims.getExistingActClaim() != null) {
+                tokReqMsgCtx.addProperty(OAuthConstants.EXISTING_ACT_CLAIM, claims.getExistingActClaim());
+                if (log.isDebugEnabled()) {
+                    log.debug("Found existing act claim in actor token - will nest in delegation chain");
+                }
             }
             tokReqMsgCtx.setRequestedActor(requestedActor);
         }
