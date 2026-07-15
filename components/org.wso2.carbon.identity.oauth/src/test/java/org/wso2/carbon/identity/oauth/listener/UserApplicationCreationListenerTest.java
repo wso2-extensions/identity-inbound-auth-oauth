@@ -24,6 +24,7 @@ import org.mockito.MockedStatic;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -33,6 +34,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
@@ -240,6 +242,83 @@ public class UserApplicationCreationListenerTest extends IdentityBaseTest {
         } catch (UserStoreException e) {
             // Must throw UserStoreException so the failure propagates to the API layer,
             // which then returns an HTTP error and prevents the UI from showing a false success.
+            assertTrue(e.getMessage().contains("Agent application creation failed for agent"),
+                    "Exception message should indicate agent application creation failure");
+        }
+
+        // Verify the agent was deleted (rollback) before the exception was thrown.
+        try {
+            verify(userStoreManager).deleteUserWithID(agentUserId);
+        } catch (UserStoreException e) {
+            fail("Verification failed: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_AppLimitReachedRollsBackAndThrowsClientException()
+            throws IdentityApplicationManagementException {
+
+        String agentUserId = "agent-user-id-124";
+        try {
+            setupCommonMocks();
+        } catch (UserStoreException e) {
+            fail("Setup failed: " + e.getMessage());
+        }
+        setupAgentUserMocks();
+        when(user.getUserID()).thenReturn(agentUserId);
+        doThrow(new IdentityApplicationManagementClientException("RLS-10001",
+                "Maximum number of allowed applications have been reached."))
+                .when(applicationManagementService)
+                .createApplication(any(ApplicationDTO.class), anyString(), anyString());
+
+        try {
+            listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                    new HashMap<>(), null, userStoreManager);
+            fail("Expected UserStoreClientException to be thrown when the application limit is reached");
+        } catch (UserStoreClientException e) {
+            // The resource limit failure must surface as a client exception carrying the original
+            // error code so the SCIM layer maps it to a 4xx response instead of a generic 500.
+            assertEquals(e.getErrorCode(), "RLS-10001");
+            assertTrue(e.getMessage().contains("Maximum number of allowed applications have been reached."),
+                    "Exception message should carry the original limit-reached message");
+        } catch (UserStoreException e) {
+            fail("Expected UserStoreClientException but got a plain UserStoreException");
+        }
+
+        // Verify the agent was deleted (rollback) before the exception was thrown.
+        try {
+            verify(userStoreManager).deleteUserWithID(agentUserId);
+        } catch (UserStoreException e) {
+            fail("Verification failed: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testDoPostAddUserWithID_OtherClientErrorStillThrowsUserStoreException()
+            throws IdentityApplicationManagementException {
+
+        String agentUserId = "agent-user-id-125";
+        try {
+            setupCommonMocks();
+        } catch (UserStoreException e) {
+            fail("Setup failed: " + e.getMessage());
+        }
+        setupAgentUserMocks();
+        when(user.getUserID()).thenReturn(agentUserId);
+        doThrow(new IdentityApplicationManagementClientException("APP-00001", "Invalid application data."))
+                .when(applicationManagementService)
+                .createApplication(any(ApplicationDTO.class), anyString(), anyString());
+
+        try {
+            listener.doPostAddUserWithID(user, "password", new String[]{"role1"},
+                    new HashMap<>(), null, userStoreManager);
+            fail("Expected UserStoreException to be thrown when application creation fails");
+        } catch (UserStoreClientException e) {
+            fail("Client exceptions other than the resource limit must not be converted to "
+                    + "UserStoreClientException");
+        } catch (UserStoreException e) {
+            // Only the resource-limit error code is mapped to a client exception; everything else
+            // keeps the existing behavior.
             assertTrue(e.getMessage().contains("Agent application creation failed for agent"),
                     "Exception message should indicate agent application creation failure");
         }

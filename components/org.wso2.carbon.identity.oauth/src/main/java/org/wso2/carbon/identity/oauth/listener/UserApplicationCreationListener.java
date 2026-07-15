@@ -141,8 +141,19 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
             return true;
 
         } catch (IdentityApplicationManagementException e) {
-            log.error("Error occurred while creating agent application for agent and Rolling back agent " +
-                    "creation.", e);
+            boolean isResourceLimitError = e instanceof IdentityApplicationManagementClientException
+                    && ERROR_CODE_RESOURCE_LIMIT_REACHED.equals(e.getErrorCode());
+            if (isResourceLimitError) {
+                // A client-induced failure (4xx). Logging at debug level to avoid flooding the error log
+                // when a client repeatedly retries at the limit.
+                if (log.isDebugEnabled()) {
+                    log.debug("Agent application creation blocked by the resource limit. Rolling back agent "
+                            + "creation.", e);
+                }
+            } else {
+                log.error("Error occurred while creating agent application for agent and Rolling back agent " +
+                        "creation.", e);
+            }
 
             try {
                 if (!(userStoreManager instanceof AbstractUserStoreManager)) {
@@ -157,13 +168,12 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
                         " Agent may be left in an inconsistent state.", deleteException);
             }
 
-            if (e instanceof IdentityApplicationManagementClientException
-                    && ERROR_CODE_RESOURCE_LIMIT_REACHED.equals(e.getErrorCode())) {
+            if (isResourceLimitError) {
                 // The application limit reached error should surface as a client exception
                 // so the SCIM layer returns a 4xx with the actual error instead of a
                 // generic 500. The cause is intentionally not chained: the SCIM layer
                 // resolves the root cause of the exception chain, and it must resolve to
-                // this UserStoreClientException. The full stack trace is already logged above.
+                // this UserStoreClientException.
                 throw new UserStoreClientException(
                         "Agent application creation failed: " + e.getMessage(), e.getErrorCode());
             }
