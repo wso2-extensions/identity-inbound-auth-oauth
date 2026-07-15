@@ -66,6 +66,8 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
     private static final Log log = LogFactory.getLog(UserApplicationCreationListener.class);
     private static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
     private static final String AGENT_LISTENER_ORDER_ID = "AgentIdentity.ApplicationCreatorListener.Order";
+    // Error code set by the resource limit enforcement when application creation is blocked by the tier quota.
+    private static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "RLS-10001";
     boolean isEnabled = false;
 
     public UserApplicationCreationListener() {
@@ -155,10 +157,11 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
                         " Agent may be left in an inconsistent state.", deleteException);
             }
 
-            if (e instanceof IdentityApplicationManagementClientException) {
-                // Client errors (e.g. application limit reached) should surface as a client
-                // exception so the SCIM layer returns a 4xx with the actual error instead of
-                // a generic 500. The cause is intentionally not chained: the SCIM layer
+            if (e instanceof IdentityApplicationManagementClientException
+                    && ERROR_CODE_RESOURCE_LIMIT_REACHED.equals(e.getErrorCode())) {
+                // The application limit reached error should surface as a client exception
+                // so the SCIM layer returns a 4xx with the actual error instead of a
+                // generic 500. The cause is intentionally not chained: the SCIM layer
                 // resolves the root cause of the exception chain, and it must resolve to
                 // this UserStoreClientException. The full stack trace is already logged above.
                 throw new UserStoreClientException(
