@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDToken
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Oauth token request message context.
@@ -72,6 +73,8 @@ public class OAuthTokenReqMessageContext {
     private Map<String, Object> additionalAccessTokenClaims;
 
     private Map<String, Object> additionalTokenResponseParams;
+
+    private Set<String> suppressedTokenResponseFields;
 
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
@@ -264,6 +267,26 @@ public class OAuthTokenReqMessageContext {
     public void setAdditionalTokenResponseParams(Map<String, Object> additionalTokenResponseParams) {
 
         this.additionalTokenResponseParams = additionalTokenResponseParams;
+    }
+
+    /**
+     * Get the standard token endpoint response fields to be suppressed from the response.
+     *
+     * @return suppressed token response field names.
+     */
+    public Set<String> getSuppressedTokenResponseFields() {
+
+        return suppressedTokenResponseFields;
+    }
+
+    /**
+     * Set the standard token endpoint response fields to be suppressed from the response.
+     *
+     * @param suppressedTokenResponseFields suppressed token response field names.
+     */
+    public void setSuppressedTokenResponseFields(Set<String> suppressedTokenResponseFields) {
+
+        this.suppressedTokenResponseFields = suppressedTokenResponseFields;
     }
 
     /**

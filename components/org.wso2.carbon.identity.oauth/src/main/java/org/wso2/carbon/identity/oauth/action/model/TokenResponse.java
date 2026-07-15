@@ -18,35 +18,28 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This class represents the token endpoint response sent in the event payload
  * of the pre issue access token action.
- * It models the custom, top level parameters that can be added to the token endpoint response,
- * in addition to the access token and refresh token content.
+ * It models the manifest of top level field names that will be present on the token endpoint's response,
+ * so that an external service can add custom fields to the response, and remove optional standard fields
+ * from it.
  */
 public class TokenResponse {
 
-    private final Map<String, Object> params;
+    private final List<String> fields;
 
     private TokenResponse(Builder builder) {
 
-        this.params = builder.params;
+        this.fields = builder.fields;
     }
 
-    @JsonInclude(JsonInclude.Include.ALWAYS)
-    public Map<String, Object> getParams() {
+    public List<String> getFields() {
 
-        return params;
-    }
-
-    public Builder copy() {
-
-        return new Builder().params(new HashMap<>(this.params));
+        return fields;
     }
 
     /**
@@ -54,23 +47,12 @@ public class TokenResponse {
      */
     public static class Builder {
 
-        private Map<String, Object> params = new HashMap<>();
+        private List<String> fields = new ArrayList<>();
 
-        public Builder params(Map<String, Object> params) {
+        public Builder fields(List<String> fields) {
 
-            this.params = params;
+            this.fields = fields;
             return this;
-        }
-
-        public Builder addParam(String name, Object value) {
-
-            this.params.put(name, value);
-            return this;
-        }
-
-        public Map<String, Object> getParams() {
-
-            return params;
         }
 
         public TokenResponse build() {
