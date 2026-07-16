@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.listener;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -64,6 +66,8 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
     private static final Log log = LogFactory.getLog(UserApplicationCreationListener.class);
     private static final String AGENT_LISTENER_ENABLE = "AgentIdentity.ApplicationCreatorListener.Enabled";
     private static final String AGENT_LISTENER_ORDER_ID = "AgentIdentity.ApplicationCreatorListener.Order";
+    // Error code set by the resource limit enforcement when application creation is blocked by the tier quota.
+    private static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "RLS-10001";
     boolean isEnabled = false;
 
     public UserApplicationCreationListener() {
@@ -137,8 +141,19 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
             return true;
 
         } catch (IdentityApplicationManagementException e) {
-            log.error("Error occurred while creating agent application for agent and Rolling back agent " +
-                    "creation.", e);
+            boolean isResourceLimitError = e instanceof IdentityApplicationManagementClientException
+                    && ERROR_CODE_RESOURCE_LIMIT_REACHED.equals(e.getErrorCode());
+            if (isResourceLimitError) {
+                // A client-induced failure (4xx). Logging at debug level to avoid flooding the error log
+                // when a client repeatedly retries at the limit.
+                if (log.isDebugEnabled()) {
+                    log.debug("Agent application creation blocked by the resource limit. Rolling back agent "
+                            + "creation.", e);
+                }
+            } else {
+                log.error("Error occurred while creating agent application for agent and Rolling back agent " +
+                        "creation.", e);
+            }
 
             try {
                 if (!(userStoreManager instanceof AbstractUserStoreManager)) {
@@ -153,6 +168,15 @@ public class UserApplicationCreationListener extends AbstractIdentityUserOperati
                         " Agent may be left in an inconsistent state.", deleteException);
             }
 
+            if (isResourceLimitError) {
+                // The application limit reached error should surface as a client exception
+                // so the SCIM layer returns a 4xx with the actual error instead of a
+                // generic 500. The cause is intentionally not chained: the SCIM layer
+                // resolves the root cause of the exception chain, and it must resolve to
+                // this UserStoreClientException.
+                throw new UserStoreClientException(
+                        "Agent application creation failed: " + e.getMessage(), e.getErrorCode());
+            }
             throw new UserStoreException(
                     "Agent application creation failed for agent ", e);
         }
