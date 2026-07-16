@@ -72,9 +72,11 @@ public class OAuthTokenReqMessageContext {
 
     private Map<String, Object> additionalAccessTokenClaims;
 
+    // Additional custom parameters injected into the token endpoint response by the pre issue access token
+    // action, through the actions framework.
     private Map<String, Object> additionalTokenResponseParams;
 
-    private Set<String> suppressedTokenResponseFields;
+    private Set<String> suppressedTokenResponseParams;
 
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
@@ -270,23 +272,23 @@ public class OAuthTokenReqMessageContext {
     }
 
     /**
-     * Get the standard token endpoint response fields to be suppressed from the response.
+     * Get the standard token endpoint response parameters to be suppressed from the response.
      *
-     * @return suppressed token response field names.
+     * @return suppressed token response parameter names.
      */
-    public Set<String> getSuppressedTokenResponseFields() {
+    public Set<String> getSuppressedTokenResponseParams() {
 
-        return suppressedTokenResponseFields;
+        return suppressedTokenResponseParams;
     }
 
     /**
-     * Set the standard token endpoint response fields to be suppressed from the response.
+     * Set the standard token endpoint response parameters to be suppressed from the response.
      *
-     * @param suppressedTokenResponseFields suppressed token response field names.
+     * @param suppressedTokenResponseParams suppressed token response parameter names.
      */
-    public void setSuppressedTokenResponseFields(Set<String> suppressedTokenResponseFields) {
+    public void setSuppressedTokenResponseParams(Set<String> suppressedTokenResponseParams) {
 
-        this.suppressedTokenResponseFields = suppressedTokenResponseFields;
+        this.suppressedTokenResponseParams = suppressedTokenResponseParams;
     }
 
     /**

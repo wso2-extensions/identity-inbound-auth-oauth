@@ -83,12 +83,12 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
-    public static final String RESPONSE_FIELDS_PATH_PREFIX = "/response/fields/";
-    private static final String FIELD_ACCESS_TOKEN = "access_token";
-    private static final String FIELD_SCOPE = "scope";
-    private static final String FIELD_EXPIRES_IN = "expires_in";
-    private static final String FIELD_REFRESH_TOKEN = "refresh_token";
-    private static final String FIELD_ID_TOKEN = "id_token";
+    public static final String RESPONSE_PARAMETERS_PATH_PREFIX = "/response/parameters/";
+    private static final String PARAM_ACCESS_TOKEN = "access_token";
+    private static final String PARAM_SCOPE = "scope";
+    private static final String PARAM_EXPIRES_IN = "expires_in";
+    private static final String PARAM_REFRESH_TOKEN = "refresh_token";
+    private static final String PARAM_ID_TOKEN = "id_token";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
     @Override
@@ -112,10 +112,10 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
         actionRequestBuilder.event(event);
-        List<String> responseFields = event.getResponse().getFields();
+        List<String> responseParameters = event.getResponse().getParameters();
         actionRequestBuilder.allowedOperations(
                 getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null,
-                        responseFields.contains(FIELD_ID_TOKEN)));
+                        responseParameters.contains(PARAM_ID_TOKEN)));
 
         return actionRequestBuilder.build();
     }
@@ -147,7 +147,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
         eventBuilder.request(getRequest(tokenReqDTO));
         eventBuilder.response(new TokenResponse.Builder()
-                .fields(getTokenResponseFields(tokenMessageContext, oAuthAppDO))
+                .parameters(getTokenResponseParameters(tokenMessageContext, oAuthAppDO))
                 .build());
 
         String sessionDataKeyConsent = (String) tokenMessageContext.getProperty(
@@ -165,17 +165,17 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         return eventBuilder.build();
     }
 
-    private List<String> getTokenResponseFields(OAuthTokenReqMessageContext tokenMessageContext,
-                                                OAuthAppDO oAuthAppDO) {
+    private List<String> getTokenResponseParameters(OAuthTokenReqMessageContext tokenMessageContext,
+                                                     OAuthAppDO oAuthAppDO) {
 
-        List<String> fields = new ArrayList<>(Arrays.asList(FIELD_ACCESS_TOKEN, FIELD_SCOPE, FIELD_EXPIRES_IN));
+        List<String> parameters = new ArrayList<>(Arrays.asList(PARAM_ACCESS_TOKEN, PARAM_SCOPE, PARAM_EXPIRES_IN));
         if (isRefreshTokenAllowed(oAuthAppDO)) {
-            fields.add(FIELD_REFRESH_TOKEN);
+            parameters.add(PARAM_REFRESH_TOKEN);
         }
         if (OAuth2Util.isOIDCAuthzRequest(tokenMessageContext.getScope())) {
-            fields.add(FIELD_ID_TOKEN);
+            parameters.add(PARAM_ID_TOKEN);
         }
-        return fields;
+        return parameters;
     }
 
     private boolean isRefreshTokenAllowed(OAuthAppDO oAuthAppDO) {
@@ -432,16 +432,16 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         if (isRefreshTokenAllowed) {
             replacePaths.add(REFRESH_TOKEN_CLAIMS_PATH_PREFIX + RefreshToken.ClaimNames.EXPIRES_IN.getName());
-            removePaths.add(RESPONSE_FIELDS_PATH_PREFIX + FIELD_REFRESH_TOKEN);
+            removePaths.add(RESPONSE_PARAMETERS_PATH_PREFIX + PARAM_REFRESH_TOKEN);
         }
         if (isIdTokenApplicable) {
-            removePaths.add(RESPONSE_FIELDS_PATH_PREFIX + FIELD_ID_TOKEN);
+            removePaths.add(RESPONSE_PARAMETERS_PATH_PREFIX + PARAM_ID_TOKEN);
         }
 
         AllowedOperation addOperation =
                 createAllowedOperation(Operation.ADD, Arrays.asList(ACCESS_TOKEN_CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
                         ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/",
-                        RESPONSE_FIELDS_PATH_PREFIX));
+                        RESPONSE_PARAMETERS_PATH_PREFIX));
         AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removePaths);
         AllowedOperation replaceOperation = createAllowedOperation(Operation.REPLACE, replacePaths);
 

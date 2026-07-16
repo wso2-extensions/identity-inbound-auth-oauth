@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.action.execution.api.model.Success;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
+import org.wso2.carbon.identity.oauth.action.model.ResponseParam;
 import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -57,7 +58,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.ACCESS_TOKEN_CLAIMS_PATH_PREFIX;
-import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_FIELDS_PATH_PREFIX;
+import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.RESPONSE_PARAMETERS_PATH_PREFIX;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.SCOPES_PATH_PREFIX;
 
 public class PreIssueAccessTokenResponseProcessorTest {
@@ -201,12 +202,12 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldValid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddTokenResponseParameterValid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("custom_param", "custom_value")));
+                RESPONSE_PARAMETERS_PATH_PREFIX + TAIL_CHARACTER,
+                new ResponseParam("custom_param", "custom_value")));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
@@ -215,7 +216,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldComplexValueValid()
+    void testProcessSuccessResponseAddTokenResponseParameterComplexValueValid()
             throws ActionExecutionResponseProcessorException {
 
         Map<String, Object> nestedObject = new HashMap<>();
@@ -226,8 +227,8 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("custom_object", complexValue)));
+                RESPONSE_PARAMETERS_PATH_PREFIX + TAIL_CHARACTER,
+                new ResponseParam("custom_object", complexValue)));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
@@ -236,17 +237,17 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldWithNestedIntegerArrayValid() throws Exception {
+    void testProcessSuccessResponseAddTokenResponseParameterWithNestedIntegerArrayValid() throws Exception {
 
         String json = "{"
                 + "\"actionStatus\": \"SUCCESS\","
                 + "\"operations\": ["
-                + "  {\"op\": \"add\", \"path\": \"/response/fields/-\","
+                + "  {\"op\": \"add\", \"path\": \"/response/parameters/-\","
                 + "   \"value\": {\"name\": \"subscription_tier\", \"value\": \"premium\"}},"
-                + "  {\"op\": \"add\", \"path\": \"/response/fields/-\","
+                + "  {\"op\": \"add\", \"path\": \"/response/parameters/-\","
                 + "   \"value\": {\"name\": \"ashanthamara\", \"value\": "
                 + "     {\"a\": \"b\", \"c\": {\"d\": \"e\", \"f\": [1, 2]}}}},"
-                + "  {\"op\": \"remove\", \"path\": \"/response/fields/refresh_token\"}"
+                + "  {\"op\": \"remove\", \"path\": \"/response/parameters/refresh_token\"}"
                 + "]"
                 + "}";
 
@@ -268,17 +269,17 @@ public class PreIssueAccessTokenResponseProcessorTest {
         Object ashanthamaraValue = oAuthTokenReqMessageContext.getAdditionalTokenResponseParams().get("ashanthamara");
         assertTrue(ashanthamaraValue instanceof Map);
         assertEquals(((Map<?, ?>) ashanthamaraValue).get("a"), "b");
-        assertNotNull(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields());
-        assertTrue(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields().contains("refresh_token"));
+        assertNotNull(oAuthTokenReqMessageContext.getSuppressedTokenResponseParams());
+        assertTrue(oAuthTokenReqMessageContext.getSuppressedTokenResponseParams().contains("refresh_token"));
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldWithTopLevelIntegerArrayValid() throws Exception {
+    void testProcessSuccessResponseAddTokenResponseParameterWithTopLevelIntegerArrayValid() throws Exception {
 
         String json = "{"
                 + "\"actionStatus\": \"SUCCESS\","
                 + "\"operations\": ["
-                + "  {\"op\": \"add\", \"path\": \"/response/fields/-\","
+                + "  {\"op\": \"add\", \"path\": \"/response/parameters/-\","
                 + "   \"value\": {\"name\": \"ranks\", \"value\": [1, 2, 3]}}"
                 + "]"
                 + "}";
@@ -296,12 +297,12 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldWithArrayOfObjectsValid() throws Exception {
+    void testProcessSuccessResponseAddTokenResponseParameterWithArrayOfObjectsValid() throws Exception {
 
         String json = "{"
                 + "\"actionStatus\": \"SUCCESS\","
                 + "\"operations\": ["
-                + "  {\"op\": \"add\", \"path\": \"/response/fields/-\","
+                + "  {\"op\": \"add\", \"path\": \"/response/parameters/-\","
                 + "   \"value\": {\"name\": \"entitlements\", \"value\": [{\"x\": 1}, {\"y\": 2}]}}"
                 + "]"
                 + "}";
@@ -335,28 +336,29 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponseAddTokenResponseFieldReservedNameInvalid()
+    void testProcessSuccessResponseAddTokenResponseParameterReservedNameInvalid()
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                RESPONSE_FIELDS_PATH_PREFIX + TAIL_CHARACTER,
-                new AccessToken.Claim("access_token", "malicious_value")));
+                RESPONSE_PARAMETERS_PATH_PREFIX + TAIL_CHARACTER,
+                new ResponseParam("access_token", "malicious_value")));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
     }
 
     @Test
-    void testProcessSuccessResponseRemoveTokenResponseFieldValid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseRemoveTokenResponseParameterValid()
+            throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                RESPONSE_FIELDS_PATH_PREFIX + "refresh_token", null));
+                RESPONSE_PARAMETERS_PATH_PREFIX + "refresh_token", null));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
-        assertNotNull(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields());
-        assertTrue(oAuthTokenReqMessageContext.getSuppressedTokenResponseFields().contains("refresh_token"));
+        assertNotNull(oAuthTokenReqMessageContext.getSuppressedTokenResponseParams());
+        assertTrue(oAuthTokenReqMessageContext.getSuppressedTokenResponseParams().contains("refresh_token"));
     }
 
     @DataProvider(name = "scopeRemovalTestData")
@@ -515,7 +517,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
         PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
                 .accessToken(requestAccessTokenBuilder.build())
                 .response(new TokenResponse.Builder()
-                        .fields(Arrays.asList("access_token", "scope", "expires_in", "refresh_token"))
+                        .parameters(Arrays.asList("access_token", "scope", "expires_in", "refresh_token"))
                         .build());
         ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
                 ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), successResponse);

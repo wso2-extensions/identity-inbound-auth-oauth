@@ -24,22 +24,22 @@ import java.util.List;
 /**
  * This class represents the token endpoint response sent in the event payload
  * of the pre issue access token action.
- * It models the manifest of top level field names that will be present on the token endpoint's response,
- * so that an external service can add custom fields to the response, and remove optional standard fields
- * from it.
+ * It models the manifest of top level parameter names that will be present on the token endpoint's response,
+ * so that an external service can add custom parameters to the response, and remove optional standard
+ * parameters from it.
  */
 public class TokenResponse {
 
-    private final List<String> fields;
+    private final List<String> parameters;
 
     private TokenResponse(Builder builder) {
 
-        this.fields = builder.fields;
+        this.parameters = builder.parameters;
     }
 
-    public List<String> getFields() {
+    public List<String> getParameters() {
 
-        return fields;
+        return parameters;
     }
 
     /**
@@ -47,11 +47,11 @@ public class TokenResponse {
      */
     public static class Builder {
 
-        private List<String> fields = new ArrayList<>();
+        private List<String> parameters = new ArrayList<>();
 
-        public Builder fields(List<String> fields) {
+        public Builder parameters(List<String> parameters) {
 
-            this.fields = fields;
+            this.parameters = parameters;
             return this;
         }
 

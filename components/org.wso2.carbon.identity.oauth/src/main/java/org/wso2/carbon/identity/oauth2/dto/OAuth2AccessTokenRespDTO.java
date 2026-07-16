@@ -48,7 +48,7 @@ public class OAuth2AccessTokenRespDTO {
     private Map<String, String> parameters;
     private Map<String, Object> parameterObjects;
     private boolean isConsentedToken;
-    private Set<String> suppressedResponseFields;
+    private Set<String> suppressedResponseParams;
 
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
@@ -268,23 +268,23 @@ public class OAuth2AccessTokenRespDTO {
     }
 
     /**
-     * Get the standard token endpoint response fields to be suppressed from the response, e.g.
+     * Get the standard token endpoint response parameters to be suppressed from the response, e.g.
      * "refresh_token" or "id_token".
      *
-     * @return suppressed response field names.
+     * @return suppressed response parameter names.
      */
-    public Set<String> getSuppressedResponseFields() {
+    public Set<String> getSuppressedResponseParams() {
 
-        return suppressedResponseFields == null ? Collections.emptySet() : suppressedResponseFields;
+        return suppressedResponseParams == null ? Collections.emptySet() : suppressedResponseParams;
     }
 
     /**
-     * Set the standard token endpoint response fields to be suppressed from the response.
+     * Set the standard token endpoint response parameters to be suppressed from the response.
      *
-     * @param suppressedResponseFields suppressed response field names.
+     * @param suppressedResponseParams suppressed response parameter names.
      */
-    public void setSuppressedResponseFields(Set<String> suppressedResponseFields) {
+    public void setSuppressedResponseParams(Set<String> suppressedResponseParams) {
 
-        this.suppressedResponseFields = suppressedResponseFields;
+        this.suppressedResponseParams = suppressedResponseParams;
     }
 }

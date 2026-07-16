@@ -166,7 +166,7 @@ public class PreIssueAccessTokenRequestBuilderForRefreshGrantTest {
         assertRefreshToken(actualEvent.getRefreshToken(), expectedEvent.getRefreshToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
         Assert.assertNotNull(actualEvent.getResponse());
-        assertEquals(actualEvent.getResponse().getFields(), Arrays.asList("access_token", "scope", "expires_in",
+        assertEquals(actualEvent.getResponse().getParameters(), Arrays.asList("access_token", "scope", "expires_in",
                 "refresh_token"));
     }
 
@@ -336,13 +336,13 @@ public class PreIssueAccessTokenRequestBuilderForRefreshGrantTest {
                 "/accessToken/claims/",
                 "/accessToken/scopes/",
                 "/accessToken/claims/aud/",
-                "/response/fields/"));
+                "/response/parameters/"));
         AllowedOperation removeOperation = new AllowedOperation();
         removeOperation.setOp(Operation.REMOVE);
         removeOperation.setPaths(Arrays.asList(
                 "/accessToken/scopes/",
                 "/accessToken/claims/aud/",
-                "/response/fields/refresh_token"));
+                "/response/parameters/refresh_token"));
         AllowedOperation replaceOperation = new AllowedOperation();
         replaceOperation.setOp(Operation.REPLACE);
         replaceOperation.setPaths(Arrays.asList(
