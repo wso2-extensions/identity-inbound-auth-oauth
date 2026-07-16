@@ -443,6 +443,8 @@ public class AccessTokenEventUtil {
                 properties.put(OAuthConstants.EventProperty.REMOTE_IP,
                         IdentityUtil.getClientIpAddress(tokenReqDTO.getHttpServletRequestWrapper()));
             }
+            properties.put(OAuthConstants.EventProperty.ACTOR,
+                    tokReqMsgCtx.getRequestedActor());
         }
 
         if (tokenRespDTO != null) {

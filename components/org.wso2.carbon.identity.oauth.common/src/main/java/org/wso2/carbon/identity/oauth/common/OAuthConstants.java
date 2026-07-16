@@ -899,6 +899,7 @@ public final class OAuthConstants {
         public static final String ACCESS_TOKEN_VALIDITY_MILLIS = "ACCESS_TOKEN_VALIDITY_MILLIS";
         public static final String REFRESH_TOKEN_VALIDITY_MILLIS = "REFRESH_TOKEN_VALIDITY_MILLIS";
         public static final String REMOTE_IP = "REMOTE_IP";
+        public static final String ACTOR = "ACTOR";
     }
 
     /**
