@@ -77,7 +77,6 @@ import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_AUDIENCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.APPLICATION_USER;
@@ -931,18 +930,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens.
         // But we are keeping this in JWT as well.
-        List<String> defaultAudiences = tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null
-                ? tokenReqMessageContext.getAudiences()
-                : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
-
-        // If a single audience was requested via the token exchange audience parameter, apply it if valid.
-        if (tokenReqMessageContext != null) {
-            Object requestedAudience = tokenReqMessageContext.getProperty(REQUESTED_AUDIENCE);
-            if (requestedAudience != null && defaultAudiences.contains(requestedAudience.toString())) {
-                defaultAudiences = Collections.singletonList(requestedAudience.toString());
-            }
-        }
-        jwtClaimsSetBuilder.audience(defaultAudiences);
+        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
+                tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
 
         JWTClaimsSet jwtClaimsSet;
 

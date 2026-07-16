@@ -139,7 +139,6 @@ public final class OAuthConstants {
     public static final String ACTOR_AZP = "ACTOR_AZP";
     public static final String ACTOR_SUBJECT = "ACTOR_SUBJECT";
     public static final String EXISTING_ACT_CLAIM = "EXISTING_ACT_CLAIM";
-    public static final String REQUESTED_AUDIENCE = "REQUESTED_AUDIENCE";
 
     /**
      * Enum for OIDC supported subject types.
@@ -852,7 +851,7 @@ public final class OAuthConstants {
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
             public static final String IMPERSONATOR = "impersonator";
-            public static final String DELEGATOR = "delegator";
+            public static final String ACTOR = "actor";
             public static final String REQUESTED_AUTHORIZATION_DETAILS = "requested authorization details";
         }
 

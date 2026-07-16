@@ -61,7 +61,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TYPE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.DELEGATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 
 /**
@@ -333,23 +332,16 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
 
                     boolean isImpersonatingActorInitiatedRevocation = validateImpersonatingActorInitiatedRevocation(
                             accessTokenDO, user.getAuthenticatedSubjectIdentifier());
-
-                    boolean isDelegatingActorInitiatedRevocation = validateDelegatingActorInitiatedRevocation(
-                            accessTokenDO, user.getAuthenticatedSubjectIdentifier());
-
-                    boolean isActorInitiatedRevocation = isImpersonatingActorInitiatedRevocation
-                            || isDelegatingActorInitiatedRevocation;
-
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
-                            && (isActorInitiatedRevocation
+                            && (isImpersonatingActorInitiatedRevocation
                             || StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName()))) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (
                             StringUtils.equalsIgnoreCase(tokenBindingType,
                                     OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER)
-                                    || isActorInitiatedRevocation
+                                    || isImpersonatingActorInitiatedRevocation
                                     || StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())
                     ) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
@@ -373,22 +365,6 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         if (isImpersonationRequest) {
             return Objects.equals(accessTokenDO.getAccessTokenExtendedAttributes()
                     .getParameters().get(IMPERSONATING_ACTOR), authenticatedSubjectIdentifier);
-        }
-        return false;
-    }
-
-    private boolean validateDelegatingActorInitiatedRevocation(
-            AccessTokenDO accessTokenDO, String authenticatedSubjectIdentifier) {
-
-        boolean isDelegationRequest = accessTokenDO.getAccessTokenExtendedAttributes() != null &&
-                accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null &&
-                accessTokenDO.getAccessTokenExtendedAttributes().getParameters()
-                        .containsKey(DELEGATING_ACTOR);
-        if (isDelegationRequest) {
-            return Objects.equals(
-                    accessTokenDO.getAccessTokenExtendedAttributes()
-                            .getParameters().get(DELEGATING_ACTOR),
-                    authenticatedSubjectIdentifier);
         }
         return false;
     }

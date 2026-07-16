@@ -86,7 +86,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -326,7 +325,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(validationBean.getScope());
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
-        propagateActorInfo(tokReqMsgCtx);
+        propagateImpersonationInfo(tokReqMsgCtx);
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
@@ -350,33 +349,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private void propagateActorInfo(OAuthTokenReqMessageContext tokenReqMessageContext) {
+    private void propagateImpersonationInfo(OAuthTokenReqMessageContext tokenReqMessageContext) {
 
-        log.debug("Checking for actor information in token request");
-        if (tokenReqMessageContext == null || tokenReqMessageContext.getOauth2AccessTokenReqDTO() == null ||
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() == null) {
-            return;
-        }
-
-        Map<String, String> params = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-        .getAccessTokenExtendedAttributes().getParameters();
-
-        String impersonator = params.get(OAuthConstants.IMPERSONATING_ACTOR);
-        if (StringUtils.isNotBlank(impersonator)) {
-            tokenReqMessageContext.setImpersonationRequest(true);
-            tokenReqMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonator);
-            if (log.isDebugEnabled()) {
-                log.debug("Impersonation request identified for the user: " + impersonator);
-            }
-            return;
-        }
-
-        String delegatingActor = params.get(OAuthConstants.DELEGATING_ACTOR);
-        if (StringUtils.isNotBlank(delegatingActor)) {
-            tokenReqMessageContext.setDelegationRequest(true);
-            tokenReqMessageContext.addProperty(OAuthConstants.DELEGATING_ACTOR, delegatingActor);
-            if (log.isDebugEnabled()) {
-                log.debug("Delegation request identified for the user: " + delegatingActor);
+        log.debug("Checking for impersonation information in token request");
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            String impersonator = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getAccessTokenExtendedAttributes().getParameters()
+                    .get(OAuthConstants.IMPERSONATING_ACTOR);
+            if (StringUtils.isNotBlank(impersonator)) {
+                tokenReqMessageContext.setImpersonationRequest(true);
+                tokenReqMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonator);
+                if (log.isDebugEnabled()) {
+                    log.debug("Impersonation request identified for the user: " + impersonator);
+                }
             }
         }
     }
