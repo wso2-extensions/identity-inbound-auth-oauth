@@ -24,7 +24,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
@@ -47,34 +46,6 @@ public class ActorTokenValidator {
     }
 
     /**
-     * Holds the extracted claims from a validated actor token.
-     */
-    public static class ActorTokenClaims {
-
-        private final String subject;
-        private final String azp;
-        private final Object existingActClaim;
-
-        ActorTokenClaims(String subject, String azp, Object existingActClaim) {
-            this.subject = subject;
-            this.azp = azp;
-            this.existingActClaim = existingActClaim;
-        }
-
-        public String getSubject() {
-            return subject;
-        }
-
-        public String getAzp() {
-            return azp;
-        }
-
-        public Object getExistingActClaim() {
-            return existingActClaim;
-        }
-    }
-
-    /**
      * Validates the actor token JWT and returns the actor's subject claim.
      *
      * @param actorToken   Raw JWT string representing the actor token.
@@ -84,22 +55,6 @@ public class ActorTokenValidator {
      *                                 the token is expired, or the issuer is unexpected.
      */
     public static String validateAndGetSubject(String actorToken, String tenantDomain)
-            throws IdentityOAuth2Exception {
-        return validateAndExtractClaims(actorToken, tenantDomain).getSubject();
-    }
-
-    /**
-     * Validates the actor token JWT and returns the extracted actor claims including
-     * the subject, {@code azp}/{@code client_id}, and existing {@code act} claim.
-     *
-     * @param actorToken   Raw JWT string representing the actor token.
-     * @param tenantDomain Tenant domain used for IDP lookup and issuer validation.
-     * @return {@link ActorTokenClaims} containing the subject, azp, and existing act claim.
-     * @throws IdentityOAuth2Exception If the JWT is invalid, the signature fails,
-     *                                 the token is expired, or the issuer is unexpected.
-     */
-
-    public static ActorTokenClaims validateAndExtractClaims(String actorToken, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         SignedJWT signedJWT;
@@ -136,18 +91,6 @@ public class ActorTokenValidator {
                     + ", Received: " + jwtIssuer);
         }
 
-        // Extract azp/client_id and existing act claim for delegation chain processing.
-        Object azpClaim = claimsSet.getClaim(OAuthConstants.OIDCClaims.AZP);
-        if (azpClaim == null) {
-            // Fallback to client_id if azp not present.
-            azpClaim = claimsSet.getClaim(OAuthConstants.OIDCClaims.CLIENT_ID);
-        }
-        Object existingActClaim = claimsSet.getClaim(OAuthConstants.ACT);
-
-        return new ActorTokenClaims(
-                claimsSet.getSubject(),
-                azpClaim != null ? azpClaim.toString() : null,
-                existingActClaim
-        );
+        return claimsSet.getSubject();
     }
 }

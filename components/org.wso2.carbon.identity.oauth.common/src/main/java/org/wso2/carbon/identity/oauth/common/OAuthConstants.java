@@ -136,7 +136,6 @@ public final class OAuthConstants {
     public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
 
     // Token Exchange delegation property key
-    public static final String ACTOR_AZP = "ACTOR_AZP";
     public static final String ACTOR_SUBJECT = "ACTOR_SUBJECT";
     public static final String EXISTING_ACT_CLAIM = "EXISTING_ACT_CLAIM";
 
@@ -201,7 +200,6 @@ public final class OAuthConstants {
     public static final String ID_TOKEN_SUBJECT_TOKEN = "id_token subject_token";
     public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
-    public static final String DELEGATING_ACTOR = "DELEGATING_ACTOR";
     public static final String IS_SHARED_USER = "IS_SHARED_USER";
     public static final String IDTOKEN_TOKEN = "id_token token";
     public static final String ACTOR_TOKEN = "actor_token";
@@ -608,7 +606,6 @@ public final class OAuthConstants {
         public static final String APP_ROLES = "application_roles";
         public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
-        public static final String CLIENT_ID = "client_id";
         public static final String AUTH_TIME = "auth_time";
         public static final String AT_HASH = "at_hash";
         public static final String NONCE = "nonce";
