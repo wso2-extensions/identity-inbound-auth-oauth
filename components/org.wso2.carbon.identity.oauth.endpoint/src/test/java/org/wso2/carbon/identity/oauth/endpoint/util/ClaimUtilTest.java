@@ -66,8 +66,10 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -560,6 +562,56 @@ public class ClaimUtilTest {
         String returned = ClaimUtil.getServiceProviderMappedUserRoles(mockedServiceProvider,
                 locallyMappedUserRoles, claimSeparator);
         Assert.assertEquals(returned, expected, "Invalid returned value");
+    }
+
+    private static final String GROUPS_CLAIM_URI = "groups";
+    private static final String GIVEN_NAME_OIDC_URI = "given_name";
+    private static final String GIVEN_NAME_LOCAL_URI = "http://wso2.org/claims/givenname";
+    private static final String MULTI_TEST_OIDC_URI = "multi_test";
+    private static final String MULTI_TEST_LOCAL_URI = "http://wso2.org/claims/multiTest";
+
+    @DataProvider(name = "selectiveMultiValuedAttributeProvider")
+    public Object[][] selectiveMultiValuedAttributeProvider() {
+
+        Set<String> multiValuedLocalClaimUris = new HashSet<>();
+        multiValuedLocalClaimUris.add(MULTI_TEST_LOCAL_URI);
+
+        return new Object[][]{
+                // claimUri, localClaimUri, claimValue, multiValuedLocalClaimUris (null = legacy), expectedMultiValued.
+
+                // Scenario (d): groups is always treated as an array, regardless of flag/value.
+                {GROUPS_CLAIM_URI, "http://wso2.org/claims/groups", "admin", null, true},
+                {GROUPS_CLAIM_URI, "http://wso2.org/claims/groups", "admin", multiValuedLocalClaimUris, true},
+
+                // Scenario (c): flag ON + claim flagged multiValued=true -> array, even without separator.
+                {MULTI_TEST_OIDC_URI, MULTI_TEST_LOCAL_URI, "a", multiValuedLocalClaimUris, true},
+                {MULTI_TEST_OIDC_URI, MULTI_TEST_LOCAL_URI, "a,b,c,d", multiValuedLocalClaimUris, true},
+
+                // Scenario (b): flag ON + claim flagged multiValued=false with comma value -> plain string (no array).
+                {GIVEN_NAME_OIDC_URI, GIVEN_NAME_LOCAL_URI, "a,b,c,d", multiValuedLocalClaimUris, false},
+                // Flag ON + non-flagged claim, no separator -> still not an array.
+                {GIVEN_NAME_OIDC_URI, GIVEN_NAME_LOCAL_URI, "a", multiValuedLocalClaimUris, false},
+
+                // Scenario (a): flag OFF (null set) -> legacy comma-split behaviour preserved.
+                {GIVEN_NAME_OIDC_URI, GIVEN_NAME_LOCAL_URI, "a,b,c,d", null, true},
+                {GIVEN_NAME_OIDC_URI, GIVEN_NAME_LOCAL_URI, "a", null, false},
+                // Legacy fallback applies to a flagged claim's local URI when the set is null (flag off).
+                {MULTI_TEST_OIDC_URI, MULTI_TEST_LOCAL_URI, "a", null, false},
+        };
+    }
+
+    @Test(dataProvider = "selectiveMultiValuedAttributeProvider")
+    public void testIsMultiValuedAttributeSelective(String claimUri, String localClaimUri, String claimValue,
+                                                    Set<String> multiValuedLocalClaimUris, boolean expected) {
+
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(CLAIM_SEPARATOR);
+            boolean actual = ClaimUtil.isMultiValuedAttribute(claimUri, localClaimUri, claimValue,
+                    multiValuedLocalClaimUris);
+            Assert.assertEquals(actual, expected,
+                    "Unexpected multi-valued resolution for claim '" + claimUri + "' (local '" + localClaimUri +
+                            "') with value '" + claimValue + "' and selectiveSet=" + multiValuedLocalClaimUris);
+        }
     }
 
     @Test

@@ -69,6 +69,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -103,7 +104,15 @@ public class ClaimUtil {
             userClaimsInOIDCDialect = getClaimsFromUserStore(tokenResponse);
         } else {
             UserInfoClaimRetriever retriever = UserInfoEndpointConfig.getInstance().getUserInfoClaimRetriever();
-            userClaimsInOIDCDialect = retriever.getClaimsMap(userAttributes);
+            // Resolve against the SP tenant domain to stay consistent with the cache-miss path.
+            Set<String> multiValuedLocalClaimUris = null;
+            if (OAuthServerConfiguration.getInstance().getHonourMultiValuedClaimMetadata()) {
+                String spTenantDomain = resolveSpTenantDomain(tokenResponse);
+                if (spTenantDomain != null) {
+                    multiValuedLocalClaimUris = OAuth2Util.getMultiValuedClaimUris(spTenantDomain);
+                }
+            }
+            userClaimsInOIDCDialect = retriever.getClaimsMap(userAttributes, multiValuedLocalClaimUris);
         }
 
         if (isEmpty(userClaimsInOIDCDialect)) {
@@ -111,6 +120,32 @@ public class ClaimUtil {
         }
 
         return userClaimsInOIDCDialect;
+    }
+
+    /**
+     * Resolve the service provider tenant domain for the given token.
+     *
+     * @param tokenResponse OAuth2TokenValidationResponseDTO containing the token information.
+     * @return Service provider tenant domain, or {@code null} if it could not be resolved.
+     */
+    private static String resolveSpTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse) {
+
+        try {
+            String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+            if (StringUtils.isNotEmpty(appResidentTenantDomain)) {
+                return appResidentTenantDomain;
+            }
+            AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
+                    .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            String clientId = getClientID(accessTokenDO);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Failed to resolve SP tenant domain for multi-valued claims; using legacy behaviour.", e);
+            }
+            return null;
+        }
     }
 
     /**
@@ -264,6 +299,11 @@ public class ClaimUtil {
                             userId, realm, claimURIList, isImpersonatedUser);
                 }
 
+                // Resolve metadata multi-valued claims once; null set -> legacy behaviour.
+                Set<String> multiValuedLocalClaimUris = null;
+                if (OAuthServerConfiguration.getInstance().getHonourMultiValuedClaimMetadata()) {
+                    multiValuedLocalClaimUris = OAuth2Util.getMultiValuedClaimUris(spTenantDomain);
+                }
                 if (isNotEmpty(userClaims)) {
                     for (Map.Entry<String, String> entry : userClaims.entrySet()) {
                         //set local2sp role mappings
@@ -289,7 +329,8 @@ public class ClaimUtil {
                             boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration
                                     .getInstance().getUserInfoMultiValueSupportEnabled();
                             if (isMultiValueSupportEnabledForUserinfoResponse &&
-                                    isMultiValuedAttribute(oidcClaimUri, claimValue)) {
+                                    isMultiValuedAttribute(oidcClaimUri, entry.getKey(), claimValue,
+                                            multiValuedLocalClaimUris)) {
                                 String[] attributeValues = processMultiValuedAttribute(claimValue);
                                 mappedAppClaims.put(oidcClaimUri, attributeValues);
                             } else {
@@ -571,6 +612,31 @@ public class ClaimUtil {
         group as multi value attribute. */
         if (GROUPS.equals(claimUri)) {
             return true;
+        }
+        return StringUtils.contains(claimValue, FrameworkUtils.getMultiAttributeSeparator());
+    }
+
+    /**
+     * Checks whether a user value should be emitted as a multi-valued (array) attribute. The {@code groups} claim is
+     * always an array. When {@code multiValuedLocalClaimUris} is non-null, only claims whose local URI is in the set
+     * are arrays; a null set falls back to the legacy separator-based check.
+     *
+     * @param claimUri                  OIDC dialect claim URI (short name).
+     * @param localClaimUri             Local claim URI mapped to the OIDC claim.
+     * @param claimValue                Claim value.
+     * @param multiValuedLocalClaimUris Set of multi-valued local claim URIs, or {@code null} for legacy behaviour.
+     * @return Whether the claim should be emitted as a multi-valued (array) attribute.
+     */
+    public static boolean isMultiValuedAttribute(String claimUri, String localClaimUri, String claimValue,
+                                                 Set<String> multiValuedLocalClaimUris) {
+
+        /* To format the groups claim to always return as an array, we should consider single
+        group as multi value attribute. */
+        if (GROUPS.equals(claimUri)) {
+            return true;
+        }
+        if (multiValuedLocalClaimUris != null) {
+            return multiValuedLocalClaimUris.contains(localClaimUri);
         }
         return StringUtils.contains(claimValue, FrameworkUtils.getMultiAttributeSeparator());
     }
