@@ -93,6 +93,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
@@ -2318,6 +2319,55 @@ public class OAuth2Util {
             }
         } catch (IdentityOAuth2Exception | ClaimMetadataException | OrganizationManagementException e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Builds a claim URI (local and mapped OIDC dialect) to {@link LocalClaim} map. The value is
+     * read-only (shared with the claim metadata cache).
+     *
+     * @param tenantDomain Tenant domain to resolve claim metadata for.
+     * @return Map of {local + OIDC claim URI} to {@link LocalClaim}, or {@code null} if unavailable.
+     */
+    public static Map<String, LocalClaim> getMappedLocalClaims(String tenantDomain) {
+
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        if (claimMetadataManagementService == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("ClaimMetadataManagementService unavailable for tenant: " + tenantDomain);
+            }
+            return null;
+        }
+        try {
+            List<LocalClaim> localClaims = claimMetadataManagementService.getLocalClaims(tenantDomain);
+            if (localClaims == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("No local claims for tenant: " + tenantDomain);
+                }
+                return null;
+            }
+            Map<String, LocalClaim> mappedLocalClaims = new HashMap<>();
+            for (LocalClaim localClaim : localClaims) {
+                mappedLocalClaims.put(localClaim.getClaimURI(), localClaim);
+            }
+            // Alias each OIDC dialect claim URI to its mapped local claim, so token paths (keyed by the
+            // OIDC URI) resolve the same metadata as the UserInfo path (keyed by the local URI).
+            List<ExternalClaim> oidcClaims =
+                    claimMetadataManagementService.getExternalClaims(OAuthConstants.OIDC_DIALECT, tenantDomain);
+            if (oidcClaims != null) {
+                for (ExternalClaim oidcClaim : oidcClaims) {
+                    LocalClaim mappedLocalClaim = mappedLocalClaims.get(oidcClaim.getMappedLocalClaim());
+                    if (mappedLocalClaim != null) {
+                        mappedLocalClaims.put(oidcClaim.getClaimURI(), mappedLocalClaim);
+                    }
+                }
+            }
+            return mappedLocalClaims;
+        } catch (ClaimMetadataException e) {
+            log.error("Error reading claim metadata for tenant: " + tenantDomain
+                    + ". Falling back to legacy handling.", e);
+            return null;
         }
     }
 

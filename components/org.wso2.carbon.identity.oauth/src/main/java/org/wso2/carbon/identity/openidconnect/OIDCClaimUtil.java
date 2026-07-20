@@ -33,6 +33,8 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -756,5 +758,38 @@ public class OIDCClaimUtil {
         }
 
         return userClaimsInOidcDialect;
+    }
+
+    /**
+     * Whether a claim should be rendered as an array, keyed on the claim URI (OIDC or local dialect).
+     * With metadata ({@code mappedLocalClaims} present and the claim found) the local claim
+     * {@code multiValued} property decides; otherwise legacy separator-based detection is used.
+     * Special cases: {@code address} is never an array, {@code groups} is always an array.
+     *
+     * @param claimKey                Claim URI (OIDC or local dialect).
+     * @param claimValue              Raw claim value.
+     * @param multiAttributeSeparator Multi attribute separator.
+     * @param mappedLocalClaims       Mapped local claims from {@link OAuth2Util#getMappedLocalClaims(String)},
+     *                                or {@code null}.
+     * @return True if the claim should be rendered as a multivalued attribute.
+     */
+    public static boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator,
+                                                 Map<String, LocalClaim> mappedLocalClaims) {
+
+        // Address claim contains the multi attribute separator but is not a multi valued attribute.
+        if (OAuthConstants.OIDCClaims.ADDRESS.equals(claimKey)) {
+            return false;
+        }
+        // Groups claim is always formatted as an array (a single group is still returned as an array).
+        if (OAuthConstants.OIDCClaims.GROUPS.equals(claimKey)) {
+            return true;
+        }
+        if (mappedLocalClaims != null) {
+            LocalClaim localClaim = mappedLocalClaims.get(claimKey);
+            if (localClaim != null) {
+                return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
+            }
+        }
+        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 }

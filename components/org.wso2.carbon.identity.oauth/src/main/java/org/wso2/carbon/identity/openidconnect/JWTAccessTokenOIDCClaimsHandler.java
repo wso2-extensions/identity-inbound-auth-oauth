@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -81,8 +82,6 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 
 /**
@@ -100,7 +99,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             throws IdentityOAuth2Exception {
 
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     @Override
@@ -112,7 +111,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
           to manage user attributes for the access token.
          */
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     /**
@@ -890,19 +889,24 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     /**
      * This method sets claims to JWTClaimSet.
      *
-     * @param jwtClaimsSetBuilder JWTClaimSet builder.
+     * @param jwtClaimsSetBuilder     JWTClaimSet builder.
      * @param userClaimsInOIDCDialect User claims in OIDC dialect.
+     * @param spTenantDomain          Service provider tenant domain.
      * @return JWTClaimSet with claims.
      */
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
-            userClaimsInOIDCDialect) {
+            userClaimsInOIDCDialect, String spTenantDomain) {
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        Map<String, LocalClaim> mappedLocalClaims =
+                OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                        ? OAuth2Util.getMappedLocalClaims(spTenantDomain) : null;
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
+            if (OIDCClaimUtil.isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator,
+                    mappedLocalClaims)) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
                 for (String attributeValue : attributeValues) {
@@ -920,28 +924,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             }
         }
         return jwtClaimsSetBuilder.build();
-    }
-
-    /**
-     * Check weather claim value if multi valued or not.
-     *
-     * @param claimKey Claim key.
-     * @param claimValue Claim value.
-     * @param multiAttributeSeparator Multi attribute separator.
-     * @return True if claim value is multi valued, false otherwise.
-     */
-    private boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator) {
-
-        // Address claim contains multi attribute separator but its not a multi valued attribute.
-        if (claimKey.equals(ADDRESS)) {
-            return false;
-        }
-        // To format the groups claim to always return as an array, we should consider single group as
-        // multi value attribute.
-        if (claimKey.equals(GROUPS)) {
-            return true;
-        }
-        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 
     /**

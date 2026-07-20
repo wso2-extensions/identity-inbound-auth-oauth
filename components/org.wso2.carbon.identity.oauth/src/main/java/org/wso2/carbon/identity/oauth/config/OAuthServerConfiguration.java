@@ -246,6 +246,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
+    private boolean honorMultivaluedClaimMetadata = false;
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
     private boolean isReturnOnlyAppAssociatedRolesInUserInfo = false;
     private boolean isReturnOnlyAppAssociatedRolesInJWTToken = false;
@@ -1827,6 +1828,18 @@ public class OAuthServerConfiguration {
     public boolean getUserInfoMultiValueSupportEnabled() {
 
         return userInfoMultiValueSupportEnabled;
+    }
+
+    /**
+     * Whether a claim is emitted as a JSON array in JWT/ID tokens and the UserInfo response based on
+     * its local claim {@code multiValued} metadata property, instead of the legacy separator-based
+     * detection. Opt-in; default false = legacy behaviour.
+     *
+     * @return True if only multi-valued claims should be converted to arrays.
+     */
+    public boolean isHonorMultivaluedClaimMetadata() {
+
+        return honorMultivaluedClaimMetadata;
     }
 
     /**
@@ -3941,6 +3954,13 @@ public class OAuthServerConfiguration {
                         userInfoMultiValueSupportEnabledElem.getText().trim());
             }
 
+            OMElement honorMultivaluedClaimMetadataElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_HONOR_MULTIVALUED_CLAIM_METADATA));
+            if (honorMultivaluedClaimMetadataElem != null) {
+                honorMultivaluedClaimMetadata = Boolean.parseBoolean(
+                        honorMultivaluedClaimMetadataElem.getText().trim());
+            }
+
             OMElement userInfoResponseRemoveInternalPrefixFromRoles = openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES));
             if (userInfoResponseRemoveInternalPrefixFromRoles != null) {
@@ -4696,6 +4716,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
         public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
                 "UserInfoMultiValueSupportEnabled";
+        public static final String OPENID_CONNECT_HONOR_MULTIVALUED_CLAIM_METADATA =
+                "HonorMultivaluedClaimMetadata";
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
         private static final String OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO =
