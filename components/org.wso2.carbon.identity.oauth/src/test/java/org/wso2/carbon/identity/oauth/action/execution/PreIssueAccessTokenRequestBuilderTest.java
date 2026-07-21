@@ -139,6 +139,9 @@ public class PreIssueAccessTokenRequestBuilderTest {
         oAuth2UtilMockedStatic.when(() -> OAuth2Util.getOIDCAudience(CLIENT_ID_TEST, oAuthAppDO)).
                 thenReturn(new LinkedList<>(Collections.singleton(AUDIENCE_TEST)));
         oAuth2UtilMockedStatic.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(false);
+        oAuth2UtilMockedStatic.when(() -> OAuth2Util.isOIDCAuthzRequest(any(String[].class)))
+                .thenAnswer(invocation -> Arrays.asList((String[]) invocation.getArgument(0))
+                        .contains("openid"));
         AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
         doReturn(USER_ID_TEST).when(authenticatedUser).getAuthenticatedSubjectIdentifier();
 
@@ -210,6 +213,65 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     /**
+     * Verifies that when the token request scope contains "openid", the "id_token" response parameter is
+     * included in the event's response manifest, and the external service is allowed to suppress it via a
+     * REMOVE operation on "/response/parameters/id_token".
+     */
+    @Test
+    public void testBuildActionExecutionRequestWithOIDCScope()
+            throws ActionExecutionRequestBuilderException, OrganizationManagementException {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+            tokenMessageContext.setScope(new String[]{"scope1", "scope2", "openid"});
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
+                    buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+
+            PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+            Assert.assertTrue(event.getResponse().getParameters().contains("id_token"));
+
+            AllowedOperation removeOperation = actionExecutionRequest.getAllowedOperations().stream()
+                    .filter(operation -> operation.getOp() == Operation.REMOVE)
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("Remove operation not found"));
+            Assert.assertTrue(removeOperation.getPaths().contains("/response/parameters/id_token"));
+        }
+    }
+
+    /**
+     * Verifies that the two-argument overload of getAllowedOperations (kept for backward compatibility)
+     * behaves as if id_token suppression is not applicable.
+     */
+    @Test
+    public void testGetAllowedOperationsTwoArgOverload() {
+
+        List<AllowedOperation> allowedOperations =
+                preIssueAccessTokenRequestBuilder.getAllowedOperations(new HashMap<>(), false);
+
+        AllowedOperation removeOperation = allowedOperations.stream()
+                .filter(operation -> operation.getOp() == Operation.REMOVE)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Remove operation not found"));
+        Assert.assertFalse(removeOperation.getPaths().contains("/response/parameters/refresh_token"));
+        Assert.assertFalse(removeOperation.getPaths().contains("/response/parameters/id_token"));
+    }
+
+    /**
      * Assert that the actual event matches the expected event.
      *
      * @param actualEvent   The actual PreIssueAccessTokenEvent.
@@ -224,8 +286,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
         assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
         assertNotNull(actualEvent.getResponse());
-        Assert.assertEquals(actualEvent.getResponse().getParameters(), Arrays.asList("access_token", "scope",
-                "expires_in"));
+        Assert.assertEquals(actualEvent.getResponse().getParameters(), Arrays.asList("access_token", "token_type",
+                "scope", "expires_in"));
     }
 
     private void assertOrganization(Organization expectedOrg, Organization actualOrg) {

@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.api.constant.ActionExecutionLogConstants;
@@ -76,6 +76,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     private static final String RESPONSE_PARAMETERS_PATH_PREFIX = "/response/parameters/";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
@@ -183,11 +184,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             LoggerUtils.triggerDiagnosticLogEvent(diagLogBuilder);
         }
         if (LOG.isDebugEnabled()) {
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
             try {
-                String executionSummary = objectMapper.writeValueAsString(operationExecutionResultList);
+                String executionSummary = OBJECT_MAPPER.writeValueAsString(operationExecutionResultList);
                 LOG.debug(String.format("Processed response for action type: %s. Results of operations performed: %s",
                         actionType, executionSummary));
             } catch (JsonProcessingException e) {
@@ -317,9 +315,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                                                                          Map<String, Object> additionalParameters) {
 
         Object valueToAdd = operation.getValue();
-        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            ResponseParam param = objectMapper.convertValue(valueToAdd, ResponseParam.class);
+            ResponseParam param = OBJECT_MAPPER.convertValue(valueToAdd, ResponseParam.class);
+            if (StringUtils.isBlank(param.getName())) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Response parameter name cannot be empty.");
+            }
             if (standardParameters.contains(param.getName()) || additionalParameters.containsKey(param.getName())) {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "A response parameter already exists with the given name.");
@@ -451,9 +452,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
 
         Object claimToAdd = operation.getValue();
-        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
+            AccessToken.Claim claim = OBJECT_MAPPER.convertValue(claimToAdd, AccessToken.Claim.class);
             if (SCOPE_PROPERTY_NAME.equalsIgnoreCase(claim.getName())) {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "The operation path is invalid for the scope. Please use the path " + SCOPE_PATH_PREFIX);

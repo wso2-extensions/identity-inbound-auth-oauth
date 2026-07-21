@@ -166,8 +166,8 @@ public class PreIssueAccessTokenRequestBuilderForRefreshGrantTest {
         assertRefreshToken(actualEvent.getRefreshToken(), expectedEvent.getRefreshToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
         Assert.assertNotNull(actualEvent.getResponse());
-        assertEquals(actualEvent.getResponse().getParameters(), Arrays.asList("access_token", "scope", "expires_in",
-                "refresh_token"));
+        assertEquals(actualEvent.getResponse().getParameters(), Arrays.asList("access_token", "token_type", "scope",
+                "expires_in", "refresh_token"));
     }
 
     private void assertAccessToken(AccessToken actualAccessToken, AccessToken expectedAccessToken) {

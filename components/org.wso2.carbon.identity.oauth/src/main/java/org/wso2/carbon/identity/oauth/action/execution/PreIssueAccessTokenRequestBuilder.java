@@ -85,6 +85,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
     public static final String RESPONSE_PARAMETERS_PATH_PREFIX = "/response/parameters/";
     private static final String PARAM_ACCESS_TOKEN = "access_token";
+    private static final String PARAM_TOKEN_TYPE = "token_type";
     private static final String PARAM_SCOPE = "scope";
     private static final String PARAM_EXPIRES_IN = "expires_in";
     private static final String PARAM_REFRESH_TOKEN = "refresh_token";
@@ -168,7 +169,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private List<String> getTokenResponseParameters(OAuthTokenReqMessageContext tokenMessageContext,
                                                      OAuthAppDO oAuthAppDO) {
 
-        List<String> parameters = new ArrayList<>(Arrays.asList(PARAM_ACCESS_TOKEN, PARAM_SCOPE, PARAM_EXPIRES_IN));
+        List<String> parameters = new ArrayList<>(
+                Arrays.asList(PARAM_ACCESS_TOKEN, PARAM_TOKEN_TYPE, PARAM_SCOPE, PARAM_EXPIRES_IN));
         if (isRefreshTokenAllowed(oAuthAppDO)) {
             parameters.add(PARAM_REFRESH_TOKEN);
         }
@@ -418,6 +420,12 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     .addClaim(AccessToken.ClaimNames.TOKEN_BINDING_TYPE.getName(),
                             tokenMessageContext.getTokenBinding().getBindingType());
         }
+    }
+
+    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims,
+                                                       boolean isRefreshTokenAllowed) {
+
+        return getAllowedOperations(oidcClaims, isRefreshTokenAllowed, false);
     }
 
     public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims, boolean isRefreshTokenAllowed,

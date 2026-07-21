@@ -349,6 +349,32 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
+    void testProcessSuccessResponseAddTokenResponseParameterMissingNameInvalid()
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                RESPONSE_PARAMETERS_PATH_PREFIX + TAIL_CHARACTER,
+                new ResponseParam(null, "some_value")));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
+    }
+
+    @Test
+    void testProcessSuccessResponseAddTokenResponseParameterEmptyNameInvalid()
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                RESPONSE_PARAMETERS_PATH_PREFIX + TAIL_CHARACTER,
+                new ResponseParam("", "some_value")));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNull(oAuthTokenReqMessageContext.getAdditionalTokenResponseParams());
+    }
+
+    @Test
     void testProcessSuccessResponseRemoveTokenResponseParameterValid()
             throws ActionExecutionResponseProcessorException {
 
