@@ -292,6 +292,18 @@ public class OAuthTokenReqMessageContext {
     }
 
     /**
+     * Checks if the given standard token endpoint response parameter has been suppressed from the response
+     * by the pre issue access token action.
+     *
+     * @param paramName standard token response parameter name, e.g. "refresh_token" or "id_token".
+     * @return true if the given parameter is suppressed from the token endpoint response.
+     */
+    public boolean isTokenResponseParamSuppressed(String paramName) {
+
+        return suppressedTokenResponseParams != null && suppressedTokenResponseParams.contains(paramName);
+    }
+
+    /**
      * Checks if pre-issue ID token actions have been executed.
      *
      * @return true if pre-issue ID token actions have been executed, false otherwise.

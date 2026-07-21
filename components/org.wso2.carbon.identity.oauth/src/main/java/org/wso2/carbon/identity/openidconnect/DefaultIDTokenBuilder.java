@@ -1225,6 +1225,17 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                 OAuthConstants.GrantTypes.DEVICE_CODE_URN.equals(grantType) ||
                 OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType));
 
+        // If the pre issue access token action has already requested the "id_token" response parameter to be
+        // removed from the token response, the ID token being built here will never be included in the response,
+        // so there is no need to execute the pre issue ID token action either.
+        if (tokenReqMessageContext.isTokenResponseParamSuppressed(OAuthConstants.ID_TOKEN)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping pre issue ID token action execution for client: " + clientId +
+                        " since the ID token is suppressed by the pre issue access token action.");
+            }
+            return false;
+        }
+
         // Pre-issue token action invocation is enabled at server level.
         // For the System applications, pre issue ID token actions will not be executed.
         // Fragment apps are used for internal authentication purposes(B2B scenarios) hence action execution is skipped.
