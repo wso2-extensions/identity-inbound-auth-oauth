@@ -72,8 +72,10 @@ public class OAuthTokenReqMessageContext {
 
     private Map<String, Object> additionalAccessTokenClaims;
 
-    // Additional custom parameters injected into the token endpoint response by the pre issue access token
-    // action, through the actions framework.
+    /**
+     * Additional custom parameters injected into the token endpoint response by the pre issue access token
+     * action, through the action framework.
+     */
     private Map<String, Object> additionalTokenResponseParams;
 
     private Set<String> suppressedTokenResponseParams;
