@@ -23,6 +23,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * OAuth 2 access token response DTO.
@@ -47,6 +48,7 @@ public class OAuth2AccessTokenRespDTO {
     private Map<String, String> parameters;
     private Map<String, Object> parameterObjects;
     private boolean isConsentedToken;
+    private Set<String> suppressedResponseParams;
 
     public ResponseHeader[] getResponseHeaders() {
         if (responseHeaders == null) {
@@ -263,5 +265,26 @@ public class OAuth2AccessTokenRespDTO {
     public void setIsConsentedToken(boolean isConsentedToken) {
 
         this.isConsentedToken = isConsentedToken;
+    }
+
+    /**
+     * Get the standard token endpoint response parameters to be suppressed from the response, e.g.
+     * "refresh_token" or "id_token".
+     *
+     * @return suppressed response parameter names.
+     */
+    public Set<String> getSuppressedResponseParams() {
+
+        return suppressedResponseParams == null ? Collections.emptySet() : suppressedResponseParams;
+    }
+
+    /**
+     * Set the standard token endpoint response parameters to be suppressed from the response.
+     *
+     * @param suppressedResponseParams suppressed response parameter names.
+     */
+    public void setSuppressedResponseParams(Set<String> suppressedResponseParams) {
+
+        this.suppressedResponseParams = suppressedResponseParams;
     }
 }

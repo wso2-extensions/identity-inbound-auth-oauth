@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
+import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -162,7 +163,8 @@ public class PreIssueAccessTokenResponseProcessorWithRefreshTokenTest {
                 .build();
 
         PreIssueAccessTokenEvent.Builder preIssueAccessTokenEventBuilder = new PreIssueAccessTokenEvent.Builder()
-                .accessToken(requestAccessTokenBuilder.build()).refreshToken(requestRefreshTokenBuilder.build());
+                .accessToken(requestAccessTokenBuilder.build()).refreshToken(requestRefreshTokenBuilder.build())
+                .response(new TokenResponse.Builder().build());
         ActionExecutionResponseContext<ActionInvocationSuccessResponse> responseContext =
                 ActionExecutionResponseContext.create(preIssueAccessTokenEventBuilder.build(), successResponse);
 

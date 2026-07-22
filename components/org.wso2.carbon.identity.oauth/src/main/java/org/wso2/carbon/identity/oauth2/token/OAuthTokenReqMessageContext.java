@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.dto.IDToken
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Oauth token request message context.
@@ -70,6 +71,14 @@ public class OAuthTokenReqMessageContext {
     private List<String> audiences;
 
     private Map<String, Object> additionalAccessTokenClaims;
+
+    /**
+     * Additional custom parameters injected into the token endpoint response by the pre issue access token
+     * action, through the action framework.
+     */
+    private Map<String, Object> additionalTokenResponseParams;
+
+    private Set<String> suppressedTokenResponseParams;
 
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
@@ -242,6 +251,58 @@ public class OAuthTokenReqMessageContext {
     public void setAdditionalAccessTokenClaims(Map<String, Object> additionalAccessTokenClaims) {
 
         this.additionalAccessTokenClaims = additionalAccessTokenClaims;
+    }
+
+    /**
+     * Get the additional custom parameters to be added to the token endpoint response.
+     *
+     * @return additional token response parameters.
+     */
+    public Map<String, Object> getAdditionalTokenResponseParams() {
+
+        return additionalTokenResponseParams;
+    }
+
+    /**
+     * Set the additional custom parameters to be added to the token endpoint response.
+     *
+     * @param additionalTokenResponseParams additional token response parameters.
+     */
+    public void setAdditionalTokenResponseParams(Map<String, Object> additionalTokenResponseParams) {
+
+        this.additionalTokenResponseParams = additionalTokenResponseParams;
+    }
+
+    /**
+     * Get the standard token endpoint response parameters to be suppressed from the response.
+     *
+     * @return suppressed token response parameter names.
+     */
+    public Set<String> getSuppressedTokenResponseParams() {
+
+        return suppressedTokenResponseParams;
+    }
+
+    /**
+     * Set the standard token endpoint response parameters to be suppressed from the response.
+     *
+     * @param suppressedTokenResponseParams suppressed token response parameter names.
+     */
+    public void setSuppressedTokenResponseParams(Set<String> suppressedTokenResponseParams) {
+
+        this.suppressedTokenResponseParams = suppressedTokenResponseParams;
+    }
+
+    /**
+     * Checks if the given standard token endpoint response parameter has been suppressed from the response
+     * by the pre issue access token action.
+     *
+     * @param paramName standard token response parameter name, e.g. "refresh_token" or "id_token".
+     * @return true if the given parameter is suppressed from the token endpoint response.
+     */
+    public boolean isTokenResponseParamSuppressed(String paramName) {
+
+        return suppressedTokenResponseParams != null && suppressedTokenResponseParams.contains(paramName);
     }
 
     /**

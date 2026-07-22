@@ -360,6 +360,25 @@ public class DefaultIDTokenBuilderTest {
     }
 
     @Test
+    public void testCheckExecutePreIssueIdTokensActionsSkippedWhenIdTokenSuppressed() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(CLIENT_ID);
+        tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
+        tokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+        tokenReqMessageContext.setSuppressedTokenResponseParams(Collections.singleton(OAuthConstants.ID_TOKEN));
+
+        Method method = DefaultIDTokenBuilder.class.getDeclaredMethod(
+                "checkExecutePreIssueIdTokensActions", OAuthTokenReqMessageContext.class);
+        method.setAccessible(true);
+        boolean result = (boolean) method.invoke(defaultIDTokenBuilder, tokenReqMessageContext);
+
+        Assert.assertFalse(result, "Pre issue ID token action execution should be skipped when the ID token is " +
+                "suppressed by the pre issue access token action.");
+    }
+
+    @Test
     public void testBuildIDTokenFiltersSharedUserAttribute() throws Exception {
 
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);

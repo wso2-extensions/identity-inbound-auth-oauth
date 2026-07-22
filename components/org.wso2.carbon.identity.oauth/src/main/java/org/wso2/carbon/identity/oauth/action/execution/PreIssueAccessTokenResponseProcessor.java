@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.action.execution;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.api.constant.ActionExecutionLogConstants;
@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
+import org.wso2.carbon.identity.oauth.action.model.ResponseParam;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -55,9 +56,11 @@ import org.wso2.carbon.utils.DiagnosticLog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,6 +75,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
+    private static final String RESPONSE_PARAMETERS_PATH_PREFIX = "/response/parameters/";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
@@ -105,6 +110,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         Optional<RefreshToken.Builder> optionalResponseRefreshTokenBuilder =
                 optionalRequestRefreshToken.map(RefreshToken::copy);
 
+        List<String> defaultResponseParameters = preIssueAccessTokenEvent.getResponse().getParameters();
+        Map<String, Object> additionalResponseParameters = new HashMap<>();
+        Set<String> suppressedResponseParameters = new HashSet<>();
+
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
         if (operationsToPerform != null) {
@@ -112,11 +121,13 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 switch (operation.getOp()) {
                     case ADD:
                         operationExecutionResultList.add(
-                                handleAddOperation(operation, requestAccessToken, responseAccessTokenBuilder));
+                                handleAddOperation(operation, requestAccessToken, responseAccessTokenBuilder,
+                                        defaultResponseParameters, additionalResponseParameters));
                         break;
                     case REMOVE:
                         operationExecutionResultList.add(
-                                handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder));
+                                handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder,
+                                        suppressedResponseParameters));
                         break;
                     case REPLACE:
                         operationExecutionResultList.add(
@@ -140,7 +151,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 .map(RefreshToken.Builder::build)
                 .orElse(null);
 
-        updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken);
+        updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken,
+                additionalResponseParameters, suppressedResponseParameters);
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
     }
@@ -172,11 +184,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             LoggerUtils.triggerDiagnosticLogEvent(diagLogBuilder);
         }
         if (LOG.isDebugEnabled()) {
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
             try {
-                String executionSummary = objectMapper.writeValueAsString(operationExecutionResultList);
+                String executionSummary = OBJECT_MAPPER.writeValueAsString(operationExecutionResultList);
                 LOG.debug(String.format("Processed response for action type: %s. Results of operations performed: %s",
                         actionType, executionSummary));
             } catch (JsonProcessingException e) {
@@ -249,7 +258,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
-                                           AccessToken responseAccessToken, RefreshToken responseRefreshToken) {
+                                           AccessToken responseAccessToken, RefreshToken responseRefreshToken,
+                                           Map<String, Object> additionalResponseParameters,
+                                           Set<String> suppressedResponseParameters) {
 
         tokenMessageContext.setScope(responseAccessToken.getScopes().toArray(new String[0]));
 
@@ -289,16 +300,62 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
         tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
 
+        if (!additionalResponseParameters.isEmpty()) {
+            tokenMessageContext.setAdditionalTokenResponseParams(additionalResponseParameters);
+        }
+        if (!suppressedResponseParameters.isEmpty()) {
+            tokenMessageContext.setSuppressedTokenResponseParams(suppressedResponseParameters);
+        }
+
         tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
     }
 
+    private OperationExecutionResult handleAddResponseParameterOperation(PerformableOperation operation,
+                                                                         List<String> standardParameters,
+                                                                         Map<String, Object> additionalParameters) {
+
+        Object valueToAdd = operation.getValue();
+        try {
+            ResponseParam param = OBJECT_MAPPER.convertValue(valueToAdd, ResponseParam.class);
+            if (StringUtils.isBlank(param.getName())) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Response parameter name cannot be empty.");
+            }
+            if (standardParameters.contains(param.getName()) || additionalParameters.containsKey(param.getName())) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "A response parameter already exists with the given name.");
+            }
+
+            additionalParameters.put(param.getName(), param.getValue());
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Response parameter added.");
+        } catch (IllegalArgumentException e) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid parameter.");
+        }
+    }
+
+    private OperationExecutionResult handleRemoveResponseParameterOperation(PerformableOperation operation,
+                                                                            Set<String> suppressedParameters) {
+
+        String parameterName = operation.getPath().substring(RESPONSE_PARAMETERS_PATH_PREFIX.length());
+        suppressedParameters.add(parameterName);
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Response parameter removed.");
+    }
+
     private OperationExecutionResult handleAddOperation(PerformableOperation operation, AccessToken requestAccessToken,
-                                                        AccessToken.Builder responseAccessToken) {
+                                                        AccessToken.Builder responseAccessToken,
+                                                        List<String> standardResponseParameters,
+                                                        Map<String, Object> additionalResponseParameters) {
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
             return addScope(operation, responseAccessToken);
         } else if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX)) {
             return addClaim(operation, requestAccessToken, responseAccessToken);
+        } else if (operation.getPath().startsWith(RESPONSE_PARAMETERS_PATH_PREFIX)) {
+            return handleAddResponseParameterOperation(operation, standardResponseParameters,
+                    additionalResponseParameters);
         }
 
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
@@ -395,9 +452,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
 
         Object claimToAdd = operation.getValue();
-        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
+            AccessToken.Claim claim = OBJECT_MAPPER.convertValue(claimToAdd, AccessToken.Claim.class);
             if (SCOPE_PROPERTY_NAME.equalsIgnoreCase(claim.getName())) {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "The operation path is invalid for the scope. Please use the path " + SCOPE_PATH_PREFIX);
@@ -423,12 +479,15 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private OperationExecutionResult handleRemoveOperation(PerformableOperation operation,
                                                            AccessToken requestAccessToken,
-                                                           AccessToken.Builder responseAccessToken) {
+                                                           AccessToken.Builder responseAccessToken,
+                                                           Set<String> suppressedResponseParameters) {
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
             return removeScope(operation, requestAccessToken, responseAccessToken);
         } else if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX)) {
             return removeClaim(operation, requestAccessToken, responseAccessToken);
+        } else if (operation.getPath().startsWith(RESPONSE_PARAMETERS_PATH_PREFIX)) {
+            return handleRemoveResponseParameterOperation(operation, suppressedResponseParameters);
         }
 
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,

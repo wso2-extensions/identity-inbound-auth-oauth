@@ -62,6 +62,7 @@ import org.wso2.carbon.utils.DiagnosticLog;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -96,6 +97,7 @@ public class OAuth2TokenEndpoint {
     private static final Log log = LogFactory.getLog(OAuth2TokenEndpoint.class);
     public static final String BEARER = "Bearer";
     private static final String SQL_ERROR = "sql_error";
+    private static final String REFRESH_TOKEN_RESPONSE_PARAM = "refresh_token";
 
     @POST
     @Path("/")
@@ -291,16 +293,22 @@ public class OAuth2TokenEndpoint {
             oauth2AccessTokenResp.setTokenType(BEARER);
         }
 
+        Set<String> suppressedResponseParams = oauth2AccessTokenResp.getSuppressedResponseParams();
+
         OAuth2TokenResponse.OAuthTokenResponseBuilder oAuthRespBuilder = OAuth2TokenResponse
                 .tokenResponse(HttpServletResponse.SC_OK)
                 .setAccessToken(oauth2AccessTokenResp.getAccessToken())
-                .setRefreshToken(oauth2AccessTokenResp.getRefreshToken())
                 .setExpiresIn(Long.toString(oauth2AccessTokenResp.getExpiresIn()))
                 .setTokenType(oauth2AccessTokenResp.getTokenType());
 
+        if (!suppressedResponseParams.contains(REFRESH_TOKEN_RESPONSE_PARAM)) {
+            oAuthRespBuilder.setRefreshToken(oauth2AccessTokenResp.getRefreshToken());
+        }
+
         oAuthRespBuilder.setScope(oauth2AccessTokenResp.getAuthorizedScopes());
 
-        if (oauth2AccessTokenResp.getIDToken() != null) {
+        if (oauth2AccessTokenResp.getIDToken() != null &&
+                !suppressedResponseParams.contains(OAuthConstants.ID_TOKEN)) {
             oAuthRespBuilder.setParam(OAuthConstants.ID_TOKEN, oauth2AccessTokenResp.getIDToken());
         }
 
