@@ -115,13 +115,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUB;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -645,6 +649,18 @@ public class AccessTokenIssuer {
                     diagnosticLogBuilder.inputParam(IMPERSONATOR, impersonatorId);
                 }
                 diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
+            } else if (tokReqMsgCtx.isDelegationRequest()) {
+                Object actor = tokReqMsgCtx.getProperty(ACTOR_SUBJECT);
+                if (actor == null) {
+                    Object existingActClaim = tokReqMsgCtx.getProperty(EXISTING_ACT_CLAIM);
+                    if (existingActClaim instanceof Map) {
+                        actor = ((Map<String, Object>) existingActClaim).get(SUB);
+                    }
+                }
+                if (actor != null) {
+                    diagnosticLogBuilder.inputParam(ACTOR, actor.toString());
+                }
+                diagnosticLogBuilder.resultMessage("Delegated Access token issued for the application.");
             } else {
                 diagnosticLogBuilder.resultMessage("Access token issued for the application.");
             }
