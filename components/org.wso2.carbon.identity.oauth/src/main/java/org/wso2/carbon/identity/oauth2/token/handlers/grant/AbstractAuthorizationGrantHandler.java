@@ -693,9 +693,25 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long validityPeriodInMillis = getConfiguredExpiryTimeForApplication(tokReqMsgCtx, consumerKey, oAuthAppBean);
         tokReqMsgCtx.setValidityPeriod(validityPeriodInMillis);
         tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
-        tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
+        tokReqMsgCtx.setAudiences(resolveAudiences(tokReqMsgCtx, consumerKey, oAuthAppBean));
 
         updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, existingTokenBean, tokReqMsgCtx);
+    }
+
+    /**
+     * Resolve the audience list to set on the access token. Defaults to the application's configured OIDC
+     * audiences; grant handlers may override to constrain it based on the request.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @param consumerKey  Consumer key of the application.
+     * @param oAuthAppBean Application information.
+     * @return the audience list to set on the token.
+     * @throws IdentityOAuth2Exception if an error occurred while resolving the audiences.
+     */
+    protected List<String> resolveAudiences(OAuthTokenReqMessageContext tokReqMsgCtx, String consumerKey,
+                                            OAuthAppDO oAuthAppBean) throws IdentityOAuth2Exception {
+
+        return OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean);
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean,
