@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -78,8 +79,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ID_TOKEN;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.handleGroupClaim;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
@@ -99,7 +98,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
-            return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
+            return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect,
+                    getServiceProviderTenantDomain(tokenReqMessageContext));
         } catch (OAuthSystemException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while adding claims of user: " + tokenReqMessageContext.getAuthorizedUser() +
@@ -116,7 +116,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(authzReqMessageContext);
-            return setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect);
+            return setClaimsToJwtClaimSet(jwtClaimsSet, userClaimsInOIDCDialect,
+                    getServiceProviderTenantDomain(authzReqMessageContext));
         } catch (OAuthSystemException e) {
             log.error("Error occurred while adding claims of user: " +
                     authzReqMessageContext.getAuthorizationReqDTO().getUser() + " to the JWTClaimSet used to " +
@@ -870,14 +871,18 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * @param userClaimsInOIDCDialect
      */
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
-            userClaimsInOIDCDialect) {
+            userClaimsInOIDCDialect, String spTenantDomain) {
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        Map<String, LocalClaim> mappedLocalClaims =
+                OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                        ? OAuth2Util.getMappedLocalClaims(spTenantDomain) : null;
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
+            if (OIDCClaimUtil.isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator,
+                    mappedLocalClaims)) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
                 for (String attributeValue : attributeValues) {
@@ -920,20 +925,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private boolean isLocalUser(OAuthAuthzReqMessageContext authzReqMessageContext) {
         return !authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser();
-    }
-
-    private boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator) {
-
-        // Address claim contains multi attribute separator but its not a multi valued attribute.
-        if (claimKey.equals(ADDRESS)) {
-            return false;
-        }
-        // To format the groups claim to always return as an array, we should consider single group as
-        // multi value attribute.
-        if (claimKey.equals(GROUPS)) {
-            return true;
-        }
-        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 
     private boolean isApiBasedAuthFlow(String accessToken, String authorizationCode) {
