@@ -30,6 +30,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -65,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -264,11 +267,13 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
 
             if (claimValues != null) {
+                Map<String, LocalClaim> oidcToLocalClaimMap =
+                        OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                                ? OAuth2Util.getLocalClaimMap(tenantDomain) : new HashMap<>();
                 for (String claimURI : new TreeSet<>(claimValues.keySet())) {
                     String claimVal = claimValues.get(claimURI);
-                    List<String> claimList = new ArrayList<>();
-                    if (useMultiValueSeparator && userAttributeSeparator != null &&
-                            claimVal.contains(userAttributeSeparator)) {
+                    if (isMultiValuedAttribute(oidcToLocalClaimMap.get(claimURI), claimVal)) {
+                        List<String> claimList = new ArrayList<>();
                         StringTokenizer st = new StringTokenizer(claimVal, userAttributeSeparator);
                         while (st.hasMoreElements()) {
                             String attValue = st.nextElement().toString();
@@ -298,6 +303,24 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
         OAuth2TokenValidationResponseDTO.AuthorizationContextToken token;
         token = messageContext.getResponseDTO().new AuthorizationContextToken("JWT", jwt.serialize());
         messageContext.getResponseDTO().setAuthorizationContextToken(token);
+    }
+
+
+    /**
+     * Checks whether a user value is multivalued, honouring local claim metadata when available.
+     *
+     * @param localClaim          Local claim object.
+     * @param claimValue          Claim value.
+     * @return Whether the value should be rendered as multivalued.
+     */
+    private boolean isMultiValuedAttribute(LocalClaim localClaim, String claimValue) {
+
+        if (localClaim == null) {
+            // Legacy separator-based detection.
+            return useMultiValueSeparator && userAttributeSeparator != null &&
+                    claimValue.contains(userAttributeSeparator);
+        }
+        return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
     }
 
     private SortedMap<String, String> filterClaimsFromCache(AuthenticatedUser authenticatedUser, ClaimCacheKey cacheKey,

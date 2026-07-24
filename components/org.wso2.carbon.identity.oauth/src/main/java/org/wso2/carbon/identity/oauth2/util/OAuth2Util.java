@@ -2323,51 +2323,40 @@ public class OAuth2Util {
     }
 
     /**
-     * Builds a claim URI (local and mapped OIDC dialect) to {@link LocalClaim} map. The value is
-     * read-only (shared with the claim metadata cache).
+     * This method is used to get the OIDC claim to local claim mapping for a given tenant domain.
      *
-     * @param tenantDomain Tenant domain to resolve claim metadata for.
-     * @return Map of {local + OIDC claim URI} to {@link LocalClaim}, or {@code null} if unavailable.
+     * @param tenantDomain Tenant domain.
+     * @return Map of OIDC claim to local claim mapping.
      */
-    public static Map<String, LocalClaim> getMappedLocalClaims(String tenantDomain) {
+    public static Map<String, LocalClaim> getOidcClaimToLocalClaimMap(String tenantDomain) {
 
         ClaimMetadataManagementService claimMetadataManagementService =
                 OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
-        if (claimMetadataManagementService == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("ClaimMetadataManagementService unavailable for tenant: " + tenantDomain);
-            }
-            return null;
-        }
+        Map<String, LocalClaim> mappedLocalClaims = getLocalClaimMap(tenantDomain);
         try {
-            List<LocalClaim> localClaims = claimMetadataManagementService.getLocalClaims(tenantDomain);
-            if (localClaims == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("No local claims for tenant: " + tenantDomain);
-                }
-                return null;
-            }
-            Map<String, LocalClaim> mappedLocalClaims = new HashMap<>();
-            for (LocalClaim localClaim : localClaims) {
-                mappedLocalClaims.put(localClaim.getClaimURI(), localClaim);
-            }
-            // Alias each OIDC dialect claim URI to its mapped local claim, so token paths (keyed by the
-            // OIDC URI) resolve the same metadata as the UserInfo path (keyed by the local URI).
             List<ExternalClaim> oidcClaims =
                     claimMetadataManagementService.getExternalClaims(OAuthConstants.OIDC_DIALECT, tenantDomain);
             if (oidcClaims != null) {
-                for (ExternalClaim oidcClaim : oidcClaims) {
-                    LocalClaim mappedLocalClaim = mappedLocalClaims.get(oidcClaim.getMappedLocalClaim());
-                    if (mappedLocalClaim != null) {
-                        mappedLocalClaims.put(oidcClaim.getClaimURI(), mappedLocalClaim);
-                    }
-                }
+                return oidcClaims.stream().collect(Collectors.toMap(ExternalClaim::getClaimURI,
+                        externalClaim -> mappedLocalClaims.get(externalClaim.getMappedLocalClaim())));
             }
-            return mappedLocalClaims;
+            return new HashMap<>();
         } catch (ClaimMetadataException e) {
-            log.error("Error reading claim metadata for tenant: " + tenantDomain
-                    + ". Falling back to legacy handling.", e);
-            return null;
+            log.error("Error reading OIDC claims of tenant: " + tenantDomain, e);
+            return new HashMap<>();
+        }
+    }
+
+    public static Map<String, LocalClaim> getLocalClaimMap(String tenantDomain) {
+
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        try {
+            return claimMetadataManagementService.getLocalClaims(tenantDomain).stream()
+                    .collect(Collectors.toMap(LocalClaim::getClaimURI, localClaim -> localClaim));
+        } catch (ClaimMetadataException e) {
+            log.error("Error reading claim metadata for tenant: " + tenantDomain, e);
+            return new HashMap<>();
         }
     }
 

@@ -762,19 +762,18 @@ public class OIDCClaimUtil {
 
     /**
      * Whether a claim should be rendered as an array, keyed on the claim URI (OIDC or local dialect).
-     * With metadata ({@code mappedLocalClaims} present and the claim found) the local claim
+     * With metadata ({@code localClaim} present and the claim found) the local claim
      * {@code multiValued} property decides; otherwise legacy separator-based detection is used.
      * Special cases: {@code address} is never an array, {@code groups} is always an array.
      *
      * @param claimKey                Claim URI (OIDC or local dialect).
      * @param claimValue              Raw claim value.
      * @param multiAttributeSeparator Multi attribute separator.
-     * @param mappedLocalClaims       Mapped local claims from {@link OAuth2Util#getMappedLocalClaims(String)},
-     *                                or {@code null}.
+     * @param localClaim              Local claim object.
      * @return True if the claim should be rendered as a multivalued attribute.
      */
     public static boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator,
-                                                 Map<String, LocalClaim> mappedLocalClaims) {
+                                                 LocalClaim localClaim) {
 
         // Address claim contains the multi attribute separator but is not a multi valued attribute.
         if (OAuthConstants.OIDCClaims.ADDRESS.equals(claimKey)) {
@@ -784,11 +783,8 @@ public class OIDCClaimUtil {
         if (OAuthConstants.OIDCClaims.GROUPS.equals(claimKey)) {
             return true;
         }
-        if (mappedLocalClaims != null) {
-            LocalClaim localClaim = mappedLocalClaims.get(claimKey);
-            if (localClaim != null) {
-                return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
-            }
+        if (localClaim != null) {
+            return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
         }
         return StringUtils.contains(claimValue, multiAttributeSeparator);
     }

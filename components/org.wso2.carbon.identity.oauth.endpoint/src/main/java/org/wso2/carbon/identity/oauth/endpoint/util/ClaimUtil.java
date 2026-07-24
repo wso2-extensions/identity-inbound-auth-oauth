@@ -267,9 +267,9 @@ public class ClaimUtil {
                 }
 
                 if (isNotEmpty(userClaims)) {
-                    Map<String, LocalClaim> mappedLocalClaims =
+                    Map<String, LocalClaim> oidcToLocalClaimMap =
                             OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
-                                    ? OAuth2Util.getMappedLocalClaims(userTenantDomain) : null;
+                                    ? OAuth2Util.getOidcClaimToLocalClaimMap(userTenantDomain) : new HashMap<>();
                     for (Map.Entry<String, String> entry : userClaims.entrySet()) {
                         //set local2sp role mappings
                         if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
@@ -294,8 +294,8 @@ public class ClaimUtil {
                             boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration
                                     .getInstance().getUserInfoMultiValueSupportEnabled();
                             if (isMultiValueSupportEnabledForUserinfoResponse &&
-                                    isMultiValuedAttribute(oidcClaimUri, entry.getKey(), claimValue,
-                                            mappedLocalClaims)) {
+                                    isMultiValuedAttribute(oidcClaimUri, oidcToLocalClaimMap.get(oidcClaimUri),
+                                            claimValue)) {
                                 String[] attributeValues = processMultiValuedAttribute(claimValue);
                                 mappedAppClaims.put(oidcClaimUri, attributeValues);
                             } else {
@@ -585,24 +585,17 @@ public class ClaimUtil {
      * Checks whether a user value is multivalued, honouring local claim metadata when available.
      *
      * @param oidcClaimUri        OIDC dialect claim URI.
-     * @param localClaimUri       Local claim URI (metadata lookup key).
+     * @param localClaim          Local claim object.
      * @param claimValue          Claim value.
-     * @param mappedLocalClaims  Claim metadata from {@link OAuth2Util#getMappedLocalClaims(String)},
-     *                            or {@code null} for legacy separator-based handling.
      * @return Whether the value should be rendered as multivalued.
      */
-    public static boolean isMultiValuedAttribute(String oidcClaimUri, String localClaimUri, String claimValue,
-                                                 Map<String, LocalClaim> mappedLocalClaims) {
+    public static boolean isMultiValuedAttribute(String oidcClaimUri, LocalClaim localClaim, String claimValue) {
 
-        if (mappedLocalClaims == null) {
+        if (localClaim == null) {
             return isMultiValuedAttribute(oidcClaimUri, claimValue);
         }
         if (GROUPS.equals(oidcClaimUri)) {
             return true;
-        }
-        LocalClaim localClaim = mappedLocalClaims.get(localClaimUri);
-        if (localClaim == null) {
-            return isMultiValuedAttribute(oidcClaimUri, claimValue);
         }
         return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
     }

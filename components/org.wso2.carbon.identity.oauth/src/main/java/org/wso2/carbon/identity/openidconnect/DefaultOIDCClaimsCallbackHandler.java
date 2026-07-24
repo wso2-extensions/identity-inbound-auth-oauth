@@ -875,14 +875,14 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
-        Map<String, LocalClaim> mappedLocalClaims =
+        Map<String, LocalClaim> oidcToLocalClaimMap =
                 OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
-                        ? OAuth2Util.getMappedLocalClaims(spTenantDomain) : null;
+                        ? OAuth2Util.getOidcClaimToLocalClaimMap(spTenantDomain) : new HashMap<>();
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
             if (OIDCClaimUtil.isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator,
-                    mappedLocalClaims)) {
+                    oidcToLocalClaimMap.get(claimKey))) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
                 for (String attributeValue : attributeValues) {

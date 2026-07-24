@@ -40,10 +40,10 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
 
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
-            Map<String, LocalClaim> mappedLocalClaims =
+            Map<String, LocalClaim> oidcToLocalClaimMap =
                     OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
-                            ? OAuth2Util.getMappedLocalClaims(PrivilegedCarbonContext
-                            .getThreadLocalCarbonContext().getTenantDomain()) : null;
+                            ? OAuth2Util.getOidcClaimToLocalClaimMap(PrivilegedCarbonContext
+                            .getThreadLocalCarbonContext().getTenantDomain()) : new HashMap<>();
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
 
                 if (entry.getKey().getRemoteClaim() == null || IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(
@@ -51,17 +51,13 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                     continue;
                 }
                 String claimValue = entry.getValue();
-                String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
-                String localClaimUri = entry.getKey().getLocalClaim() == null ? null
-                        : entry.getKey().getLocalClaim().getClaimUri();
-                boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration.getInstance()
-                        .getUserInfoMultiValueSupportEnabled();
-                if (isMultiValueSupportEnabledForUserinfoResponse &&
-                        ClaimUtil.isMultiValuedAttribute(claimUri, localClaimUri, claimValue, mappedLocalClaims)) {
+                String oidcClaim = entry.getKey().getRemoteClaim().getClaimUri();
+                if (OAuthServerConfiguration.getInstance().getUserInfoMultiValueSupportEnabled() &&
+                        ClaimUtil.isMultiValuedAttribute(oidcClaim, oidcToLocalClaimMap.get(oidcClaim), claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
-                    claims.put(claimUri, attributeValues);
+                    claims.put(oidcClaim, attributeValues);
                 } else {
-                    claims.put(claimUri, claimValue);
+                    claims.put(oidcClaim, claimValue);
                 }
             }
         }
