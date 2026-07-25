@@ -65,6 +65,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.RO
 public abstract class AbstractUserInfoResponseBuilder implements UserInfoResponseBuilder {
 
     private static final Log log = LogFactory.getLog(AbstractUserInfoResponseBuilder.class);
+    private static final String RECOMPUTE_SUBJECT_CLAIM_FOR_ALTERNATE_SUBJECT_IDENTIFIER =
+            "OAuth.RecomputeSubjectClaimForAlternateSubjectIdentifier";
 
     @Override
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
@@ -240,6 +242,17 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      String spTenantDomain,
                                      OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(RECOMPUTE_SUBJECT_CLAIM_FOR_ALTERNATE_SUBJECT_IDENTIFIER))) {
+            ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig().getSubjectClaimUri();
+            if (StringUtils.isNotBlank(subjectClaimUri)) {
+                Object subjectClaimValue = userClaims.get(OAuth2Util.SUB);
+                if (subjectClaimValue != null && StringUtils.isNotBlank(subjectClaimValue.toString())) {
+                    return subjectClaimValue.toString();
+                }
+            }
+        }
 
         AuthenticatedUser authenticatedUser;
         try {
