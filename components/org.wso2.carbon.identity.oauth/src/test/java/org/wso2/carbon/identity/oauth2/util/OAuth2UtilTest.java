@@ -65,6 +65,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -3103,6 +3104,71 @@ public class OAuth2UtilTest {
             OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
             verify(log, times(1))
                     .error(claimMetadataException.getMessage(), claimMetadataException);
+        }
+    }
+
+    @Test
+    public void testGetLocalClaimMap() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+
+            LocalClaim emailLocalClaim = new LocalClaim("http://wso2.org/claims/emailaddress");
+            LocalClaim groupsLocalClaim = new LocalClaim("http://wso2.org/claims/groups");
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Arrays.asList(emailLocalClaim, groupsLocalClaim));
+
+            Map<String, LocalClaim> localClaimMap = OAuth2Util.getLocalClaimMap(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertEquals(localClaimMap.size(), 2);
+            Assert.assertSame(localClaimMap.get("http://wso2.org/claims/emailaddress"), emailLocalClaim);
+            Assert.assertSame(localClaimMap.get("http://wso2.org/claims/groups"), groupsLocalClaim);
+
+            // On a claim metadata failure an empty map is returned instead of propagating the exception.
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(new ClaimMetadataException("error"));
+            Assert.assertTrue(OAuth2Util.getLocalClaimMap(SUPER_TENANT_DOMAIN_NAME).isEmpty());
+        }
+    }
+
+    @Test
+    public void testGetOidcClaimToLocalClaimMap() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+
+            LocalClaim emailLocalClaim = new LocalClaim("http://wso2.org/claims/emailaddress");
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Collections.singletonList(emailLocalClaim));
+
+            ExternalClaim mappedOidcClaim = new ExternalClaim(OIDC_DIALECT,
+                    "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
+            // This OIDC claim maps to a local claim that is not present in the local claim map (e.g. a
+            // dangling mapping); it must be skipped rather than cause a null value in the built map.
+            ExternalClaim danglingOidcClaim = new ExternalClaim(OIDC_DIALECT,
+                    "http://wso2.org/oidc/claim/unknown", "http://wso2.org/claims/deleted");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Arrays.asList(mappedOidcClaim, danglingOidcClaim));
+
+            Map<String, LocalClaim> oidcToLocalClaimMap =
+                    OAuth2Util.getOidcClaimToLocalClaimMap(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertEquals(oidcToLocalClaimMap.size(), 1);
+            Assert.assertSame(oidcToLocalClaimMap.get("http://wso2.org/oidc/claim/email"), emailLocalClaim);
+            Assert.assertFalse(oidcToLocalClaimMap.containsKey("http://wso2.org/oidc/claim/unknown"));
+
+            // On a claim metadata failure an empty map is returned instead of propagating the exception.
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(new ClaimMetadataException("error"));
+            Assert.assertTrue(OAuth2Util.getOidcClaimToLocalClaimMap(SUPER_TENANT_DOMAIN_NAME).isEmpty());
         }
     }
 
