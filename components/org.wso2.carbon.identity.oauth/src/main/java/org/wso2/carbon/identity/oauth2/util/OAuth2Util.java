@@ -2325,8 +2325,8 @@ public class OAuth2Util {
     /**
      * This method is used to get the OIDC claim to local claim mapping for a given tenant domain.
      *
-     * @param tenantDomain Tenant domain.
-     * @return Map of OIDC claim to local claim mapping.
+     * `@param` tenantDomain Tenant domain.
+     * `@return` Map of OIDC claim to local claim mapping.
      */
     public static Map<String, LocalClaim> getOidcClaimToLocalClaimMap(String tenantDomain) {
 
@@ -2337,8 +2337,14 @@ public class OAuth2Util {
             List<ExternalClaim> oidcClaims =
                     claimMetadataManagementService.getExternalClaims(OAuthConstants.OIDC_DIALECT, tenantDomain);
             if (oidcClaims != null) {
-                return oidcClaims.stream().collect(Collectors.toMap(ExternalClaim::getClaimURI,
-                        externalClaim -> mappedLocalClaims.get(externalClaim.getMappedLocalClaim())));
+                Map<String, LocalClaim> oidcClaimToLocalClaimMap = new HashMap<>();
+                for (ExternalClaim oidcClaim : oidcClaims) {
+                    LocalClaim mappedLocalClaim = mappedLocalClaims.get(oidcClaim.getMappedLocalClaim());
+                    if (mappedLocalClaim != null) {
+                        oidcClaimToLocalClaimMap.put(oidcClaim.getClaimURI(), mappedLocalClaim);
+                    }
+                }
+                return oidcClaimToLocalClaimMap;
             }
             return new HashMap<>();
         } catch (ClaimMetadataException e) {
