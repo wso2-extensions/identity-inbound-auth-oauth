@@ -37,6 +37,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -64,6 +65,14 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private int id;
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
+    /*
+     Absolute expiry time (epoch millis) of the latest client secret. Kept out of the exported service provider in
+     both formats (@XmlTransient/@JsonIgnore) as it is tied to a secret the export strips; on import the expiry
+     travels per-secret in consumerSecrets.
+     */
+    @XmlTransient
+    @JsonIgnore
+    private Long oauthConsumerSecretExpiryTime;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -93,6 +102,22 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
+    /*
+     Cached metadata (hash + expiry) of every client secret of this application, populated on load when multiple
+     client secrets are enabled. Held only in memory / the distributed cache for authentication; kept out of the
+     exported service provider XML (@XmlTransient) as it carries secret hashes.
+     */
+    @XmlTransient
+    @JsonIgnore
+    private List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList;
+    /*
+     Full client secret list (value, name, expiry) of this application, populated ONLY during export in plaintext
+     persistence mode. Serialized into the exported service provider (both XML via JAXB and JSON via Jackson) so
+     import can recreate every secret; it is never populated on a normal load, so it is not held in the cache.
+     */
+    @XmlElementWrapper(name = "consumerSecrets")
+    @XmlElement(name = "consumerSecret")
+    private List<OAuthConsumerSecretDO> consumerSecrets;
     @XmlTransient
     @JsonIgnore
     private AuthenticatedUser appOwner;
@@ -170,6 +195,30 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
     public void setOauthConsumerSecret(String oauthConsumerSecret) {
         this.oauthConsumerSecret = oauthConsumerSecret;
+    }
+
+    public Long getOauthConsumerSecretExpiryTime() {
+        return oauthConsumerSecretExpiryTime;
+    }
+
+    public void setOauthConsumerSecretExpiryTime(Long oauthConsumerSecretExpiryTime) {
+        this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
+    }
+
+    public List<OAuthConsumerSecretMetadataDO> getConsumerSecretMetadataList() {
+        return consumerSecretMetadataList;
+    }
+
+    public void setConsumerSecretMetadataList(List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList) {
+        this.consumerSecretMetadataList = consumerSecretMetadataList;
+    }
+
+    public List<OAuthConsumerSecretDO> getConsumerSecrets() {
+        return consumerSecrets;
+    }
+
+    public void setConsumerSecrets(List<OAuthConsumerSecretDO> consumerSecrets) {
+        this.consumerSecrets = consumerSecrets;
     }
 
     public String getApplicationName() {
@@ -758,4 +807,5 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         return OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
                 clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
     }
+
 }

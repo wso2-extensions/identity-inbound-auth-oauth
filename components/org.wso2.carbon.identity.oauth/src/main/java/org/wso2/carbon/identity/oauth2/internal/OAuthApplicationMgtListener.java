@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -57,6 +58,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
@@ -282,6 +284,16 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         String oauthConsumerKey = oAuthConsumerAppDTO.getOauthConsumerKey();
                         boolean isExistingClient = dao.isDuplicateConsumer(oauthConsumerKey);
 
+                        /* A client secret list in the import file must accompany the client secret it belongs to;
+                           a file carrying the list without the secret is self-inconsistent, as an export always
+                           writes both. */
+                        if (!isExistingClient && OAuth2Util.isMultipleClientSecretsEnabled()
+                                && StringUtils.isBlank(oAuthConsumerAppDTO.getOauthConsumerSecret())
+                                && CollectionUtils.isNotEmpty(oAuthAppDO.getConsumerSecrets())) {
+                            throw new IdentityOAuthClientException("The client secret list is present in the "
+                                    + "import file but the client secret is missing.");
+                        }
+
                         // Set the client secret before doing registering/updating the oauth app.
                         if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
                             if (isExistingClient) {
@@ -296,9 +308,46 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         OAuthAdminServiceImpl oAuthAdminService =
                                 OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
                         if (isExistingClient) {
+                            // Update-import: preserve the existing secrets; the imported secret list is ignored.
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
-                            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            if (OAuth2Util.isMultipleClientSecretsEnabled()
+                                    && CollectionUtils.isNotEmpty(oAuthAppDO.getConsumerSecrets())) {
+                                List<OAuthConsumerSecretDO> importedSecrets = oAuthAppDO.getConsumerSecrets();
+                                /* The secret on the DTO is the latest and is created with the application record.
+                                   Drop its entry from the imported list; its expiry goes to the completion call,
+                                   so an already expired secret is imported as it is. */
+                                String latestSecretValue = oAuthConsumerAppDTO.getOauthConsumerSecret();
+                                boolean latestSecretMatched = false;
+                                Long latestSecretExpiryTime = null;
+                                List<OAuthConsumerSecretDO> nonLatestSecrets = new ArrayList<>();
+                                for (OAuthConsumerSecretDO importedSecret : importedSecrets) {
+                                    // A negative expiry time marks a malformed file.
+                                    if (importedSecret.getExpiryTime() != null
+                                            && importedSecret.getExpiryTime() < 0) {
+                                        throw new IdentityOAuthClientException("The client secret list contains "
+                                                + "an invalid expiry time.");
+                                    }
+                                    if (StringUtils.equals(importedSecret.getSecretValue(), latestSecretValue)) {
+                                        latestSecretMatched = true;
+                                        latestSecretExpiryTime = importedSecret.getExpiryTime();
+                                    } else {
+                                        nonLatestSecrets.add(importedSecret);
+                                    }
+                                }
+                                /* An export always includes the latest secret in the list; a client secret absent
+                                   from its own list marks a self-inconsistent, hand-edited file. */
+                                if (!latestSecretMatched) {
+                                    throw new IdentityOAuthClientException("The client secret in the import file "
+                                            + "does not match any entry in the client secret list.");
+                                }
+                                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                                dao.completeImportedOAuthConsumerSecrets(oauthConsumerKey, nonLatestSecrets,
+                                        latestSecretExpiryTime);
+                                AppInfoCache.getInstance().clearCacheEntry(oauthConsumerKey);
+                            } else {
+                                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            }
                         }
                         return;
                     }
@@ -362,6 +411,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
                                 .equals(tokenProcessorName) || !exportSecrets) {
                             authApplication.setOauthConsumerSecret(null);
+                        } else if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                            /* Plaintext persistence with secret export enabled: export the full client secret list
+                               (value, name, expiry) ordered latest-first so import can recreate every secret. */
+                            authApplication.setConsumerSecrets(dao.getOAuthConsumerSecrets(authApplication.getId()));
                         }
 
                         Property[] properties = authConfig.getProperties();

@@ -156,6 +156,17 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                 if (!StringUtils.equals(oauthApp.getOauthConsumerSecret(), consumerAppDTO.getOauthConsumerSecret())) {
                     throw new IdentityOAuthClientException("Invalid ClientSecret provided for update.");
                 }
+                /* The client secret expiry time is bound to the secret itself and cannot be changed through an
+                   application update. Keep the existing value when not provided and reject an attempt to change
+                   it; both values are Unix epoch seconds, where zero denotes a never-expiring secret. */
+                Long existingSecretExpiryTime = oauthApp.getOauthConsumerSecretExpiryTime();
+                Long providedSecretExpiryTime = consumerAppDTO.getOauthConsumerSecretExpiryTime();
+                if (providedSecretExpiryTime == null) {
+                    consumerAppDTO.setOauthConsumerSecretExpiryTime(existingSecretExpiryTime);
+                } else if (!providedSecretExpiryTime.equals(existingSecretExpiryTime)) {
+                    throw new IdentityOAuthClientException(
+                            "The client secret expiry time cannot be modified with the application update.");
+                }
 
                 /*
                  Checking whether the application is a fragment app by checking the application properties and set

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -32,6 +32,7 @@ public class Application implements Serializable {
     private String clientName = null;
     private String clientId = null;
     private String clientSecret = null;
+    private Long clientSecretExpiresAt = null;
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
     private String extApplicationDisplayName = null;
@@ -124,6 +125,16 @@ public class Application implements Serializable {
     public void setClientSecret(String clientSecret) {
 
         this.clientSecret = clientSecret;
+    }
+
+    public Long getClientSecretExpiresAt() {
+
+        return clientSecretExpiresAt;
+    }
+
+    public void setClientSecretExpiresAt(Long clientSecretExpiresAt) {
+
+        this.clientSecretExpiresAt = clientSecretExpiresAt;
     }
 
     public List<String> getRedirectUris() {
@@ -431,6 +442,7 @@ public class Application implements Serializable {
                 "  clientName: " + this.clientName + "\n" +
                 "  clientId: " + this.clientId + "\n" +
                 "  clientSecret: " + this.clientSecret + "\n" +
+                "  clientSecretExpiresAt: " + this.clientSecretExpiresAt + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
                 "}\n";

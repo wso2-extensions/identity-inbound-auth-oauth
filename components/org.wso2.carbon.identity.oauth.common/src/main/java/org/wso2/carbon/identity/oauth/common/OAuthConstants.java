@@ -302,6 +302,8 @@ public final class OAuthConstants {
 
     public static final String REQUESTED_ACTOR = "requested_actor";
 
+    public static final String DEFAULT_SECRET_ID = "defaultSecretId";
+
     private OAuthConstants() {
 
     }
@@ -771,6 +773,8 @@ public final class OAuthConstants {
         public static final String UPDATE_OAUTH_APPLICATION = "update-oauth-application";
         public static final String DELETE_OAUTH_APPLICATION = "delete-oauth-application";
         public static final String REGENERATE_CLIENT_SECRET = "regenerate-client-secret";
+        public static final String CREATE_CLIENT_SECRET = "create-client-secret";
+        public static final String DELETE_CLIENT_SECRET = "delete-client-secret";
         public static final String UPDATE_APP_STATE = "update-app-state";
 
         /**
@@ -926,6 +930,15 @@ public final class OAuthConstants {
         public static final String SCOPE = "scope";
         public static final String GRANT_TYPE = "grantType";
         public static final String AUTHORIZATION_PARTY = "azp";
+    }
+
+    /**
+     * Enum for client secret statuses, judged against the secret's expiry time.
+     */
+    public enum ClientSecretStatus {
+
+        ACTIVE,
+        EXPIRED
     }
 
 }

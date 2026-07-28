@@ -727,6 +727,7 @@ public class DCRMServiceTest {
                 "  clientName: " + oAuthConsumerApp.getApplicationName() + "\n" +
                 "  clientId: " + oAuthConsumerApp.getOauthConsumerKey() + "\n" +
                 "  clientSecret: " + oAuthConsumerApp.getOauthConsumerSecret() + "\n" +
+                "  clientSecretExpiresAt: 0\n" +
                 "  redirectUris: " +  Arrays.asList(oAuthConsumerApp.getCallbackUrl()) + "\n" +
                 "  grantTypes: " + Arrays.asList(oAuthConsumerApp.getGrantTypes().split(" ")) + "\n" +
                 "}\n";
