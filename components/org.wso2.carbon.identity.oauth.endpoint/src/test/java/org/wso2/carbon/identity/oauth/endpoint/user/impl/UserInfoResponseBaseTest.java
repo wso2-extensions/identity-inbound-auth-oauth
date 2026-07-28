@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -102,6 +103,15 @@ public class UserInfoResponseBaseTest {
 
     public static final String CUSTOM_CLAIM_VALUE = "custom_claim_value";
     public static final String[] OIDC_SCOPE_ARRAY = new String[]{OIDC_SCOPE};
+
+    // Fixtures for the alternate-subject-identifier recompute knob (issue #7720).
+    public static final String RECOMPUTE_SUBJECT_CLAIM_KNOB =
+            "OAuth.RecomputeSubjectClaimForAlternateSubjectIdentifier";
+    public static final String ALTERNATE_SUBJECT_CLAIM_URI = "http://wso2.org/claims/emailaddress";
+    // Value persisted on the access token at first issuance (before the email change).
+    public static final String STALE_SUBJECT_VALUE = "bob@gmail.com";
+    // Current value of the subject-source claim, present fresh in userClaims (after the email change).
+    public static final String FRESH_SUBJECT_VALUE = "bob1@gmail.com";
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String SUBJECT_TYPE = "subject_type";
@@ -243,6 +253,17 @@ public class UserInfoResponseBaseTest {
         serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                 .setUseUserstoreDomainInLocalSubjectIdentifier(appendUserStoreDomain);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+    }
+
+    /**
+     * Configure the service provider (prepared by {@link #prepareApplicationManagementService}) with an alternate
+     * subject identifier, i.e. a user-attribute claim URI used as the OIDC subject.
+     */
+    protected void setAlternateSubjectClaimUri(String subjectClaimUri) throws Exception {
+
+        ServiceProvider serviceProvider = applicationManagementService.getServiceProviderByClientId(
+                CLIENT_ID, IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME);
+        serviceProvider.getLocalAndOutBoundAuthenticationConfig().setSubjectClaimUri(subjectClaimUri);
     }
 
     protected void prepareUserInfoEndpointConfig(MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig) {
