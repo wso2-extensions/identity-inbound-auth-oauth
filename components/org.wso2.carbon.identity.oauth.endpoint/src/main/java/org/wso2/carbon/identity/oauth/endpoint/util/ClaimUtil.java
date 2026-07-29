@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -265,6 +267,9 @@ public class ClaimUtil {
                 }
 
                 if (isNotEmpty(userClaims)) {
+                    Map<String, LocalClaim> mappedLocalClaims =
+                            OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                                    ? OAuth2Util.getMappedLocalClaims(userTenantDomain) : null;
                     for (Map.Entry<String, String> entry : userClaims.entrySet()) {
                         //set local2sp role mappings
                         if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
@@ -289,7 +294,8 @@ public class ClaimUtil {
                             boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration
                                     .getInstance().getUserInfoMultiValueSupportEnabled();
                             if (isMultiValueSupportEnabledForUserinfoResponse &&
-                                    isMultiValuedAttribute(oidcClaimUri, claimValue)) {
+                                    isMultiValuedAttribute(oidcClaimUri, entry.getKey(), claimValue,
+                                            mappedLocalClaims)) {
                                 String[] attributeValues = processMultiValuedAttribute(claimValue);
                                 mappedAppClaims.put(oidcClaimUri, attributeValues);
                             } else {
@@ -573,6 +579,32 @@ public class ClaimUtil {
             return true;
         }
         return StringUtils.contains(claimValue, FrameworkUtils.getMultiAttributeSeparator());
+    }
+
+    /**
+     * Checks whether a user value is multivalued, honouring local claim metadata when available.
+     *
+     * @param oidcClaimUri        OIDC dialect claim URI.
+     * @param localClaimUri       Local claim URI (metadata lookup key).
+     * @param claimValue          Claim value.
+     * @param mappedLocalClaims  Claim metadata from {@link OAuth2Util#getMappedLocalClaims(String)},
+     *                            or {@code null} for legacy separator-based handling.
+     * @return Whether the value should be rendered as multivalued.
+     */
+    public static boolean isMultiValuedAttribute(String oidcClaimUri, String localClaimUri, String claimValue,
+                                                 Map<String, LocalClaim> mappedLocalClaims) {
+
+        if (mappedLocalClaims == null) {
+            return isMultiValuedAttribute(oidcClaimUri, claimValue);
+        }
+        if (GROUPS.equals(oidcClaimUri)) {
+            return true;
+        }
+        LocalClaim localClaim = mappedLocalClaims.get(localClaimUri);
+        if (localClaim == null) {
+            return isMultiValuedAttribute(oidcClaimUri, claimValue);
+        }
+        return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
     }
 
     /**
