@@ -85,7 +85,7 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
                 actClaim.put(ACT, existingActClaim);
             }
             if (log.isDebugEnabled()) {
-                log.debug("Delegation: added actor '" + actorSubject + "', nested existing act: "
+                log.debug("Delegation: added a new actor to the act claim. Nested existing act: "
                         + (existingActClaim instanceof Map));
             }
             return actClaim;
