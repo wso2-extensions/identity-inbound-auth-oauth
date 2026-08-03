@@ -29,6 +29,8 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HttpMethod;
@@ -37,7 +39,7 @@ import javax.ws.rs.core.HttpHeaders;
 /**
  * Validates the schema and authorization header according to the specification
  *
- * @see http://openid.net/specs/openid-connect-basic-1_0-22.html#anchor6
+ * @see <a href="http://openid.net/specs/openid-connect-basic-1_0-22.html#anchor6">OpenID Connect Basic 1.0</a>
  */
 public class UserInforRequestDefaultValidator implements UserInfoRequestValidator {
 
@@ -48,80 +50,129 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     private static final String CONTENT_TYPE_HEADER_VALUE = "application/x-www-form-urlencoded";
     public static final String CHARSET = "charset=";
 
+    private static final Pattern AUTHZ_HEADER_PATTERN = Pattern.compile("(\\S+)(?: +(\\S+))?");
+
     @Override
     public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
 
         String authzHeaders = request.getHeader(HttpHeaders.AUTHORIZATION);
+
         if (authzHeaders == null) {
-            String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
-            // To validate the Content_Type header.
-            if (StringUtils.isBlank(contentTypeHeaders)) {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Authorization or Content-Type header is missing");
-            }
-
-            // Restricting passing the access token via request body in GET requests.
-            if (HttpMethod.GET.equals(request.getMethod())) {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Authorization header is missing");
-            }
-            if (contentTypeHeaders.trim().startsWith(CONTENT_TYPE_HEADER_VALUE)) {
-                String charset = getCharsetFromContentType(contentTypeHeaders);
-
-                // Use a default charset if none is provided
-                Charset encodingCharset;
-                try {
-                    encodingCharset = charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
-                } catch (IllegalArgumentException e) {
-                    encodingCharset = StandardCharsets.UTF_8;
-                }
-                String[] arrAccessToken = new String[2];
-                String requestBody = EndpointUtil.readRequestBody(request, encodingCharset);
-                String[] arrAccessTokenNew;
-                // To check whether the entity-body consist entirely of ASCII [USASCII] characters.
-                if (!isPureAscii(requestBody)) {
-                    throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                            "Body contains non ASCII characters");
-                }
-                if (requestBody.contains(ACCESS_TOKEN_PARAM)) {
-                    arrAccessToken = requestBody.trim().split(ACCESS_TOKEN_PARAM);
-                    if (arrAccessToken[1].contains("&")) {
-                        arrAccessTokenNew = arrAccessToken[1].split("&", 2);
-                        return arrAccessTokenNew[0];
-                    }
-                }
-                return arrAccessToken[1];
-            } else {
-                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
-                        "Content-Type header is wrong");
-            }
+            return extractTokenFromBody(request);
         }
 
-        String[] authzHeaderInfo = authzHeaders.trim().split(" ");
+        return extractTokenFromHeader(authzHeaders, request);
+    }
 
-        if (authzHeaderInfo.length < 2) {
+    /**
+     * Extracts the access token from the HTTP request body for form-urlencoded requests.
+     *
+     * @param request The HttpServletRequest.
+     * @return The extracted access token.
+     * @throws UserInfoEndpointException If the request body is malformed or the token is missing.
+     */
+    private String extractTokenFromBody(HttpServletRequest request) throws UserInfoEndpointException {
+        String contentTypeHeaders = request.getHeader(HttpHeaders.CONTENT_TYPE);
+        // To validate the Content_Type header.
+        if (StringUtils.isBlank(contentTypeHeaders)) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Authorization or Content-Type header is missing");
+        }
+
+        // Restricting passing the access token via request body in GET requests.
+        if (HttpMethod.GET.equals(request.getMethod())) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Authorization header is missing");
+        }
+
+        if (contentTypeHeaders.trim().startsWith(CONTENT_TYPE_HEADER_VALUE)) {
+            String charset = getCharsetFromContentType(contentTypeHeaders);
+
+            // Use a default charset if none is provided
+            Charset encodingCharset;
+            try {
+                encodingCharset = charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
+            } catch (IllegalArgumentException e) {
+                encodingCharset = StandardCharsets.UTF_8;
+            }
+
+            String[] arrAccessToken = new String[2];
+            String requestBody = EndpointUtil.readRequestBody(request, encodingCharset);
+            String[] arrAccessTokenNew;
+            // To check whether the entity-body consist entirely of ASCII [USASCII] characters.
+            if (!isPureAscii(requestBody)) {
+                throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                        "Body contains non ASCII characters");
+            }
+
+            if (requestBody.contains(ACCESS_TOKEN_PARAM)) {
+                arrAccessToken = requestBody.trim().split(ACCESS_TOKEN_PARAM);
+
+                if (arrAccessToken.length < 2 || StringUtils.isBlank(arrAccessToken[1])) {
+                    throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                            "Access token value is missing in request body");
+                }
+
+                if (arrAccessToken[1].contains("&")) {
+                    arrAccessTokenNew = arrAccessToken[1].split("&", 2);
+                    return arrAccessTokenNew[0];
+                }
+            }
+
+            return arrAccessToken[1];
+        } else {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Content-Type header is wrong");
+        }
+    }
+
+    /**
+     * Extracts the access token from the HTTP Authorization header.
+     *
+     * @param authzHeaders The Authorization header string.
+     * @param request      The HttpServletRequest.
+     * @return The extracted access token.
+     * @throws UserInfoEndpointException If the header format is invalid or the token is missing.
+     */
+    private String extractTokenFromHeader(String authzHeaders, HttpServletRequest request)
+            throws UserInfoEndpointException {
+        Matcher matcher = AUTHZ_HEADER_PATTERN.matcher(authzHeaders.trim());
+
+        if (!matcher.matches()) {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Invalid Authorization header format"
             );
         }
 
-        String authScheme = authzHeaderInfo[0];
+        String authScheme = matcher.group(1);
+        String accessToken = matcher.group(2);
 
         if (BEARER.equalsIgnoreCase(authScheme)) {
             // Bearer token. For a Bearer token no additional DPoP header is expected.
-            return authzHeaderInfo[1];
+            if (StringUtils.isBlank(accessToken)) {
+                throw new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                );
+            }
+            return accessToken;
         } else if (DPOP.equals(authScheme)) {
-            // DPoP token: the request MUST include a DPoP header
+            // DPoP token: the request MUST include a DPoP header.
+            if (StringUtils.isBlank(accessToken)) {
+                throw new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP token missing"
+                );
+            }
+
             String dpopHeader = request.getHeader(DPOP);
             if (StringUtils.isBlank(dpopHeader)) {
                 throw new UserInfoEndpointException(
                         OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP header is required with DPoP tokens"
                 );
             }
-            return authzHeaderInfo[1];
+            return accessToken;
         } else {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Invalid Authorization header format"
             );
         }
     }
