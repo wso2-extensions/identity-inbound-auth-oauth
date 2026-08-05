@@ -55,6 +55,22 @@ public class EncryptionDecryptionPersistenceProcessorTest {
     }
 
     @Test
+    public void testGetPreprocessedClientSecretWithSuccessfulDecryption()
+            throws CryptoException, IdentityOAuth2Exception {
+
+        try (MockedStatic<CryptoUtil> cryptoUtil = mockStatic(CryptoUtil.class)) {
+            CryptoUtil mockCryptoUtil = mock(CryptoUtil.class);
+            byte[] decryptedSecret = "decryptedSecret".getBytes(StandardCharsets.UTF_8);
+            when(mockCryptoUtil.base64DecodeAndDecrypt("encryptedSecret")).thenReturn(decryptedSecret);
+            cryptoUtil.when(() -> CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+                    any(RegistryService.class))).thenReturn(mockCryptoUtil);
+            cryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtil);
+
+            assertEquals(testclass.getPreprocessedClientSecret("encryptedSecret"), "decryptedSecret");
+        }
+    }
+
+    @Test
     public void testGetPreprocessed() throws CryptoException, IdentityOAuth2Exception {
 
         try (MockedStatic<CryptoUtil> cryptoUtil = mockStatic(CryptoUtil.class)) {
@@ -65,7 +81,6 @@ public class EncryptionDecryptionPersistenceProcessorTest {
                     any(RegistryService.class))).thenReturn(mockCryptoUtil);
             cryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtil);
 
-            assertEquals(testclass.getPreprocessedClientSecret("test"), "test");
             assertEquals(testclass.getPreprocessedAuthzCode("test"), "test");
             assertEquals(testclass.getPreprocessedRefreshToken("test"), "test");
             assertEquals(testclass.getPreprocessedAccessTokenIdentifier("test"), "test");
