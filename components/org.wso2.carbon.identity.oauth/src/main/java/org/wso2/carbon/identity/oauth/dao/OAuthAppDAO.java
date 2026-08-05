@@ -159,7 +159,7 @@ public class OAuthAppDAO {
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isClientSecretHashingDisabled();
-    private final TokenPersistenceProcessor hashingPersistenceProcessor;
+    private final HashingPersistenceProcessor hashingPersistenceProcessor;
 
     public OAuthAppDAO() {
 

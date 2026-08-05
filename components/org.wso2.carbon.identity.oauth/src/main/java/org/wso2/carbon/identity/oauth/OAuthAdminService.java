@@ -406,8 +406,8 @@ public class OAuthAdminService extends AbstractAdmin {
      * Create a new client secret for an OAuth application.
      *
      * @param consumerKey   Consumer key of the OAuth application.
-     * @param secretRequest Client secret attributes: an optional absolute expiry time in epoch milliseconds
-     *                      (null for no expiry).
+     * @param secretRequest Client secret attributes: an optional absolute expiry time as Unix epoch seconds,
+     *                      where zero or null denotes a never-expiring secret.
      * @return Created OAuthClientSecretResponseDTO with the details of the new client secret.
      * @throws IdentityOAuthAdminException Error when persisting the client secret in the persistence store.
      */

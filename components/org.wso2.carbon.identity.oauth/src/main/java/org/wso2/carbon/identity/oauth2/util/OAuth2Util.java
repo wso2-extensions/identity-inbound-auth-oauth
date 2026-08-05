@@ -797,7 +797,7 @@ public class OAuth2Util {
         }
 
         // Legacy secret comparison for applications not yet migrated to the secrets store.
-        boolean isHashDisabled = isHashDisabled();
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -808,7 +808,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 

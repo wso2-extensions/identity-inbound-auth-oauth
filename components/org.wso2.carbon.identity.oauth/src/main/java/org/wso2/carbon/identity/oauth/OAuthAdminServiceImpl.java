@@ -171,8 +171,6 @@ public class OAuthAdminServiceImpl {
     private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
             "OAuth.AllowIssuerSelectionForSubOrgApplications";
 
-    private static final String OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE =
-            "The requested operation is not supported as the multiple client secret support is disabled.";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -394,7 +392,7 @@ public class OAuthAdminServiceImpl {
         if (application != null && application.getOauthConsumerSecretExpiryTime() != null) {
             if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
                 throw handleClientError(INVALID_REQUEST,
-                        OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                        OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
             }
             if (application.getOauthConsumerSecretExpiryTime() < 0) {
                 throw handleClientError(INVALID_REQUEST,
@@ -755,7 +753,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         Long expiryTime = secretRequest == null ? null : secretRequest.getExpiryTime();
         if (LOG.isDebugEnabled()) {
@@ -821,7 +819,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         if (StringUtils.isBlank(secretId)) {
             throw handleClientError(INVALID_SECRET_ID, "The client secret ID must not be blank.");
@@ -868,7 +866,7 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
@@ -902,10 +900,14 @@ public class OAuthAdminServiceImpl {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey);
-        if (OAuthConstants.DEFAULT_SECRET_ID.equals(secretId)) {
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        /* The default secret id resolves only before migration; once the secrets store holds records for the
+           application, no secret carries it and the lookup below rejects it like any unknown id. */
+        if (OAuthConstants.DEFAULT_SECRET_ID.equals(secretId) && OAuthConstants.DEFAULT_SECRET_ID.equals(
+                oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId()))) {
             OAuthConsumerSecretDO fallback = new OAuthConsumerSecretDO();
             fallback.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
             fallback.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
@@ -914,7 +916,6 @@ public class OAuthAdminServiceImpl {
             fallbackResponse.setLatest(true);
             return fallbackResponse;
         }
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId, oAuthAppDO.getId());
         if (secret == null) {
             throw handleClientError(INVALID_SECRET_ID,
@@ -3029,7 +3030,7 @@ public class OAuthAdminServiceImpl {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = getOAuthApp(consumerKey, getTenantDomain());
+            oAuthAppDO = getOAuthApp(consumerKey, getAppTenantDomain());
             if (oAuthAppDO == null) {
                 String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
                 if (LOG.isDebugEnabled()) {

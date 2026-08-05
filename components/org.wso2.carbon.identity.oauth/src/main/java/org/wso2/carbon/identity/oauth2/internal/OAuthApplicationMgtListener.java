@@ -322,9 +322,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 Long latestSecretExpiryTime = null;
                                 List<OAuthConsumerSecretDO> nonLatestSecrets = new ArrayList<>();
                                 for (OAuthConsumerSecretDO importedSecret : importedSecrets) {
-                                    // A negative expiry time marks a malformed file.
+                                    /* A never-expiring secret carries no expiry element; zero or a negative value
+                                       marks a malformed file. */
                                     if (importedSecret.getExpiryTime() != null
-                                            && importedSecret.getExpiryTime() < 0) {
+                                            && importedSecret.getExpiryTime() <= 0) {
                                         throw new IdentityOAuthClientException("The client secret list contains "
                                                 + "an invalid expiry time.");
                                     }
