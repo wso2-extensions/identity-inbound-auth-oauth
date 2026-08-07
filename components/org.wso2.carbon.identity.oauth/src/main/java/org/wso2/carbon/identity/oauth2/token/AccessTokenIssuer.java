@@ -115,13 +115,17 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUB;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -646,6 +650,11 @@ public class AccessTokenIssuer {
                 }
                 diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
             } else if (tokReqMsgCtx.isDelegationRequest()) {
+                String actorSubject = resolveDelegationActorSubject(tokReqMsgCtx);
+                if (actorSubject != null) {
+                    diagnosticLogBuilder.inputParam(ACTOR, LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(actorSubject) : actorSubject);
+                }
                 diagnosticLogBuilder.resultMessage("Delegated Access token issued for the application.");
             } else {
                 diagnosticLogBuilder.resultMessage("Access token issued for the application.");
@@ -746,6 +755,31 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    /**
+     * Resolve the actor subject of a delegation request. Falls back to the subject of the existing act claim
+     * when no new actor was added to the delegation chain.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return the actor subject, or {@code null} if it could not be resolved.
+     */
+    private String resolveDelegationActorSubject(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        Object actorSubject = tokReqMsgCtx.getProperty(ACTOR_SUBJECT);
+        if (actorSubject != null) {
+            return actorSubject.toString();
+        }
+
+        // No new actor was added: the current top of the delegation chain is the existing act claim's subject.
+        Object existingActClaim = tokReqMsgCtx.getProperty(EXISTING_ACT_CLAIM);
+        if (existingActClaim instanceof Map) {
+            Object subject = ((Map<?, ?>) existingActClaim).get(SUB);
+            if (subject != null) {
+                return subject.toString();
+            }
+        }
+        return null;
     }
 
     private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomain,
