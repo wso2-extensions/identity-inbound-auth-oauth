@@ -135,6 +135,10 @@ public final class OAuthConstants {
             ".EnableHybridFlowAppLevelValidation";
     public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
 
+    // Token Exchange delegation property key
+    public static final String ACTOR_SUBJECT = "ACTOR_SUBJECT";
+    public static final String EXISTING_ACT_CLAIM = "EXISTING_ACT_CLAIM";
+
     /**
      * Enum for OIDC supported subject types.
      */
@@ -201,6 +205,7 @@ public final class OAuthConstants {
     public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";
     public static final String MAY_ACT = "may_act";
+    public static final String ACT = "act";
     public static final String SUB = "sub";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
@@ -843,6 +848,7 @@ public final class OAuthConstants {
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
             public static final String IMPERSONATOR = "impersonator";
+            public static final String ACTOR = "actor";
             public static final String REQUESTED_AUTHORIZATION_DETAILS = "requested authorization details";
         }
 

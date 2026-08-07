@@ -34,11 +34,14 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 
 @Listeners(MockitoTestNGListener.class)
 public class AgentAccessTokenClaimProviderTest {
@@ -49,7 +52,9 @@ public class AgentAccessTokenClaimProviderTest {
     private static final String ACT = "act";
     private static final String AUT = "aut";
     private static final String SUB = "sub";
+    private static final String AZP = "azp";
     private static final String AGENT = "AGENT";
+    private static final String TOKEN_EXCHANGE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:token-exchange";
 
     @Mock
     private OAuthTokenReqMessageContext mockTokenReqCtx;
@@ -182,5 +187,74 @@ public class AgentAccessTokenClaimProviderTest {
         Map<String, Object> result = provider.getAdditionalClaims(mockTokenReqCtx);
 
         Assert.assertNull(result);
+    }
+
+    @DataProvider(name = "delegationActProvider")
+    public Object[][] delegationActProvider() {
+
+        Map<String, Object> existingAct = new HashMap<>();
+        existingAct.put(SUB, "previous-actor");
+
+        return new Object[][]{
+                // {actorSubject, existingActClaim, expectAct, expectNestedAct}
+                {"actor-sub", null,        true,  false},
+                {"actor-sub", existingAct, true,  true},
+                {null,        null,        false, false},
+        };
+    }
+
+    @Test(dataProvider = "delegationActProvider")
+    public void testGetAdditionalClaims_delegationRequest(String actorSubject,
+            Map<String, Object> existingActClaim, boolean expectAct, boolean expectNestedAct) throws Exception {
+
+        mockedIdentityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn(AGENT_STORE);
+        lenient().when(mockAuthorizedUser.getUserStoreDomain()).thenReturn(PRIMARY_STORE);
+        lenient().when(mockTokenReqDTO.getGrantType()).thenReturn(TOKEN_EXCHANGE_GRANT_TYPE);
+
+        when(mockTokenReqCtx.isDelegationRequest()).thenReturn(true);
+        when(mockTokenReqCtx.getProperty(ACTOR_SUBJECT)).thenReturn(actorSubject);
+        lenient().when(mockTokenReqCtx.getProperty(EXISTING_ACT_CLAIM)).thenReturn(existingActClaim);
+
+        Map<String, Object> result = provider.getAdditionalClaims(mockTokenReqCtx);
+
+        if (expectAct) {
+            Assert.assertNotNull(result);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> actClaim = (Map<String, Object>) result.get(ACT);
+            Assert.assertNotNull(actClaim);
+            Assert.assertEquals(actClaim.get(SUB), actorSubject);
+            // The act claim is now sub-only; azp must never be set.
+            Assert.assertFalse(actClaim.containsKey(AZP));
+            if (expectNestedAct) {
+                Assert.assertEquals(actClaim.get(ACT), existingActClaim);
+            } else {
+                Assert.assertFalse(actClaim.containsKey(ACT));
+            }
+            Assert.assertFalse(result.containsKey(AUT));
+        } else {
+            Assert.assertNull(result);
+        }
+    }
+
+    @Test
+    public void testGetAdditionalClaims_delegationNoNewActor_carriesForwardExistingActClaim()
+            throws Exception {
+
+        mockedIdentityUtil.when(IdentityUtil::getAgentIdentityUserstoreName).thenReturn(AGENT_STORE);
+        lenient().when(mockAuthorizedUser.getUserStoreDomain()).thenReturn(PRIMARY_STORE);
+        lenient().when(mockTokenReqDTO.getGrantType()).thenReturn(TOKEN_EXCHANGE_GRANT_TYPE);
+
+        Map<String, Object> existingAct = new HashMap<>();
+        existingAct.put(SUB, "original-actor");
+
+        when(mockTokenReqCtx.isDelegationRequest()).thenReturn(true);
+        // No new actor subject on the context: the existing act claim is carried forward directly.
+        when(mockTokenReqCtx.getProperty(ACTOR_SUBJECT)).thenReturn(null);
+        when(mockTokenReqCtx.getProperty(EXISTING_ACT_CLAIM)).thenReturn(existingAct);
+
+        Map<String, Object> result = provider.getAdditionalClaims(mockTokenReqCtx);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result.get(ACT), existingAct);
     }
 }

@@ -62,6 +62,8 @@ public class OAuthTokenReqMessageContext {
 
     private boolean isImpersonationRequest;
 
+    private boolean isDelegationRequest;
+
     private boolean preIssueAccessTokenActionsExecuted;
 
     private boolean preIssueIDTokenActionsExecuted;
@@ -218,9 +220,19 @@ public class OAuthTokenReqMessageContext {
         return isImpersonationRequest;
     }
 
+    public boolean isDelegationRequest() {
+
+        return isDelegationRequest;
+    }
+
     public void setImpersonationRequest(boolean impersonationRequest) {
 
         isImpersonationRequest = impersonationRequest;
+    }
+
+    public void setDelegationRequest(boolean delegationRequest) {
+
+        isDelegationRequest = delegationRequest;
     }
 
     public boolean isPreIssueAccessTokenActionsExecuted() {
