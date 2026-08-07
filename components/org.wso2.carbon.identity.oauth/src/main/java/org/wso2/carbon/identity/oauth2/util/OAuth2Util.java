@@ -177,6 +177,7 @@ import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.idp.mgt.model.SharedIdPResolveType;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
 import org.wso2.carbon.registry.core.exceptions.RegistryException;
@@ -6036,7 +6037,7 @@ public class OAuth2Util {
         try {
             if (OAuth2ServiceComponentHolder.getInstance().getIdpManager() != null) {
                 return OAuth2ServiceComponentHolder.getInstance().getIdpManager().getIdPByName(identityProviderName,
-                        tenantDomain);
+                        tenantDomain, false, SharedIdPResolveType.FULL_RESOLVED);
             } else {
                 String errorMsg = String.format("Unable to retrieve Idp manager. Error while " +
                         "getting '%s' Identity  Provider of '%s' tenant.", identityProviderName, tenantDomain);
@@ -6928,7 +6929,8 @@ public class OAuth2Util {
                             IdentityApplicationConstants.IDP_ISSUER_NAME + " with value: " + jwtIssuer +
                             ". Attempting to retrieve IDP using IDP Name as issuer.");
                 }
-                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain, true);
+                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain, true,
+                        SharedIdPResolveType.FULL_RESOLVED);
             }
             if (identityProvider == null || DEFAULT_IDP_NAME.equals(identityProvider.getIdentityProviderName())) {
                 identityProvider = getResidentIDPForIssuer(tenantDomain, jwtIssuer);
