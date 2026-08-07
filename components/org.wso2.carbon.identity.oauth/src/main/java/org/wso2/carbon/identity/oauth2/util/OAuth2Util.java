@@ -119,10 +119,12 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretMetadataDO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -214,6 +216,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -454,6 +457,33 @@ public class OAuth2Util {
     }
 
     /**
+     * Returns the {@link TokenPersistenceProcessor} instance used for processing
+     * OAuth consumer secrets.
+     *
+     * The processor is lazily initialized and shared across all callers in
+     * a thread-safe manner.
+     *
+     * @return the {@link TokenPersistenceProcessor} instance
+     */
+    private static TokenPersistenceProcessor getHashingPersistenceProcessor() {
+
+        return HashingPersistenceProcessorHolder.INSTANCE;
+    }
+
+    /**
+     * Holder class for lazy, thread-safe initialization of {@link TokenPersistenceProcessor}.
+     *
+     * This leverages the JVM's class loading mechanism to ensure that the
+     * {@link HashingPersistenceProcessor} instance is created only when it is
+     * first accessed, while also guaranteeing thread safety without explicit
+     * synchronization.
+     */
+    private static class HashingPersistenceProcessorHolder {
+        private static final TokenPersistenceProcessor INSTANCE =
+                new HashingPersistenceProcessor();
+    }
+
+    /**
      * @return
      */
     public static OAuthAuthzReqMessageContext getAuthzRequestContext() {
@@ -666,7 +696,32 @@ public class OAuth2Util {
                     + appTenant);
         }
 
-        // Cache miss
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
+            }
+            return false;
+        }
+
+        /* When multiple client secrets support is enabled, the cached secret metadata of the application is
+           authoritative for a migrated application: match the presented secret against the cached hashes and honour
+           the matched secret's expiry. An empty list means the application is not yet migrated to the secrets store,
+           so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList = appDO.getConsumerSecretMetadataList();
+            if (CollectionUtils.isNotEmpty(consumerSecretMetadataList)) {
+                String hashedProvidedSecret =
+                        getHashingPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
+                for (OAuthConsumerSecretMetadataDO consumerSecret : consumerSecretMetadataList) {
+                    if (StringUtils.equals(consumerSecret.getSecretHash(), hashedProvidedSecret)) {
+                        return !isClientSecretExpired(consumerSecret.getExpiryTime());
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Legacy secret comparison for applications not yet migrated to the secrets store.
         boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
@@ -717,8 +772,33 @@ public class OAuth2Util {
                     + appTenant);
         }
 
-        // Cache miss
-        boolean isHashDisabled = isHashDisabled();
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
+            }
+            return false;
+        }
+
+        /* When multiple client secrets support is enabled, the cached secret metadata of the application is
+           authoritative for a migrated application: match the presented secret against the cached hashes and honour
+           the matched secret's expiry. An empty list means the application is not yet migrated to the secrets store,
+           so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList = appDO.getConsumerSecretMetadataList();
+            if (CollectionUtils.isNotEmpty(consumerSecretMetadataList)) {
+                String hashedProvidedSecret =
+                        getHashingPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
+                for (OAuthConsumerSecretMetadataDO consumerSecret : consumerSecretMetadataList) {
+                    if (StringUtils.equals(consumerSecret.getSecretHash(), hashedProvidedSecret)) {
+                        return !isClientSecretExpired(consumerSecret.getExpiryTime());
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Legacy secret comparison for applications not yet migrated to the secrets store.
+        boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
             if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
@@ -729,7 +809,7 @@ public class OAuth2Util {
                 return false;
             }
         } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
             // We convert the provided client_secret to the processed form stored in the DB.
             String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
 
@@ -810,6 +890,45 @@ public class OAuth2Util {
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return !isHashEnabled;
 
+    }
+
+    /**
+     * Check whether the client secret is expired.
+     *
+     * @param expiryTime expiry timestamp of client secret since epoch in milliseconds.
+     *                   Null means the secret does not expire.
+     * @return true if the client secret is expired, false otherwise.
+     */
+    public static boolean isClientSecretExpired(Long expiryTime) {
+
+        if (expiryTime == null) {
+            // Never expires
+            return false;
+        }
+        Instant nowUtc = Instant.now();
+        long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
+        Instant expiryInstantWithSkew = Instant.ofEpochMilli(expiryTime).plusSeconds(timeStampSkewInSeconds);
+        return expiryInstantWithSkew.isBefore(nowUtc);
+    }
+
+    /**
+     * Check whether multiple client secret support is enabled or not.
+     *
+     * @return Whether multiple client secret support is enabled or not.
+     */
+    public static boolean isMultipleClientSecretsEnabled() {
+
+        return OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled();
+    }
+
+     /**
+     * Get the allowed client secret count.
+     *
+     * @return client secret count.
+     */
+    public static int getClientSecretCount() {
+
+        return OAuthServerConfiguration.getInstance().getClientSecretCount();
     }
 
     /**

@@ -37,6 +37,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
+    private Long oauthConsumerSecretExpiryTime;
+    private Boolean multipleConsumerSecretsConfigured;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -211,6 +213,31 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     public void setOauthConsumerSecret(String oauthConsumerSecret) {
         this.oauthConsumerSecret = oauthConsumerSecret;
+    }
+
+    /**
+     * Expiry time of the consumer secret as Unix epoch seconds. Zero denotes a never-expiring secret; null denotes
+     * not provided, or multiple client secrets support being disabled in responses.
+     */
+    public Long getOauthConsumerSecretExpiryTime() {
+        return oauthConsumerSecretExpiryTime;
+    }
+
+    public void setOauthConsumerSecretExpiryTime(Long oauthConsumerSecretExpiryTime) {
+        this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
+    }
+
+    /**
+     * Check whether the application has more than one consumer secret configured.
+     */
+    public Boolean getMultipleConsumerSecretsConfigured() {
+
+        return multipleConsumerSecretsConfigured;
+    }
+
+    public void setMultipleConsumerSecretsConfigured(Boolean multipleConsumerSecretsConfigured) {
+
+        this.multipleConsumerSecretsConfigured = multipleConsumerSecretsConfigured;
     }
 
     public String getOAuthVersion() {
@@ -687,5 +714,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
         this.isFragmentApp = isFragmentApp;
     }
+
 }
 

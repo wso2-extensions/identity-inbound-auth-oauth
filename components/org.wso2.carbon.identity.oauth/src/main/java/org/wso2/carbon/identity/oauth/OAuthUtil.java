@@ -53,6 +53,8 @@ import org.wso2.carbon.identity.oauth.cache.RefreshTokenCache;
 import org.wso2.carbon.identity.oauth.cache.RefreshTokenCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -529,6 +531,13 @@ public final class OAuthUtil {
         dto.setCallbackUrl(appDO.getCallbackUrl());
         dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
         dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
+            dto.setOauthConsumerSecretExpiryTime(appDO.getOauthConsumerSecretExpiryTime() == null ? 0L
+                    : appDO.getOauthConsumerSecretExpiryTime() / 1000L);
+            dto.setMultipleConsumerSecretsConfigured(appDO.getConsumerSecretMetadataList() != null
+                    && appDO.getConsumerSecretMetadataList().size() > 1);
+        }
         dto.setOAuthVersion(appDO.getOauthVersion());
         dto.setGrantTypes(appDO.getGrantTypes());
         dto.setScopeValidators(appDO.getScopeValidators());
@@ -583,6 +592,32 @@ public final class OAuthUtil {
         dto.setCibaAllowFederatedUsers(appDO.isCibaAllowFederatedUsers());
         dto.setIssuerDetails(appDO.getIssuerDetails());
         return dto;
+    }
+
+    /**
+     * Build the client secret response from the given consumer secret. The secret value is carried over as
+     * given, and the latest flag is left for the caller to set.
+     *
+     * @param consumerSecretDO Consumer secret to map.
+     * @return {@link OAuthClientSecretResponseDTO} with the id, value, expiry time and status of the given
+     *         secret, the expiry time converted to Unix epoch seconds.
+     */
+    public static OAuthClientSecretResponseDTO buildClientSecretResponseDTO(OAuthConsumerSecretDO consumerSecretDO) {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Building OAuthClientSecretResponseDTO for secretId: " + consumerSecretDO.getSecretId());
+        }
+        OAuthClientSecretResponseDTO consumerSecretDTO = new OAuthClientSecretResponseDTO();
+        consumerSecretDTO.setSecretId(consumerSecretDO.getSecretId());
+        consumerSecretDTO.setSecretValue(consumerSecretDO.getSecretValue());
+        /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
+        consumerSecretDTO.setExpiryTime(consumerSecretDO.getExpiryTime() == null ? 0L
+                : consumerSecretDO.getExpiryTime() / 1000L);
+        /* The status is judged with the same skew-aware expiry check the token endpoint enforces, so the
+           reported state always matches the authentication behavior. */
+        consumerSecretDTO.setStatus(OAuth2Util.isClientSecretExpired(consumerSecretDO.getExpiryTime())
+                ? OAuthConstants.ClientSecretStatus.EXPIRED : OAuthConstants.ClientSecretStatus.ACTIVE);
+        return consumerSecretDTO;
     }
 
     /**

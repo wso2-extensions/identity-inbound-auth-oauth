@@ -37,9 +37,11 @@ import org.wso2.carbon.identity.cors.mgt.core.exception.CORSManagementServiceCli
 import org.wso2.carbon.identity.cors.mgt.core.exception.CORSManagementServiceException;
 import org.wso2.carbon.identity.cors.mgt.core.exception.CORSManagementServiceServerException;
 import org.wso2.carbon.identity.cors.mgt.core.model.CORSOrigin;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
 import java.util.List;
@@ -155,6 +157,21 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                 }
                 if (!StringUtils.equals(oauthApp.getOauthConsumerSecret(), consumerAppDTO.getOauthConsumerSecret())) {
                     throw new IdentityOAuthClientException("Invalid ClientSecret provided for update.");
+                }
+                Long providedSecretExpiryTime = consumerAppDTO.getOauthConsumerSecretExpiryTime();
+                if (providedSecretExpiryTime != null && !OAuth2Util.isMultipleClientSecretsEnabled()) {
+                    throw new IdentityOAuthClientException(
+                            OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                }
+                /* The client secret expiry time is bound to the secret itself and cannot be changed through an
+                   application update. Keep the existing value when not provided and reject an attempt to change
+                   it; both values are Unix epoch seconds, where zero denotes a never-expiring secret. */
+                Long existingSecretExpiryTime = oauthApp.getOauthConsumerSecretExpiryTime();
+                if (providedSecretExpiryTime == null) {
+                    consumerAppDTO.setOauthConsumerSecretExpiryTime(existingSecretExpiryTime);
+                } else if (!providedSecretExpiryTime.equals(existingSecretExpiryTime)) {
+                    throw new IdentityOAuthClientException(
+                            "The client secret expiry time cannot be modified with the application update.");
                 }
 
                 /*
