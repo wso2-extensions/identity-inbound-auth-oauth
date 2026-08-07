@@ -65,6 +65,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -756,5 +757,55 @@ public class OIDCClaimUtil {
         }
 
         return userClaimsInOidcDialect;
+    }
+
+    /**
+     * Checks whether a claim should be emitted as a multi-valued (array) attribute. The {@code address} claim is
+     * never an array; the {@code groups} claim always is. When {@code multiValuedClaimUris} is non-null, only claims
+     * present in the set are arrays; otherwise the legacy separator-based check applies.
+     *
+     * @param claimKey                OIDC dialect claim URI.
+     * @param claimValue              Claim value.
+     * @param multiAttributeSeparator Multi-attribute separator used for the legacy check.
+     * @param multiValuedClaimUris    Set of multi-valued claim URIs (local + mapped OIDC), or {@code null} for legacy
+     *                                separator-based behaviour.
+     * @return Whether the claim should be emitted as a multi-valued (array) attribute.
+     */
+    public static boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator,
+                                                 Set<String> multiValuedClaimUris) {
+
+        // Address claim contains the multi attribute separator but is not a multi valued attribute.
+        if (OAuthConstants.OIDCClaims.ADDRESS.equals(claimKey)) {
+            return false;
+        }
+        // To format the groups claim to always return as an array, we should consider single group as
+        // multi value attribute.
+        if (OAuthConstants.OIDCClaims.GROUPS.equals(claimKey)) {
+            return true;
+        }
+        // Feature on: only claims flagged multi-valued in metadata are arrays. Null set -> legacy fallback.
+        if (multiValuedClaimUris != null) {
+            return multiValuedClaimUris.contains(claimKey);
+        }
+        return StringUtils.contains(claimValue, multiAttributeSeparator);
+    }
+
+    /**
+     * Split a multi-valued claim value by the given separator, dropping blank segments.
+     *
+     * @param claimValue              Claim value to split.
+     * @param multiAttributeSeparator Multi-attribute separator.
+     * @return Non-blank segments of the value (empty array if none).
+     */
+    public static String[] splitMultiValuedAttribute(String claimValue, String multiAttributeSeparator) {
+
+        String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
+        List<String> nonBlankValues = new ArrayList<>();
+        for (String attributeValue : attributeValues) {
+            if (StringUtils.isNotBlank(attributeValue)) {
+                nonBlankValues.add(attributeValue);
+            }
+        }
+        return nonBlankValues.toArray(new String[0]);
     }
 }

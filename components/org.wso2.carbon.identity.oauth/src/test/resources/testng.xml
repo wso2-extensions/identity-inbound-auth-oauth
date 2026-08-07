@@ -143,6 +143,8 @@
             <class name="org.wso2.carbon.identity.oauth2.util.TokenMgtUtilTest"/>
             <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerMultiValuedClaimTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerMultiValuedClaimTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>

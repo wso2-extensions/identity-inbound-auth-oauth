@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Retrieving claims from the user store for the given claims dialect
@@ -35,8 +36,16 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
 
+        return getClaimsMap(userAttributes, null);
+    }
+
+    @Override
+    public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes,
+                                            Set<String> multiValuedLocalClaimUris) {
+
         Map<String, Object> claims = new HashMap<String, Object>();
         if (MapUtils.isNotEmpty(userAttributes)) {
+            // A null multiValuedLocalClaimUris means legacy behaviour applies.
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
 
                 if (entry.getKey().getRemoteClaim() == null || IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(
@@ -45,10 +54,13 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                 }
                 String claimValue = entry.getValue();
                 String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
+                String localClaimUri = entry.getKey().getLocalClaim() != null ?
+                        entry.getKey().getLocalClaim().getClaimUri() : null;
                 boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration.getInstance()
                         .getUserInfoMultiValueSupportEnabled();
                 if (isMultiValueSupportEnabledForUserinfoResponse &&
-                        ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
+                        ClaimUtil.isMultiValuedAttribute(claimUri, localClaimUri, claimValue,
+                                multiValuedLocalClaimUris)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
                     claims.put(claimUri, attributeValues);
                 } else {

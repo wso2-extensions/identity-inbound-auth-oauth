@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -73,7 +74,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -81,8 +82,6 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 
 /**
@@ -100,7 +99,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             throws IdentityOAuth2Exception {
 
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     @Override
@@ -112,7 +111,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
           to manage user attributes for the access token.
          */
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     /**
@@ -895,21 +894,23 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      * @return JWTClaimSet with claims.
      */
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
-            userClaimsInOIDCDialect) {
+            userClaimsInOIDCDialect, String spTenantDomain) {
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        // Resolve metadata multi-valued claims once; null set -> legacy behaviour.
+        Set<String> multiValuedClaimUris = null;
+        if (OAuthServerConfiguration.getInstance().getHonourMultiValuedClaimMetadata()) {
+            multiValuedClaimUris = getMultiValuedClaimUris(spTenantDomain);
+        }
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
+            if (OIDCClaimUtil.isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator,
+                    multiValuedClaimUris)) {
                 JSONArray claimValues = new JSONArray();
-                String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
-                for (String attributeValue : attributeValues) {
-                    if (StringUtils.isNotBlank(attributeValue)) {
-                        claimValues.add(attributeValue);
-                    }
-                }
+                Collections.addAll(claimValues,
+                        OIDCClaimUtil.splitMultiValuedAttribute(claimValue, multiAttributeSeparator));
                 if (jwtClaimsSet.getClaim(claimKey) == null) {
                     jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
                 }
@@ -923,25 +924,17 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     }
 
     /**
-     * Check weather claim value if multi valued or not.
+     * Build the set of multi-valued claim URIs for the given tenant, delegating to the shared
+     * {@link OAuth2Util#getMultiValuedClaimUris(ClaimMetadataManagementService, String)}.
      *
-     * @param claimKey Claim key.
-     * @param claimValue Claim value.
-     * @param multiAttributeSeparator Multi attribute separator.
-     * @return True if claim value is multi valued, false otherwise.
+     * @param tenantDomain Tenant domain of the service provider.
+     * @return Set of multi-valued claim URIs (local + mapped OIDC), or {@code null} for legacy handling.
      */
-    private boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator) {
+    private Set<String> getMultiValuedClaimUris(String tenantDomain) {
 
-        // Address claim contains multi attribute separator but its not a multi valued attribute.
-        if (claimKey.equals(ADDRESS)) {
-            return false;
-        }
-        // To format the groups claim to always return as an array, we should consider single group as
-        // multi value attribute.
-        if (claimKey.equals(GROUPS)) {
-            return true;
-        }
-        return StringUtils.contains(claimValue, multiAttributeSeparator);
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OpenIDConnectServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        return OAuth2Util.getMultiValuedClaimUris(claimMetadataManagementService, tenantDomain);
     }
 
     /**
