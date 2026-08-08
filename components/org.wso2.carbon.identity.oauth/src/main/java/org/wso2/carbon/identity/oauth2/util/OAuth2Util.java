@@ -93,6 +93,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
@@ -2319,6 +2320,50 @@ public class OAuth2Util {
             }
         } catch (IdentityOAuth2Exception | ClaimMetadataException | OrganizationManagementException e) {
             log.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * This method is used to get the OIDC claim to local claim mapping for a given tenant domain.
+     *
+     * `@param` tenantDomain Tenant domain.
+     * `@return` Map of OIDC claim to local claim mapping.
+     */
+    public static Map<String, LocalClaim> getOidcClaimToLocalClaimMap(String tenantDomain) {
+
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        Map<String, LocalClaim> mappedLocalClaims = getLocalClaimMap(tenantDomain);
+        try {
+            List<ExternalClaim> oidcClaims =
+                    claimMetadataManagementService.getExternalClaims(OAuthConstants.OIDC_DIALECT, tenantDomain);
+            if (oidcClaims != null) {
+                Map<String, LocalClaim> oidcClaimToLocalClaimMap = new HashMap<>();
+                for (ExternalClaim oidcClaim : oidcClaims) {
+                    LocalClaim mappedLocalClaim = mappedLocalClaims.get(oidcClaim.getMappedLocalClaim());
+                    if (mappedLocalClaim != null) {
+                        oidcClaimToLocalClaimMap.put(oidcClaim.getClaimURI(), mappedLocalClaim);
+                    }
+                }
+                return oidcClaimToLocalClaimMap;
+            }
+            return new HashMap<>();
+        } catch (ClaimMetadataException e) {
+            log.error("Error reading OIDC claims of tenant: " + tenantDomain, e);
+            return new HashMap<>();
+        }
+    }
+
+    public static Map<String, LocalClaim> getLocalClaimMap(String tenantDomain) {
+
+        ClaimMetadataManagementService claimMetadataManagementService =
+                OAuth2ServiceComponentHolder.getInstance().getClaimMetadataManagementService();
+        try {
+            return claimMetadataManagementService.getLocalClaims(tenantDomain).stream()
+                    .collect(Collectors.toMap(LocalClaim::getClaimURI, localClaim -> localClaim));
+        } catch (ClaimMetadataException e) {
+            log.error("Error reading claim metadata for tenant: " + tenantDomain, e);
+            return new HashMap<>();
         }
     }
 

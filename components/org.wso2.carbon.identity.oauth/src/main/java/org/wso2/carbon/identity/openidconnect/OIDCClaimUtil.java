@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
-
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.MapUtils;
@@ -33,6 +34,8 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -756,5 +759,34 @@ public class OIDCClaimUtil {
         }
 
         return userClaimsInOidcDialect;
+    }
+
+    /**
+     * Whether a claim should be rendered as an array, keyed on the claim URI (OIDC or local dialect).
+     * With metadata ({@code localClaim} present and the claim found) the local claim
+     * {@code multiValued} property decides; otherwise legacy separator-based detection is used.
+     * Special cases: {@code address} is never an array, {@code groups} is always an array.
+     *
+     * @param claimKey                Claim URI (OIDC or local dialect).
+     * @param claimValue              Raw claim value.
+     * @param multiAttributeSeparator Multi attribute separator.
+     * @param localClaim              Local claim object.
+     * @return True if the claim should be rendered as a multivalued attribute.
+     */
+    public static boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator,
+                                                 LocalClaim localClaim) {
+
+        // Address claim contains the multi attribute separator but is not a multi valued attribute.
+        if (OAuthConstants.OIDCClaims.ADDRESS.equals(claimKey)) {
+            return false;
+        }
+        // Groups claim is always formatted as an array (a single group is still returned as an array).
+        if (OAuthConstants.OIDCClaims.GROUPS.equals(claimKey)) {
+            return true;
+        }
+        if (localClaim != null) {
+            return Boolean.parseBoolean(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY));
+        }
+        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 }

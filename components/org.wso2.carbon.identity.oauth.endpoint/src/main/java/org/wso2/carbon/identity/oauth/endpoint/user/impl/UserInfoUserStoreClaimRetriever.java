@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,11 +18,14 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.collections.MapUtils;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,24 +38,32 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
     @Override
     public Map<String, Object> getClaimsMap(Map<ClaimMapping, String> userAttributes) {
 
-        Map<String, Object> claims = new HashMap<String, Object>();
+        Map<String, Object> claims = new HashMap<>();
         if (MapUtils.isNotEmpty(userAttributes)) {
-            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+            boolean userInfoMultiValueSupportEnabled =
+                    OAuthServerConfiguration.getInstance().getUserInfoMultiValueSupportEnabled();
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            Map<String, LocalClaim> oidcToLocalClaimMap = userInfoMultiValueSupportEnabled &&
+                    OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                            ? OAuth2Util.getOidcClaimToLocalClaimMap(tenantDomain) : new HashMap<>();
 
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() == null || IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR.equals(
                         entry.getKey().getRemoteClaim().getClaimUri())) {
                     continue;
                 }
                 String claimValue = entry.getValue();
-                String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
-                boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration.getInstance()
-                        .getUserInfoMultiValueSupportEnabled();
-                if (isMultiValueSupportEnabledForUserinfoResponse &&
-                        ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
+                String oidcClaim = entry.getKey().getRemoteClaim().getClaimUri();
+                if (claimValue == null) {
+                    claims.put(oidcClaim, null);
+                    continue;
+                }
+                if (userInfoMultiValueSupportEnabled &&
+                        ClaimUtil.isMultiValuedAttribute(oidcClaim, oidcToLocalClaimMap.get(oidcClaim), claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
-                    claims.put(claimUri, attributeValues);
+                    claims.put(oidcClaim, attributeValues);
                 } else {
-                    claims.put(claimUri, claimValue);
+                    claims.put(oidcClaim, claimValue);
                 }
             }
         }
