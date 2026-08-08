@@ -44,11 +44,12 @@ import org.wso2.carbon.identity.organization.management.organization.agent.shari
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.NotImplementedException;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.common.Group;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -63,11 +64,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
-import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
-import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_DOMAIN;
 
 /**
  * Utility methods for the authorization related functionality.
@@ -131,9 +131,9 @@ public class AuthzUtil {
     public static List<String> getRoles(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
         List<String> roleIds = new ArrayList<>(getRoleIdsOfUser(userId, tenantDomain));
-        List<String> groups = getUserGroups(userId, tenantDomain);
-        if (!groups.isEmpty()) {
-            roleIds.addAll(getRoleIdsOfGroups(groups, tenantDomain));
+        List<String> groupNames = getUserGroupNames(userId, tenantDomain);
+        if (!groupNames.isEmpty()) {
+            roleIds.addAll(getRoleIdsOfGroups(groupNames, tenantDomain));
         }
         return roleIds;
     }
@@ -427,60 +427,61 @@ public class AuthzUtil {
      *
      * @param userId User id.
      * @param tenantDomain Tenant domain.
-     * @return - Groups of the user.
+     * @return - Group names of the user.
      */
-    private static List<String> getUserGroups(String userId, String tenantDomain) throws IdentityOAuth2Exception {
+    private static List<String> getUserGroupNames(String userId, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Started group fetching for scope validation.");
         }
-        List<String> userGroups = new ArrayList<>();
+        List<String> userGroupNames = new ArrayList<>();
         RealmService realmService = UserCoreUtil.getRealmService();
         try {
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
-            UserStoreManager userStoreManager = realmService.getTenantUserRealm(tenantId).getUserStoreManager();
-            List<Group> groups =
-                    ((AbstractUserStoreManager) userStoreManager).getGroupListOfUser(userId,
-                            null, null);
-            for (Group group : groups) {
-                String groupName = group.getGroupName();
-                String groupDomainName = UserCoreUtil.extractDomainFromName(groupName);
-                if (!INTERNAL_DOMAIN.equalsIgnoreCase(groupDomainName) &&
-                        !APPLICATION_DOMAIN.equalsIgnoreCase(groupDomainName)) {
-                    userGroups.add(group.getGroupID());
-                }
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+            Map<String, String> userClaims = userStoreManager.getUserClaimValuesWithID(userId,
+                    new String[]{FrameworkConstants.GROUPS_CLAIM}, null);
+            String groupNamesString = userClaims.get(FrameworkConstants.GROUPS_CLAIM);
+            if (StringUtils.isEmpty(groupNamesString)) {
+                return userGroupNames;
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception(e.getMessage(), e);
-        } catch (UserStoreException e) {
-            if (isDoGetGroupListOfUserNotImplemented(e)) {
-                return userGroups;
+
+            String userStoreDomain = resolveUserStoreDomain(userId, userStoreManager);
+            String separator = resolveMultiAttributeSeparator(userStoreManager
+                    .getSecondaryUserStoreManager(userStoreDomain));
+
+            String[] groupNames = StringUtils.splitByWholeSeparator(groupNamesString, separator);
+            for (String groupName : groupNames) {
+                userGroupNames.add(UserCoreUtil.addDomainToName(groupName, userStoreDomain));
             }
+        } catch (IdentityOAuth2Exception | UserStoreException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Completed group fetching for scope validation.");
         }
-        return userGroups;
+        return userGroupNames;
     }
 
     /**
-     * Get the role ids of groups.
+     * Get the role ids of group names.
      *
-     * @param groups Groups.
+     * @param groupNames Group names.
      * @param tenantDomain Tenant domain.
-     * @return Role ids of groups.
-     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of groups.
+     * @return Role ids of group names.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of group names.
      */
-    private static List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain)
+    private static List<String> getRoleIdsOfGroups(List<String> groupNames, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getRoleIdListOfGroups(groups, tenantDomain);
+                    .getRoleIdListOfGroupNames(groupNames, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role id list of groups : "
-                    + StringUtils.join(groups, ",") + "tenant domain : " + tenantDomain, e);
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of group names: "
+                    + StringUtils.join(groupNames, ",") + "tenant domain: " + tenantDomain, e);
         }
     }
 
@@ -644,5 +645,60 @@ public class AuthzUtil {
             throw new IdentityOAuth2Exception(
                     "Error resolving authorized scopes for clientId: " + clientId, e);
         }
+    }
+
+    /**
+     * Resolve the user store domain of the given user.
+     *
+     * @param userId           User id.
+     * @param userStoreManager User store manager.
+     * @return User store domain name.
+     */
+    private static String resolveUserStoreDomain(String userId, AbstractUserStoreManager userStoreManager) {
+
+        try {
+            String userName = userStoreManager.getUserNameFromUserID(userId);
+            return UserCoreUtil.extractDomainFromName(userName);
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while retrieving user name from user id : " + userId, e);
+            }
+            return resolvePrimaryUserStoreDomainName();
+        }
+    }
+
+    /**
+     * Resolve the multi attribute separator configured for the given user store.
+     *
+     * @param userStoreManager User store manager.
+     * @return Multi attribute separator.
+     */
+    private static String resolveMultiAttributeSeparator(UserStoreManager userStoreManager) {
+
+        String defaultSeparator = ",";
+        if (userStoreManager == null) {
+            return defaultSeparator;
+        }
+        String separator = userStoreManager.getRealmConfiguration().getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        if (separator == null || separator.trim().isEmpty()) {
+            return defaultSeparator;
+        }
+        return separator;
+    }
+
+    /**
+     * This method resolves the primary user store domain name when it is changed
+     * from `PRIMARY` to a different name; otherwise, it returns `PRIMARY`.
+     *
+     * @return Primary user store domain name.
+     */
+    private static String resolvePrimaryUserStoreDomainName() {
+
+        RealmService realmService = UserCoreUtil.getRealmService();
+        RealmConfiguration realmConfiguration = realmService.getBootstrapRealmConfiguration();
+        if (realmConfiguration.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME) != null) {
+            return realmConfiguration.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME);
+        }
+        return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
     }
 }

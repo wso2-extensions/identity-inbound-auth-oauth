@@ -28,6 +28,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
@@ -40,20 +41,31 @@ import org.wso2.carbon.identity.organization.management.organization.user.sharin
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.user.core.UserStoreConfigConstants.PRIMARY;
 
 /**
@@ -81,6 +93,8 @@ public class AuthzUtilTest {
     private static final String USER_ID = "test-user-id";
     private static final String ACCESSING_ORGANIZATION = "accessing-org-id";
     private static final String TENANT_DOMAIN = "tenantDomain";
+    private static final int TENANT_ID = 1;
+    private static final String SECONDARY_USER_STORE_DOMAIN = "SECONDARY";
     private static final String USER_RESIDENT_ORG_TENANT = "resident-tenant";
     private static final String ACCESSING_ORG_TENANT = "accessing-tenant";
     private static final String SHARED_AGENT_ID = "shared-agent-id";
@@ -241,11 +255,9 @@ public class AuthzUtilTest {
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
 
-        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION))
-                .thenReturn(USER_RESIDENT_ORG_TENANT)
-                .thenReturn(ACCESSING_ORG_TENANT);
+        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION)).thenReturn(ACCESSING_ORG_TENANT);
 
-        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, USER_RESIDENT_ORG_TENANT))
+        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, ACCESSING_ORG_TENANT))
                 .thenReturn(sharedUserRoles);
 
         when(roleManagementService.getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, ACCESSING_ORG_TENANT))
@@ -268,11 +280,9 @@ public class AuthzUtilTest {
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
 
-        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION))
-                .thenReturn(USER_RESIDENT_ORG_TENANT)
-                .thenReturn(ACCESSING_ORG_TENANT);
+        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION)).thenReturn(ACCESSING_ORG_TENANT);
 
-        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, USER_RESIDENT_ORG_TENANT))
+        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, ACCESSING_ORG_TENANT))
                 .thenReturn(sharedUserRoles);
 
         when(roleManagementService.getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, ACCESSING_ORG_TENANT))
@@ -292,11 +302,9 @@ public class AuthzUtilTest {
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
 
-        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION))
-                .thenReturn(USER_RESIDENT_ORG_TENANT)
-                .thenReturn(ACCESSING_ORG_TENANT);
+        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION)).thenReturn(ACCESSING_ORG_TENANT);
 
-        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, USER_RESIDENT_ORG_TENANT))
+        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, ACCESSING_ORG_TENANT))
                 .thenReturn(sharedUserRoles);
 
         when(roleManagementService.getSharedRoleToMainRoleMappingsBySubOrg(anyList(), anyString()))
@@ -314,11 +322,9 @@ public class AuthzUtilTest {
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
 
-        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION))
-                .thenReturn(USER_RESIDENT_ORG_TENANT)
-                .thenReturn(ACCESSING_ORG_TENANT);
+        when(organizationManager.resolveTenantDomain(ACCESSING_ORGANIZATION)).thenReturn(ACCESSING_ORG_TENANT);
 
-        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(null, USER_RESIDENT_ORG_TENANT))
+        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(null, ACCESSING_ORG_TENANT))
                 .thenReturn(sharedUserRoles);
 
         when(roleManagementService.getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, ACCESSING_ORG_TENANT))
@@ -338,11 +344,9 @@ public class AuthzUtilTest {
         when(oAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
 
-        when(organizationManager.resolveTenantDomain(""))
-                .thenReturn(USER_RESIDENT_ORG_TENANT)
-                .thenReturn(ACCESSING_ORG_TENANT);
+        when(organizationManager.resolveTenantDomain("")).thenReturn(ACCESSING_ORG_TENANT);
 
-        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, USER_RESIDENT_ORG_TENANT))
+        authzUtilMockedStatic.when(() -> AuthzUtil.getRoles(USER_ID, ACCESSING_ORG_TENANT))
                 .thenReturn(sharedUserRoles);
 
         when(roleManagementService.getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, ACCESSING_ORG_TENANT))
@@ -391,5 +395,72 @@ public class AuthzUtilTest {
             String result = AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser);
             Assert.assertEquals(result, SHARED_USER_ID);
         }
+    }
+
+    @Test
+    public void testGetRolesWithUserGroups() throws Exception {
+
+        try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+            mockUserGroupResolution(userCoreUtil, oAuth2Util);
+            when(roleManagementService.getRoleIdListOfUser(USER_ID, TENANT_DOMAIN))
+                    .thenReturn(new ArrayList<>(Collections.singletonList("user-role")));
+            when(roleManagementService.getRoleIdListOfGroupNames(anyList(), eq(TENANT_DOMAIN)))
+                    .thenReturn(Arrays.asList("group-role1", "group-role2"));
+
+            List<String> roleIds = AuthzUtil.getRoles(USER_ID, TENANT_DOMAIN);
+
+            Assert.assertEquals(roleIds, Arrays.asList("user-role", "group-role1", "group-role2"));
+            // Group names are resolved with the user store domain of the user.
+            verify(roleManagementService).getRoleIdListOfGroupNames(
+                    Arrays.asList("SECONDARY/group1", "SECONDARY/group2"), TENANT_DOMAIN);
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = "Error while retrieving role id list of group names: .*")
+    public void testGetRolesWhenGroupRoleResolutionFails() throws Exception {
+
+        try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+            mockUserGroupResolution(userCoreUtil, oAuth2Util);
+            when(roleManagementService.getRoleIdListOfUser(USER_ID, TENANT_DOMAIN)).thenReturn(new ArrayList<>());
+            when(roleManagementService.getRoleIdListOfGroupNames(anyList(), eq(TENANT_DOMAIN)))
+                    .thenThrow(new IdentityRoleManagementException("Role management error"));
+
+            AuthzUtil.getRoles(USER_ID, TENANT_DOMAIN);
+        }
+    }
+
+    /**
+     * Mocks a user residing in the SECONDARY user store who belongs to two groups, so that group name resolution
+     * in {@link AuthzUtil#getRoles(String, String)} can be exercised.
+     */
+    private void mockUserGroupResolution(MockedStatic<UserCoreUtil> userCoreUtil, MockedStatic<OAuth2Util> oAuth2Util)
+            throws Exception {
+
+        RealmService realmService = Mockito.mock(RealmService.class);
+        UserRealm userRealm = Mockito.mock(UserRealm.class);
+        AbstractUserStoreManager userStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        UserStoreManager secondaryUserStoreManager = Mockito.mock(UserStoreManager.class);
+        RealmConfiguration realmConfiguration = Mockito.mock(RealmConfiguration.class);
+
+        userCoreUtil.when(UserCoreUtil::getRealmService).thenReturn(realmService);
+        oAuth2Util.when(() -> OAuth2Util.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
+        when(realmService.getTenantUserRealm(TENANT_ID)).thenReturn(userRealm);
+        when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+        when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
+
+        Map<String, String> userClaims = new HashMap<>();
+        userClaims.put(FrameworkConstants.GROUPS_CLAIM, "group1,,,group2");
+        when(userStoreManager.getUserClaimValuesWithID(eq(USER_ID), any(String[].class), isNull()))
+                .thenReturn(userClaims);
+        when(userStoreManager.getUserNameFromUserID(USER_ID)).thenReturn(SECONDARY_USER_STORE_DOMAIN + "/john");
+        when(userStoreManager.getSecondaryUserStoreManager(SECONDARY_USER_STORE_DOMAIN))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
+        when(realmConfiguration.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR)).thenReturn(",,,");
     }
 }
