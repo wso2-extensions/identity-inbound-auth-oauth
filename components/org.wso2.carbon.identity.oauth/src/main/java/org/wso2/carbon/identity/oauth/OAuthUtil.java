@@ -535,8 +535,8 @@ public final class OAuthUtil {
             /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
             dto.setOauthConsumerSecretExpiryTime(appDO.getOauthConsumerSecretExpiryTime() == null ? 0L
                     : appDO.getOauthConsumerSecretExpiryTime() / 1000L);
-            dto.setMultipleConsumerSecretsConfigured(appDO.getConsumerSecretMetadataList() != null
-                    && appDO.getConsumerSecretMetadataList().size() > 1);
+            dto.setMultipleConsumerSecretsConfigured(appDO.getOauthConsumerSecretsMetadataList() != null
+                    && appDO.getOauthConsumerSecretsMetadataList().size() > 1);
         }
         dto.setOAuthVersion(appDO.getOauthVersion());
         dto.setGrantTypes(appDO.getGrantTypes());
@@ -615,7 +615,7 @@ public final class OAuthUtil {
                 : consumerSecretDO.getExpiryTime() / 1000L);
         /* The status is judged with the same skew-aware expiry check the token endpoint enforces, so the
            reported state always matches the authentication behavior. */
-        consumerSecretDTO.setStatus(OAuth2Util.isClientSecretExpired(consumerSecretDO.getExpiryTime())
+        consumerSecretDTO.setStatus(OAuth2Util.isExpiryTimeInPast(consumerSecretDO.getExpiryTime())
                 ? OAuthConstants.ClientSecretStatus.EXPIRED : OAuthConstants.ClientSecretStatus.ACTIVE);
         return consumerSecretDTO;
     }

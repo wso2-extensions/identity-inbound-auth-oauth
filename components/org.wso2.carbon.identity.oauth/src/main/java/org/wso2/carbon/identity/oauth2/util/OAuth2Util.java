@@ -704,23 +704,24 @@ public class OAuth2Util {
 
         /* When multiple client secrets support is enabled, the cached secret metadata of the application is
            authoritative for a migrated application: match the presented secret against the cached hashes and honour
-           the matched secret's expiry. An empty list means the application is not yet migrated to the secrets store,
-           so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
+           the matched secret's expiry. An empty list means the application is not yet migrated to the new secrets
+           table, so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList = appDO.getConsumerSecretMetadataList();
+            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList =
+                    appDO.getOauthConsumerSecretsMetadataList();
             if (CollectionUtils.isNotEmpty(consumerSecretMetadataList)) {
                 String hashedProvidedSecret =
                         getHashingPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
                 for (OAuthConsumerSecretMetadataDO consumerSecret : consumerSecretMetadataList) {
                     if (StringUtils.equals(consumerSecret.getSecretHash(), hashedProvidedSecret)) {
-                        return !isClientSecretExpired(consumerSecret.getExpiryTime());
+                        return !isExpiryTimeInPast(consumerSecret.getExpiryTime());
                     }
                 }
                 return false;
             }
         }
 
-        // Legacy secret comparison for applications not yet migrated to the secrets store.
+        // Legacy secret comparison for applications not yet migrated to the secrets table.
         boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
@@ -780,23 +781,24 @@ public class OAuth2Util {
 
         /* When multiple client secrets support is enabled, the cached secret metadata of the application is
            authoritative for a migrated application: match the presented secret against the cached hashes and honour
-           the matched secret's expiry. An empty list means the application is not yet migrated to the secrets store,
+           the matched secret's expiry. An empty list means the application is not yet migrated to the secrets table,
            so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
         if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList = appDO.getConsumerSecretMetadataList();
+            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList =
+                    appDO.getOauthConsumerSecretsMetadataList();
             if (CollectionUtils.isNotEmpty(consumerSecretMetadataList)) {
                 String hashedProvidedSecret =
                         getHashingPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
                 for (OAuthConsumerSecretMetadataDO consumerSecret : consumerSecretMetadataList) {
                     if (StringUtils.equals(consumerSecret.getSecretHash(), hashedProvidedSecret)) {
-                        return !isClientSecretExpired(consumerSecret.getExpiryTime());
+                        return !isExpiryTimeInPast(consumerSecret.getExpiryTime());
                     }
                 }
                 return false;
             }
         }
 
-        // Legacy secret comparison for applications not yet migrated to the secrets store.
+        // Legacy secret comparison for applications not yet migrated to the secrets table.
         boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {
@@ -892,13 +894,12 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the client secret is expired.
+     * Check whether the given expiry time is already in the past, allowing for the configured timestamp skew.
      *
-     * @param expiryTime expiry timestamp of client secret since epoch in milliseconds.
-     *                   Null means the secret does not expire.
-     * @return true if the client secret is expired, false otherwise.
+     * @param expiryTime Expiry timestamp since epoch in milliseconds. Null denotes never expiring.
+     * @return true if the expiry time is in the past, false otherwise.
      */
-    public static boolean isClientSecretExpired(Long expiryTime) {
+    public static boolean isExpiryTimeInPast(Long expiryTime) {
 
         if (expiryTime == null) {
             // Never expires

@@ -59,6 +59,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthApplicationImportDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretImportDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
@@ -289,9 +291,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                            writes both. */
                         if (!isExistingClient && OAuth2Util.isMultipleClientSecretsEnabled()
                                 && StringUtils.isBlank(oAuthConsumerAppDTO.getOauthConsumerSecret())
-                                && CollectionUtils.isNotEmpty(oAuthAppDO.getConsumerSecrets())) {
-                            throw new IdentityOAuthClientException("The client secret list is present in the "
-                                    + "import file but the client secret is missing.");
+                                && CollectionUtils.isNotEmpty(oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                            throw new IdentityOAuthClientException("The additional client secrets are present in the "
+                                    + "import file but the latest client secret is missing.");
                         }
 
                         // Set the client secret before doing registering/updating the oauth app.
@@ -312,40 +314,26 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
                             if (OAuth2Util.isMultipleClientSecretsEnabled()
-                                    && CollectionUtils.isNotEmpty(oAuthAppDO.getConsumerSecrets())) {
-                                List<OAuthConsumerSecretDO> importedSecrets = oAuthAppDO.getConsumerSecrets();
-                                /* The secret on the DTO is the latest and is created with the application record.
-                                   Drop its entry from the imported list; its expiry goes to the completion call,
-                                   so an already expired secret is imported as it is. */
-                                String latestSecretValue = oAuthConsumerAppDTO.getOauthConsumerSecret();
-                                boolean latestSecretMatched = false;
-                                Long latestSecretExpiryTime = null;
-                                List<OAuthConsumerSecretDO> nonLatestSecrets = new ArrayList<>();
-                                for (OAuthConsumerSecretDO importedSecret : importedSecrets) {
-                                    /* A never-expiring secret carries no expiry element; zero or a negative value
-                                       marks a malformed file. */
-                                    if (importedSecret.getExpiryTime() != null
-                                            && importedSecret.getExpiryTime() <= 0) {
-                                        throw new IdentityOAuthClientException("The client secret list contains "
-                                                + "an invalid expiry time.");
+                                    && (oAuthAppDO.getOauthConsumerSecretExpiryTime() != null
+                                        || CollectionUtils.isNotEmpty(
+                                                oAuthAppDO.getAdditionalOauthConsumerSecrets()))) {
+                                /* The application carries multiple client secret data (the latest secret's expiry
+                                   and/or non-latest secrets), so restore them exactly as exported. */
+                                OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
+                                applicationImportDTO.setApplication(oAuthConsumerAppDTO);
+                                if (CollectionUtils.isNotEmpty(oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                                    List<OAuthClientSecretImportDTO> additionalSecrets = new ArrayList<>();
+                                    for (OAuthConsumerSecretDO additionalSecret :
+                                            oAuthAppDO.getAdditionalOauthConsumerSecrets()) {
+                                        OAuthClientSecretImportDTO importedSecret = new OAuthClientSecretImportDTO();
+                                        importedSecret.setSecretValue(additionalSecret.getSecretValue());
+                                        importedSecret.setExpiryTime(additionalSecret.getExpiryTime() == null ? null
+                                                : additionalSecret.getExpiryTime() / 1000L);
+                                        additionalSecrets.add(importedSecret);
                                     }
-                                    if (StringUtils.equals(importedSecret.getSecretValue(), latestSecretValue)) {
-                                        latestSecretMatched = true;
-                                        latestSecretExpiryTime = importedSecret.getExpiryTime();
-                                    } else {
-                                        nonLatestSecrets.add(importedSecret);
-                                    }
+                                    applicationImportDTO.setAdditionalSecrets(additionalSecrets);
                                 }
-                                /* An export always includes the latest secret in the list; a client secret absent
-                                   from its own list marks a self-inconsistent, hand-edited file. */
-                                if (!latestSecretMatched) {
-                                    throw new IdentityOAuthClientException("The client secret in the import file "
-                                            + "does not match any entry in the client secret list.");
-                                }
-                                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
-                                dao.completeImportedOAuthConsumerSecrets(oauthConsumerKey, nonLatestSecrets,
-                                        latestSecretExpiryTime);
-                                AppInfoCache.getInstance().clearCacheEntry(oauthConsumerKey);
+                                oAuthAdminService.registerImportedOAuthApplicationData(applicationImportDTO);
                             } else {
                                 oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
                             }
@@ -412,10 +400,17 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
                                 .equals(tokenProcessorName) || !exportSecrets) {
                             authApplication.setOauthConsumerSecret(null);
+                            authApplication.setOauthConsumerSecretExpiryTime(null);
                         } else if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                            /* Plaintext persistence with secret export enabled: export the full client secret list
-                               (value, name, expiry) ordered latest-first so import can recreate every secret. */
-                            authApplication.setConsumerSecrets(dao.getOAuthConsumerSecrets(authApplication.getId()));
+                            /* Plaintext persistence with secret export enabled: the latest secret travels on the
+                               application record (oauthConsumerSecret and oauthConsumerSecretExpiryTime); export only
+                               the remaining non-latest secrets, which follow the latest in the latest-first list. */
+                            List<OAuthConsumerSecretDO> consumerSecrets =
+                                    dao.getOAuthConsumerSecrets(authApplication.getId());
+                            if (consumerSecrets.size() > 1) {
+                                authApplication.setAdditionalOauthConsumerSecrets(
+                                        new ArrayList<>(consumerSecrets.subList(1, consumerSecrets.size())));
+                            }
                         }
 
                         Property[] properties = authConfig.getProperties();

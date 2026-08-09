@@ -781,7 +781,7 @@ public class DCRMService {
                         DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_SECRET_EXPIRY_NOT_SUPPORTED, null);
             }
             /* The expiry is carried as Unix epoch seconds on the DTO. */
-            if (registrationRequest.getClientSecretExpiresAt() != 0 && OAuth2Util.isClientSecretExpired(
+            if (registrationRequest.getClientSecretExpiresAt() != 0 && OAuth2Util.isExpiryTimeInPast(
                     registrationRequest.getClientSecretExpiresAt() * 1000L)) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_CLIENT_SECRET_EXPIRY,

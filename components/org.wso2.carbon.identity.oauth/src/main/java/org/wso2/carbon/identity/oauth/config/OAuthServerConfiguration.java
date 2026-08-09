@@ -344,8 +344,9 @@ public class OAuthServerConfiguration {
 
     // Property to define whether multiple client secrets are allowed for oauth applications,
     private boolean isMultipleClientSecretsEnabled = true;
-    // Property to define the number of max client secrets per oauth application. -1 means unlimited.
-    private int clientSecretCount = -1;
+    // Max number of client secrets per oauth application. Defaults to 2 when not configured or misconfigured.
+    private static final int DEFAULT_CLIENT_SECRET_COUNT = 2;
+    private int clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -4213,20 +4214,21 @@ public class OAuthServerConfiguration {
                 isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
                 if (isMultipleClientSecretsEnabled) {
                     OMElement isClientSecretLimitElement = multipleClientSecretsElement
-                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SECRET_COUNT_MAX));
+                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MAX_SECRET_COUNT));
                     if (isClientSecretLimitElement != null &&
                             StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
                         String secretCountText = isClientSecretLimitElement.getText().trim();
                         try {
                             clientSecretCount = Integer.parseInt(secretCountText);
                             if (clientSecretCount <= 0) {
+                                clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
                                 log.error("Invalid value for client secret count: '" + secretCountText +
-                                        "'. Secret count should be a positive value. Using default client " +
-                                        "secret count: unlimited secrets");
+                                        "'. Secret count should be a positive value. Using default client "
+                                        + "secret count: " + DEFAULT_CLIENT_SECRET_COUNT);
                             }
                         } catch (NumberFormatException e) {
                             log.error("Invalid value for client secret count: '" + secretCountText +
-                                    "'. Using default client secret count: unlimited secrets", e);
+                                    "'. Using default client secret count: " + DEFAULT_CLIENT_SECRET_COUNT, e);
                         }
                     }
                 }
@@ -4958,7 +4960,7 @@ public class OAuthServerConfiguration {
         // Multiple client secret configurations
         private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
         private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
-        private static final String SECRET_COUNT_MAX = "SecretCountMax";
+        private static final String MAX_SECRET_COUNT = "MaxSecretCount";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
