@@ -317,8 +317,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                     && (oAuthAppDO.getOauthConsumerSecretExpiryTime() != null
                                         || CollectionUtils.isNotEmpty(
                                                 oAuthAppDO.getAdditionalOauthConsumerSecrets()))) {
-                                /* The application carries multiple client secret data (the latest secret's expiry
-                                   and/or non-latest secrets), so restore them exactly as exported. */
+                                /* Restore the secrets exactly as exported through the import path: it preserves the
+                                   latest secret's expiry and re-creates the non-latest secrets, and unlike normal
+                                   registration it does not reject an already-expired secret. */
                                 OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
                                 applicationImportDTO.setApplication(oAuthConsumerAppDTO);
                                 if (CollectionUtils.isNotEmpty(oAuthAppDO.getAdditionalOauthConsumerSecrets())) {

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -56,7 +58,12 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthApplicationImportDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretImportDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretRequestDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
@@ -114,6 +121,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -222,6 +230,8 @@ public class OAuthAdminServiceImplTest {
 
         identityTenantUtil.close();
         loggerUtils.close();
+        // Reset the thread-local carbon context so a logged-in user set by one test does not leak into the next.
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(null);
     }
 
     private void initConfigsAndRealm() throws Exception {
@@ -2404,5 +2414,722 @@ public class OAuthAdminServiceImplTest {
                                 + "be clamped to the max, not set to 30.");
             }
         }
+    }
+
+    @DataProvider(name = "clientSecretOperations")
+    public Object[][] clientSecretOperations() {
+
+        // Each client secret operation that must be rejected when the multiple client secrets feature is disabled.
+        return new Object[][]{
+                {"createOAuthClientSecret", (ClientSecretOperation) service ->
+                        service.createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME,
+                                new OAuthClientSecretRequestDTO())},
+                {"removeOAuthClientSecret", (ClientSecretOperation) service ->
+                        service.removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "secret-id")},
+                {"getOAuthClientSecrets", (ClientSecretOperation) service ->
+                        service.getOAuthClientSecrets(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)},
+                {"getOAuthClientSecret", (ClientSecretOperation) service ->
+                        service.getOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "secret-id")}
+        };
+    }
+
+    @Test(description = "Client secret operations are rejected when the feature is disabled",
+            dataProvider = "clientSecretOperations")
+    public void testClientSecretOperationsRejectedWhenFeatureDisabled(String operationName,
+                                                                      ClientSecretOperation operation) {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(false);
+            try {
+                operation.run(new OAuthAdminServiceImpl());
+                Assert.fail(operationName + " should be rejected when multiple client secrets is disabled.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+            }
+        }
+    }
+
+    @DataProvider(name = "validClientSecretExpiry")
+    public Object[][] validClientSecretExpiry() {
+
+        // requestedExpirySeconds, expectedExpiryMillisPersisted (null denotes a never-expiring secret).
+        return new Object[][]{
+                {100L, 100000L},
+                {0L, null},
+                {null, null}
+        };
+    }
+
+    @Test(description = "Creating a client secret with a valid expiry (future, zero or none) succeeds: the expiry is "
+            + "validated and persisted in milliseconds, and the new secret is returned as the latest, active secret",
+            dataProvider = "validClientSecretExpiry")
+    public void testCreateOAuthClientSecretWithValidExpiry(Long requestedExpirySeconds, Long expectedExpiryMillis)
+            throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthConsumerSecretDO createdSecret = new OAuthConsumerSecretDO();
+        createdSecret.setSecretId("new-secret-id");
+        createdSecret.setSecretValue("new-secret-value");
+        createdSecret.setExpiryTime(expectedExpiryMillis);
+
+        OAuthClientSecretRequestDTO secretRequest = new OAuthClientSecretRequestDTO();
+        secretRequest.setExpiryTime(requestedExpirySeconds);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) ->
+                            when(mock.addOAuthConsumerSecret(anyInt(), any())).thenReturn(createdSecret))) {
+                OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl()
+                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, secretRequest);
+
+                // The requested expiry (epoch seconds) is validated and persisted in milliseconds.
+                ArgumentCaptor<Long> persistedExpiryCaptor = ArgumentCaptor.forClass(Long.class);
+                verify(mockedConstruction.constructed().get(0))
+                        .addOAuthConsumerSecret(anyInt(), persistedExpiryCaptor.capture());
+                Assert.assertEquals(persistedExpiryCaptor.getValue(), expectedExpiryMillis);
+
+                Assert.assertEquals(response.getSecretId(), "new-secret-id");
+                Assert.assertTrue(response.isLatest(), "A newly created secret is the latest secret.");
+                Assert.assertEquals(response.getStatus(), OAuthConstants.ClientSecretStatus.ACTIVE);
+            }
+        }
+    }
+
+    @Test(description = "Removing a non-latest client secret deletes it from the application")
+    public void testRemoveOAuthClientSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getLatestOAuthConsumerSecretId(1)).thenReturn("latest-secret-id");
+                        when(mock.deleteOAuthConsumerSecret("non-latest-secret-id", 1)).thenReturn(1);
+                    })) {
+                new OAuthAdminServiceImpl()
+                        .removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "non-latest-secret-id");
+                verify(mockedConstruction.constructed().get(0)).deleteOAuthConsumerSecret("non-latest-secret-id", 1);
+            }
+        }
+    }
+
+    @Test(description = "Removing the latest client secret is rejected with a client error")
+    public void testRemoveOAuthClientSecretRejectsLatestSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getLatestOAuthConsumerSecretId(1)).thenReturn("latest-secret-id"))) {
+                try {
+                    new OAuthAdminServiceImpl()
+                            .removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "latest-secret-id");
+                    Assert.fail("Deleting the latest client secret should be rejected.");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                    Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                            Error.INVALID_DELETE.getErrorCode());
+                }
+            }
+        }
+    }
+
+    @Test(description = "Getting a client secret by id returns it and flags it as the latest secret when applicable")
+    public void testGetOAuthClientSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthConsumerSecretDO secretDO = new OAuthConsumerSecretDO();
+        secretDO.setSecretId("secret-id");
+        secretDO.setSecretValue("secret-value");
+        secretDO.setExpiryTime(4102444800000L);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getOAuthConsumerSecret("secret-id", 1)).thenReturn(secretDO);
+                        when(mock.getLatestOAuthConsumerSecretId(1)).thenReturn("secret-id");
+                    })) {
+                OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl()
+                        .getOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "secret-id");
+                Assert.assertEquals(response.getSecretId(), "secret-id");
+                Assert.assertTrue(response.isLatest(), "The queried secret is the latest secret.");
+                Assert.assertEquals(response.getStatus(), OAuthConstants.ClientSecretStatus.ACTIVE);
+            }
+        }
+    }
+
+    @Test(description = "Getting an unknown client secret id is rejected as not found")
+    public void testGetOAuthClientSecretWithUnknownSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getOAuthConsumerSecret("unknown-secret-id", 1)).thenReturn(null))) {
+                try {
+                    new OAuthAdminServiceImpl()
+                            .getOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "unknown-secret-id");
+                    Assert.fail("Getting an unknown client secret should be rejected.");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                    Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                            Error.INVALID_SECRET_ID.getErrorCode());
+                }
+            }
+        }
+    }
+
+    @Test(description = "Registering an OAuth application with a client secret expiry persists the expiry in "
+            + "milliseconds on the application")
+    public void testRegisterOAuthApplicationDataWithClientSecretExpiry() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.isMultipleClientSecretsEnabled()).thenReturn(true);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn("org-id");
+            when(mockOrganizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
+
+            OAuthConsumerAppDTO application = getoAuthConsumerAppDTO(USER_NAME, CONSUMER_KEY, CONSUMER_SECRET,
+                    OAuthConstants.OAuthVersions.VERSION_2);
+            // A future client secret expiry provided in epoch seconds.
+            application.setOauthConsumerSecretExpiryTime(4102444800L);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class)))) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                new OAuthAdminServiceImpl().registerOAuthApplicationData(application);
+
+                ArgumentCaptor<OAuthAppDO> appCaptor = ArgumentCaptor.forClass(OAuthAppDO.class);
+                verify(mockedConstruction.constructed().get(0)).addOAuthApplication(appCaptor.capture());
+                Assert.assertEquals(appCaptor.getValue().getOauthConsumerSecretExpiryTime(), (Long) 4102444800000L,
+                        "The client secret expiry should be persisted in milliseconds.");
+            }
+        }
+    }
+
+    @DataProvider(name = "invalidClientSecretExpiry")
+    public Object[][] invalidClientSecretExpiry() {
+
+        // requestedExpirySeconds, expiryInPast.
+        return new Object[][]{
+                {100L, true},
+                {-1L, false}
+        };
+    }
+
+    @Test(description = "Creating a client secret with a past or negative (malformed) expiry is rejected",
+            dataProvider = "invalidClientSecretExpiry")
+    public void testCreateOAuthClientSecretRejectsInvalidExpiry(Long requestedExpirySeconds, boolean expiryInPast) {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthClientSecretRequestDTO secretRequest = new OAuthClientSecretRequestDTO();
+        secretRequest.setExpiryTime(requestedExpirySeconds);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(expiryInPast);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try {
+                new OAuthAdminServiceImpl()
+                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, secretRequest);
+                Assert.fail("Creating a client secret with an invalid expiry should be rejected.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+            }
+        }
+    }
+
+    @Test(description = "Importing an application restores its additional secrets with the correct millisecond expiry")
+    public void testRegisterImportedOAuthApplicationDataRestoresAdditionalSecrets() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.isMultipleClientSecretsEnabled()).thenReturn(true);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn("org-id");
+            when(mockOrganizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
+
+            OAuthConsumerAppDTO application = getoAuthConsumerAppDTO(USER_NAME, CONSUMER_KEY, CONSUMER_SECRET,
+                    OAuthConstants.OAuthVersions.VERSION_2);
+            OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
+            applicationImportDTO.setApplication(application);
+            OAuthClientSecretImportDTO additionalSecret = new OAuthClientSecretImportDTO();
+            additionalSecret.setSecretValue("additional-secret-value");
+            additionalSecret.setExpiryTime(100L);
+            applicationImportDTO.setAdditionalSecrets(Arrays.asList(additionalSecret));
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class)))) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                new OAuthAdminServiceImpl().registerImportedOAuthApplicationData(applicationImportDTO);
+
+                ArgumentCaptor<OAuthAppDO> appCaptor = ArgumentCaptor.forClass(OAuthAppDO.class);
+                verify(mockedConstruction.constructed().get(0)).addOAuthApplication(appCaptor.capture());
+                List<OAuthConsumerSecretDO> restoredSecrets =
+                        appCaptor.getValue().getAdditionalOauthConsumerSecrets();
+                Assert.assertNotNull(restoredSecrets);
+                Assert.assertEquals(restoredSecrets.size(), 1);
+                Assert.assertEquals(restoredSecrets.get(0).getSecretValue(), "additional-secret-value");
+                // The API carries expiry in seconds; the DAO layer persists it in milliseconds.
+                Assert.assertEquals(restoredSecrets.get(0).getExpiryTime(), (Long) 100000L);
+            }
+        }
+    }
+
+    @Test(description = "Importing an application that carries only its latest secret (no additional secrets) "
+            + "preserves the latest secret's expiry in milliseconds and restores no additional secrets")
+    public void testRegisterImportedOAuthApplicationDataWithoutAdditionalSecrets() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class)) {
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(new HashMap<>());
+            when(mockOAuthServerConfiguration.isMultipleClientSecretsEnabled()).thenReturn(true);
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(-1234);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(USER_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockOAuth2ServiceComponentHolder);
+            when(mockOAuth2ServiceComponentHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(anyString())).thenReturn("org-id");
+            when(mockOrganizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
+
+            OAuthConsumerAppDTO application = getoAuthConsumerAppDTO(USER_NAME, CONSUMER_KEY, CONSUMER_SECRET,
+                    OAuthConstants.OAuthVersions.VERSION_2);
+            // The exported app carried only the latest secret with a future expiry and no additional secrets.
+            application.setOauthConsumerSecretExpiryTime(4102444800L);
+            OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
+            applicationImportDTO.setApplication(application);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> doNothing().when(mock).addOAuthApplication(any(OAuthAppDO.class)))) {
+
+                mockUserstore(identityUtil, oAuthComponentServiceHolder);
+                new OAuthAdminServiceImpl().registerImportedOAuthApplicationData(applicationImportDTO);
+
+                ArgumentCaptor<OAuthAppDO> appCaptor = ArgumentCaptor.forClass(OAuthAppDO.class);
+                verify(mockedConstruction.constructed().get(0)).addOAuthApplication(appCaptor.capture());
+                OAuthAppDO registeredApp = appCaptor.getValue();
+                // The latest secret's expiry is preserved and converted from seconds to milliseconds.
+                Assert.assertEquals(registeredApp.getOauthConsumerSecretExpiryTime(), (Long) 4102444800000L);
+                Assert.assertTrue(registeredApp.getAdditionalOauthConsumerSecrets() == null
+                                || registeredApp.getAdditionalOauthConsumerSecrets().isEmpty(),
+                        "No additional secrets should be restored when the import carries none.");
+            }
+        }
+    }
+
+    @Test(description = "Importing an additional secret with an invalid expiry is rejected")
+    public void testRegisterImportedRejectsInvalidAdditionalSecretExpiry() {
+
+        OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
+        applicationImportDTO.setApplication(new OAuthConsumerAppDTO());
+        OAuthClientSecretImportDTO additionalSecret = new OAuthClientSecretImportDTO();
+        additionalSecret.setSecretValue("additional-secret-value");
+        additionalSecret.setExpiryTime(-1L);
+        applicationImportDTO.setAdditionalSecrets(Arrays.asList(additionalSecret));
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            try {
+                new OAuthAdminServiceImpl().registerImportedOAuthApplicationData(applicationImportDTO);
+                Assert.fail("An additional secret with a negative expiry should be rejected.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+            }
+        }
+    }
+
+
+    @DataProvider(name = "invalidImportApplication")
+    public Object[][] invalidImportApplication() {
+
+        // Import payloads missing the application details: a null wrapper and a wrapper without an application.
+        return new Object[][]{
+                {null},
+                {new OAuthApplicationImportDTO()}
+        };
+    }
+
+    @Test(description = "Import without application details is rejected with a client error",
+            dataProvider = "invalidImportApplication")
+    public void testRegisterImportedOAuthApplicationDataWithMissingApplication(
+            OAuthApplicationImportDTO applicationImportDTO) {
+
+        try {
+            new OAuthAdminServiceImpl().registerImportedOAuthApplicationData(applicationImportDTO);
+            Assert.fail("Import without application details should fail.");
+        } catch (IdentityOAuthAdminException e) {
+            Assert.assertTrue(e instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Importing additional client secrets is rejected when the feature is disabled")
+    public void testRegisterImportedAdditionalSecretsRejectedWhenFeatureDisabled() {
+
+        OAuthApplicationImportDTO applicationImportDTO = new OAuthApplicationImportDTO();
+        applicationImportDTO.setApplication(new OAuthConsumerAppDTO());
+        OAuthClientSecretImportDTO additionalSecret = new OAuthClientSecretImportDTO();
+        additionalSecret.setSecretValue("additional-secret-value");
+        applicationImportDTO.setAdditionalSecrets(Arrays.asList(additionalSecret));
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(false);
+            try {
+                new OAuthAdminServiceImpl().registerImportedOAuthApplicationData(applicationImportDTO);
+                Assert.fail("Importing additional secrets should be rejected when the feature is disabled.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+            }
+        }
+    }
+
+    @Test(description = "Masking redacts the latest and additional client secret values in audit data")
+    public void testMaskClientSecretRedactsAllSecretValues() throws Exception {
+
+        JSONObject additionalSecretOne = new JSONObject().put("secretValue", "additional-secret-1");
+        JSONObject additionalSecretTwo = new JSONObject().put("secretValue", "additional-secret-2");
+        JSONArray additionalSecrets = new JSONArray().put(additionalSecretOne).put(additionalSecretTwo);
+        JSONObject oauthApp = new JSONObject()
+                .put("oauthConsumerSecret", "latest-secret")
+                .put("additionalOauthConsumerSecrets", additionalSecrets)
+                .put("applicationName", "sample-app");
+
+        loggerUtils.when(() -> LoggerUtils.getMaskedContent(anyString())).thenReturn("***");
+
+        Method method = OAuthAdminServiceImpl.class.getDeclaredMethod("maskClientSecret", JSONObject.class);
+        method.setAccessible(true);
+        method.invoke(null, oauthApp);
+
+        Assert.assertEquals(oauthApp.getString("oauthConsumerSecret"), "***");
+        JSONArray maskedSecrets = oauthApp.getJSONArray("additionalOauthConsumerSecrets");
+        Assert.assertEquals(maskedSecrets.getJSONObject(0).getString("secretValue"), "***");
+        Assert.assertEquals(maskedSecrets.getJSONObject(1).getString("secretValue"), "***");
+        Assert.assertEquals(oauthApp.getString("applicationName"), "sample-app",
+                "Non-secret fields must be left untouched.");
+    }
+
+    @Test(description = "Getting all client secrets returns them latest-first, flagging only the first as the latest")
+    public void testGetOAuthClientSecretsReturnsAllSecretsLatestFirst() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthConsumerSecretDO latestSecret = new OAuthConsumerSecretDO();
+        latestSecret.setSecretId("latest-secret-id");
+        latestSecret.setSecretValue("latest-secret-value");
+        OAuthConsumerSecretDO olderSecret = new OAuthConsumerSecretDO();
+        olderSecret.setSecretId("older-secret-id");
+        olderSecret.setSecretValue("older-secret-value");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getOAuthConsumerSecrets(1))
+                            .thenReturn(Arrays.asList(latestSecret, olderSecret)))) {
+                List<OAuthClientSecretResponseDTO> secrets = new OAuthAdminServiceImpl()
+                        .getOAuthClientSecrets(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME);
+                Assert.assertEquals(secrets.size(), 2);
+                Assert.assertEquals(secrets.get(0).getSecretId(), "latest-secret-id");
+                Assert.assertTrue(secrets.get(0).isLatest(), "The first (latest-first) secret is the latest secret.");
+                Assert.assertFalse(secrets.get(1).isLatest(), "Only the first secret is flagged as the latest.");
+            }
+        }
+    }
+
+    @Test(description = "Getting all client secrets returns an empty list when the application has no secrets")
+    public void testGetOAuthClientSecretsReturnsEmptyListWhenNoneExist() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getOAuthConsumerSecrets(1)).thenReturn(new ArrayList<>()))) {
+                List<OAuthClientSecretResponseDTO> secrets = new OAuthAdminServiceImpl()
+                        .getOAuthClientSecrets(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME);
+                Assert.assertTrue(secrets.isEmpty(), "No secrets should be returned when the application has none.");
+            }
+        }
+    }
+
+    @Test(description = "Getting the default secret id on an unmigrated single-secret application returns the "
+            + "application's consumer secret as the latest secret")
+    public void testGetOAuthClientSecretReturnsDefaultSecretFallbackForUnmigratedApp() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+        appDO.setOauthConsumerSecret("consumer-secret-value");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getLatestOAuthConsumerSecretId(1))
+                            .thenReturn(OAuthConstants.DEFAULT_SECRET_ID))) {
+                OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl().getOAuthClientSecret(
+                        CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, OAuthConstants.DEFAULT_SECRET_ID);
+                Assert.assertEquals(response.getSecretId(), OAuthConstants.DEFAULT_SECRET_ID);
+                Assert.assertEquals(response.getSecretValue(), "consumer-secret-value",
+                        "The unmigrated app exposes its consumer secret as the default secret's value.");
+                Assert.assertTrue(response.isLatest(), "The single pre-migration secret is the latest by definition.");
+            }
+        }
+    }
+
+    @Test(description = "Getting a non-latest client secret returns it flagged as not the latest secret")
+    public void testGetOAuthClientSecretFlagsNonLatestSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthConsumerSecretDO secretDO = new OAuthConsumerSecretDO();
+        secretDO.setSecretId("non-latest-secret-id");
+        secretDO.setSecretValue("non-latest-secret-value");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getOAuthConsumerSecret("non-latest-secret-id", 1)).thenReturn(secretDO);
+                        when(mock.getLatestOAuthConsumerSecretId(1)).thenReturn("latest-secret-id");
+                    })) {
+                OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl()
+                        .getOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "non-latest-secret-id");
+                Assert.assertEquals(response.getSecretId(), "non-latest-secret-id");
+                Assert.assertFalse(response.isLatest(), "A secret other than the latest must not be flagged latest.");
+            }
+        }
+    }
+
+    @Test(description = "Removing a client secret with a blank secret id is rejected as an invalid secret id")
+    public void testRemoveOAuthClientSecretRejectsBlankSecretId() {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            try {
+                new OAuthAdminServiceImpl().removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "  ");
+                Assert.fail("Removing a client secret with a blank id should be rejected.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_SECRET_ID.getErrorCode());
+            }
+        }
+    }
+
+    @Test(description = "Removing a client secret that does not exist (no row deleted) is rejected as not found")
+    public void testRemoveOAuthClientSecretRejectsUnknownSecretId() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getLatestOAuthConsumerSecretId(1)).thenReturn("latest-secret-id");
+                        when(mock.deleteOAuthConsumerSecret("unknown-secret-id", 1)).thenReturn(0);
+                    })) {
+                try {
+                    new OAuthAdminServiceImpl()
+                            .removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "unknown-secret-id");
+                    Assert.fail("Removing an unknown client secret should be rejected.");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                    Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                            Error.INVALID_SECRET_ID.getErrorCode());
+                }
+            }
+        }
+    }
+
+    @Test(description = "Client secret operations are rejected as invalid client when the application cannot be found",
+            dataProvider = "clientSecretOperations")
+    public void testClientSecretOperationsRejectedWhenAppNotFound(String operationName,
+                                                                  ClientSecretOperation operation) {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(true);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(null);
+
+            try (MockedConstruction<OAuthAppDAO> ignored = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(anyString(), anyInt())).thenReturn(null))) {
+                operation.run(new OAuthAdminServiceImpl());
+                Assert.fail(operationName + " should be rejected when the application cannot be found.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_OAUTH_CLIENT.getErrorCode());
+            }
+        }
+    }
+
+    @FunctionalInterface
+    private interface ClientSecretOperation {
+
+        void run(OAuthAdminServiceImpl oAuthAdminService) throws IdentityOAuthAdminException;
     }
 }

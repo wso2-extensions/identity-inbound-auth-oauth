@@ -545,6 +545,17 @@ public class OAuthServerConfigurationTest {
     }
 
 
+    @Test(description = "When the feature is not configured in identity.xml, multiple client secrets is enabled by "
+            + "default and the maximum secret count defaults to 2")
+    public void testGetMultipleClientSecretsDefaults() {
+
+        // The test identity.xml does not configure the feature, so the code-level defaults apply.
+        Assert.assertTrue(OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled(),
+                "Multiple client secrets should be enabled by default.");
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getClientSecretCount(), 2,
+                "The default maximum client secret count should be 2.");
+    }
+
     private String fillURLPlaceholdersForTest(String url) {
 
         return url.replace("${carbon.protocol}", "https")

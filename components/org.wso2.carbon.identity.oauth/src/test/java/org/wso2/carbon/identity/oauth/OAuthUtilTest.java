@@ -48,6 +48,12 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretMetadataDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -851,5 +857,89 @@ public class OAuthUtilTest {
         public String getIdentifier() {
             return identifier;
         }
+    }
+
+    @DataProvider(name = "clientSecretResponseData")
+    public Object[][] clientSecretResponseData() {
+
+        // expiryMillis, expiryInPast, expectedExpirySeconds, expectedStatus.
+        return new Object[][]{
+                {4102444800000L, false, 4102444800L, OAuthConstants.ClientSecretStatus.ACTIVE},
+                {1000L, true, 1L, OAuthConstants.ClientSecretStatus.EXPIRED},
+                {null, false, 0L, OAuthConstants.ClientSecretStatus.ACTIVE}
+        };
+    }
+
+    @Test(description = "Build the client secret response DTO with expiry and status mapping",
+            dataProvider = "clientSecretResponseData")
+    public void testBuildClientSecretResponseDTO(Long expiryMillis, boolean expiryInPast, Long expectedExpirySeconds,
+                                                 OAuthConstants.ClientSecretStatus expectedStatus) {
+
+        OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
+        consumerSecretDO.setSecretId("secret-id");
+        consumerSecretDO.setSecretValue("secret-value");
+        consumerSecretDO.setExpiryTime(expiryMillis);
+
+        oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(expiryMillis)).thenReturn(expiryInPast);
+
+        OAuthClientSecretResponseDTO responseDTO = OAuthUtil.buildClientSecretResponseDTO(consumerSecretDO);
+        assertEquals(responseDTO.getSecretId(), "secret-id");
+        assertEquals(responseDTO.getSecretValue(), "secret-value");
+        assertEquals(responseDTO.getExpiryTime(), expectedExpirySeconds);
+        assertEquals(responseDTO.getStatus(), expectedStatus);
+    }
+
+    @DataProvider(name = "getApplicationClientSecretScenarios")
+    public Object[][] getApplicationClientSecretScenarios() {
+
+        /* storedSecretCount, latestSecretExpiryMillis, multipleSecretsEnabled, expectMultipleSecretsFlag,
+           expectedLatestSecretExpirySeconds. */
+        return new Object[][]{
+                // Basic app with a single (latest) secret that never expires: not multi-secret; expiry 0 (= never).
+                {1, null, true, false, 0L},
+                // App with two secrets whose latest secret expires in the future: multi-secret; expiry in seconds.
+                {2, 5000L, true, true, 5L},
+                // Feature disabled: neither the expiry nor the multi-secret flag is exposed, even with two secrets.
+                {2, 5000L, false, null, null}
+        };
+    }
+
+    @Test(description = "On GET application, the response flags multipleClientSecretsConfigured only when the app "
+            + "holds more than one secret and exposes the latest secret's expiry converted from millis to seconds; "
+            + "when the feature is disabled neither is exposed",
+            dataProvider = "getApplicationClientSecretScenarios")
+    public void testBuildConsumerAppDTOExposesLatestSecretExpiryAndMultipleSecretsFlag(int storedSecretCount,
+            Long latestSecretExpiryMillis, boolean multipleSecretsEnabled, Boolean expectMultipleSecretsFlag,
+            Long expectedLatestSecretExpirySeconds) {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setUserName("app-owner");
+        user.setTenantDomain("carbon.super");
+        user.setUserStoreDomain("PRIMARY");
+
+        // The metadata list mirrors how many secrets the app currently holds (one entry per stored secret).
+        List<OAuthConsumerSecretMetadataDO> secretMetadataList = new ArrayList<>();
+        for (int i = 0; i < storedSecretCount; i++) {
+            secretMetadataList.add(new OAuthConsumerSecretMetadataDO("secret-hash-" + i, null));
+        }
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setApplicationName("sample-app");
+        appDO.setOauthConsumerKey("consumer-key");
+        appDO.setOauthConsumerSecret("consumer-secret");
+        appDO.setUser(user);
+        // On a load, this carries the LATEST secret's expiry (epoch millis); the DTO must expose it in seconds.
+        appDO.setOauthConsumerSecretExpiryTime(latestSecretExpiryMillis);
+        appDO.setOauthConsumerSecretsMetadataList(secretMetadataList);
+
+        oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(multipleSecretsEnabled);
+
+        OAuthConsumerAppDTO dto = OAuthUtil.buildConsumerAppDTO(appDO);
+        assertEquals(dto.getMultipleConsumerSecretsConfigured(), expectMultipleSecretsFlag,
+                "multipleClientSecretsConfigured should be true only when the app holds more than one secret, and "
+                        + "unset when the feature is disabled.");
+        assertEquals(dto.getOauthConsumerSecretExpiryTime(), expectedLatestSecretExpirySeconds,
+                "The latest secret's expiry should be exposed in epoch seconds (0 when it never expires), and unset "
+                        + "when the feature is disabled.");
     }
 }

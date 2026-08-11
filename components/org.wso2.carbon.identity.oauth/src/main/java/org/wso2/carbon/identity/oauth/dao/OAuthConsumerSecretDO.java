@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.beans.Transient;
 import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -48,6 +49,7 @@ public class OAuthConsumerSecretDO implements Serializable {
     private Long createdTime;
     private Long expiryTime;
 
+    @Transient
     public String getSecretId() {
 
         return secretId;
@@ -58,6 +60,7 @@ public class OAuthConsumerSecretDO implements Serializable {
         this.secretId = secretId;
     }
 
+    @Transient
     public int getConsumerKeyId() {
 
         return consumerKeyId;
@@ -78,6 +81,7 @@ public class OAuthConsumerSecretDO implements Serializable {
         this.secretValue = secretValue;
     }
 
+    @Transient
     public String getSecretHash() {
 
         return secretHash;
@@ -88,6 +92,7 @@ public class OAuthConsumerSecretDO implements Serializable {
         this.secretHash = secretHash;
     }
 
+    @Transient
     public Long getCreatedTime() {
 
         return createdTime;

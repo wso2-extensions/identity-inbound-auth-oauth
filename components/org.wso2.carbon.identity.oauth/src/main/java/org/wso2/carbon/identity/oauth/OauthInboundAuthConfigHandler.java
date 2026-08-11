@@ -159,19 +159,21 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                     throw new IdentityOAuthClientException("Invalid ClientSecret provided for update.");
                 }
                 Long providedSecretExpiryTime = consumerAppDTO.getOauthConsumerSecretExpiryTime();
-                if (providedSecretExpiryTime != null && !OAuth2Util.isMultipleClientSecretsEnabled()) {
+                if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+                    /* The client secret expiry time is bound to the secret itself and cannot be changed through an
+                       application update. Keep the existing value when not provided and reject an attempt to change
+                       it, mirroring how the consumer secret is validated above. Both values are Unix epoch seconds,
+                       where zero denotes a never-expiring secret. */
+                    Long existingSecretExpiryTime = oauthApp.getOauthConsumerSecretExpiryTime();
+                    if (providedSecretExpiryTime == null) {
+                        consumerAppDTO.setOauthConsumerSecretExpiryTime(existingSecretExpiryTime);
+                    } else if (!providedSecretExpiryTime.equals(existingSecretExpiryTime)) {
+                        throw new IdentityOAuthClientException(
+                                "The client secret expiry time cannot be modified with the application update.");
+                    }
+                } else if (providedSecretExpiryTime != null) {
                     throw new IdentityOAuthClientException(
                             OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
-                }
-                /* The client secret expiry time is bound to the secret itself and cannot be changed through an
-                   application update. Keep the existing value when not provided and reject an attempt to change
-                   it; both values are Unix epoch seconds, where zero denotes a never-expiring secret. */
-                Long existingSecretExpiryTime = oauthApp.getOauthConsumerSecretExpiryTime();
-                if (providedSecretExpiryTime == null) {
-                    consumerAppDTO.setOauthConsumerSecretExpiryTime(existingSecretExpiryTime);
-                } else if (!providedSecretExpiryTime.equals(existingSecretExpiryTime)) {
-                    throw new IdentityOAuthClientException(
-                            "The client secret expiry time cannot be modified with the application update.");
                 }
 
                 /*

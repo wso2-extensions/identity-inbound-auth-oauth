@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.beans.Transient;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
@@ -195,6 +196,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
     }
 
+    @Transient
     public List<OAuthConsumerSecretMetadataDO> getOauthConsumerSecretsMetadataList() {
         return oauthConsumerSecretsMetadataList;
     }
