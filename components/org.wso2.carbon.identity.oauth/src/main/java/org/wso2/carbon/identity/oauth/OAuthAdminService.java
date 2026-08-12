@@ -21,8 +21,6 @@ package org.wso2.carbon.identity.oauth;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.AbstractAdmin;
-import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretRequestDTO;
-import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
@@ -397,81 +395,6 @@ public class OAuthAdminService extends AbstractAdmin {
 
         try {
             return oAuthAdminServiceImpl.updateApproveAlwaysForAppConsentByResourceOwner(appName, state);
-        } catch (IdentityOAuthAdminException ex) {
-            throw handleError(ex);
-        }
-    }
-
-    /**
-     * Create a new client secret for an OAuth application.
-     *
-     * @param consumerKey   Consumer key of the OAuth application.
-     * @param tenantDomain  Tenant domain of the application.
-     * @param secretRequest Client secret attributes: an optional absolute expiry time as Unix epoch seconds,
-     *                      where zero or null denotes a never-expiring secret.
-     * @return Created OAuthClientSecretResponseDTO with the details of the new client secret.
-     * @throws IdentityOAuthAdminException Error when persisting the client secret in the persistence store.
-     */
-    public OAuthClientSecretResponseDTO createClientSecret(String consumerKey, String tenantDomain,
-            OAuthClientSecretRequestDTO secretRequest) throws IdentityOAuthAdminException {
-
-        try {
-            return oAuthAdminServiceImpl.createOAuthClientSecret(consumerKey, tenantDomain, secretRequest);
-        } catch (IdentityOAuthAdminException ex) {
-            throw handleError(ex);
-        }
-    }
-
-    /**
-     * Remove an existing client secret from an OAuth application.
-     *
-     * @param consumerKey  Consumer key of the OAuth application.
-     * @param tenantDomain Tenant domain of the application.
-     * @param secretId     ID of the client secret to be removed.
-     * @throws IdentityOAuthAdminException Error when removing the client secret from the persistence store.
-     */
-    public void removeClientSecret(String consumerKey, String tenantDomain, String secretId)
-            throws IdentityOAuthAdminException {
-
-        try {
-            oAuthAdminServiceImpl.removeOAuthClientSecret(consumerKey, tenantDomain, secretId);
-        } catch (IdentityOAuthAdminException ex) {
-            throw handleError(ex);
-        }
-    }
-
-    /**
-     * Get all client secrets associated with an OAuth application.
-     *
-     * @param consumerKey  Consumer key of the OAuth application.
-     * @param tenantDomain Tenant domain of the application.
-     * @return List of OAuthClientSecretResponseDTO objects containing the details of the client secrets.
-     * @throws IdentityOAuthAdminException Error when reading the client secrets from the persistence store.
-     */
-    public List<OAuthClientSecretResponseDTO> getClientSecrets(String consumerKey, String tenantDomain)
-            throws IdentityOAuthAdminException {
-
-        try {
-            return oAuthAdminServiceImpl.getOAuthClientSecrets(consumerKey, tenantDomain);
-        } catch (IdentityOAuthAdminException ex) {
-            throw handleError(ex);
-        }
-    }
-
-    /**
-     * Get details of a client secret by its ID.
-     *
-     * @param consumerKey  Consumer key of the OAuth application.
-     * @param tenantDomain Tenant domain of the application.
-     * @param secretId     ID of the client secret.
-     * @return OAuthClientSecretResponseDTO containing the details of the client secret.
-     * @throws IdentityOAuthAdminException Error when reading the client secret from the persistence store.
-     */
-    public OAuthClientSecretResponseDTO getClientSecret(String consumerKey, String tenantDomain, String secretId)
-            throws IdentityOAuthAdminException {
-
-        try {
-            return oAuthAdminServiceImpl.getOAuthClientSecret(consumerKey, tenantDomain, secretId);
         } catch (IdentityOAuthAdminException ex) {
             throw handleError(ex);
         }
