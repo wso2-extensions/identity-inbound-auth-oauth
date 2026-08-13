@@ -479,7 +479,7 @@ public class JWTUtils {
                 return OAuth2Util.getTenantDomainOfOauthApp(accessTokenDO.getConsumerKey());
             } catch (InvalidOAuthClientException e) {
                 throw new IdentityOAuth2ClientException("Error while getting tenant domain from OAuth app with " +
-                        "consumer key: " + accessTokenDO.getConsumerKey());
+                        "consumer key: " + accessTokenDO.getConsumerKey(), e);
             } catch (OrganizationManagementException e) {
                 throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with " +
                         "consumer key: " + accessTokenDO.getConsumerKey(), e);
