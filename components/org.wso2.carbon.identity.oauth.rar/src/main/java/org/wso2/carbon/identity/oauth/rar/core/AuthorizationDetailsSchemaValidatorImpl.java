@@ -37,7 +37,14 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT;
@@ -68,6 +75,8 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
+    private static final Set<String> NON_NEGATIVE_INTEGER_SCHEMA_KEYWORDS = Set.of("minItems", "maxItems",
+            "minLength", "maxLength", "minProperties", "maxProperties");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -218,9 +227,94 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             return false;
         }
 
-        final JsonObject jsonSchema = new JsonObject(schema);
+        final JsonObject jsonSchema = new JsonObject(this.normalizeSchemaMap(schema));
         jsonSchema.put(ADDITIONAL_PROPERTIES, false); // Ensure no unknown fields are allowed
 
         return this.isSchemaCompliant(jsonSchema, authorizationDetail);
+    }
+
+    private Map<String, Object> normalizeSchemaMap(final Map<String, Object> schema) {
+
+        final Map<String, Object> normalizedSchema = new HashMap<>();
+        for (Map.Entry<String, Object> entry : schema.entrySet()) {
+            normalizedSchema.put(entry.getKey(), this.normalizeSchemaValue(entry.getKey(), entry.getValue()));
+        }
+        return normalizedSchema;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object normalizeSchemaValue(final String key, final Object value) {
+
+        if (value instanceof Number && NON_NEGATIVE_INTEGER_SCHEMA_KEYWORDS.contains(key)) {
+            return this.normalizeNonNegativeIntegerSchemaKeyword(value);
+        }
+        if (value instanceof Map) {
+            return this.normalizeSchemaMap((Map<String, Object>) value);
+        }
+        if (value instanceof Collection) {
+            return this.normalizeSchemaCollection((Collection<?>) value);
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> normalizeSchemaCollection(final Collection<?> values) {
+
+        final List<Object> normalizedValues = new ArrayList<>(values.size());
+        for (Object value : values) {
+            if (value instanceof Map) {
+                normalizedValues.add(this.normalizeSchemaMap((Map<String, Object>) value));
+            } else if (value instanceof Collection) {
+                normalizedValues.add(this.normalizeSchemaCollection((Collection<?>) value));
+            } else {
+                normalizedValues.add(value);
+            }
+        }
+        return normalizedValues;
+    }
+
+    private Object normalizeNonNegativeIntegerSchemaKeyword(final Object value) {
+
+        if (!(value instanceof Number)) {
+            return value;
+        }
+
+        final Number number = (Number) value;
+        if (number instanceof Integer) {
+            return number;
+        }
+        if (number instanceof Byte || number instanceof Short) {
+            final int intValue = number.intValue();
+            return intValue >= 0 ? intValue : value;
+        }
+        if (number instanceof Long) {
+            final long longValue = number.longValue();
+            return longValue >= 0 && longValue <= Integer.MAX_VALUE ? (int) longValue : value;
+        }
+        if (number instanceof BigInteger) {
+            return this.normalizeBigInteger((BigInteger) number, value);
+        }
+        if (number instanceof BigDecimal) {
+            try {
+                return this.normalizeBigInteger(((BigDecimal) number).toBigIntegerExact(), value);
+            } catch (ArithmeticException e) {
+                return value;
+            }
+        }
+
+        final double doubleValue = number.doubleValue();
+        if (Double.isFinite(doubleValue) && doubleValue >= 0 && doubleValue <= Integer.MAX_VALUE
+                && doubleValue == Math.rint(doubleValue)) {
+            return (int) doubleValue;
+        }
+        return value;
+    }
+
+    private Object normalizeBigInteger(final BigInteger integerValue, final Object originalValue) {
+
+        if (integerValue.signum() >= 0 && integerValue.compareTo(BigInteger.valueOf(Integer.MAX_VALUE)) <= 0) {
+            return integerValue.intValue();
+        }
+        return originalValue;
     }
 }
