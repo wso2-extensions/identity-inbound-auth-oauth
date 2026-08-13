@@ -245,7 +245,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     @SuppressWarnings("unchecked")
     private Object normalizeSchemaValue(final String key, final Object value) {
 
-        if (NON_NEGATIVE_INTEGER_SCHEMA_KEYWORDS.contains(key)) {
+        if (value instanceof Number && NON_NEGATIVE_INTEGER_SCHEMA_KEYWORDS.contains(key)) {
             return this.normalizeNonNegativeIntegerSchemaKeyword(value);
         }
         if (value instanceof Map) {
