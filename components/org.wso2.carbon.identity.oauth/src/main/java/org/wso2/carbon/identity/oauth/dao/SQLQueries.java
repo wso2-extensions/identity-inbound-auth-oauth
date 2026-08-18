@@ -53,8 +53,8 @@ public class SQLQueries {
                 "ID_TOKEN_EXPIRE_TIME) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
         public static final String ADD_OAUTH_CONSUMER_SECRET = "INSERT INTO IDN_OAUTH_CONSUMER_SECRETS " +
-                "(SECRET_ID, CONSUMER_KEY_ID, SECRET_VALUE, SECRET_HASH, CREATED_TIME, EXPIRY_TIME) " +
-                "VALUES (?,?,?,?,?,?)";
+                "(SECRET_ID, CONSUMER_KEY_ID, SECRET_VALUE, CREATED_TIME, EXPIRY_TIME) " +
+                "VALUES (?,?,?,?,?)";
 
         public static final String DELETE_OAUTH_CONSUMER_SECRET =
                 "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS WHERE SECRET_ID = ? AND CONSUMER_KEY_ID = ?";
@@ -64,7 +64,7 @@ public class SQLQueries {
 
         /* The ordering is contractual: the first row is the latest secret of the application. */
         public static final String GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT = "SELECT SECRET_ID, SECRET_VALUE, " +
-                "SECRET_HASH, CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=? " +
+                "CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=? " +
                 "ORDER BY COALESCE(CREATED_TIME, 0) DESC, SECRET_ID DESC";
 
         public static final String GET_LATEST_OAUTH_CONSUMER_SECRET_ID_OF_CLIENT =
@@ -75,7 +75,7 @@ public class SQLQueries {
                 "SELECT COUNT(*) FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=?";
 
         public static final String GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_ID = "SELECT SECRET_ID, " +
-                "SECRET_VALUE, SECRET_HASH, CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS " +
+                "SECRET_VALUE, CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS " +
                 "WHERE SECRET_ID=? AND CONSUMER_KEY_ID=?";
 
         public static final String GET_CONSUMER_SECRET_BY_APP_ID =

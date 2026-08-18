@@ -43,9 +43,6 @@ public class OAuthConsumerSecretDO implements Serializable {
     private String secretValue;
     @XmlTransient
     @JsonIgnore
-    private String secretHash;
-    @XmlTransient
-    @JsonIgnore
     private Long createdTime;
     private Long expiryTime;
 
@@ -79,17 +76,6 @@ public class OAuthConsumerSecretDO implements Serializable {
     public void setSecretValue(String secretValue) {
 
         this.secretValue = secretValue;
-    }
-
-    @Transient
-    public String getSecretHash() {
-
-        return secretHash;
-    }
-
-    public void setSecretHash(String secretHash) {
-
-        this.secretHash = secretHash;
     }
 
     @Transient

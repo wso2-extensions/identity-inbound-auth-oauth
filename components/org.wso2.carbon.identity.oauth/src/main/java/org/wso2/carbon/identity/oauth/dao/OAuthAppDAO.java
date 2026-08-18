@@ -476,12 +476,22 @@ public class OAuthAppDAO {
      * @return Metadata list (hash and expiry) of the given client secrets.
      */
     private List<OAuthConsumerSecretMetadataDO> buildConsumerSecretMetadataList(
-            List<OAuthConsumerSecretDO> consumerSecrets) {
+            List<OAuthConsumerSecretDO> consumerSecrets) throws IdentityOAuth2Exception {
 
         List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList = new ArrayList<>();
         for (OAuthConsumerSecretDO consumerSecret : consumerSecrets) {
+            String secretHash;
+            if (isHashDisabled) {
+                /* With hashing disabled the stored secret value is the plaintext or the encrypted secret, so it is
+                   recovered to plaintext and hashed to build the comparison hash used at authentication. */
+                String plainSecret = persistenceProcessor.getPreprocessedClientSecret(consumerSecret.getSecretValue());
+                secretHash = hashingPersistenceProcessor.getProcessedClientSecret(plainSecret);
+            } else {
+                // With hashing enabled the stored secret value is already the hash of the secret.
+                secretHash = consumerSecret.getSecretValue();
+            }
             consumerSecretMetadataList.add(
-                    new OAuthConsumerSecretMetadataDO(consumerSecret.getSecretHash(), consumerSecret.getExpiryTime()));
+                    new OAuthConsumerSecretMetadataDO(secretHash, consumerSecret.getExpiryTime()));
         }
         return consumerSecretMetadataList;
     }
@@ -2749,7 +2759,7 @@ public class OAuthAppDAO {
      * @param consumerKeyId Integer ID of the OAuth consumer application.
      * @param secret        Plaintext of the consumer secret.
      * @param expiryTime    Expiry time in epoch milliseconds, or null if the secret does not expire.
-     * @return {@link OAuthConsumerSecretDO} populated with the stored forms of the secret value and hash.
+     * @return {@link OAuthConsumerSecretDO} populated with the stored form of the secret value.
      * @throws IdentityOAuth2Exception if the secret cannot be processed.
      */
     private OAuthConsumerSecretDO buildConsumerSecretDO(int consumerKeyId, String secret, Long expiryTime)
@@ -2759,7 +2769,6 @@ public class OAuthAppDAO {
         consumerSecretDO.setSecretId(UUID.randomUUID().toString());
         consumerSecretDO.setConsumerKeyId(consumerKeyId);
         consumerSecretDO.setSecretValue(persistenceProcessor.getProcessedClientSecret(secret));
-        consumerSecretDO.setSecretHash(hashingPersistenceProcessor.getProcessedClientSecret(secret));
         consumerSecretDO.setExpiryTime(expiryTime);
         consumerSecretDO.setCreatedTime(System.currentTimeMillis());
         return consumerSecretDO;
@@ -2785,13 +2794,10 @@ public class OAuthAppDAO {
         consumerSecretDO.setConsumerKeyId(consumerKeyId);
         if (isHashDisabled) {
             consumerSecretDO.setSecretValue(persistenceProcessor.getProcessedClientSecret(unmigratedConsumerSecret));
-            consumerSecretDO.setSecretHash(
-                    hashingPersistenceProcessor.getProcessedClientSecret(unmigratedConsumerSecret));
         } else {
-            /* With hashing enabled the plaintext is unrecoverable: the stored hash serves as both the secret
-               value and the hash of the migrated secret. */
+            /* With hashing enabled the plaintext is unrecoverable, so the stored hash held in
+               IDN_OAUTH_CONSUMER_APPS is carried over as the secret value of the migrated secret. */
             consumerSecretDO.setSecretValue(unmigratedConsumerSecret);
-            consumerSecretDO.setSecretHash(unmigratedConsumerSecret);
         }
         insertOAuthConsumerSecretToSecretsTable(connection, consumerSecretDO);
     }
@@ -2804,9 +2810,8 @@ public class OAuthAppDAO {
      * IDN_OAUTH_CONSUMER_APPS.
      *
      * @param connection       DB connection to be used.
-     * @param consumerSecretDO Consumer secret to be added, fully populated with the stored forms of the secret
-     *                         value and the secret hash: both are written exactly as given, without any
-     *                         processing.
+     * @param consumerSecretDO Consumer secret to be added, fully populated with the stored form of the secret
+     *                         value, which is written exactly as given, without any processing.
      * @throws SQLException            if a database access error occurs.
      * @throws IdentityOAuth2Exception if the consumer secret is not fully populated.
      */
@@ -2814,27 +2819,26 @@ public class OAuthAppDAO {
             throws SQLException, IdentityOAuth2Exception {
 
         if (consumerSecretDO.getSecretId() == null || consumerSecretDO.getConsumerKeyId() <= 0
-                || consumerSecretDO.getSecretValue() == null || consumerSecretDO.getSecretHash() == null) {
+                || consumerSecretDO.getSecretValue() == null) {
             throw new IdentityOAuth2Exception("The consumer secret to be added must be fully populated with the "
-                    + "secret id, consumer key id, and the stored forms of the secret value and hash.");
+                    + "secret id, consumer key id, and the stored form of the secret value.");
         }
         try (PreparedStatement prepStmt = connection
                 .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER_SECRET)) {
             prepStmt.setString(1, consumerSecretDO.getSecretId());
             prepStmt.setInt(2, consumerSecretDO.getConsumerKeyId());
             prepStmt.setString(3, consumerSecretDO.getSecretValue());
-            prepStmt.setString(4, consumerSecretDO.getSecretHash());
             /* Persist the creation time as provided. A null time (a legacy secret migrated from
                IDN_OAUTH_CONSUMER_APPS, whose original creation time is unknown) is stored as NULL. */
             if (consumerSecretDO.getCreatedTime() != null) {
-                prepStmt.setLong(5, consumerSecretDO.getCreatedTime());
+                prepStmt.setLong(4, consumerSecretDO.getCreatedTime());
             } else {
-                prepStmt.setNull(5, java.sql.Types.BIGINT);
+                prepStmt.setNull(4, java.sql.Types.BIGINT);
             }
             if (consumerSecretDO.getExpiryTime() != null) {
-                prepStmt.setLong(6, consumerSecretDO.getExpiryTime());
+                prepStmt.setLong(5, consumerSecretDO.getExpiryTime());
             } else {
-                prepStmt.setNull(6, java.sql.Types.BIGINT);
+                prepStmt.setNull(5, java.sql.Types.BIGINT);
             }
             prepStmt.execute();
         }
@@ -2943,12 +2947,11 @@ public class OAuthAppDAO {
         OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
         secret.setSecretId(resultSet.getString(1));
         secret.setSecretValue(resultSet.getString(2));
-        secret.setSecretHash(resultSet.getString(3));
-        long createdTime = resultSet.getLong(4);
+        long createdTime = resultSet.getLong(3);
         if (!resultSet.wasNull()) {
             secret.setCreatedTime(createdTime);
         }
-        long expiryTime = resultSet.getLong(5);
+        long expiryTime = resultSet.getLong(4);
         /* getLong() returns 0 for SQL NULL; wasNull() is the only way to detect a true NULL. */
         if (!resultSet.wasNull()) {
             secret.setExpiryTime(expiryTime);
