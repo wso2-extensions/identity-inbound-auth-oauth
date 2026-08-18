@@ -638,7 +638,33 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
-        // Cache miss
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
+            }
+            return false;
+        }
+
+        /* When multiple client secrets support is enabled, the cached secret metadata of the application is
+           authoritative for a migrated application: match the presented secret against the cached hashes and honour
+           the matched secret's expiry. An empty list means the application is not yet migrated to the new secrets
+           table, so fall through to the legacy secret in IDN_OAUTH_CONSUMER_APPS below. */
+        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
+            List<OAuthConsumerSecretMetadataDO> consumerSecretMetadataList =
+                    appDO.getOauthConsumerSecretsMetadataList();
+            if (CollectionUtils.isNotEmpty(consumerSecretMetadataList)) {
+                String hashedProvidedSecret =
+                        getHashingPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
+                for (OAuthConsumerSecretMetadataDO consumerSecret : consumerSecretMetadataList) {
+                    if (StringUtils.equals(consumerSecret.getSecretHash(), hashedProvidedSecret)) {
+                        return !isExpiryTimeInPast(consumerSecret.getExpiryTime());
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Legacy secret comparison for applications not yet migrated to the secrets table.
         boolean isHashDisabled = isClientSecretHashingDisabled();
         String appClientSecret = appDO.getOauthConsumerSecret();
         if (isHashDisabled) {

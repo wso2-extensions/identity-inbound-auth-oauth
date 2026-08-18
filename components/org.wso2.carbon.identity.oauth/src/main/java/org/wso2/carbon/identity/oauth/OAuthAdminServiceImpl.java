@@ -123,6 +123,7 @@ import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogC
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.Error.FEATURE_NOT_ENABLED;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_DELETE;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
@@ -784,7 +785,7 @@ public class OAuthAdminServiceImpl {
             OAuthClientSecretRequestDTO secretRequest) throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST,
+            throw handleClientError(FEATURE_NOT_ENABLED,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         Long expiryTime = secretRequest == null ? null : secretRequest.getExpiryTime();
@@ -831,7 +832,7 @@ public class OAuthAdminServiceImpl {
         }
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                    OAuthConstants.CLIENT_SECRET_EXPIRY_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         if (expiryTimeInSeconds < 0) {
             throw handleClientError(INVALID_REQUEST, "The provided expiry time for the client secret is invalid.");
@@ -849,17 +850,18 @@ public class OAuthAdminServiceImpl {
      * (negative) expiry is rejected; an already expired secret is allowed so it can be restored as it is.
      *
      * @param additionalSecrets Non-latest client secrets from the import.
-     * @throws IdentityOAuthAdminException if the operation is not supported or an expiry time is invalid.
+     * @throws IdentityOAuthAdminException if additional client secrets are not supported or an expiry time
+     *                                     is invalid.
      */
     private void validateAdditionalClientSecrets(List<OAuthClientSecretImportDTO> additionalSecrets)
             throws IdentityOAuthAdminException {
 
+        if (additionalSecrets == null || additionalSecrets.isEmpty()) {
+            return;
+        }
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
             throw handleClientError(INVALID_REQUEST,
-                    OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
-        }
-        if (additionalSecrets == null) {
-            return;
+                    OAuthConstants.ADDITIONAL_CLIENT_SECRETS_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         for (OAuthClientSecretImportDTO additionalSecret : additionalSecrets) {
             validateClientSecretExpiryTime(additionalSecret.getExpiryTime(), false);
@@ -894,7 +896,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST,
+            throw handleClientError(FEATURE_NOT_ENABLED,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         if (StringUtils.isBlank(secretId)) {
@@ -942,7 +944,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST,
+            throw handleClientError(FEATURE_NOT_ENABLED,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
@@ -977,7 +979,7 @@ public class OAuthAdminServiceImpl {
             String secretId) throws IdentityOAuthAdminException {
 
         if (!OAuth2Util.isMultipleClientSecretsEnabled()) {
-            throw handleClientError(INVALID_REQUEST,
+            throw handleClientError(FEATURE_NOT_ENABLED,
                     OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);

@@ -1752,6 +1752,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             addOAuthApplication(appDO, TENANT_ID);
 
             OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), expiryTime);
+            advanceSecretCreatedTime(connection, createdSecret.getSecretId());
             assertNotNull(createdSecret.getSecretId());
             assertNotNull(createdSecret.getSecretValue(), "The generated plaintext secret should be returned once.");
             assertEquals(createdSecret.getExpiryTime(), expiryTime);
@@ -1789,6 +1790,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
             OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            advanceSecretCreatedTime(connection, createdSecret.getSecretId());
 
             assertEquals(appDAO.getLatestOAuthConsumerSecretId(appDO.getId()), createdSecret.getSecretId(),
                     "The most recently created secret should be reported as the latest.");
@@ -1904,6 +1906,22 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             testBody.run(new OAuthAppDAO(), reusableConnection);
         } finally {
             resetPrivilegedCarbonContext();
+        }
+    }
+
+    /**
+     * Advance the created time of the given client secret by one millisecond.
+     *
+     * The seeded secret and the newly created secret can rarely be stored within the same millisecond, tying on
+     * CREATED_TIME so the latest secret resolution falls back to the random secret id. Advancing the newly
+     * created secret keeps the ordering assertions deterministic.
+     */
+    private void advanceSecretCreatedTime(Connection connection, String secretId) throws SQLException {
+
+        try (PreparedStatement updateStatement = connection.prepareStatement(
+                "UPDATE IDN_OAUTH_CONSUMER_SECRETS SET CREATED_TIME = CREATED_TIME + 1 WHERE SECRET_ID = ?")) {
+            updateStatement.setString(1, secretId);
+            updateStatement.executeUpdate();
         }
     }
 

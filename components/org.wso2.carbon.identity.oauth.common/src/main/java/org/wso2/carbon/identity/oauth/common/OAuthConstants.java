@@ -304,6 +304,10 @@ public final class OAuthConstants {
 
     public static final String OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE
             = "The requested operation is not supported as the multiple client secret support is disabled.";
+    public static final String CLIENT_SECRET_EXPIRY_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE
+            = "The client secret expiry time is not supported as the multiple client secret support is disabled.";
+    public static final String ADDITIONAL_CLIENT_SECRETS_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE
+            = "Additional client secrets are not supported as the multiple client secret support is disabled.";
     public static final String DEFAULT_SECRET_ID = "25399749-8916-4625-b39d-c53ccf51666b";
 
     private OAuthConstants() {

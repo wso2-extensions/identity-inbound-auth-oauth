@@ -173,7 +173,7 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                     }
                 } else if (providedSecretExpiryTime != null) {
                     throw new IdentityOAuthClientException(
-                            OAuthConstants.OPERATION_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
+                            OAuthConstants.CLIENT_SECRET_EXPIRY_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE);
                 }
 
                 /*

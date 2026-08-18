@@ -708,6 +708,35 @@ public class OAuth2UtilTest {
         }
     }
 
+    @Test(description = "The deprecated client authentication without an app tenant matches the presented secret "
+            + "against the stored secret hashes and honours each secret's expiry, consistently with the tenant "
+            + "aware authentication", dataProvider = "multipleClientSecretsAuthentication")
+    public void testDeprecatedAuthenticateClientWithMultipleClientSecrets(String providedSecret,
+            Long storedSecretExpiryTime, boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            when(oauthServerConfigurationMock.isMultipleClientSecretsEnabled()).thenReturn(true);
+            when(oauthServerConfigurationMock.getHashAlgorithm()).thenReturn("SHA-256");
+
+            // The secrets table keeps the hash of the valid client secret; authentication matches against it.
+            String storedSecretHash = new HashingPersistenceProcessor().getProcessedClientSecret(clientSecret);
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setOauthConsumerSecretsMetadataList(Collections.singletonList(
+                    new OAuthConsumerSecretMetadataDO(storedSecretHash, storedSecretExpiryTime)));
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO))) {
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret), expectedResult);
+            }
+        }
+    }
+
     @Test
     public void testIsHashDisabled() {
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);

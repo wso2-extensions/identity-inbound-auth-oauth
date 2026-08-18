@@ -2446,7 +2446,7 @@ public class OAuthAdminServiceImplTest {
             } catch (IdentityOAuthAdminException e) {
                 Assert.assertTrue(e instanceof IdentityOAuthClientException);
                 Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
-                        Error.INVALID_REQUEST.getErrorCode());
+                        Error.FEATURE_NOT_ENABLED.getErrorCode());
             }
         }
     }
