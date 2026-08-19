@@ -703,12 +703,16 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
-            // If refresh token persistence is disabled and the user is not federated, do not store user attributes.
-            // When a user's profile is updated after the token is issued, the cache cannot be cleared because
-            // the Identity Server will not persist either the refresh token or the access token. As a result,
-            // outdated user attribute data would be returned on the next refresh grant.
-            // To mitigate this, user attributes are set to null.
-            if (!OAuth2Util.isRefreshTokenPersistenceEnabled() && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+            /*
+             A refresh grant carries no re-authentication, so copying the attributes cached against the previous
+             access token freezes the claims at the values resolved during the original authentication - a role
+             assigned, or a first or last name changed, afterwards is reflected neither in the id_token nor at the
+             userinfo endpoint for the whole life of the refresh chain. For users whose claims are resolvable
+             locally the copied attributes are therefore dropped, which makes both surfaces re-resolve them.
+             Federated users are excluded, since their attributes originate from the identity provider and there is
+             no local source to re-resolve them from.
+            */
+            if (accessTokenBean.getAuthzUser() != null && !accessTokenBean.getAuthzUser().isFederatedUser()) {
                 grantCacheEntry.setUserAttributes(null);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);

@@ -60,10 +60,16 @@ public class AccessTokenIssuerTest {
 
     @DataProvider(name = "federatedAndCacheStateData")
     public Object[][] federatedAndCacheStateData() {
-        // Each row: {isFederatedUser, cacheHasEntry}.
+        /*
+         Each row: {isFederatedUser, cacheHasEntry}. The freshly resolved attributes are cached in every
+         combination: an access token can be reused across authentications, so an entry left behind by an
+         earlier one would otherwise keep serving the claims resolved back then.
+        */
         return new Object[][]{
-                {true, false},   // federated user -> cache add expected (cache miss).
-                {false, true}    // non-federated user with existing cache entry -> no cache add expected.
+                {true, false},
+                {true, true},
+                {false, false},
+                {false, true}
         };
     }
 
@@ -71,7 +77,7 @@ public class AccessTokenIssuerTest {
     public void testCacheBehavior(boolean isFederatedUser, boolean cacheHasEntry) throws Exception {
 
         // Use a unique access token to avoid collision with other tests.
-        String accessToken = "ut_access_token_dp_" + (isFederatedUser ? "add" : "exist");
+        String accessToken = "ut_access_token_dp_" + isFederatedUser + "_" + cacheHasEntry;
         OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
         tokenRespDTO.setAccessToken(accessToken);
         tokenRespDTO.setTokenId(isFederatedUser ? "token-id-123" : "token-id-xyz");
@@ -114,26 +120,17 @@ public class AccessTokenIssuerTest {
             ArgumentCaptor<AuthorizationGrantCacheEntry> entryCaptor =
                     ArgumentCaptor.forClass(AuthorizationGrantCacheEntry.class);
 
-            boolean expectAdd = isFederatedUser || !cacheHasEntry;
-            if (expectAdd) {
-                Mockito.verify(mockCache, times(1)).addToCacheByToken(keyCaptor.capture(), entryCaptor.capture());
+            Mockito.verify(mockCache, times(1)).addToCacheByToken(keyCaptor.capture(), entryCaptor.capture());
 
-                AuthorizationGrantCacheEntry cachedEntry = entryCaptor.getValue();
-                // tokenId should be set from tokenRespDTO.
-                Assert.assertEquals(cachedEntry.getTokenId(), tokenRespDTO.getTokenId());
-                // validityPeriod should be set to refreshTokenExpiresInMillis converted to nanos.
-                Assert.assertEquals(cachedEntry.getValidityPeriod(),
-                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
-                // verify key contains the access token value.
-                AuthorizationGrantCacheKey capturedKey = keyCaptor.getValue();
-                Assert.assertEquals(capturedKey.getUserAttributesId(), accessToken);
-            } else {
-                Mockito.verify(mockCache, never()).addToCacheByToken(any(AuthorizationGrantCacheKey.class),
-                        any(AuthorizationGrantCacheEntry.class));
-
-                // The passed-in entry should not have been modified (tokenId should still be null).
-                Assert.assertNull(entry.getTokenId());
-            }
+            AuthorizationGrantCacheEntry cachedEntry = entryCaptor.getValue();
+            // tokenId should be set from tokenRespDTO.
+            Assert.assertEquals(cachedEntry.getTokenId(), tokenRespDTO.getTokenId());
+            // validityPeriod should be set to refreshTokenExpiresInMillis converted to nanos.
+            Assert.assertEquals(cachedEntry.getValidityPeriod(),
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
+            // verify key contains the access token value.
+            AuthorizationGrantCacheKey capturedKey = keyCaptor.getValue();
+            Assert.assertEquals(capturedKey.getUserAttributesId(), accessToken);
         }
     }
 

@@ -157,8 +157,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Get any user attributes that were cached against the access token
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
-        if (userAttributes != null &&
-                (userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
+        if ((isEmpty(userAttributes) || isOrganizationSwitchGrantType(requestMsgCtx)
+                        || isRefreshTokenGrantType(requestMsgCtx))
                 && (isLocalUser(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser()))) {
@@ -745,6 +745,21 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         return StringUtils.equals(requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
                 OAuthConstants.GrantTypes.ORGANIZATION_SWITCH);
+    }
+
+    /*
+     A refresh grant carries no re-authentication, so the refresh token processor copies the user attributes cached
+     against the previous access token onto the newly issued one. Claims therefore stay frozen at the values resolved
+     during the original authentication for the whole life of the refresh chain - a role assigned, or a first or last
+     name changed, after the first token was issued is never reflected. Claims are hence re-resolved on the refresh
+     grant as well, the way the organization switch grant already does. Users federated from an identity provider
+     other than the organization login one are excluded by the user checks below, since their claims cannot be
+     resolved locally.
+    */
+    private boolean isRefreshTokenGrantType(OAuthTokenReqMessageContext requestMsgCtx) {
+
+        return StringUtils.equals(requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
+                OAuthConstants.GrantTypes.REFRESH_TOKEN);
     }
 
     private String getServiceProviderTenantDomain(OAuthTokenReqMessageContext requestMsgCtx) {
