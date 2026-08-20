@@ -30,6 +30,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
@@ -49,7 +51,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 
 /**
@@ -130,8 +131,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
     private boolean isImpersonatedSubOrgUser(AuthenticatedUser authenticatedUser) {
 
-        return authenticatedUser.isFederatedUser()
-                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())
+        return OrganizationUserUtil.isOrganizationLoginUser(authenticatedUser)
                 && authenticatedUser.getImpersonatedUser() == null
                 && !isSharedUser(authenticatedUser);
     }

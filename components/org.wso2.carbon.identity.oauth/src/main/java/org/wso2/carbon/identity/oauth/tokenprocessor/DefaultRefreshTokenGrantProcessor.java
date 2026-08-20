@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -62,7 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 
 /**
  * Default implementation of @RefreshTokenProcessor responsible for handling refresh token persistence logic.
@@ -757,7 +757,6 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
          held in the organization's user store. Users federated from any other identity provider are left untouched,
          so that their attributes are never dropped without a local source to re-resolve them from.
         */
-        return authorizedUser.getUserResidentOrganization() != null
-                && ORGANIZATION_LOGIN_IDP_NAME.equals(authorizedUser.getFederatedIdPName());
+        return OrganizationUserUtil.isOrganizationSsoUser(authorizedUser);
     }
 }

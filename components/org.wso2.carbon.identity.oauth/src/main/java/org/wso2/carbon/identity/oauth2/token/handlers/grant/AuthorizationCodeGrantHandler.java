@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -767,8 +768,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void resolveAccessingAndResidentOrgsForOrganizationSSOUsers(
             AuthenticatedUser authenticatedUser, String authzCode) {
 
-        if (authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME
-                .equals(authenticatedUser.getFederatedIdPName())) {
+        if (OrganizationUserUtil.isOrganizationLoginUser(authenticatedUser)) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance()
                     .getValueFromCacheByCode(new AuthorizationGrantCacheKey(authzCode));
             if (authorizationGrantCacheEntry == null) {
