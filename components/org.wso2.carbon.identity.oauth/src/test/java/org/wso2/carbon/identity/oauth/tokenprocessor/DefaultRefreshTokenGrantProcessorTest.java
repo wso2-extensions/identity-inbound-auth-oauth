@@ -24,6 +24,7 @@ import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -54,6 +55,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
+import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
@@ -1012,5 +1014,46 @@ public class DefaultRefreshTokenGrantProcessorTest {
         sibling.setAccessToken(accessToken);
         sibling.setIssuedTime(new Timestamp(System.currentTimeMillis()));
         return sibling;
+    }
+
+    /**
+     * The refresh grant drops the copied user attributes only for users whose claims can be re-resolved
+     * from a local user store, so that the id_token and the userinfo endpoint cannot disagree on the same
+     * response. Organization SSO users are federated but locally resolvable; users federated from any other
+     * identity provider must be left untouched, since dropping their attributes would lose the claims
+     * outright.
+     */
+    @Test(dataProvider = "claimsResolvableLocallyDataProvider")
+    public void testAreClaimsResolvableLocally(boolean isFederated, String residentOrg, String idpName,
+                                              boolean expected) throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setFederatedUser(isFederated);
+        user.setUserResidentOrganization(residentOrg);
+        user.setFederatedIdPName(idpName);
+
+        Method method = DefaultRefreshTokenGrantProcessor.class.getDeclaredMethod(
+                "areClaimsResolvableLocally", AuthenticatedUser.class);
+        method.setAccessible(true);
+        boolean actual = (boolean) method.invoke(new DefaultRefreshTokenGrantProcessor(), user);
+
+        assertEquals(actual, expected);
+    }
+
+    @DataProvider(name = "claimsResolvableLocallyDataProvider")
+    public Object[][] claimsResolvableLocallyDataProvider() {
+
+        return new Object[][]{
+                // A local user is always resolvable, regardless of the other fields.
+                {false, null, null, true},
+                {false, "org-id", "SSO", true},
+                // An organization SSO user is federated through the organization login IdP but held locally.
+                {true, "org-id", "SSO", true},
+                // Federated from another identity provider - not resolvable locally, attributes must be kept.
+                {true, "org-id", "GoogleIdP", false},
+                {true, "org-id", null, false},
+                // Federated with no resident organization - not an organization SSO user.
+                {true, null, "SSO", false},
+        };
     }
 }

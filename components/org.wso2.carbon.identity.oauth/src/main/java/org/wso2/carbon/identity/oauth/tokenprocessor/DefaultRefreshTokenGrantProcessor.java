@@ -22,6 +22,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -61,6 +62,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 
 /**
  * Default implementation of @RefreshTokenProcessor responsible for handling refresh token persistence logic.
@@ -709,10 +711,9 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
              assigned, or a first or last name changed, afterwards is reflected neither in the id_token nor at the
              userinfo endpoint for the whole life of the refresh chain. For users whose claims are resolvable
              locally the copied attributes are therefore dropped, which makes both surfaces re-resolve them.
-             Federated users are excluded, since their attributes originate from the identity provider and there is
-             no local source to re-resolve them from.
             */
-            if (accessTokenBean.getAuthzUser() != null && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+            if (accessTokenBean.getAuthzUser() != null
+                    && areClaimsResolvableLocally(accessTokenBean.getAuthzUser())) {
                 grantCacheEntry.setUserAttributes(null);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
@@ -732,5 +733,31 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         grantCacheEntry);
             }
         }
+    }
+
+    /**
+     * Check whether the claims of the given user can be re-resolved from a local user store.
+     * <p>
+     * This mirrors the user categories that the OIDC claims handler re-resolves claims for, so that the id_token
+     * and the userinfo endpoint cannot disagree on the same refresh response. Users federated from an identity
+     * provider are excluded, since their attributes originate from that provider and there is no local source to
+     * re-resolve them from. Organization SSO users are federated through the organization login identity provider
+     * too, but their claims are held in the organization's user store and are therefore re-resolvable.
+     *
+     * @param authorizedUser Authorized user of the token request.
+     * @return true if the claims of the user can be re-resolved locally.
+     */
+    private boolean areClaimsResolvableLocally(AuthenticatedUser authorizedUser) {
+
+        if (!authorizedUser.isFederatedUser()) {
+            return true;
+        }
+        /*
+         An organization SSO user is federated through the organization login identity provider, but the claims are
+         held in the organization's user store. Users federated from any other identity provider are left untouched,
+         so that their attributes are never dropped without a local source to re-resolve them from.
+        */
+        return authorizedUser.getUserResidentOrganization() != null
+                && ORGANIZATION_LOGIN_IDP_NAME.equals(authorizedUser.getFederatedIdPName());
     }
 }
