@@ -425,8 +425,10 @@
                     <xs:element minOccurs="0" name="issuerDetails" nillable="true" type="ax2406:IssuerDetails"/>
                     <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="jwtScopeAsArrayEnabled" nillable="true" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="multipleConsumerSecretsConfigured" nillable="true" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="oauthConsumerSecretExpiryTime" nillable="true" type="xs:long"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
