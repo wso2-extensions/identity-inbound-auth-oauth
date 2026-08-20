@@ -134,9 +134,9 @@ public class RegistrationRequestDTO  {
   }
 
   /**
-   * Epoch timestamp (in seconds) at which the client secret expires. Effective only when multiple client secrets are enabled.
+   * The expiration time of the client secret, expressed in Unix epoch seconds.
    **/
-  @ApiModelProperty(value = "Epoch timestamp (in seconds) at which the client secret expires. Effective only when multiple client secrets are enabled.")
+  @ApiModelProperty(value = "The expiration time of the client secret, expressed in Unix epoch seconds.")
   @JsonProperty("ext_param_client_secret_expires_at")
   public Long getClientSecretExpiresAt() {
     return clientSecretExpiresAt;

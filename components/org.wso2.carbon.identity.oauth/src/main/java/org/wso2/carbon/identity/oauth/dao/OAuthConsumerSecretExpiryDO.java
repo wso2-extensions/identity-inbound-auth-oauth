@@ -15,15 +15,40 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.wso2.carbon.identity.oauth.dto;
+
+package org.wso2.carbon.identity.oauth.dao;
+
+import java.io.Serializable;
 
 /**
- * Client secret request Data Transfer Object. Carries the attributes for creating a new client secret: an optional
- * absolute expiry time as Unix epoch seconds, where zero or null denotes a never-expiring secret.
+ * A client secret value and its expiry time, held on the OAuth application for authentication and export/import.
  */
-public class OAuthClientSecretRequestDTO {
+public class OAuthConsumerSecretExpiryDO implements Serializable {
 
+    private static final long serialVersionUID = 7846290135472086931L;
+
+    private String secretValue;
     private Long expiryTime;
+
+    public OAuthConsumerSecretExpiryDO() {
+
+    }
+
+    public OAuthConsumerSecretExpiryDO(String secretValue, Long expiryTime) {
+
+        this.secretValue = secretValue;
+        this.expiryTime = expiryTime;
+    }
+
+    public String getSecretValue() {
+
+        return secretValue;
+    }
+
+    public void setSecretValue(String secretValue) {
+
+        this.secretValue = secretValue;
+    }
 
     public Long getExpiryTime() {
 

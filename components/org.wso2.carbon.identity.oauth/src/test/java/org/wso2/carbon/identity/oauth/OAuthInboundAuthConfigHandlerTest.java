@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementServiceImpl
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolsDTO;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -218,24 +217,19 @@ public class OAuthInboundAuthConfigHandlerTest {
     @DataProvider(name = "clientSecretExpiryTimeOnUpdate")
     public Object[][] clientSecretExpiryTimeOnUpdate() {
 
-        // multipleSecretsEnabled, existingExpiryTime, providedExpiryTime, expectedError, expectedExpiryTime.
+        // existingExpiryTime, providedExpiryTime, expectedError, expectedExpiryTime.
         return new Object[][]{
                 // Expiry not provided on the update: the existing expiry is kept.
-                {true, 100L, null, null, 100L},
+                {100L, null, null, 100L},
                 // An attempt to change the expiry through the application update is rejected.
-                {true, 100L, 200L, "cannot be modified", null},
-                // Providing an expiry while the feature is disabled is rejected.
-                {false, null, 200L, OAuthConstants.CLIENT_SECRET_EXPIRY_NOT_SUPPORTED_FOR_SINGLE_CLIENT_SECRET_MODE,
-                        null},
-                // Feature disabled and no expiry provided: the update proceeds untouched.
-                {false, null, null, null, null}
+                {100L, 200L, "cannot be modified", null}
         };
     }
 
     @Test(description = "On application update the client secret expiry time is read-only: the existing value is "
-            + "kept when not provided, an attempt to change it is rejected, and providing it while the multiple "
-            + "client secrets feature is disabled is rejected", dataProvider = "clientSecretExpiryTimeOnUpdate")
-    public void testUpdateOAuthProtocolClientSecretExpiryTime(boolean multipleSecretsEnabled, Long existingExpiryTime,
+            + "kept when not provided and an attempt to change it is rejected",
+            dataProvider = "clientSecretExpiryTimeOnUpdate")
+    public void testUpdateOAuthProtocolClientSecretExpiryTime(Long existingExpiryTime,
             Long providedExpiryTime, String expectedError, Long expectedExpiryTime) throws Exception {
 
         OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
@@ -257,7 +251,6 @@ public class OAuthInboundAuthConfigHandlerTest {
                 any())).thenReturn(application);
 
         try (MockedStatic<OAuth2Util> oAuth2Util = Mockito.mockStatic(OAuth2Util.class)) {
-            oAuth2Util.when(OAuth2Util::isMultipleClientSecretsEnabled).thenReturn(multipleSecretsEnabled);
             try {
                 authConfigHandler.handleConfigUpdate(application, updatedApp);
                 Assert.assertNull(expectedError, "The application update should have been rejected.");

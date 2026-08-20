@@ -1656,7 +1656,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             dataProvider = "clientSecretExpiry")
     public void testAddOAuthApplicationSeedsClientSecret(Long expiryTime) throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             appDO.setOauthConsumerSecretExpiryTime(expiryTime);
             addOAuthApplication(appDO, TENANT_ID);
@@ -1673,12 +1673,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "transaction; the latest secret sorts first and every additional secret's expiry is preserved")
     public void testAddOAuthApplicationRestoresAdditionalConsumerSecrets() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
-            OAuthConsumerSecretDO expiringSecret = new OAuthConsumerSecretDO();
-            expiringSecret.setSecretValue(ADDITIONAL_CONSUMER_SECRET_1);
-            expiringSecret.setExpiryTime(CONSUMER_SECRET_EXPIRY_TIME);
-            OAuthConsumerSecretDO nonExpiringSecret = new OAuthConsumerSecretDO();
-            nonExpiringSecret.setSecretValue(ADDITIONAL_CONSUMER_SECRET_2);
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthConsumerSecretExpiryDO expiringSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_1, CONSUMER_SECRET_EXPIRY_TIME);
+            OAuthConsumerSecretExpiryDO nonExpiringSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_2, null);
 
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             appDO.setAdditionalOauthConsumerSecrets(Arrays.asList(expiringSecret, nonExpiringSecret));
@@ -1701,9 +1700,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "latest secret within the caller's transaction")
     public void testReplaceOAuthConsumerSecretsInSecretsTable() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
-            OAuthConsumerSecretDO additionalSecret = new OAuthConsumerSecretDO();
-            additionalSecret.setSecretValue(ADDITIONAL_CONSUMER_SECRET_1);
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthConsumerSecretExpiryDO additionalSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_1, null);
 
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             appDO.setAdditionalOauthConsumerSecrets(Arrays.asList(additionalSecret));
@@ -1724,7 +1723,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "CLIENT_SECRET_LIMIT_REACHED")
     public void testAddOAuthConsumerSecretLimitReached() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(2, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(2, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
@@ -1747,7 +1746,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             dataProvider = "clientSecretExpiry")
     public void testAddOAuthConsumerSecret(Long expiryTime) throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
@@ -1768,7 +1767,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "secret id returns null")
     public void testGetOAuthConsumerSecret() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
             OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
@@ -1786,7 +1785,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     @Test(description = "The most recently created secret of an application is reported as its latest secret id")
     public void testGetLatestOAuthConsumerSecretId() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
             OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
@@ -1801,7 +1800,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "secret removes no rows")
     public void testDeleteOAuthConsumerSecret() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
             appDAO.addOAuthConsumerSecret(appDO.getId(), null);
@@ -1822,7 +1821,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "the latest secret id resolves to the default secret id")
     public void testGetOAuthConsumerSecretsForUnmigratedApp() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
@@ -1850,7 +1849,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             + "IDN_OAUTH_CONSUMER_APPS into the secrets table, then adds the new secret as the latest")
     public void testAddOAuthConsumerSecretMigratesLegacySecret() throws Exception {
 
-        runWithMultipleClientSecretsEnabled(MAX_SECRET_COUNT, (appDAO, connection) -> {
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
@@ -1876,12 +1875,12 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     /**
-     * Run a client-secret test body against the H2 store with the multiple client secrets feature enabled.
+     * Run a client-secret test body against the H2 store with the given maximum client secret count.
      *
      * @param clientSecretLimit Maximum number of client secrets allowed per application.
      * @param testBody          Test body executed with a DAO instance and an active connection.
      */
-    private void runWithMultipleClientSecretsEnabled(int clientSecretLimit, SecretsTestBody testBody)
+    private void runWithMaxClientSecretCount(int clientSecretLimit, SecretsTestBody testBody)
             throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
@@ -1893,9 +1892,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                      mockStatic(OrganizationManagementUtil.class);
              Connection connection = getConnection(DB_NAME)) {
             setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
-            when(mockedServerConfig.isMultipleClientSecretsEnabled()).thenReturn(true);
-            when(mockedServerConfig.getClientSecretCount()).thenReturn(clientSecretLimit);
-            when(mockedServerConfig.getHashAlgorithm()).thenReturn("SHA-256");
+            when(mockedServerConfig.getMaxClientSecretCount()).thenReturn(clientSecretLimit);
 
             Connection reusableConnection = spy(connection);
             doNothing().when(reusableConnection).close();
@@ -1998,6 +1995,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getClientSecretPersistenceProcessor()).thenReturn(processor);
+        when(mockedServerConfig.getHashAlgorithm()).thenReturn("SHA-256");
 
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);

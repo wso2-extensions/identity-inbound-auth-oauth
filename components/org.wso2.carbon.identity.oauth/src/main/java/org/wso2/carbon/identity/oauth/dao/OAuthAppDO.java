@@ -18,7 +18,6 @@
 package org.wso2.carbon.identity.oauth.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -36,7 +35,6 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import java.beans.Transient;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
@@ -69,7 +67,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     // Latest client secret.
     private String oauthConsumerSecret;
     // Absolute expiry time (epoch millis) of the latest client secret.
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long oauthConsumerSecretExpiryTime;
     private String applicationName;
     private String callbackUrl;
@@ -100,15 +97,10 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
-    // Cached per-secret metadata (hash, expiry) used for authentication.
-    @XmlTransient
-    @JsonIgnore
-    private List<OAuthConsumerSecretMetadataDO> oauthConsumerSecretsMetadataList;
-    // Additional client secrets apart from the latest one, carried only in application export and import.
+    // The non-latest client secrets.
     @XmlElementWrapper(name = "additionalOauthConsumerSecrets")
     @XmlElement(name = "additionalOauthConsumerSecret")
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<OAuthConsumerSecretDO> additionalOauthConsumerSecrets;
+    private List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets;
     @XmlTransient
     @JsonIgnore
     private AuthenticatedUser appOwner;
@@ -196,21 +188,11 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
     }
 
-    @Transient
-    public List<OAuthConsumerSecretMetadataDO> getOauthConsumerSecretsMetadataList() {
-        return oauthConsumerSecretsMetadataList;
-    }
-
-    public void setOauthConsumerSecretsMetadataList(
-            List<OAuthConsumerSecretMetadataDO> oauthConsumerSecretsMetadataList) {
-        this.oauthConsumerSecretsMetadataList = oauthConsumerSecretsMetadataList;
-    }
-
-    public List<OAuthConsumerSecretDO> getAdditionalOauthConsumerSecrets() {
+    public List<OAuthConsumerSecretExpiryDO> getAdditionalOauthConsumerSecrets() {
         return additionalOauthConsumerSecrets;
     }
 
-    public void setAdditionalOauthConsumerSecrets(List<OAuthConsumerSecretDO> additionalOauthConsumerSecrets) {
+    public void setAdditionalOauthConsumerSecrets(List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets) {
         this.additionalOauthConsumerSecrets = additionalOauthConsumerSecrets;
     }
 

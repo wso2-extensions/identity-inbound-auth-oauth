@@ -545,14 +545,11 @@ public class OAuthServerConfigurationTest {
     }
 
 
-    @Test(description = "When the feature is not configured in identity.xml, multiple client secrets is enabled by "
-            + "default and the maximum secret count defaults to 2")
-    public void testGetMultipleClientSecretsDefaults() {
+    @Test(description = "When the maximum secret count is not configured in identity.xml, it defaults to 2")
+    public void testGetMaxClientSecretCountDefault() {
 
-        // The test identity.xml does not configure the feature, so the code-level defaults apply.
-        Assert.assertTrue(OAuthServerConfiguration.getInstance().isMultipleClientSecretsEnabled(),
-                "Multiple client secrets should be enabled by default.");
-        Assert.assertEquals(OAuthServerConfiguration.getInstance().getClientSecretCount(), 2,
+        // The test identity.xml does not configure the count, so the code-level default applies.
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getMaxClientSecretCount(), 2,
                 "The default maximum client secret count should be 2.");
     }
 

@@ -28,6 +28,7 @@ public class OAuthClientSecretResponseDTO {
     private String secretId;
     private String secretValue;
     private Long expiryTime;
+    private Long createdTime;
     private OAuthConstants.ClientSecretStatus status;
     private boolean latest;
 
@@ -59,6 +60,16 @@ public class OAuthClientSecretResponseDTO {
     public void setExpiryTime(Long expiryTime) {
 
         this.expiryTime = expiryTime;
+    }
+
+    public Long getCreatedTime() {
+
+        return createdTime;
+    }
+
+    public void setCreatedTime(Long createdTime) {
+
+        this.createdTime = createdTime;
     }
 
     public OAuthConstants.ClientSecretStatus getStatus() {

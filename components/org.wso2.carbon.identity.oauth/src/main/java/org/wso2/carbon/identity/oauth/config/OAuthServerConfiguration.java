@@ -342,8 +342,6 @@ public class OAuthServerConfiguration {
     private boolean isClientSecretHashEnabled = false;
     private boolean isClientSecretHashOnlyEnabled = false;
 
-    // Property to define whether multiple client secrets are allowed for oauth applications,
-    private boolean isMultipleClientSecretsEnabled = true;
     // Max number of client secrets per oauth application. Defaults to 2 when not configured or misconfigured.
     private static final int DEFAULT_CLIENT_SECRET_COUNT = 2;
     private int clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
@@ -570,7 +568,7 @@ public class OAuthServerConfiguration {
         parseEnableHashMode(oauthElem);
 
         // read multiple client secrets config
-        parseEnableMultipleClientSecrets(oauthElem);
+        parseMaxClientSecretCount(oauthElem);
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
@@ -1562,25 +1560,11 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Checks whether multiple client secrets are enabled for OAuth applications.
-     *
-     * <p>If multiple client secrets are enabled, an application can have more than
-     * one secret associated with its client ID. Otherwise, only a single secret
-     * is allowed.</p>
-     *
-     * @return {@code true} if multiple client secrets are enabled, {@code false} otherwise.
-     */
-    public boolean isMultipleClientSecretsEnabled() {
-
-        return isMultipleClientSecretsEnabled;
-    }
-
-    /**
      * Retrieves the maximum number of client secrets allowed for an OAuth application.
      *
      * @return the maximum number of client secrets allowed for an OAuth application.
      */
-    public int getClientSecretCount() {
+    public int getMaxClientSecretCount() {
 
         return clientSecretCount;
     }
@@ -4198,47 +4182,35 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parses the OAuth configuration XML element to determine whether
-     * the number of client secrets is allowed for a OAuth application.
+     * Parses the OAuth configuration to read the maximum number of client secrets allowed per application.
      *
      * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
      */
-    private void parseEnableMultipleClientSecrets(OMElement oauthConfigElem) {
+    private void parseMaxClientSecretCount(OMElement oauthConfigElem) {
 
         OMElement multipleClientSecretsElement = oauthConfigElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
         if (multipleClientSecretsElement != null) {
-            OMElement isMultipleClientSecretsEnabledElement = multipleClientSecretsElement
-                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_MULTIPLE_CLIENT_SECRETS));
-            if (isMultipleClientSecretsEnabledElement != null) {
-                isMultipleClientSecretsEnabled = Boolean.parseBoolean(isMultipleClientSecretsEnabledElement.getText());
-                if (isMultipleClientSecretsEnabled) {
-                    OMElement isClientSecretLimitElement = multipleClientSecretsElement
-                            .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MAX_SECRET_COUNT));
-                    if (isClientSecretLimitElement != null &&
-                            StringUtils.isNotBlank(isClientSecretLimitElement.getText())) {
-                        String secretCountText = isClientSecretLimitElement.getText().trim();
-                        try {
-                            clientSecretCount = Integer.parseInt(secretCountText);
-                            if (clientSecretCount <= 0) {
-                                clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
-                                log.error("Invalid value for client secret count: '" + secretCountText +
-                                        "'. Secret count should be a positive value. Using default client "
-                                        + "secret count: " + DEFAULT_CLIENT_SECRET_COUNT);
-                            }
-                        } catch (NumberFormatException e) {
-                            log.error("Invalid value for client secret count: '" + secretCountText +
-                                    "'. Using default client secret count: " + DEFAULT_CLIENT_SECRET_COUNT, e);
-                        }
+            OMElement maxSecretCountElement = multipleClientSecretsElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MAX_SECRET_COUNT));
+            if (maxSecretCountElement != null && StringUtils.isNotBlank(maxSecretCountElement.getText())) {
+                String secretCountText = maxSecretCountElement.getText().trim();
+                try {
+                    clientSecretCount = Integer.parseInt(secretCountText);
+                    if (clientSecretCount <= 0) {
+                        clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
+                        log.error("Invalid value for client secret count: '" + secretCountText +
+                                "'. Secret count should be a positive value. Using default client "
+                                + "secret count: " + DEFAULT_CLIENT_SECRET_COUNT);
                     }
+                } catch (NumberFormatException e) {
+                    log.error("Invalid value for client secret count: '" + secretCountText +
+                            "'. Using default client secret count: " + DEFAULT_CLIENT_SECRET_COUNT, e);
                 }
             }
         }
         if (log.isDebugEnabled()) {
-            log.debug("Multiple client secrets enabled: " + isMultipleClientSecretsEnabled);
-            if (isMultipleClientSecretsEnabled) {
-                log.debug("Client secret limit: " + clientSecretCount);
-            }
+            log.debug("Client secret limit: " + clientSecretCount);
         }
     }
 
@@ -4959,7 +4931,6 @@ public class OAuthServerConfiguration {
 
         // Multiple client secret configurations
         private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
-        private static final String ENABLE_MULTIPLE_CLIENT_SECRETS = "Enable";
         private static final String MAX_SECRET_COUNT = "MaxSecretCount";
 
         // Token introspection Configs

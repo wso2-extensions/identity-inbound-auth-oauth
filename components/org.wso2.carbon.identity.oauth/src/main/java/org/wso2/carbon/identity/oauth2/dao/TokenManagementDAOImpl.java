@@ -631,13 +631,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 }
                 updateStateStatement.execute();
 
-                /* In multi-secret mode the IDN_OAUTH_CONSUMER_SECRETS table is the source of truth, so the same
-                   transaction must remove all existing secrets and add the regenerated one. Otherwise the old
-                   secrets would keep authenticating even after the consumer app secret has been rotated. */
-                if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-                    new OAuthAppDAO().replaceOAuthConsumerSecretsInSecretsTable(connection, consumerKey, appTenantId,
-                            newSecretKey);
-                }
+                // Delete the existing secrets and add the regenerated one so the old secrets no longer authenticate.
+                new OAuthAppDAO().replaceOAuthConsumerSecretsInSecretsTable(connection, consumerKey, appTenantId,
+                        newSecretKey);
 
                 if (log.isDebugEnabled()) {
                     log.debug("Regenerating the client secret of: " + consumerKey);

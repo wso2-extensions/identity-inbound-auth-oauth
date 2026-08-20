@@ -531,13 +531,10 @@ public final class OAuthUtil {
         dto.setCallbackUrl(appDO.getCallbackUrl());
         dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
         dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());
-        if (OAuth2Util.isMultipleClientSecretsEnabled()) {
-            /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
-            dto.setOauthConsumerSecretExpiryTime(appDO.getOauthConsumerSecretExpiryTime() == null ? 0L
-                    : appDO.getOauthConsumerSecretExpiryTime() / 1000L);
-            dto.setMultipleConsumerSecretsConfigured(appDO.getOauthConsumerSecretsMetadataList() != null
-                    && appDO.getOauthConsumerSecretsMetadataList().size() > 1);
-        }
+        /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
+        dto.setOauthConsumerSecretExpiryTime(appDO.getOauthConsumerSecretExpiryTime() == null ? 0L
+                : appDO.getOauthConsumerSecretExpiryTime() / 1000L);
+        dto.setMultipleConsumerSecretsConfigured(CollectionUtils.isNotEmpty(appDO.getAdditionalOauthConsumerSecrets()));
         dto.setOAuthVersion(appDO.getOauthVersion());
         dto.setGrantTypes(appDO.getGrantTypes());
         dto.setScopeValidators(appDO.getScopeValidators());
@@ -613,6 +610,9 @@ public final class OAuthUtil {
         /* The expiry is exposed as Unix epoch seconds; zero denotes a never-expiring client secret. */
         consumerSecretDTO.setExpiryTime(consumerSecretDO.getExpiryTime() == null ? 0L
                 : consumerSecretDO.getExpiryTime() / 1000L);
+        // The creation time is exposed as Unix epoch seconds.
+        consumerSecretDTO.setCreatedTime(consumerSecretDO.getCreatedTime() == null ? null
+                : consumerSecretDO.getCreatedTime() / 1000L);
         /* The status is judged with the same skew-aware expiry check the token endpoint enforces, so the
            reported state always matches the authentication behavior. */
         consumerSecretDTO.setStatus(OAuth2Util.isExpiryTimeInPast(consumerSecretDO.getExpiryTime())

@@ -286,7 +286,7 @@ definitions:
       ext_param_client_secret_expires_at:
         type: integer
         format: int64
-        description: Epoch timestamp (in seconds) at which the client secret expires. Effective only when multiple client secrets are enabled.
+        description: The expiration time of the client secret, expressed in Unix epoch seconds.
       contacts:
         type: array
         items:
