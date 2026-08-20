@@ -37,6 +37,8 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Fra
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
@@ -82,6 +84,7 @@ import org.wso2.carbon.identity.user.profile.mgt.association.federation.exceptio
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -138,6 +141,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                     ", Authorized User : " + validationBean.getAuthorizedUser() +
                     ", Token Scope : " + OAuth2Util.buildScopeString(validationBean.getScope()));
         }
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = getRefreshTokenValidationLogBuilder(tokenReq,
+                    validationBean);
+            diagnosticLogBuilder.resultMessage("Refresh token validation is successful.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
         setPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
         return true;
     }
@@ -174,6 +184,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         RefreshTokenValidationDataDO validationBean = (RefreshTokenValidationDataDO) tokReqMsgCtx
                 .getProperty(PREV_ACCESS_TOKEN);
         if (validationBean == null || isRefreshTokenExpired(validationBean)) {
+            logRefreshTokenValidationFailure("The provided refresh token is expired. A new refresh token needs to " +
+                    "be obtained by re-authenticating the user.", tokenReq, validationBean);
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
@@ -396,11 +408,14 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                                   RefreshTokenValidationDataDO validationBean)
             throws IdentityOAuth2Exception {
 
-        validateRefreshTokenStatus(validationBean, tokenReq.getClientId());
+        validateRefreshTokenStatus(validationBean, tokenReq);
         if (getRefreshTokenGrantProcessor(tokenReq.getRefreshToken()).isLatestRefreshToken(tokenReq,
                 validationBean, getUserStoreDomain(validationBean.getAuthorizedUser()))) {
             return true;
         } else {
+            logRefreshTokenValidationFailure("The provided refresh token is not the latest refresh token issued " +
+                    "for the application. It has already been replaced by a newer refresh token through refresh " +
+                    "token rotation.", tokenReq, validationBean);
             removeIfCached(tokenReq, validationBean);
             throw new IdentityOAuth2Exception("Invalid refresh token value in the request");
         }
@@ -424,16 +439,20 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         }
     }
 
-    private boolean validateRefreshTokenStatus(RefreshTokenValidationDataDO validationBean, String clientId)
+    private boolean validateRefreshTokenStatus(RefreshTokenValidationDataDO validationBean,
+                                               OAuth2AccessTokenReqDTO tokenReq)
             throws IdentityOAuth2Exception {
 
         String tokenState = validationBean.getRefreshTokenState();
         if (tokenState != null && !OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE.equals(tokenState) &&
                 !OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED.equals(tokenState)) {
             if (log.isDebugEnabled()) {
-                log.debug("Refresh Token state is " + tokenState + " for client: " + clientId + ". Expected 'Active' " +
-                        "or 'EXPIRED'");
+                log.debug("Refresh Token state is " + tokenState + " for client: " + tokenReq.getClientId()
+                        + ". Expected 'Active' or 'EXPIRED'");
             }
+            logRefreshTokenValidationFailure(String.format("The provided refresh token is not in a usable state. " +
+                            "Current state of the refresh token is '%s' while either 'ACTIVE' or 'EXPIRED' is " +
+                            "expected.", tokenState), tokenReq, validationBean);
             throw new IdentityOAuth2Exception("Invalid refresh token state");
         }
         return true;
@@ -710,6 +729,79 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey, tenantDomain);
         }
 
+    }
+
+    /**
+     * Records a refresh token validation failure as a diagnostic log so that the reason for a failed refresh grant
+     * request is available in the logs. Without this, the diagnostic logs of a failed refresh grant request end at
+     * the application validation, leaving no trace of why the request failed.
+     *
+     * @param resultMessage  Reason for the validation failure.
+     * @param tokenReq       Token request received for the refresh grant.
+     * @param validationBean Validation data of the refresh token. Can be null.
+     */
+    private void logRefreshTokenValidationFailure(String resultMessage, OAuth2AccessTokenReqDTO tokenReq,
+                                                  RefreshTokenValidationDataDO validationBean) {
+
+        if (!LoggerUtils.isDiagnosticLogsEnabled()) {
+            return;
+        }
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = getRefreshTokenValidationLogBuilder(tokenReq,
+                validationBean);
+        diagnosticLogBuilder.resultMessage(resultMessage)
+                .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+    }
+
+    /**
+     * Builds a diagnostic log entry for the refresh token validation with the context available for the request.
+     * Refresh tokens cannot be logged, therefore the token itself is never added. Instead the internal token id,
+     * the state and the issued time of the token are added since none of them can be used to obtain a token. The
+     * SHA-256 hash of the refresh token is added only when token logging is explicitly permitted through the
+     * {@code REFRESH_TOKEN} identity token configuration, which allows a specific token reported by an application
+     * developer to be correlated with the logs.
+     *
+     * @param tokenReq       Token request received for the refresh grant.
+     * @param validationBean Validation data of the refresh token. Can be null.
+     * @return Diagnostic log builder with the available refresh token context.
+     */
+    private DiagnosticLog.DiagnosticLogBuilder getRefreshTokenValidationLogBuilder(
+            OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean) {
+
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN)
+                .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReq.getClientId())
+                .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, tokenReq.getTenantDomain())
+                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+
+        if (StringUtils.isNotBlank(tokenReq.getRefreshToken())
+                && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.REFRESH_TOKEN)) {
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_HASH,
+                    DigestUtils.sha256Hex(tokenReq.getRefreshToken()));
+        }
+        if (validationBean == null) {
+            return diagnosticLogBuilder;
+        }
+        if (StringUtils.isNotBlank(validationBean.getTokenId())) {
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.TOKEN_ID,
+                    validationBean.getTokenId());
+        }
+        if (StringUtils.isNotBlank(validationBean.getRefreshTokenState())) {
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_STATE,
+                    validationBean.getRefreshTokenState());
+        }
+        if (validationBean.getIssuedTime() != null) {
+            diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_ISSUED_TIME,
+                    validationBean.getIssuedTime().toString());
+        }
+        diagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_VALIDITY_PERIOD,
+                validationBean.getValidityPeriodInMillis());
+        if (validationBean.getAuthorizedUser() != null) {
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER,
+                    validationBean.getAuthorizedUser().getLoggableMaskedUserId());
+        }
+        return diagnosticLogBuilder;
     }
 
     private boolean isRefreshTokenExpired(RefreshTokenValidationDataDO validationBean) {
