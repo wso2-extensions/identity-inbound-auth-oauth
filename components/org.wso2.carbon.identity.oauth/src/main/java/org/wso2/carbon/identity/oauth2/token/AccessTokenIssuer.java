@@ -509,6 +509,23 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
             }
+            /* The grant handlers log the specific reason for the failure. This log guarantees that the diagnostic
+             logs of a token request never end at the application validation, even if a grant handler could not
+             resolve a specific reason for the failure. */
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.ERROR_CODE, errorCode)
+                        .resultMessage("Authorization grant validation failed. " + (StringUtils.isNotBlank(error)
+                                ? LoggerUtils.getSanitizedErrorMessage(error,
+                                        OAuth2Util.getUserIdentifierFromRequest(tokenReqDTO))
+                                : StringUtils.EMPTY))
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);

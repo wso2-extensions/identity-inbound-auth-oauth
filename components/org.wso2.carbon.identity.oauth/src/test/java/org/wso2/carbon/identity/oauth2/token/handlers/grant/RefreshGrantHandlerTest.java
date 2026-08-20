@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
@@ -119,9 +121,14 @@ public class RefreshGrantHandlerTest {
     private OAuthCache mockOAuthCache;
     private AuthorizationGrantCache mockAuthorizationGrantCache;
     private OAuthAppDO oAuthAppDO;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
     public void init() {
+        /* The refresh token validation writes diagnostic logs. Diagnostic logging is mocked as enabled so that the
+         diagnostic log building code is exercised without requiring a carbon context to resolve the tenant. */
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
         refreshTokenGrantProcessor = mock(DefaultRefreshTokenGrantProcessor.class);
         oAuthTokenReqMessageContext = mock(OAuthTokenReqMessageContext.class);
         refreshTokenValidationDataDO = mock(RefreshTokenValidationDataDO.class);
@@ -141,6 +148,14 @@ public class RefreshGrantHandlerTest {
         mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
 
         oAuthAppDO = mock(OAuthAppDO.class);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        if (loggerUtils != null) {
+            loggerUtils.close();
+        }
     }
 
     @DataProvider(name = "validateGrantWhenUserIsLockedInUserStoreEnd")
