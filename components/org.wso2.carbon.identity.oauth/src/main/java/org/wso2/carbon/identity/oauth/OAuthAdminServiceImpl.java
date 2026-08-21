@@ -771,6 +771,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthClientSecretResponseDTO createOAuthClientSecret(String consumerKey, String tenantDomain,
             Long expiryTime) throws IdentityOAuthAdminException {
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Creating a new client secret for consumer key: " + consumerKey);
         }
@@ -879,6 +880,7 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthClientSecret(String consumerKey, String tenantDomain, String secretId)
             throws IdentityOAuthAdminException {
+
         if (StringUtils.isBlank(secretId)) {
             throw handleClientError(INVALID_SECRET_ID, "The client secret ID must not be blank.");
         }
@@ -922,6 +924,7 @@ public class OAuthAdminServiceImpl {
      */
     public List<OAuthClientSecretResponseDTO> getOAuthClientSecrets(String consumerKey, String tenantDomain)
             throws IdentityOAuthAdminException {
+
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         List<OAuthClientSecretResponseDTO> clientSecrets = new ArrayList<>();
@@ -952,6 +955,7 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthClientSecretResponseDTO getOAuthClientSecret(String consumerKey, String tenantDomain,
             String secretId) throws IdentityOAuthAdminException {
+
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
         /* The default secret id resolves only before migration; once the secrets table holds records for the
