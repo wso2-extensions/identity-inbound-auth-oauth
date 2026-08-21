@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.util.HashMap;
@@ -131,7 +132,9 @@ public class DefaultRefreshTokenGrantProcessorTest {
         identityUtilMockedStatic = mockStatic(IdentityUtil.class);
         serviceComponentHolderMockedStatic = mockStatic(OAuth2ServiceComponentHolder.class);
         loggerUtilsMockedStatic = mockStatic(LoggerUtils.class);
-        loggerUtilsMockedStatic.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+        /* Diagnostic logging is reported as enabled so that the diagnostic log building code of the
+         refresh token validation is exercised. The actual log publishing remains mocked out. */
+        loggerUtilsMockedStatic.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
 
         persistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
                 .thenReturn(mockPersistenceFactory);
@@ -198,6 +201,35 @@ public class DefaultRefreshTokenGrantProcessorTest {
         assertEquals(result.getRefreshTokenState(),
                 OAuthConstants.TokenStates.TOKEN_STATE_GRACEFULLY_ROTATED,
                 "State should remain GRACEFULLY_ROTATED when graceful rotation is disabled");
+    }
+
+    @Test
+    public void testValidateRefreshToken_noPersistedAccessToken_logsInvalidRefreshToken() throws Exception {
+
+        // A refresh token with no persisted access token is the plain invalid refresh token scenario.
+        RefreshTokenValidationDataDO validationBean = refreshTokenBean(
+                OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE, null,
+                new Timestamp(System.currentTimeMillis()));
+        validationBean.setAccessToken(null);
+        when(mockTokenManagementDAO.validateRefreshToken(CLIENT_ID, REFRESH_TOKEN)).thenReturn(validationBean);
+
+        try {
+            processor.validateRefreshToken(buildTokenReqContext(CLIENT_ID, REFRESH_TOKEN, TENANT_DOMAIN));
+            fail("Expected IdentityOAuth2Exception when no persisted access token is found");
+        } catch (IdentityOAuth2Exception e) {
+            assertEquals(e.getMessage(), "Persisted access token data not found");
+        }
+
+        ArgumentCaptor<DiagnosticLog.DiagnosticLogBuilder> captor =
+                ArgumentCaptor.forClass(DiagnosticLog.DiagnosticLogBuilder.class);
+        loggerUtilsMockedStatic.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(captor.capture()));
+        DiagnosticLog diagnosticLog = captor.getValue().build();
+        assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name(),
+                "An invalid refresh token should be recorded as a FAILED entry.");
+        assertEquals(diagnosticLog.getActionId(),
+                OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN);
+        assertTrue(diagnosticLog.getResultMessage().contains("refresh token is invalid"),
+                "The log should state that the provided refresh token is invalid.");
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
