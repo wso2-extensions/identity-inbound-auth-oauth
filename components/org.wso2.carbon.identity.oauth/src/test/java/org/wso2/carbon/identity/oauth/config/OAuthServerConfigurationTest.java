@@ -545,6 +545,14 @@ public class OAuthServerConfigurationTest {
     }
 
 
+    @Test(description = "When the maximum secret count is not configured in identity.xml, it defaults to 2")
+    public void testGetMaxClientSecretCountDefault() {
+
+        // The test identity.xml does not configure the count, so the code-level default applies.
+        Assert.assertEquals(OAuthServerConfiguration.getInstance().getMaxClientSecretCount(), 2,
+                "The default maximum client secret count should be 2.");
+    }
+
     private String fillURLPlaceholdersForTest(String url) {
 
         return url.replace("${carbon.protocol}", "https")

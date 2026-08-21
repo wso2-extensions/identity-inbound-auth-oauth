@@ -120,6 +120,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretExpiryDO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -215,6 +216,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -610,36 +612,23 @@ public class OAuth2Util {
                     + tenantDomain);
         }
 
-        // Cache miss
-        boolean isHashDisabled = isClientSecretHashingDisabled();
-        String appClientSecret = appDO.getOauthConsumerSecret();
-        if (isHashDisabled) {
-            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
             }
-        } else {
-            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
-            // We convert the provided client_secret to the processed form stored in the DB.
-            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-
-            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
-            }
+            return false;
         }
 
+        boolean isValid = isClientSecretValid(appDO, clientSecretProvided);
         if (log.isDebugEnabled()) {
-            log.debug("Successfully authenticated the client with client id : " + clientId);
+            if (isValid) {
+                log.debug("Successfully authenticated the client with client id : " + clientId);
+            } else {
+                log.debug("Provided client : " + clientId +
+                        " and client secret do not match with the issued credentials, or the secret is expired.");
+            }
         }
-
-        return true;
+        return isValid;
     }
 
     /**
@@ -667,36 +656,23 @@ public class OAuth2Util {
                     + appTenant);
         }
 
-        // Cache miss
-        boolean isHashDisabled = isClientSecretHashingDisabled();
-        String appClientSecret = appDO.getOauthConsumerSecret();
-        if (isHashDisabled) {
-            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
             }
-        } else {
-            TokenPersistenceProcessor persistenceProcessor = getClientSecretPersistenceProcessor();
-            // We convert the provided client_secret to the processed form stored in the DB.
-            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-
-            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
-            }
+            return false;
         }
 
+        boolean isValid = isClientSecretValid(appDO, clientSecretProvided);
         if (log.isDebugEnabled()) {
-            log.debug("Successfully authenticated the client with client id : " + clientId);
+            if (isValid) {
+                log.debug("Successfully authenticated the client with client id : " + clientId);
+            } else {
+                log.debug("Provided client : " + clientId +
+                        " and client secret do not match with the issued credentials, or the secret is expired.");
+            }
         }
-
-        return true;
+        return isValid;
     }
 
     public static boolean authenticateClientFromOrgHierarchy(String clientId, String clientSecretProvided,
@@ -718,36 +694,54 @@ public class OAuth2Util {
                     + appTenant);
         }
 
-        // Cache miss
-        boolean isHashDisabled = isHashDisabled();
-        String appClientSecret = appDO.getOauthConsumerSecret();
-        if (isHashDisabled) {
-            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
+        if (StringUtils.isEmpty(clientSecretProvided)) {
+            if (log.isDebugEnabled()) {
+                log.debug("A blank client secret was provided for client id: " + clientId);
             }
-        } else {
-            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
-            // We convert the provided client_secret to the processed form stored in the DB.
-            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
-
-            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Provided the Client ID : " + clientId +
-                            " and Client Secret do not match with the issued credentials.");
-                }
-                return false;
-            }
+            return false;
         }
 
+        boolean isValid = isClientSecretValid(appDO, clientSecretProvided);
         if (log.isDebugEnabled()) {
-            log.debug("Successfully authenticated the client with client id : " + clientId);
+            if (isValid) {
+                log.debug("Successfully authenticated the client with client id : " + clientId);
+            } else {
+                log.debug("Provided client : " + clientId +
+                        " and client secret do not match with the issued credentials, or the secret is expired.");
+            }
+        }
+        return isValid;
+    }
+
+    /**
+     * Checks whether the provided client secret matches an active (non-expired) secret of the application.
+     *
+     * @param appDO                The application.
+     * @param clientSecretProvided The client secret provided at authentication.
+     * @return true if the provided secret matches a secret of the application that has not expired.
+     * @throws IdentityOAuth2Exception If an error occurs while processing the provided secret.
+     */
+    private static boolean isClientSecretValid(OAuthAppDO appDO, String clientSecretProvided)
+            throws IdentityOAuth2Exception {
+
+        String secretToCompare = clientSecretProvided;
+        if (!isClientSecretHashingDisabled()) {
+            secretToCompare = getClientSecretPersistenceProcessor().getProcessedClientSecret(clientSecretProvided);
         }
 
-        return true;
+        if (StringUtils.equals(appDO.getOauthConsumerSecret(), secretToCompare)) {
+            return !isExpiryTimeInPast(appDO.getOauthConsumerSecretExpiryTime());
+        }
+
+        if (CollectionUtils.isNotEmpty(appDO.getAdditionalOauthConsumerSecrets())) {
+            for (OAuthConsumerSecretExpiryDO additionalSecret : appDO.getAdditionalOauthConsumerSecrets()) {
+                if (StringUtils.equals(additionalSecret.getSecretValue(), secretToCompare)) {
+                    return !isExpiryTimeInPast(additionalSecret.getExpiryTime());
+                }
+            }
+        }
+
+        return false;
     }
 
     private static boolean isTenantActive(String tenantDomain) throws IdentityOAuth2Exception {
@@ -811,6 +805,34 @@ public class OAuth2Util {
         boolean isHashEnabled = OAuthServerConfiguration.getInstance().isClientSecretHashEnabled();
         return !isHashEnabled;
 
+    }
+
+    /**
+     * Check whether the given expiry time is already in the past, allowing for the configured timestamp skew.
+     *
+     * @param expiryTime Expiry timestamp since epoch in milliseconds. Null denotes never expiring.
+     * @return true if the expiry time is in the past, false otherwise.
+     */
+    public static boolean isExpiryTimeInPast(Long expiryTime) {
+
+        if (expiryTime == null) {
+            // Never expires
+            return false;
+        }
+        Instant nowUtc = Instant.now();
+        long timeStampSkewInSeconds = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds();
+        Instant expiryInstantWithSkew = Instant.ofEpochMilli(expiryTime).plusSeconds(timeStampSkewInSeconds);
+        return expiryInstantWithSkew.isBefore(nowUtc);
+    }
+
+     /**
+     * Get the allowed client secret count.
+     *
+     * @return client secret count.
+     */
+    public static int getMaxClientSecretCount() {
+
+        return OAuthServerConfiguration.getInstance().getMaxClientSecretCount();
     }
 
     /**

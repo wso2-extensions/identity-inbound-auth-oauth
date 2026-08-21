@@ -23,9 +23,12 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -39,6 +42,7 @@ import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.io.File;
@@ -207,6 +211,56 @@ public class OAuthInboundAuthConfigHandlerTest {
             // Verify that setCorsOrigins is called twice, once before update and once during rollback.
             verify(corsManagementService, times(2)).setCORSOrigins(eq(APPLICATION_RESOURCE_ID),
                     any(), any());
+        }
+    }
+
+    @DataProvider(name = "clientSecretExpiryTimeOnUpdate")
+    public Object[][] clientSecretExpiryTimeOnUpdate() {
+
+        // existingExpiryTime, providedExpiryTime, expectedError, expectedExpiryTime.
+        return new Object[][]{
+                // Expiry not provided on the update: the existing expiry is kept.
+                {100L, null, null, 100L},
+                // An attempt to change the expiry through the application update is rejected.
+                {100L, 200L, "cannot be modified", null}
+        };
+    }
+
+    @Test(description = "On application update the client secret expiry time is read-only: the existing value is "
+            + "kept when not provided and an attempt to change it is rejected",
+            dataProvider = "clientSecretExpiryTimeOnUpdate")
+    public void testUpdateOAuthProtocolClientSecretExpiryTime(Long existingExpiryTime,
+            Long providedExpiryTime, String expectedError, Long expectedExpiryTime) throws Exception {
+
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
+        mockServiceProvider();
+
+        OAuthConsumerAppDTO existingApp = new OAuthConsumerAppDTO();
+        existingApp.setOauthConsumerKey(CLIENT_ID);
+        existingApp.setOauthConsumerSecretExpiryTime(existingExpiryTime);
+
+        OAuthConsumerAppDTO updatedApp = new OAuthConsumerAppDTO();
+        updatedApp.setAuditLogData(getDummyMap());
+        updatedApp.setOauthConsumerKey(CLIENT_ID);
+        updatedApp.setOauthConsumerSecretExpiryTime(providedExpiryTime);
+
+        when(oAuthAdminService.getOAuthApplicationData(any())).thenReturn(existingApp);
+        when(applicationManagementService.getApplicationByResourceId(ArgumentMatchers.eq(APPLICATION_RESOURCE_ID),
+                any())).thenReturn(application);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = Mockito.mockStatic(OAuth2Util.class)) {
+            try {
+                authConfigHandler.handleConfigUpdate(application, updatedApp);
+                Assert.assertNull(expectedError, "The application update should have been rejected.");
+                Assert.assertEquals(updatedApp.getOauthConsumerSecretExpiryTime(), expectedExpiryTime,
+                        "The client secret expiry time carried to the update is incorrect.");
+                verify(oAuthAdminService, times(1)).updateConsumerApplication(eq(updatedApp), eq(false));
+            } catch (IdentityApplicationManagementException e) {
+                Assert.assertNotNull(expectedError, "The application update should not have been rejected.");
+                Assert.assertTrue(e.getMessage().contains(expectedError));
+            }
         }
     }
 

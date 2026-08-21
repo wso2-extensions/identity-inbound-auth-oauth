@@ -29,6 +29,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.context.CarbonContext;
@@ -59,7 +60,10 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretExpiryDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
@@ -117,8 +121,11 @@ import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogC
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_DELETE;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_SECRET_ID;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
@@ -165,6 +172,7 @@ public class OAuthAdminServiceImpl {
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
     private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
             "OAuth.AllowIssuerSelectionForSubOrgApplications";
+
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -369,15 +377,56 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * Registers an imported OAuth application together with its non-latest client secrets, restoring it as exported.
+     * For internal use.
+     *
+     * @param application       Application information.
+     * @param additionalSecrets Non-latest client secrets to restore.
+     * @return Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information.
+     */
+    public OAuthConsumerAppDTO registerImportedOAuthApplicationData(OAuthConsumerAppDTO application,
+            List<OAuthConsumerSecretExpiryDO> additionalSecrets) throws IdentityOAuthAdminException {
+
+        if (application == null) {
+            throw handleClientError(INVALID_REQUEST, "No OAuth application details were provided for the import.");
+        }
+        validateClientSecretExpiryTime(application.getOauthConsumerSecretExpiryTime(), false);
+        validateAdditionalClientSecrets(additionalSecrets);
+        return registerAndRetrieveOAuthApplicationData(application, true, additionalSecrets);
+    }
+
+    /**
      * Same as {@link #registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO)} but with an option to disable
      * the audit logs. This is to avoid logging duplicate logs.
      *
-     * @param application    <code>OAuthConsumerAppDTO</code> with application information.
+     * @param application    Application information.
      * @param enableAuditing Enable auditing or not.
      * @return OAuthConsumerAppDTO Created OAuth application details.
      * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
      */
     OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
+
+        if (application != null) {
+            validateClientSecretExpiryTime(application.getOauthConsumerSecretExpiryTime(), true);
+        }
+        return registerAndRetrieveOAuthApplicationData(application, enableAuditing, null);
+    }
+
+    /**
+     * Register an OAuth consumer application and retrieve its details, optionally restoring imported non-latest
+     * client secrets. Client secret expiry is not validated here; callers requiring validation must validate before
+     * invoking this method.
+     *
+     * @param application       Application information.
+     * @param enableAuditing    Enable auditing or not.
+     * @param additionalSecrets Non-latest client secrets to restore with the application; null for a normal create.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
+     */
+    private OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application,
+            boolean enableAuditing, List<OAuthConsumerSecretExpiryDO> additionalSecrets)
             throws IdentityOAuthAdminException {
 
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -431,6 +480,8 @@ public class OAuthAdminServiceImpl {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
                     }
+                    app.setOauthConsumerSecretExpiryTime(
+                            getClientSecretExpiryTimeInMillis(application.getOauthConsumerSecretExpiryTime()));
 
                     AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                     app.setAppOwner(appOwner);
@@ -639,6 +690,8 @@ public class OAuthAdminServiceImpl {
                             }
                         }
                     }
+                    // Non-latest secrets to restore with the app on import; null for a normal create.
+                    app.setAdditionalOauthConsumerSecrets(additionalSecrets);
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
                         String consoleCallBackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
@@ -706,6 +759,227 @@ public class OAuthAdminServiceImpl {
         return oAuthConsumerAppDTO;
     }
 
+    /**
+     * Create a new client secret for the given OAuth application.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param expiryTime   Optional absolute expiry time as Unix epoch seconds, where zero or null denotes a
+     *                     never-expiring secret.
+     * @return {@link OAuthClientSecretResponseDTO} containing the created client secret information.
+     * @throws IdentityOAuthAdminException if the operation is not supported or persistence fails.
+     */
+    public OAuthClientSecretResponseDTO createOAuthClientSecret(String consumerKey, String tenantDomain,
+            Long expiryTime) throws IdentityOAuthAdminException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Creating a new client secret for consumer key: " + consumerKey);
+        }
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        validateClientSecretExpiryTime(expiryTime, true);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthConsumerSecretDO consumerSecret = oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO.getId(),
+                getClientSecretExpiryTimeInMillis(expiryTime));
+        // The cached application entry carries the client secrets; evict it after the rotation.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+        Optional<String> initiatorId = getInitiatorId();
+        if (initiatorId.isPresent()) {
+            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                    initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                    OAuthConstants.LogConstants.CREATE_CLIENT_SECRET)
+                    .data(Map.of("secretId", consumerSecret.getSecretId()));
+            triggerAuditLogEvent(auditLogBuilder, true);
+        } else {
+            LOG.error("Error getting the logged in userId");
+        }
+        OAuthClientSecretResponseDTO clientSecretResponse = OAuthUtil.buildClientSecretResponseDTO(consumerSecret);
+        // As the most recently created, the new secret is the latest secret of the application.
+        clientSecretResponse.setLatest(true);
+        return clientSecretResponse;
+    }
+
+    /**
+     * Validate a client secret expiry time. A zero or null expiry time denotes a never-expiring secret and is
+     * always accepted.
+     *
+     * @param expiryTimeInSeconds Expiry time as Unix epoch seconds.
+     * @param rejectPastExpiry    Whether to reject an expiry time already in the past.
+     * @throws IdentityOAuthAdminException if multiple client secrets support is disabled, the expiry time is
+     *                                     negative, or it is in the past while past expiry is rejected.
+     */
+    private void validateClientSecretExpiryTime(Long expiryTimeInSeconds, boolean rejectPastExpiry)
+            throws IdentityOAuthAdminException {
+
+        if (expiryTimeInSeconds == null) {
+            return;
+        }
+        if (expiryTimeInSeconds < 0) {
+            throw handleClientError(INVALID_REQUEST, "The provided expiry time for the client secret is invalid.");
+        }
+        /* On import an already expired secret is restored as it is, so a past expiry time is not rejected. */
+        if (rejectPastExpiry && expiryTimeInSeconds != 0
+                && OAuth2Util.isExpiryTimeInPast(expiryTimeInSeconds * 1000L)) {
+            throw handleClientError(INVALID_REQUEST,
+                    "The provided expiry time for the client secret is in the past.");
+        }
+    }
+
+    /**
+     * Validate the expiry times of the non-latest client secrets restored during an application import. A malformed
+     * (negative) expiry is rejected; an already expired secret is allowed so it can be restored as it is.
+     *
+     * @param additionalSecrets Non-latest client secrets from the import.
+     * @throws IdentityOAuthAdminException if additional client secrets are not supported or an expiry time
+     *                                     is invalid.
+     */
+    private void validateAdditionalClientSecrets(List<OAuthConsumerSecretExpiryDO> additionalSecrets)
+            throws IdentityOAuthAdminException {
+
+        if (CollectionUtils.isEmpty(additionalSecrets)) {
+            return;
+        }
+        // The total secrets (the latest plus the additional secrets) must not exceed the configured maximum.
+        int maxClientSecretCount = OAuth2Util.getMaxClientSecretCount();
+        if (maxClientSecretCount > 0 && additionalSecrets.size() + 1 > maxClientSecretCount) {
+            throw handleClientError(CLIENT_SECRET_LIMIT_REACHED, String.format(
+                    "The imported client secrets exceed the maximum of %d secrets per application.",
+                    maxClientSecretCount));
+        }
+        // The expiry time is in milliseconds; a negative value is rejected while a past or absent one is allowed.
+        for (OAuthConsumerSecretExpiryDO additionalSecret : additionalSecrets) {
+            if (additionalSecret.getExpiryTime() != null && additionalSecret.getExpiryTime() < 0) {
+                throw handleClientError(INVALID_REQUEST,
+                        "The provided expiry time for the client secret is invalid.");
+            }
+        }
+    }
+
+    /**
+     * Convert a client secret expiry time from its Unix epoch seconds form to epoch milliseconds, where zero
+     * or null denotes a never-expiring secret.
+     *
+     * @param expiryTimeInSeconds Expiry time as Unix epoch seconds.
+     * @return Expiry time as epoch milliseconds; null for a never-expiring secret.
+     */
+    private static Long getClientSecretExpiryTimeInMillis(Long expiryTimeInSeconds) {
+
+        if (expiryTimeInSeconds == null || expiryTimeInSeconds == 0) {
+            return null;
+        }
+        return expiryTimeInSeconds * 1000L;
+    }
+
+    /**
+     * Remove a client secret, ensuring the latest (most recently added) secret is never deleted.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param secretId     ID of the client secret to remove.
+     * @throws IdentityOAuthAdminException if the secret is the latest secret, does not belong to the
+     *                                     given consumer key, or the operation is not supported.
+     */
+    public void removeOAuthClientSecret(String consumerKey, String tenantDomain, String secretId)
+            throws IdentityOAuthAdminException {
+
+        if (StringUtils.isBlank(secretId)) {
+            throw handleClientError(INVALID_SECRET_ID, "The client secret ID must not be blank.");
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Removing client secret with ID: " + secretId + " for consumer key: " + consumerKey);
+        }
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        String latestSecretId = oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId());
+        if (secretId.equals(latestSecretId)) {
+            throw handleClientError(INVALID_DELETE,
+                    "The requested client secret cannot be deleted as it is the latest secret.");
+        }
+        int rowsDeleted = oAuthAppDAO.deleteOAuthConsumerSecret(secretId, oAuthAppDO.getId());
+        if (rowsDeleted == 0) {
+            // No row matched: the secret does not exist for this application or was concurrently deleted.
+            throw handleClientError(INVALID_SECRET_ID,
+                    "The requested client secret does not exist for this application.");
+        }
+        // The cached application entry carries the client secrets; evict it after the deletion.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+        Optional<String> initiatorId = getInitiatorId();
+        if (initiatorId.isPresent()) {
+            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                    initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                    OAuthConstants.LogConstants.DELETE_CLIENT_SECRET)
+                    .data(Map.of("secretId", secretId));
+            triggerAuditLogEvent(auditLogBuilder, true);
+        } else {
+            LOG.error("Error getting the logged in userId");
+        }
+    }
+
+    /**
+     * Retrieve all client secrets associated with a given consumer key.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @return List of {@link OAuthClientSecretResponseDTO} ordered by creation time descending.
+     * @throws IdentityOAuthAdminException if the operation is not supported or retrieval fails.
+     */
+    public List<OAuthClientSecretResponseDTO> getOAuthClientSecrets(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        List<OAuthClientSecretResponseDTO> clientSecrets = new ArrayList<>();
+        try {
+            for (OAuthConsumerSecretDO consumerSecret : oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getId())) {
+                clientSecrets.add(OAuthUtil.buildClientSecretResponseDTO(consumerSecret));
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while retrieving the client secrets of the application with consumerKey: "
+                    + consumerKey, e);
+        }
+        // The list is ordered latest-first; the first entry is the latest (active) secret of the application.
+        if (!clientSecrets.isEmpty()) {
+            clientSecrets.get(0).setLatest(true);
+        }
+        return clientSecrets;
+    }
+
+    /**
+     * Retrieve a specific client secret by secret ID, validating ownership against the given consumer key.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param secretId     ID of the client secret.
+     * @return {@link OAuthClientSecretResponseDTO} containing the client secret information.
+     * @throws IdentityOAuthAdminException if the secret is not found, does not belong to the given
+     *                                     consumer key, or the operation is not supported.
+     */
+    public OAuthClientSecretResponseDTO getOAuthClientSecret(String consumerKey, String tenantDomain,
+            String secretId) throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        /* The default secret id resolves only before migration; once the secrets table holds records for the
+           application, no secret carries it and the lookup below rejects it like any unknown id. */
+        if (OAuthConstants.DEFAULT_SECRET_ID.equals(secretId) && OAuthConstants.DEFAULT_SECRET_ID.equals(
+                oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId()))) {
+            OAuthConsumerSecretDO fallback = new OAuthConsumerSecretDO();
+            fallback.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+            fallback.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
+            OAuthClientSecretResponseDTO fallbackResponse = OAuthUtil.buildClientSecretResponseDTO(fallback);
+            // Before on-demand migration the application has a single secret, which is the latest by definition.
+            fallbackResponse.setLatest(true);
+            return fallbackResponse;
+        }
+        OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId, oAuthAppDO.getId());
+        if (secret == null) {
+            throw handleClientError(INVALID_SECRET_ID,
+                    "The requested client secret does not exist for this application.");
+        }
+        OAuthClientSecretResponseDTO clientSecretResponse = OAuthUtil.buildClientSecretResponseDTO(secret);
+        clientSecretResponse.setLatest(
+                secretId.equals(oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId())));
+        return clientSecretResponse;
+    }
 
     private Optional<AuthenticatedUser> getLoggedInUser(String tenantDomain) {
 
@@ -759,11 +1033,21 @@ public class OAuthAdminServiceImpl {
 
     private static void maskClientSecret(JSONObject oauthApp) {
 
-        if (oauthApp.get("oauthConsumerSecret") == null) {
-            return;
+        if (oauthApp.get("oauthConsumerSecret") != null) {
+            oauthApp.put("oauthConsumerSecret",
+                    LoggerUtils.getMaskedContent(oauthApp.get("oauthConsumerSecret").toString()));
         }
-        String secret = oauthApp.get("oauthConsumerSecret").toString();
-        oauthApp.put("oauthConsumerSecret", LoggerUtils.getMaskedContent(secret));
+        // Mask the restored non-latest secret values so an application import audit log never carries a raw secret.
+        JSONArray additionalSecrets = oauthApp.optJSONArray("additionalOauthConsumerSecrets");
+        if (additionalSecrets != null) {
+            for (int i = 0; i < additionalSecrets.length(); i++) {
+                JSONObject additionalSecret = additionalSecrets.optJSONObject(i);
+                if (additionalSecret != null && additionalSecret.opt("secretValue") != null) {
+                    additionalSecret.put("secretValue",
+                            LoggerUtils.getMaskedContent(additionalSecret.opt("secretValue").toString()));
+                }
+            }
+        }
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -1707,26 +1991,27 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Regenerate consumer secret for the application and retrieve application details.
+     * Regenerate the client secret for an OAuth application and retrieve application details. In multi-secret mode
+     * this performs a hard rotation: all existing secrets in IDN_OAUTH_CONSUMER_SECRETS are revoked, associated
+     * tokens and authorization codes are revoked, and a new unnamed, non-expiring secret is added as the only entry.
      *
-     * @param consumerKey Consumer key for the application.
-     * @return OAuthConsumerAppDTO OAuth application details.
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthConsumerAppDTO OAuth application details with the new secret value set.
      * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        Properties properties = new Properties();
         String newSecret = OAuthUtil.getRandomNumberSecure();
-        OAuthConsumerAppDTO oldAppDTO = null;
+        OAuthConsumerAppDTO oldAppDTO = getOAuthApplicationData(consumerKey);
 
-        oldAppDTO = getOAuthApplicationData(consumerKey);
+        Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
-        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
         handleInternalTokenRevocation(consumerKey, properties);
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
@@ -2778,6 +3063,36 @@ public class OAuthAdminServiceImpl {
     OAuth2Service getOAuth2Service() {
 
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
+    }
+
+    /**
+     * Validate whether the OAuth application exists for the given consumer key in the given tenant domain.
+     *
+     * @param consumerKey  Consumer key of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @return OAuthAppDO OAuth application data object.
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    private OAuthAppDO validateOAuthAppExistence(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getOAuthApp(consumerKey, tenantDomain);
+            if (oAuthAppDO == null) {
+                String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(msg);
+                }
+                throw handleClientError(INVALID_OAUTH_CLIENT, msg);
+            }
+        } catch (InvalidOAuthClientException e) {
+            String msg = "Cannot find a valid OAuth client for consumerKey: " + consumerKey;
+            throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while validating OAuth app existence for consumerKey: " + consumerKey, e);
+        }
+        return oAuthAppDO;
     }
 
     OAuthAppDO getOAuthApp(String consumerKey, String tenantDomain) throws InvalidOAuthClientException,

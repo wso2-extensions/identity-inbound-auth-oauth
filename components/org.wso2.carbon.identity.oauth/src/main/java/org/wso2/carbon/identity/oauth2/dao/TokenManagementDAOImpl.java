@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
@@ -630,6 +631,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 }
                 updateStateStatement.execute();
 
+                // Delete the existing secrets and add the regenerated one so the old secrets no longer authenticate.
+                new OAuthAppDAO().replaceOAuthConsumerSecretsInSecretsTable(connection, consumerKey, appTenantId,
+                        newSecretKey);
+
                 if (log.isDebugEnabled()) {
                     log.debug("Regenerating the client secret of: " + consumerKey);
                 }
@@ -676,6 +681,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        } catch (IdentityOAuth2Exception e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw e;
         } finally {
             IdentityDatabaseUtil.closeStatement(updateStateStatement);
             IdentityDatabaseUtil.closeStatement(revokeActiveTokensStatement);

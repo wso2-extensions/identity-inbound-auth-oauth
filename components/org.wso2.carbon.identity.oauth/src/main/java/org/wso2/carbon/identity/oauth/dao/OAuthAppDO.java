@@ -37,6 +37,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -63,7 +64,10 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     @XmlTransient
     private int id;
     private String oauthConsumerKey;
+    // Latest client secret.
     private String oauthConsumerSecret;
+    // Absolute expiry time (epoch millis) of the latest client secret.
+    private Long oauthConsumerSecretExpiryTime;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -93,6 +97,10 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
+    // The non-latest client secrets.
+    @XmlElementWrapper(name = "additionalOauthConsumerSecrets")
+    @XmlElement(name = "additionalOauthConsumerSecret")
+    private List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets;
     @XmlTransient
     @JsonIgnore
     private AuthenticatedUser appOwner;
@@ -170,6 +178,22 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
     public void setOauthConsumerSecret(String oauthConsumerSecret) {
         this.oauthConsumerSecret = oauthConsumerSecret;
+    }
+
+    public Long getOauthConsumerSecretExpiryTime() {
+        return oauthConsumerSecretExpiryTime;
+    }
+
+    public void setOauthConsumerSecretExpiryTime(Long oauthConsumerSecretExpiryTime) {
+        this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
+    }
+
+    public List<OAuthConsumerSecretExpiryDO> getAdditionalOauthConsumerSecrets() {
+        return additionalOauthConsumerSecrets;
+    }
+
+    public void setAdditionalOauthConsumerSecrets(List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets) {
+        this.additionalOauthConsumerSecrets = additionalOauthConsumerSecrets;
     }
 
     public String getApplicationName() {
@@ -758,4 +782,5 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         return OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
                 clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
     }
+
 }

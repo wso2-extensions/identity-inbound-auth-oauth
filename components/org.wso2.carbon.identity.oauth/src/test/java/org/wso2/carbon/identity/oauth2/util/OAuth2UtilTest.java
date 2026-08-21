@@ -88,6 +88,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretExpiryDO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -615,6 +616,143 @@ public class OAuth2UtilTest {
                 when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
 
                 assertTrue(OAuth2Util.authenticateClient(clientId, clientSecret, clientTenantDomain));
+            }
+        }
+    }
+
+    @DataProvider(name = "multipleClientSecretsAuthentication")
+    public Object[][] multipleClientSecretsAuthentication() {
+
+        // providedSecret, storedSecretExpiryTime (epoch millis), expectedResult.
+        return new Object[][]{
+                {clientSecret, null, true},
+                {clientSecret, 4102444800000L, true},
+                {clientSecret, 1000L, false},
+                {"wrong-client-secret", null, false}
+        };
+    }
+
+    @Test(description = "Client authentication matches the presented secret against the stored secret and "
+            + "honours each secret's expiry: a valid non-expired secret authenticates, an expired one is rejected, "
+            + "and a wrong secret is rejected",
+            dataProvider = "multipleClientSecretsAuthentication")
+    public void testAuthenticateClientWithMultipleClientSecrets(String providedSecret, Long storedSecretExpiryTime,
+                                                                boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(eq(clientId), anyInt())).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) ->
+                            when(mock.getAppInformation(eq(clientId), anyInt())).thenReturn(appDO))) {
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(clientTenantDomain))
+                        .thenReturn(clientTenantId);
+                when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+                when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+                when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
+                when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret, clientTenantDomain),
+                        expectedResult);
+            }
+        }
+    }
+
+    @Test(description = "Org-hierarchy client authentication matches the presented secret against the stored secret "
+            + "hashes and honours each secret's expiry: a valid non-expired secret authenticates, an expired one is "
+            + "rejected, and a wrong secret is rejected",
+            dataProvider = "multipleClientSecretsAuthentication")
+    public void testAuthenticateClientFromOrgHierarchyWithMultipleClientSecrets(String providedSecret,
+            Long storedSecretExpiryTime, boolean expectedResult) throws Exception {
+
+        String accessingOrgId = "org-id";
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+            AuthenticatedUser appOwner = new AuthenticatedUser();
+            appOwner.setTenantDomain(clientTenantDomain);
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setUser(appOwner);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            // The application is resolved through the organization hierarchy for the accessing organization.
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId))
+                    .thenReturn(appDO);
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+            when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+            when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
+            when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+            assertEquals(OAuth2Util.authenticateClientFromOrgHierarchy(clientId, providedSecret, accessingOrgId),
+                    expectedResult);
+        }
+    }
+
+    @Test(description = "The deprecated client authentication without an app tenant matches the presented secret "
+            + "against the stored secret and honours each secret's expiry, consistently with the tenant "
+            + "aware authentication", dataProvider = "multipleClientSecretsAuthentication")
+    public void testDeprecatedAuthenticateClientWithMultipleClientSecrets(String providedSecret,
+            Long storedSecretExpiryTime, boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO))) {
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret), expectedResult);
+            }
+        }
+    }
+
+    @DataProvider(name = "additionalSecretAuthentication")
+    public Object[][] additionalSecretAuthentication() {
+
+        // providedSecret, additionalSecretExpiryTime (epoch millis), expectedResult.
+        return new Object[][]{
+                {"additional-secret", null, true},
+                {"additional-secret", 4102444800000L, true},
+                {"additional-secret", 1000L, false},
+                {"wrong-client-secret", null, false}
+        };
+    }
+
+    @Test(description = "Client authentication matches the presented secret against the additional (non-latest) "
+            + "secrets and honours the matched additional secret's expiry",
+            dataProvider = "additionalSecretAuthentication")
+    public void testAuthenticateClientMatchesAdditionalSecret(String providedSecret, Long additionalSecretExpiryTime,
+            boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            // The latest secret differs from the presented one, so a match can only come from the additional list.
+            appDO.setOauthConsumerSecret("latest-secret");
+            appDO.setAdditionalOauthConsumerSecrets(Collections.singletonList(
+                    new OAuthConsumerSecretExpiryDO("additional-secret", additionalSecretExpiryTime)));
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO))) {
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret), expectedResult);
             }
         }
     }

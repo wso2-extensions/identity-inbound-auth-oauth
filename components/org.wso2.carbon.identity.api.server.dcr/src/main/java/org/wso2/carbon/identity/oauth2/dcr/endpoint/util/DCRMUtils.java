@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -74,6 +74,7 @@ public class DCRMUtils {
         appRegistrationRequest.setExtApplicationDisplayName(registrationRequestDTO.getExtApplicationDisplayName());
         appRegistrationRequest.setExtApplicationOwner(registrationRequestDTO.getExtApplicationOwner());
         appRegistrationRequest.setExtApplicationTokenLifetime(registrationRequestDTO.getExtApplicationTokenLifetime());
+        appRegistrationRequest.setClientSecretExpiresAt(registrationRequestDTO.getClientSecretExpiresAt());
         appRegistrationRequest.setExtUserTokenLifetime(registrationRequestDTO.getExtUserTokenLifetime());
         appRegistrationRequest.setExtRefreshTokenLifetime(registrationRequestDTO.getExtRefreshTokenLifetime());
         appRegistrationRequest.setExtIdTokenLifetime(registrationRequestDTO.getExtIdTokenLifetime());
@@ -229,10 +230,7 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
-        /* Currently, we are not setting an expiration time for the client secret, hence according to the DCR
-        specification we have to set the expiration time to 0.
-        https://openid.net/specs/openid-connect-registration-1_0.html */
-        applicationDTO.setClientSecretExpiresAt(0L);
+        applicationDTO.setClientSecretExpiresAt(application.getClientSecretExpiresAt());
         applicationDTO.setExtApplicationDisplayName(application.getExtApplicationDisplayName());
         applicationDTO.setExtApplicationVersion(application.getExtApplicationVersion());
         applicationDTO.setExtApplicationOwner(application.getExtApplicationOwner());

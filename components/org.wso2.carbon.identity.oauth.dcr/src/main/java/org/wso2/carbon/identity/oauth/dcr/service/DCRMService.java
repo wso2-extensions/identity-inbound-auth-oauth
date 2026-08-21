@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -666,6 +666,9 @@ public class DCRMService {
         application.setClientName(createdApp.getApplicationName());
         application.setClientId(createdApp.getOauthConsumerKey());
         application.setClientSecret(createdApp.getOauthConsumerSecret());
+        // Per RFC 7591, client_secret_expires_at is 0 when the secret does not expire.
+        application.setClientSecretExpiresAt(createdApp.getOauthConsumerSecretExpiryTime() == null ? 0L
+                : createdApp.getOauthConsumerSecretExpiryTime());
 
         application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl(), tenantDomain));
 
@@ -770,6 +773,17 @@ public class DCRMService {
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerSecret())) {
             oAuthConsumerApp.setOauthConsumerSecret(registrationRequest.getConsumerSecret());
+        }
+        // Per RFC 7591, a client_secret_expires_at of zero denotes a never-expiring secret.
+        if (registrationRequest.getClientSecretExpiresAt() != null) {
+            // The expiry is carried as Unix epoch seconds on the DTO.
+            if (registrationRequest.getClientSecretExpiresAt() != 0 && OAuth2Util.isExpiryTimeInPast(
+                    registrationRequest.getClientSecretExpiresAt() * 1000L)) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_CLIENT_SECRET_EXPIRY,
+                        String.valueOf(registrationRequest.getClientSecretExpiresAt()));
+            }
+            oAuthConsumerApp.setOauthConsumerSecretExpiryTime(registrationRequest.getClientSecretExpiresAt());
         }
         if (registrationRequest.getExtApplicationTokenLifetime() != null) {
             oAuthConsumerApp.setApplicationAccessTokenExpiryTime(registrationRequest.getExtApplicationTokenLifetime());

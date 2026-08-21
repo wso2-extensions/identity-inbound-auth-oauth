@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -282,6 +283,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         String oauthConsumerKey = oAuthConsumerAppDTO.getOauthConsumerKey();
                         boolean isExistingClient = dao.isDuplicateConsumer(oauthConsumerKey);
 
+                        /* Additional (non-latest) secrets cannot be restored without a latest secret, so reject an
+                           import file that carries additional secrets but no latest secret. */
+                        if (!isExistingClient
+                                && StringUtils.isBlank(oAuthConsumerAppDTO.getOauthConsumerSecret())
+                                && CollectionUtils.isNotEmpty(oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                            throw new IdentityOAuthClientException("The additional client secrets are present in the "
+                                    + "import file but the latest client secret is missing.");
+                        }
+
                         // Set the client secret before doing registering/updating the oauth app.
                         if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
                             if (isExistingClient) {
@@ -296,9 +306,19 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         OAuthAdminServiceImpl oAuthAdminService =
                                 OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
                         if (isExistingClient) {
+                            // Update-import: preserve the existing secrets; the imported secret list is ignored.
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
-                            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            if (oAuthAppDO.getOauthConsumerSecretExpiryTime() != null
+                                    || CollectionUtils.isNotEmpty(
+                                            oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                                /* Restore the exported secrets: preserve the latest secret's expiry, re-create the
+                                   non-latest secrets, and allow an already-expired secret. */
+                                oAuthAdminService.registerImportedOAuthApplicationData(oAuthConsumerAppDTO,
+                                        oAuthAppDO.getAdditionalOauthConsumerSecrets());
+                            } else {
+                                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            }
                         }
                         return;
                     }
@@ -361,7 +381,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                 .getClass().getName();
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
                                 .equals(tokenProcessorName) || !exportSecrets) {
+                            // Do not export the client secrets.
                             authApplication.setOauthConsumerSecret(null);
+                            authApplication.setOauthConsumerSecretExpiryTime(null);
+                            authApplication.setAdditionalOauthConsumerSecrets(null);
                         }
 
                         Property[] properties = authConfig.getProperties();

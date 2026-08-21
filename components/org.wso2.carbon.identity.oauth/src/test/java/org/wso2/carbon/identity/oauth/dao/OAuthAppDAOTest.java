@@ -93,6 +93,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
+import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
 
 /*
@@ -139,6 +140,12 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String DELETE_ALL_OAUTH2_ACC_TOKENS = "DELETE FROM IDN_OAUTH2_ACCESS_TOKEN WHERE 1=1";
 
     private static final String BACKCHANNEL_LOGOUT = "https://localhost:8090/playground2/backChannelLogout";
+
+    private static final Long CONSUMER_SECRET_EXPIRY_TIME = 4102444800000L;
+    private static final String ADDITIONAL_CONSUMER_SECRET_1 = "additional-consumer-secret-1";
+    private static final String ADDITIONAL_CONSUMER_SECRET_2 = "additional-consumer-secret-2";
+    private static final String REPLACED_CONSUMER_SECRET = "replaced-consumer-secret";
+    private static final int MAX_SECRET_COUNT = 4;
 
     @Mock
     private TenantManager mockedTenantManager;
@@ -1634,6 +1641,304 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @DataProvider(name = "clientSecretExpiry")
+    public Object[][] clientSecretExpiry() {
+
+        // Latest secret expiry (epoch millis) persisted during app creation; null denotes a never-expiring secret.
+        return new Object[][]{
+                {CONSUMER_SECRET_EXPIRY_TIME},
+                {null}
+        };
+    }
+
+    @Test(description = "Basic app creation with multiple client secrets enabled persists the latest client secret "
+            + "into the secrets table with its value and expiry (future expiry and never-expiring cases)",
+            dataProvider = "clientSecretExpiry")
+    public void testAddOAuthApplicationSeedsClientSecret(Long expiryTime) throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            appDO.setOauthConsumerSecretExpiryTime(expiryTime);
+            addOAuthApplication(appDO, TENANT_ID);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 1,
+                    "App creation should seed the client secret into the secrets table.");
+            assertEquals(consumerSecrets.get(0).getSecretValue(), CONSUMER_SECRET);
+            assertEquals(consumerSecrets.get(0).getExpiryTime(), expiryTime);
+        });
+    }
+
+    @Test(description = "Application import restores the latest secret plus all additional secrets in a single "
+            + "transaction; the latest secret sorts first and every additional secret's expiry is preserved")
+    public void testAddOAuthApplicationRestoresAdditionalConsumerSecrets() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthConsumerSecretExpiryDO expiringSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_1, CONSUMER_SECRET_EXPIRY_TIME);
+            OAuthConsumerSecretExpiryDO nonExpiringSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_2, null);
+
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            appDO.setAdditionalOauthConsumerSecrets(Arrays.asList(expiringSecret, nonExpiringSecret));
+            addOAuthApplication(appDO, TENANT_ID);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 3,
+                    "Both additional secrets should be restored along with the latest secret.");
+            assertEquals(consumerSecrets.get(0).getSecretValue(), CONSUMER_SECRET,
+                    "The application's client secret should be the latest secret.");
+            assertEquals(findSecretByValue(consumerSecrets, ADDITIONAL_CONSUMER_SECRET_1).getExpiryTime(),
+                    CONSUMER_SECRET_EXPIRY_TIME,
+                    "The expiry time of a restored additional secret should be preserved.");
+            assertNull(findSecretByValue(consumerSecrets, ADDITIONAL_CONSUMER_SECRET_2).getExpiryTime(),
+                    "A restored non-expiring additional secret should remain non-expiring.");
+        });
+    }
+
+    @Test(description = "Secret regeneration replaces every existing secret of the application with a single new "
+            + "latest secret within the caller's transaction")
+    public void testReplaceOAuthConsumerSecretsInSecretsTable() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthConsumerSecretExpiryDO additionalSecret =
+                    new OAuthConsumerSecretExpiryDO(ADDITIONAL_CONSUMER_SECRET_1, null);
+
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            appDO.setAdditionalOauthConsumerSecrets(Arrays.asList(additionalSecret));
+            addOAuthApplication(appDO, TENANT_ID);
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 2);
+
+            appDAO.replaceOAuthConsumerSecretsInSecretsTable(connection, CONSUMER_KEY, TENANT_ID,
+                    REPLACED_CONSUMER_SECRET);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 1,
+                    "All existing secrets should be replaced by the newly generated secret.");
+            assertEquals(consumerSecrets.get(0).getSecretValue(), REPLACED_CONSUMER_SECRET);
+        });
+    }
+
+    @Test(description = "Adding a client secret once the configured MaxSecretCount is reached fails with "
+            + "CLIENT_SECRET_LIMIT_REACHED")
+    public void testAddOAuthConsumerSecretLimitReached() throws Exception {
+
+        runWithMaxClientSecretCount(2, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 2);
+
+            try {
+                appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+                fail("Adding a client secret beyond the configured limit did not fail as expected.");
+            } catch (IdentityOAuthAdminException e) {
+                assertTrue(e instanceof IdentityOAuthClientException);
+                assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        CLIENT_SECRET_LIMIT_REACHED.getErrorCode());
+            }
+        });
+    }
+
+    @Test(description = "Creating a client secret returns the generated plaintext once, persists the requested "
+            + "expiry (future expiry and never-expiring cases), and becomes the latest secret",
+            dataProvider = "clientSecretExpiry")
+    public void testAddOAuthConsumerSecret(Long expiryTime) throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), expiryTime);
+            advanceSecretCreatedTime(connection, createdSecret.getSecretId());
+            assertNotNull(createdSecret.getSecretId());
+            assertNotNull(createdSecret.getSecretValue(), "The generated plaintext secret should be returned once.");
+            assertEquals(createdSecret.getExpiryTime(), expiryTime);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 2, "The new secret should be added alongside the initial secret.");
+            assertEquals(consumerSecrets.get(0).getSecretId(), createdSecret.getSecretId(),
+                    "The most recently created secret should be the latest.");
+        });
+    }
+
+    @Test(description = "A stored client secret is fetched by its id within the owning application; an unknown "
+            + "secret id returns null")
+    public void testGetOAuthConsumerSecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+
+            OAuthConsumerSecretDO fetchedSecret =
+                    appDAO.getOAuthConsumerSecret(createdSecret.getSecretId(), appDO.getId());
+            assertNotNull(fetchedSecret);
+            assertEquals(fetchedSecret.getSecretId(), createdSecret.getSecretId());
+
+            assertNull(appDAO.getOAuthConsumerSecret("non-existent-secret-id", appDO.getId()),
+                    "An unknown secret id should return null.");
+        });
+    }
+
+    @Test(description = "The most recently created secret of an application is reported as its latest secret id")
+    public void testGetLatestOAuthConsumerSecretId() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            advanceSecretCreatedTime(connection, createdSecret.getSecretId());
+
+            assertEquals(appDAO.getLatestOAuthConsumerSecretId(appDO.getId()), createdSecret.getSecretId(),
+                    "The most recently created secret should be reported as the latest.");
+        });
+    }
+
+    @Test(description = "Deleting an existing non-latest secret removes exactly one row; deleting an unknown "
+            + "secret removes no rows")
+    public void testDeleteOAuthConsumerSecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+            appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            String nonLatestSecretId = consumerSecrets.get(consumerSecrets.size() - 1).getSecretId();
+
+            assertEquals(appDAO.deleteOAuthConsumerSecret(nonLatestSecretId, appDO.getId()), 1,
+                    "Deleting an existing secret should remove exactly one row.");
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 1);
+            assertEquals(appDAO.deleteOAuthConsumerSecret("non-existent-secret-id", appDO.getId()), 0,
+                    "Deleting an unknown secret should affect no rows.");
+        });
+    }
+
+    @Test(description = "For an un-migrated application (no rows in the secrets table), reading the client secrets "
+            + "returns a single synthetic entry with the default secret id sourced from IDN_OAUTH_CONSUMER_APPS, and "
+            + "the latest secret id resolves to the default secret id")
+    public void testGetOAuthConsumerSecretsForUnmigratedApp() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            // Simulate an un-migrated application: drop the secrets-table rows so the secret lives only in
+            // IDN_OAUTH_CONSUMER_APPS, as it did before the multiple client secrets migration.
+            try (PreparedStatement deleteStatement = connection.prepareStatement(
+                    "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID = ?")) {
+                deleteStatement.setInt(1, appDO.getId());
+                deleteStatement.executeUpdate();
+            }
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 1, "An un-migrated application exposes a single synthetic secret.");
+            assertEquals(consumerSecrets.get(0).getSecretId(), OAuthConstants.DEFAULT_SECRET_ID,
+                    "The synthetic secret should carry the default secret id.");
+            assertEquals(consumerSecrets.get(0).getSecretValue(), CONSUMER_SECRET,
+                    "The synthetic secret value should come from IDN_OAUTH_CONSUMER_APPS.");
+
+            assertEquals(appDAO.getLatestOAuthConsumerSecretId(appDO.getId()), OAuthConstants.DEFAULT_SECRET_ID,
+                    "The latest secret id of an un-migrated application resolves to the default secret id.");
+        });
+    }
+
+    @Test(description = "Adding a client secret to an un-migrated application first migrates the legacy secret from "
+            + "IDN_OAUTH_CONSUMER_APPS into the secrets table, then adds the new secret as the latest")
+    public void testAddOAuthConsumerSecretMigratesLegacySecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            // Simulate an un-migrated application: the secret lives only in IDN_OAUTH_CONSUMER_APPS.
+            try (PreparedStatement deleteStatement = connection.prepareStatement(
+                    "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID = ?")) {
+                deleteStatement.setInt(1, appDO.getId());
+                deleteStatement.executeUpdate();
+            }
+            // Before the call the un-migrated application exposes only the single synthetic default secret.
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 1);
+
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 2,
+                    "The legacy secret is migrated into the secrets table alongside the new secret.");
+            assertEquals(consumerSecrets.get(0).getSecretId(), createdSecret.getSecretId(),
+                    "The newly created secret should be the latest.");
+            assertFalse(OAuthConstants.DEFAULT_SECRET_ID.equals(consumerSecrets.get(1).getSecretId()),
+                    "The migrated legacy secret should hold a real secret id, not the synthetic default.");
+        });
+    }
+
+    /**
+     * Run a client-secret test body against the H2 store with the given maximum client secret count.
+     *
+     * @param clientSecretLimit Maximum number of client secrets allowed per application.
+     * @param testBody          Test body executed with a DAO instance and an active connection.
+     */
+    private void runWithMaxClientSecretCount(int clientSecretLimit, SecretsTestBody testBody)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             Connection connection = getConnection(DB_NAME)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            when(mockedServerConfig.getMaxClientSecretCount()).thenReturn(clientSecretLimit);
+
+            Connection reusableConnection = spy(connection);
+            doNothing().when(reusableConnection).close();
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(reusableConnection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(reusableConnection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(reusableConnection);
+
+            testBody.run(new OAuthAppDAO(), reusableConnection);
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    /**
+     * Advance the created time of the given client secret by one millisecond.
+     *
+     * The seeded secret and the newly created secret can rarely be stored within the same millisecond, tying on
+     * CREATED_TIME so the latest secret resolution falls back to the random secret id. Advancing the newly
+     * created secret keeps the ordering assertions deterministic.
+     */
+    private void advanceSecretCreatedTime(Connection connection, String secretId) throws SQLException {
+
+        try (PreparedStatement updateStatement = connection.prepareStatement(
+                "UPDATE IDN_OAUTH_CONSUMER_SECRETS SET CREATED_TIME = CREATED_TIME + 1 WHERE SECRET_ID = ?")) {
+            updateStatement.setString(1, secretId);
+            updateStatement.executeUpdate();
+        }
+    }
+
+    private OAuthConsumerSecretDO findSecretByValue(List<OAuthConsumerSecretDO> consumerSecrets, String secretValue) {
+
+        for (OAuthConsumerSecretDO consumerSecret : consumerSecrets) {
+            if (secretValue.equals(consumerSecret.getSecretValue())) {
+                return consumerSecret;
+            }
+        }
+        fail("Expected client secret with value " + secretValue + " was not found.");
+        return null;
+    }
+
+    @FunctionalInterface
+    private interface SecretsTestBody {
+
+        void run(OAuthAppDAO appDAO, Connection connection) throws Exception;
+    }
+
     private OAuthAppDO getDefaultOAuthAppDO() {
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(USER_NAME);
@@ -1690,6 +1995,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockedServerConfig.getClientSecretPersistenceProcessor()).thenReturn(processor);
+        when(mockedServerConfig.getHashAlgorithm()).thenReturn("SHA-256");
 
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);

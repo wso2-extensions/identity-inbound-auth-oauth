@@ -343,6 +343,9 @@ public class OAuthServerConfiguration {
     private boolean isClientSecretHashEnabled = false;
     private boolean isClientSecretHashOnlyEnabled = false;
 
+    // Max number of client secrets per oauth application. Defaults to 2 when not configured or misconfigured.
+    private static final int DEFAULT_CLIENT_SECRET_COUNT = 2;
+    private int clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -564,6 +567,9 @@ public class OAuthServerConfiguration {
         parseHashAlgorithm(oauthElem);
         // read hash mode config
         parseEnableHashMode(oauthElem);
+
+        // read multiple client secrets config
+        parseMaxClientSecretCount(oauthElem);
 
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
@@ -1552,6 +1558,16 @@ public class OAuthServerConfiguration {
 
     public boolean isClientSecretHashEnabled() {
         return isClientSecretHashEnabled;
+    }
+
+    /**
+     * Retrieves the maximum number of client secrets allowed for an OAuth application.
+     *
+     * @return the maximum number of client secrets allowed for an OAuth application.
+     */
+    public int getMaxClientSecretCount() {
+
+        return clientSecretCount;
     }
 
     public boolean isClientSecretHashOnlyEnabled() {
@@ -4185,6 +4201,39 @@ public class OAuthServerConfiguration {
         }
     }
 
+    /**
+     * Parses the OAuth configuration to read the maximum number of client secrets allowed per application.
+     *
+     * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
+     */
+    private void parseMaxClientSecretCount(OMElement oauthConfigElem) {
+
+        OMElement multipleClientSecretsElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
+        if (multipleClientSecretsElement != null) {
+            OMElement maxSecretCountElement = multipleClientSecretsElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MAX_SECRET_COUNT));
+            if (maxSecretCountElement != null && StringUtils.isNotBlank(maxSecretCountElement.getText())) {
+                String secretCountText = maxSecretCountElement.getText().trim();
+                try {
+                    clientSecretCount = Integer.parseInt(secretCountText);
+                    if (clientSecretCount <= 0) {
+                        clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
+                        log.error("Invalid value for client secret count: '" + secretCountText +
+                                "'. Secret count should be a positive value. Using default client "
+                                + "secret count: " + DEFAULT_CLIENT_SECRET_COUNT);
+                    }
+                } catch (NumberFormatException e) {
+                    log.error("Invalid value for client secret count: '" + secretCountText +
+                            "'. Using default client secret count: " + DEFAULT_CLIENT_SECRET_COUNT, e);
+                }
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Client secret limit: " + clientSecretCount);
+        }
+    }
+
     private void parseRedirectToOAuthErrorPageConfig(OMElement oauthConfigElem) {
 
         OMElement redirectToOAuthErrorPageElem =
@@ -4901,6 +4950,10 @@ public class OAuthServerConfiguration {
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
         private static final String ENABLE_CLIENT_SECRET_HASH_ONLY = "HashClientSecretOnly";
+
+        // Multiple client secret configurations
+        private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
+        private static final String MAX_SECRET_COUNT = "MaxSecretCount";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
