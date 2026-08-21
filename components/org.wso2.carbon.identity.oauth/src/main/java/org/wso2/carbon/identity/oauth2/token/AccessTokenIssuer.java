@@ -1529,33 +1529,30 @@ public class AccessTokenIssuer {
                                                        OAuth2AccessTokenRespDTO tokenRespDTO, boolean isFederatedUser) {
 
         AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-        // If the user is a federated user, we always add the cache entry since the user attributes are fetched
-        // from the federated IDP and may change frequently.
-        if (isFederatedUser ||
-                AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
-            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-            if (log.isDebugEnabled()) {
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
-                            DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
-                } else {
-                    log.debug("Adding AuthorizationGrantCache entry for the access token");
-                }
-            }
-            // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
-            authorizationGrantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
-            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
-        } else {
-            if (log.isDebugEnabled()) {
-                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("AuthorizationGrantCache entry for the access token(hashed):" +
-                            DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()) + " already exists.");
-                } else {
-                    log.debug("AuthorizationGrantCache entry for the access token already exists.");
-                }
+        /*
+         The entry given here always originates from a new authorization, since it is resolved from the authorization
+         code or the device code of the current token request. Its user attributes were therefore resolved during that
+         authorization. When an existing access token is reused for the request, an entry may already exist against
+         that token carrying the attributes resolved when the token was first issued. Retaining the older entry makes
+         the ID token and the userinfo response serve stale attributes: a role assigned to the user after the token
+         was first issued would not appear until that token expired or was revoked. The entry is hence refreshed even
+         when one already exists, which previously happened only for federated users.
+        */
+        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                        DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()) + ", federated user: "
+                        + isFederatedUser);
+            } else {
+                log.debug("Adding AuthorizationGrantCache entry for the access token, federated user: "
+                        + isFederatedUser);
             }
         }
+        // Setting the validity period of the cache entry to be same as the validity period of the refresh token.
+        authorizationGrantCacheEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getRefreshTokenExpiresInMillis()));
+        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
 
     private void addUserAttributesAgainstAccessTokenForPasswordGrant(OAuth2AccessTokenRespDTO tokenRespDTO,
