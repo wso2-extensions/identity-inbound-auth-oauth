@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -45,6 +47,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -172,6 +175,55 @@ public class AccessTokenIssuerTest {
             OAuth2AccessTokenRespDTO resp = (OAuth2AccessTokenRespDTO) result;
             Assert.assertTrue(resp.isError());
             Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
+        }
+    }
+
+    @Test
+    public void testInvalidGrantIsRecordedAsADiagnosticLog() throws Exception {
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        req.setClientId("test_client_id");
+        req.setGrantType("refresh_token");
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class)))
+            .thenThrow(new IdentityOAuth2Exception("Persisted access token data not found"));
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2Util> oauth2UtilMock = Mockito.mockStatic(OAuth2Util.class)) {
+
+            loggerUtilsMock.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            loggerUtilsMock.when(() -> LoggerUtils.getSanitizedErrorMessage(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+            oauth2UtilMock.when(() -> OAuth2Util.getUserIdentifierFromRequest(req)).thenReturn("user");
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            ArgumentCaptor<DiagnosticLog.DiagnosticLogBuilder> captor =
+                ArgumentCaptor.forClass(DiagnosticLog.DiagnosticLogBuilder.class);
+            loggerUtilsMock.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(captor.capture()));
+            DiagnosticLog diagnosticLog = captor.getValue().build();
+
+            Assert.assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name(),
+                "A grant validation failure should be recorded as a FAILED entry.");
+            Assert.assertEquals(diagnosticLog.getActionId(),
+                OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            Assert.assertEquals(
+                diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE), "refresh_token");
+            Assert.assertTrue(
+                diagnosticLog.getResultMessage().contains("Authorization grant validation failed"),
+                "The log should state that the authorization grant validation failed.");
+            Assert.assertTrue(
+                diagnosticLog.getResultMessage().contains("Persisted access token data not found"),
+                "The resolved error should be appended to the log message.");
         }
     }
 
