@@ -49,7 +49,8 @@ public class DCRMConstants {
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
         BAD_REQUEST_INVALID_SP_TEMPLATE_NAME("Invalid service provider template name: %s"),
         BAD_REQUEST_INVALID_INPUT("%s"),
-        BAD_REQUEST_INVALID_CLIENT_SECRET_EXPIRY("The provided client secret expiry time is in the past: %s"),
+        BAD_REQUEST_CLIENT_SECRET_EXPIRY_INVALID("The provided expiry time for the client secret is invalid."),
+        BAD_REQUEST_CLIENT_SECRET_EXPIRY_IN_PAST("The provided expiry time for the client secret is in the past."),
         BAD_REQUEST_CLIENT_SECRET_EXPIRY_NOT_SUPPORTED("Client secret expiry is not supported as the multiple " +
                 "client secret support is disabled."),
         BAD_REQUEST_INVALID_SP_INPUT("Invalid data sent for the service provider : %s"),
