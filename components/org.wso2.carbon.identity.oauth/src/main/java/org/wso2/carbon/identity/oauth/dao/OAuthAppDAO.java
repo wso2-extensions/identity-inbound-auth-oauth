@@ -1147,9 +1147,7 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties, TOKEN_BINDING_TYPE,
                 oauthAppDO.getTokenBindingType(), prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
-        // Token binding is required to enable following features.
         if (oauthAppDO.getTokenBindingType() == null) {
-            oauthAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
             oauthAppDO.setTokenBindingValidationEnabled(false);
         }
 
@@ -1938,9 +1936,8 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, TOKEN_BINDING_TYPE,
                     consumerAppDO.getTokenBindingType());
 
-            // Token binding is required to enable following features.
+            // Token binding validation requires a token binding type, token revocation on logout does not.
             if (consumerAppDO.getTokenBindingType() == null) {
-                consumerAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(false);
                 consumerAppDO.setTokenBindingValidationEnabled(false);
             }
 
@@ -2148,14 +2145,13 @@ public class OAuthAppDAO {
         }
         oauthApp.setTokenBindingType(tokenBindingType);
 
+        boolean isTokenRevocationEnabled = Boolean.parseBoolean(
+                getFirstPropertyValue(spOIDCProperties, TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION));
+        oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
+
         if (tokenBindingType == null) {
-            oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(false);
             oauthApp.setTokenBindingValidationEnabled(false);
         } else {
-            boolean isTokenRevocationEnabled = Boolean.parseBoolean(
-                    getFirstPropertyValue(spOIDCProperties, TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION));
-            oauthApp.setTokenRevocationWithIDPSessionTerminationEnabled(isTokenRevocationEnabled);
-
             boolean isTokenBindingValidationEnabled = Boolean
                     .parseBoolean(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_VALIDATION));
             oauthApp.setTokenBindingValidationEnabled(isTokenBindingValidationEnabled);

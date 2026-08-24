@@ -242,6 +242,47 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    /**
+     * Token revocation on IDP session termination must be preserved for an application that has no token binding
+     * configured. Tokens are mapped to their session irrespective of the token binding, so the absence of a binding
+     * is not a reason to drop the opt-in. Token binding validation, in contrast, does require a binding type and
+     * must stay disabled.
+     */
+    @Test
+    public void testTokenRevocationOnSessionTerminationPreservedWithoutTokenBinding() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            appDO.setTokenBindingType(OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE);
+            appDO.setTokenRevocationWithIDPSessionTerminationEnabled(true);
+            appDO.setTokenBindingValidationEnabled(true);
+
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                addOAuthApplication(appDO, TENANT_ID);
+
+                OAuthAppDO retrievedApp = new OAuthAppDAO().getAppInformation(appDO.getOauthConsumerKey(), TENANT_ID);
+                assertNotNull(retrievedApp);
+                assertNull(retrievedApp.getTokenBindingType(),
+                        "A token binding type of 'None' should be persisted as null.");
+                assertTrue(retrievedApp.isTokenRevocationWithIDPSessionTerminationEnabled(),
+                        "Token revocation on IDP session termination should be preserved when the application has "
+                                + "no token binding type configured.");
+                assertFalse(retrievedApp.isTokenBindingValidationEnabled(),
+                        "Token binding validation should be disabled when there is no token binding type.");
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
     @Test
     public void testAddOAuthApplicationWithAppResidentOrgId() throws Exception {
 

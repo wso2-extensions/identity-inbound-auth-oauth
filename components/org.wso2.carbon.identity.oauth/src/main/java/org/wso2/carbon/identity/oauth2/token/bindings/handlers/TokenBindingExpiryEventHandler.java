@@ -110,6 +110,17 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 if (!OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER.equals(bindingType)) {
                     revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
                 }
+
+                /*
+                 Tokens issued to an application that has no token binding configured carry no binding reference
+                 pointing back to the terminated session, hence neither of the lookups above is able to find them.
+                 Fall back to the token to session mapping, which is persisted for every token belonging to a
+                 session irrespective of the token binding configuration of the application. Each token found this
+                 way is still filtered by the token revocation on IDP session termination configuration of its own
+                 application, so applications that have not opted in are left untouched.
+                */
+                revokeTokensMappedToSession(getSessionIdentifierFromEventProperties(eventProperties),
+                        getAuthenticatedUser(eventProperties, context), true);
             } else {
                 revokeTokensForCommonAuthCookie(request, getAuthenticatedUser(eventProperties, context));
             }
@@ -159,6 +170,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      */
     private String getSessionIdentifier(Map<String, Object> paramMap) {
 
+        if (paramMap == null) {
+            return null;
+        }
         String sessionContextIdentifier = null;
         for (Map.Entry<String, Object> entry : paramMap.entrySet()) {
             if (StringUtils.equals(entry.getKey(), FrameworkConstants.AnalyticsAttributes.SESSION_ID)) {
@@ -170,6 +184,18 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
         }
         return sessionContextIdentifier;
+    }
+
+    /**
+     * Get the session context identifier carried by the event properties.
+     *
+     * @param eventProperties Event properties.
+     * @return Session context identifier.
+     */
+    private String getSessionIdentifierFromEventProperties(Map<String, Object> eventProperties) {
+
+        return getSessionIdentifier((Map<String, Object>) eventProperties.get(
+                IdentityEventConstants.EventProperty.PARAMS));
     }
 
     /**
@@ -378,6 +404,26 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      */
     private void revokeTokensMappedToSession(String sessionId, AuthenticatedUser user) throws IdentityOAuth2Exception {
 
+        revokeTokensMappedToSession(sessionId, user, false);
+    }
+
+    /**
+     * Get the access tokens mapped for the session identifier and revoke those tokens.
+     *
+     * @param sessionId                       Session context identifier.
+     * @param user                            Authenticated user.
+     * @param enforceAppLevelRevocationConfig Whether to skip the tokens of the applications that have not enabled
+     *                                        token revocation on IDP session termination.
+     * @throws IdentityOAuth2Exception
+     */
+    private void revokeTokensMappedToSession(String sessionId, AuthenticatedUser user,
+                                             boolean enforceAppLevelRevocationConfig)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(sessionId) || user == null) {
+            return;
+        }
+
         Set<String> tokenIds =
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                         .getTokenIdBySessionIdentifier(sessionId);
@@ -396,7 +442,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Could not find access token mapped for tokenId: %s", tokenId));
                 }
-                return;
+                continue;
             }
             AccessTokenDO accessTokenDO = null;
             try {
@@ -422,6 +468,13 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 AuthenticatedUser authenticatedUser = new AuthenticatedUser(accessTokenDO.getAuthzUser());
 
                 String consumerKey = accessTokenDO.getConsumerKey();
+                if (enforceAppLevelRevocationConfig && !isTokenRevocationEnabledForApp(consumerKey)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Token revocation on IDP session termination is not enabled for the application "
+                                + "with consumerKey: " + consumerKey + ". Hence skipping the token revocation.");
+                    }
+                    continue;
+                }
                 if (authenticatedUser.isFederatedUser()) {
                     isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
                 }
@@ -495,6 +548,28 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             }
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Check whether token revocation after session termination is enabled for the application that owns the given
+     * consumer key.
+     *
+     * @param consumerKey Consumer key of the application.
+     * @return true if token revocation after logout is enabled, false otherwise.
+     */
+    private boolean isTokenRevocationEnabledForApp(String consumerKey) {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            return isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO,
+                    oAuthAppDO.getTokenBindingType());
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving the application for the consumerKey: " + consumerKey
+                        + ". Hence skipping the token revocation.", e);
+            }
+            return false;
+        }
     }
 
     /**
