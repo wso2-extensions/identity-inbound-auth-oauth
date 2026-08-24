@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserNotificationHandler;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserValidator;
 import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
@@ -95,6 +96,8 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             throw new CibaCoreException("Failed to resolve user for CIBA request from client: " +
                     cibaAuthCodeRequest.getIssuer());
         }
+        // Run pluggable validators against the resolved user.
+        validateResolvedUser(resolvedUser, cibaAuthCodeRequest, tenantDomain);
         if (resolvedUser.getUserId() != null) {
             cibaAuthCodeDO.setResolvedUserId(resolvedUser.getUserId());
         }
@@ -146,6 +149,28 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             log.debug("Successfully resolved user for CIBA request from client: " + clientId);
         }
         return resolvedUser;
+    }
+
+    /**
+     * Runs all registered pluggable {@link CibaUserValidator}s that apply to the request against the
+     * resolved user. Any applicable validator that fails will short-circuit the CIBA request.
+     *
+     * @param resolvedUser        The resolved user.
+     * @param cibaAuthCodeRequest The CIBA auth code request.
+     * @param tenantDomain        The tenant domain.
+     * @throws CibaClientException If a validator rejects the resolved user.
+     * @throws CibaCoreException   If a validator fails due to a server-side error.
+     */
+    private void validateResolvedUser(CibaUserResolver.ResolvedUser resolvedUser,
+                                      CibaAuthCodeRequest cibaAuthCodeRequest, String tenantDomain)
+            throws CibaClientException, CibaCoreException {
+
+        List<CibaUserValidator> validators = CibaServiceComponentHolder.getInstance().getCibaUserValidators();
+        for (CibaUserValidator validator : validators) {
+            if (validator.isApplicable(cibaAuthCodeRequest)) {
+                validator.validate(resolvedUser, cibaAuthCodeRequest, tenantDomain);
+            }
+        }
     }
 
     /**

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -158,12 +159,13 @@ public class OAuth2CibaEndpoint {
             cibaAuthCodeRequest.setAuthenticatedWithAgentJWT(
                     isAuthenticatedWithAgentJWT(oAuthClientAuthnContext));
 
-            // Validate actor_token and store actor subject for OBO delegation.
+            // Validate actor_token and store actor subject and claims for OBO delegation.
             String actorToken = request.getParameter(OAuthConstants.ACTOR_TOKEN);
             if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(actorToken)) {
                 try {
-                    String actorSub = ActorTokenValidator.validateAndGetSubject(actorToken, tenantDomain);
-                    cibaAuthCodeRequest.setRequestedActor(actorSub);
+                    JWTClaimsSet actorClaims = ActorTokenValidator.validateAndGetClaims(actorToken, tenantDomain);
+                    cibaAuthCodeRequest.setRequestedActor(actorClaims.getSubject());
+                    cibaAuthCodeRequest.setActorTokenClaims(toStringClaimMap(actorClaims));
                 } catch (IdentityOAuth2Exception e) {
                     throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
                             "Invalid actor_token: " + e.getMessage(), e);
@@ -236,6 +238,26 @@ public class OAuth2CibaEndpoint {
     private CibaAuthCodeRequest getCibaAuthCodeRequest(String authRequest) throws CibaAuthFailureException {
 
         return cibaAuthRequestValidator.prepareAuthCodeRequest(authRequest);
+    }
+
+    /**
+     * Converts the actor token claim set into a string-valued map keyed by claim name.
+     *
+     * @param claimsSet The validated actor token claim set.
+     * @return Map of claim name to string claim value.
+     */
+    private Map<String, String> toStringClaimMap(JWTClaimsSet claimsSet) {
+
+        Map<String, String> claims = new HashMap<>();
+        if (claimsSet == null) {
+            return claims;
+        }
+        for (Map.Entry<String, Object> entry : claimsSet.getClaims().entrySet()) {
+            if (entry.getValue() != null) {
+                claims.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
+        }
+        return claims;
     }
 
     /**
