@@ -41,6 +41,7 @@ public class CibaAuthCodeRequest {
     private String transactionContext;
     private String notificationChannel;
     private String requestedActor;
+    private boolean authenticatedWithAgentJWT;
 
     public String getRequestedActor() {
 
@@ -206,5 +207,20 @@ public class CibaAuthCodeRequest {
     public void setNotificationChannel(String notificationChannel) {
 
         this.notificationChannel = notificationChannel;
+    }
+
+    /**
+     * Whether the agent JWT client authenticator authenticated this request.
+     *
+     * @return true if the agent JWT client authentication method authenticated the request.
+     */
+    public boolean isAuthenticatedWithAgentJWT() {
+
+        return authenticatedWithAgentJWT;
+    }
+
+    public void setAuthenticatedWithAgentJWT(boolean authenticatedWithAgentJWT) {
+
+        this.authenticatedWithAgentJWT = authenticatedWithAgentJWT;
     }
 }

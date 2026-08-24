@@ -72,7 +72,7 @@ public class CibaAuthServiceImpl implements CibaAuthService {
             throw new CibaCoreException("Error fetching app information for client: " + clientID, e);
         }
 
-        if (appDO.isBypassClientCredentials()) {
+        if (appDO.isBypassClientCredentials() && !cibaAuthCodeRequest.isAuthenticatedWithAgentJWT()) {
             throw new CibaClientException("CIBA cannot be used with public clients. Client: " + clientID + " " +
                     "is configured as a public client.");
         }
