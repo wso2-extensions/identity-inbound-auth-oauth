@@ -776,12 +776,16 @@ public class DCRMService {
         }
         // Per RFC 7591, a client_secret_expires_at of zero denotes a never-expiring secret.
         if (registrationRequest.getClientSecretExpiresAt() != null) {
-            // The expiry is carried as Unix epoch seconds on the DTO.
+            // Reject negatives and values that overflow when converted to milliseconds below.
+            if (registrationRequest.getClientSecretExpiresAt() < 0
+                    || registrationRequest.getClientSecretExpiresAt() > Long.MAX_VALUE / 1000L) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_SECRET_EXPIRY_INVALID, null);
+            }
             if (registrationRequest.getClientSecretExpiresAt() != 0 && OAuth2Util.isExpiryTimeInPast(
                     registrationRequest.getClientSecretExpiresAt() * 1000L)) {
                 throw DCRMUtils.generateClientException(
-                        DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_CLIENT_SECRET_EXPIRY,
-                        String.valueOf(registrationRequest.getClientSecretExpiresAt()));
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_SECRET_EXPIRY_IN_PAST, null);
             }
             oAuthConsumerApp.setOauthConsumerSecretExpiryTime(registrationRequest.getClientSecretExpiresAt());
         }
