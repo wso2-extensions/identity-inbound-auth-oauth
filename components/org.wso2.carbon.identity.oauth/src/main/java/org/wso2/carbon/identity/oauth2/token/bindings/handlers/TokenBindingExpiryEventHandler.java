@@ -564,10 +564,9 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             return isTokenRevocationWithIDPSessionTerminationEnabledForOAuthApp(oAuthAppDO,
                     oAuthAppDO.getTokenBindingType());
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while retrieving the application for the consumerKey: " + consumerKey
-                        + ". Hence skipping the token revocation.", e);
-            }
+            // Skipping leaves the token active, so this must be visible without debug logs enabled.
+            log.warn("Error while retrieving the application for the consumerKey: " + consumerKey
+                    + ". Hence skipping the token revocation.", e);
             return false;
         }
     }

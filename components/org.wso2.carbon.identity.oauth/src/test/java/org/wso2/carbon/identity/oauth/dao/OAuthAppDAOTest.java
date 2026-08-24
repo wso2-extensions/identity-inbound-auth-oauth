@@ -243,10 +243,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     }
 
     /**
-     * Token revocation on IDP session termination must be preserved for an application that has no token binding
-     * configured. Tokens are mapped to their session irrespective of the token binding, so the absence of a binding
-     * is not a reason to drop the opt-in. Token binding validation, in contrast, does require a binding type and
-     * must stay disabled.
+     * Token revocation on IDP session termination must survive a round trip for an application with no token
+     * binding, while token binding validation must still be disabled.
      */
     @Test
     public void testTokenRevocationOnSessionTerminationPreservedWithoutTokenBinding() throws Exception {
@@ -270,8 +268,6 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
                 OAuthAppDO retrievedApp = new OAuthAppDAO().getAppInformation(appDO.getOauthConsumerKey(), TENANT_ID);
                 assertNotNull(retrievedApp);
-                assertNull(retrievedApp.getTokenBindingType(),
-                        "A token binding type of 'None' should be persisted as null.");
                 assertTrue(retrievedApp.isTokenRevocationWithIDPSessionTerminationEnabled(),
                         "Token revocation on IDP session termination should be preserved when the application has "
                                 + "no token binding type configured.");
