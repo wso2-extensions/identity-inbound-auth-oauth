@@ -95,6 +95,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -581,16 +582,23 @@ public class RefreshGrantHandlerTest {
 
             DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
             assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
-            assertTrue(diagnosticLog.getResultMessage().contains("not the latest refresh token"),
-                    "The log should state that the refresh token is not the latest one issued.");
+            assertTrue(diagnosticLog.getResultMessage().contains("not the currently valid refresh token"),
+                    "The log should state that the refresh token is not the currently valid one.");
+            /* Rotation is only one of the reasons this branch is reached, so it must not be stated as the cause. */
+            assertTrue(diagnosticLog.getResultMessage().contains("no longer active"),
+                    "The log should also offer the non rotation reason for the failure.");
             assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_HASH),
                     DigestUtils.sha256Hex("test_refresh_token"),
                     "The hash of the refresh token should be logged when token logging is permitted.");
         }
     }
 
+    /**
+     * Test that a missing previous access token in the request context is reported as missing validation data
+     * rather than as an expired refresh token, since the two have different causes.
+     */
     @Test
-    public void testIssueLogsExpiredRefreshTokenWhenValidationDataIsMissing() throws Exception {
+    public void testIssueLogsMissingValidationDataSeparatelyFromExpiry() throws Exception {
 
         when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
         when(oAuthTokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN)).thenReturn(null);
@@ -614,8 +622,11 @@ public class RefreshGrantHandlerTest {
 
             DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
             assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
-            assertTrue(diagnosticLog.getResultMessage().contains("expired"),
-                    "The log should state that the refresh token is expired.");
+            assertTrue(diagnosticLog.getResultMessage().contains("validation data of the refresh token is not "
+                            + "available"),
+                    "The log should state that the validation data of the refresh token is unavailable.");
+            assertFalse(diagnosticLog.getResultMessage().contains("expired"),
+                    "Missing validation data should not be reported as an expired refresh token.");
         }
     }
 

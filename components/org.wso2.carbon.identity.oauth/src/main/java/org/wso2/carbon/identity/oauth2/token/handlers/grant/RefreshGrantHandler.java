@@ -184,8 +184,17 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         RefreshTokenValidationDataDO validationBean = (RefreshTokenValidationDataDO) tokReqMsgCtx
                 .getProperty(PREV_ACCESS_TOKEN);
         if (validationBean == null || isRefreshTokenExpired(validationBean)) {
-            logRefreshTokenValidationFailure("The provided refresh token is expired. A new refresh token needs to " +
-                    "be obtained by re-authenticating the user.", tokenReq, validationBean);
+            /* A null validation bean is not an expiry. It means the previous access token was never placed in the
+             message context, therefore the reason is reported separately to avoid pointing the investigation at
+             the refresh token itself. */
+            if (validationBean == null) {
+                logRefreshTokenValidationFailure("The validation data of the refresh token is not available in the " +
+                        "context of the token request, hence the refresh token could not be validated.", tokenReq,
+                        null);
+            } else {
+                logRefreshTokenValidationFailure("The provided refresh token is expired. A new refresh token needs " +
+                        "to be obtained by re-authenticating the user.", tokenReq, validationBean);
+            }
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
@@ -413,9 +422,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 validationBean, getUserStoreDomain(validationBean.getAuthorizedUser()))) {
             return true;
         } else {
-            logRefreshTokenValidationFailure("The provided refresh token is not the latest refresh token issued " +
-                    "for the application. It has already been replaced by a newer refresh token through refresh " +
-                    "token rotation.", tokenReq, validationBean);
+            /* This is reached either when the token was replaced through refresh token rotation, or when the token
+             is no longer active and no access token issued against it remains usable. The state of the token is
+             included as an input parameter so that the two can be told apart. */
+            logRefreshTokenValidationFailure("The provided refresh token is not the currently valid refresh token " +
+                    "for the application. It has either been replaced by a newer refresh token through refresh " +
+                    "token rotation, or it is no longer active along with the access token issued against it.",
+                    tokenReq, validationBean);
             removeIfCached(tokenReq, validationBean);
             throw new IdentityOAuth2Exception("Invalid refresh token value in the request");
         }

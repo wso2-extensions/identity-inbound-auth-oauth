@@ -221,9 +221,14 @@ public class AccessTokenIssuerTest {
             Assert.assertTrue(
                 diagnosticLog.getResultMessage().contains("Authorization grant validation failed"),
                 "The log should state that the authorization grant validation failed.");
-            Assert.assertTrue(
+            /* The internal error message can carry user identifiers which cannot be masked for grant types that do
+             not send the username parameter, hence it must not reach an application level diagnostic log. */
+            Assert.assertFalse(
                 diagnosticLog.getResultMessage().contains("Persisted access token data not found"),
-                "The resolved error should be appended to the log message.");
+                "The internal error message should not be included in the application level log.");
+            Assert.assertNotNull(
+                diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.ERROR_CODE),
+                "The error code should be recorded so that the failure reason is still traceable.");
         }
     }
 

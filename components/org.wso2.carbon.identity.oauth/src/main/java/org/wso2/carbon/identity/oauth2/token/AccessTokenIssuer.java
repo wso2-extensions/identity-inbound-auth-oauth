@@ -511,7 +511,10 @@ public class AccessTokenIssuer {
             }
             /* The grant handlers log the specific reason for the failure. This log guarantees that the diagnostic
              logs of a token request never end at the application validation, even if a grant handler could not
-             resolve a specific reason for the failure. */
+             resolve a specific reason for the failure. The internal error message is deliberately not included.
+             It is not guaranteed to be free of user identifiers, and LoggerUtils.getSanitizedErrorMessage() can
+             only mask the value of the username request parameter, which grant types other than the password
+             grant do not carry. The error code carries the reason without carrying identifiers. */
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -519,10 +522,7 @@ public class AccessTokenIssuer {
                         .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
                         .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
                         .inputParam(OAuthConstants.LogConstants.InputKeys.ERROR_CODE, errorCode)
-                        .resultMessage("Authorization grant validation failed. " + (StringUtils.isNotBlank(error)
-                                ? LoggerUtils.getSanitizedErrorMessage(error,
-                                        OAuth2Util.getUserIdentifierFromRequest(tokenReqDTO))
-                                : StringUtils.EMPTY))
+                        .resultMessage("Authorization grant validation failed for the provided grant type.")
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
