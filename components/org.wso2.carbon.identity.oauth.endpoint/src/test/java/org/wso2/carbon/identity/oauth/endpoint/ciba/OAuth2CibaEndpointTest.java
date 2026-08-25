@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -769,9 +770,13 @@ public class OAuth2CibaEndpointTest {
                      mockStatic(CibaAuthServiceFactory.class)) {
 
             identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
+            JWTClaimsSet actorClaims = new JWTClaimsSet.Builder()
+                    .subject("actor-subject-001")
+                    .claim("agent_owner", "owner-user-id@carbon.super")
+                    .build();
             actorTokenValidator.when(() ->
-                    ActorTokenValidator.validateAndGetSubject("actor.jwt.token", "carbon.super"))
-                    .thenReturn("actor-subject-001");
+                    ActorTokenValidator.validateAndGetClaims("actor.jwt.token", "carbon.super"))
+                    .thenReturn(actorClaims);
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
                     .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -788,6 +793,8 @@ public class OAuth2CibaEndpointTest {
             Assert.assertEquals(cibaResponse.getStatus(), HttpServletResponse.SC_OK);
             verify(authService).generateAuthCodeResponse(captor.capture());
             Assert.assertEquals(captor.getValue().getRequestedActor(), "actor-subject-001");
+            Assert.assertEquals(captor.getValue().getActorTokenClaims().get("agent_owner"),
+                    "owner-user-id@carbon.super");
         }
     }
 
@@ -825,7 +832,7 @@ public class OAuth2CibaEndpointTest {
             oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
             actorTokenValidator.verify(() ->
-                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()), never());
+                    ActorTokenValidator.validateAndGetClaims(anyString(), anyString()), never());
         }
     }
 
@@ -852,7 +859,7 @@ public class OAuth2CibaEndpointTest {
 
             identityUtil.when(IdentityUtil::isAgentIdentityEnabled).thenReturn(true);
             actorTokenValidator.when(() ->
-                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()))
+                    ActorTokenValidator.validateAndGetClaims(anyString(), anyString()))
                     .thenThrow(new IdentityOAuth2Exception("Signature validation failed for actor token"));
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
@@ -899,7 +906,7 @@ public class OAuth2CibaEndpointTest {
             oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, paramMap);
 
             actorTokenValidator.verify(() ->
-                    ActorTokenValidator.validateAndGetSubject(anyString(), anyString()), never());
+                    ActorTokenValidator.validateAndGetClaims(anyString(), anyString()), never());
         }
     }
 }
