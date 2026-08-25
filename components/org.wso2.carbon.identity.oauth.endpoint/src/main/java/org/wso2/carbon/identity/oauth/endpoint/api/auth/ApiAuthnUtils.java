@@ -303,11 +303,17 @@ public class ApiAuthnUtils {
         return new AuthServiceRequest(request, response, params);
     }
 
-    public static String base64URLDecode(String value) {
+    public static String base64URLDecode(String value) throws AuthServiceClientException {
 
-        return new String(
-                Base64.getUrlDecoder().decode(value),
-                StandardCharsets.UTF_8);
+        try {
+            return new String(
+                    Base64.getUrlDecoder().decode(value),
+                    StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            throw new AuthServiceClientException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error occurred while decoding value: " + value, e);
+        }
     }
 
     public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
