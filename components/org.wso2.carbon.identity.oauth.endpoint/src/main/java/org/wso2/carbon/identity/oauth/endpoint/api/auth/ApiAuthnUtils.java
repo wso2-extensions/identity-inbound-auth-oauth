@@ -312,7 +312,7 @@ public class ApiAuthnUtils {
         } catch (IllegalArgumentException e) {
             throw new AuthServiceClientException(
                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Error occurred while decoding value: " + value, e);
+                    "Error occurred while decoding the Base64 URL value.", e);
         }
     }
 
