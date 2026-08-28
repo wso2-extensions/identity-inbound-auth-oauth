@@ -48,6 +48,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
@@ -56,11 +58,14 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -642,6 +647,202 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         Object expected = invokePrivateMethod(logoutServlet, "appendStateQueryParam",
                 postLogoutUrl, stateParam);
         assertEquals(expected, outputRedirectUrl);
+    }
+
+
+    private static final String SUB_ORG_TENANT = "sub-org-tenant";
+    private static final String SUB_ORG_ID = "9476b110-131d-4c74-89b6-b2a8f1a877d0";
+    private static final String ROOT_ISSUER = "https://localhost:9443/oauth2/token";
+    private static final String SUB_ORG_ISSUER =
+            "https://localhost:9443/t/carbon.super/o/9476b110-131d-4c74-89b6-b2a8f1a877d0/oauth2/token";
+    private static final String ORG_QUALIFIED_ISSUER =
+            "https://localhost:9443/o/9476b110-131d-4c74-89b6-b2a8f1a877d0/oauth2/token";
+    private static final String TENANT_QUALIFIED_ISSUER =
+            "https://localhost:9443/t/sub-org-tenant/oauth2/token";
+    private static final String ROOT_TENANT_QUALIFIED_ISSUER =
+            "https://localhost:9443/t/carbon.super/oauth2/token";
+
+    /**
+     * Build an unsigned id token carrying the given issuer and azp. Only the claims are read by the
+     * tenant resolution, so the signature is irrelevant here.
+     */
+    private String idTokenWithIssuer(String issuer) {
+
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+        String claims = issuer == null
+                ? "{\"azp\":\"" + CLIENT_ID_VALUE + "\",\"aud\":[\"" + CLIENT_ID_VALUE + "\"]}"
+                : "{\"azp\":\"" + CLIENT_ID_VALUE + "\",\"aud\":[\"" + CLIENT_ID_VALUE
+                        + "\"],\"iss\":\"" + issuer + "\"}";
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(claims.getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".c2ln";
+    }
+
+    /**
+     * Wire an application owned by the sub organization whose configured token issuer is the given
+     * tenant, and make the issuer of each tenant resolvable.
+     */
+    private void mockApplicationWithIssuer(MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils,
+                                           String issuerTenantDomain) throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        if (issuerTenantDomain != null) {
+            IssuerDetails issuerDetails = new IssuerDetails();
+            issuerDetails.setIssuerTenantDomain(issuerTenantDomain);
+            oAuthAppDO.setIssuerDetails(issuerDetails);
+        }
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn(SUB_ORG_TENANT);
+        lenient().when(mockOAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(true);
+        issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUB_ORG_TENANT))
+                .thenReturn(SUB_ORG_ISSUER);
+        issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(ROOT_ISSUER);
+    }
+
+    @DataProvider(name = "signingTenantResolutionDataProvider")
+    public Object[][] signingTenantResolutionDataProvider() {
+
+        return new Object[][]{
+                // issuer claim, application token issuer tenant, expected tenant used for validation.
+                // The application owner tenant issued the token.
+                {SUB_ORG_ISSUER, SUB_ORG_TENANT, SUB_ORG_TENANT},
+                // The application is configured to issue from the root organization, so the root key signed it.
+                {ROOT_ISSUER, SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_DOMAIN_NAME},
+                // The root issuer must not be selected when the application issues from the sub organization.
+                {ROOT_ISSUER, SUB_ORG_TENANT, null},
+                // An issuer naming an unrelated organization is not accepted.
+                {"https://localhost:9443/o/11111111-2222-3333-4444-555555555555/oauth2/token", SUB_ORG_TENANT, null},
+                // A foreign origin must not select a key even when the organization segment is correct.
+                {"https://evil.example.com/o/" + SUB_ORG_ID + "/oauth2/token", SUB_ORG_TENANT, null},
+                // A scheme downgrade must not select a key.
+                {"http://localhost:9443/o/" + SUB_ORG_ID + "/oauth2/token", SUB_ORG_TENANT, null},
+                // A different port must not select a key.
+                {"https://localhost:9999/o/" + SUB_ORG_ID + "/oauth2/token", SUB_ORG_TENANT, null},
+                // The organization qualified issuer resolves to the owning organization's tenant.
+                {ORG_QUALIFIED_ISSUER, SUB_ORG_TENANT, SUB_ORG_TENANT},
+                // An unrecognised issuer is rejected.
+                {"https://localhost:9443/some/other/path", SUB_ORG_TENANT, null},
+                // A token with no issuer claim is rejected.
+                {null, SUB_ORG_TENANT, null},
+                /*
+                 The tenant qualified issuer form, /t/<tenant-domain>/oauth2/token, which is produced when
+                 the relying party obtains the token through the tenant's own endpoints. The organization
+                 qualified form of the same tenant is a different string, so both must be recognised.
+                */
+                {TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT, SUB_ORG_TENANT},
+                // The application owner tenant is accepted regardless of the configured token issuer.
+                {TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, SUB_ORG_TENANT},
+                // The configured token issuer tenant is accepted in the tenant qualified form.
+                {ROOT_TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_DOMAIN_NAME},
+                // The root tenant must not be selected when the application issues from the sub organization.
+                {ROOT_TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT, null},
+                // A tenant qualified issuer naming an unrelated tenant is not accepted.
+                {"https://localhost:9443/t/unrelated-tenant/oauth2/token", SUB_ORG_TENANT, null},
+                // A foreign origin must not select a key even when the tenant segment is correct.
+                {"https://evil.example.com/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT, null},
+                // A scheme downgrade must not select a key.
+                {"http://localhost:9443/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT, null},
+                // A different port must not select a key.
+                {"https://localhost:9999/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT, null},
+        };
+    }
+
+    @Test(dataProvider = "signingTenantResolutionDataProvider")
+    public void testResolveSigningTenantDomain(String issuerClaim, String appIssuerTenant, String expectedTenant)
+            throws Exception {
+
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, appIssuerTenant);
+            /*
+             The organization manager must resolve the organization in the issuer to the application owner
+             tenant. Without it the organization qualified branch fails for an unrelated reason and the
+             assertions on the origin of the issuer would pass whether or not the origin is checked.
+            */
+            OrganizationManager organizationManager = mock(OrganizationManager.class);
+            lenient().when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
+            OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+            try {
+                Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                        idTokenWithIssuer(issuerClaim));
+                assertEquals(resolved, expectedTenant);
+            } finally {
+                OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+            }
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainWithOrganizationQualifiedIssuer() throws Exception {
+
+        // The organization qualified issuer resolves to the tenant of the organization that owns the
+        // application, which is how a token obtained through /o/<org-id>/oauth2/token is validated.
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
+            OrganizationManager organizationManager = mock(OrganizationManager.class);
+            when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
+            OIDCSessionManagementComponentServiceHolder.getInstance()
+                    .setOrganizationManager(organizationManager);
+            try {
+                Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                        idTokenWithIssuer(ORG_QUALIFIED_ISSUER));
+                assertEquals(resolved, SUB_ORG_TENANT);
+            } finally {
+                OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+            }
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainWithTenantQualifiedIssuer() throws Exception {
+
+        // A token obtained through /t/<tenant-domain>/oauth2/token carries an issuer that names the tenant
+        // directly. It is signed by the same key as the organization qualified form of that tenant, so it
+        // must resolve to the same tenant.
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, SUPER_TENANT_DOMAIN_NAME);
+            /*
+             The organization manager is deliberately left unset. The tenant qualified form names the tenant
+             in the path, so it must resolve without reaching organization management at all.
+            */
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(TENANT_QUALIFIED_ISSUER));
+            assertEquals(resolved, SUB_ORG_TENANT);
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainRejectsUnrelatedTenantInIssuer() throws Exception {
+
+        // The tenant named in a tenant qualified issuer must be one of the two tenants that may issue for
+        // the application. An issuer naming any other tenant must not select a key.
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer("https://localhost:9443/t/another-tenant/oauth2/token"));
+            assertEquals(resolved, null);
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainDeniesWhenIssuerResolutionFails() throws Exception {
+
+        // Issuer resolution reaches services that may be unavailable and fail with unchecked exceptions.
+        // The request must be denied rather than failing with a server error.
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
+            issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUB_ORG_TENANT))
+                    .thenThrow(new NullPointerException("organization manager is not available"));
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(SUB_ORG_ISSUER));
+            assertEquals(resolved, null);
+        }
     }
 
     private void mockServiceURLBuilder(String context, MockedStatic<ServiceURLBuilder> serviceURLBuilder)
