@@ -33,12 +33,17 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.ServerConfiguration;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -59,6 +64,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
@@ -67,6 +73,7 @@ import static org.testng.Assert.assertThrows;
  Unit test coverage for OIDCSessionManagementUtil class
  */
 @Listeners(MockitoTestNGListener.class)
+@WithCarbonHome
 public class OIDCSessionManagementUtilTest {
 
     @Mock
@@ -84,6 +91,7 @@ public class OIDCSessionManagementUtilTest {
     private static final String CLIENT_ID = "u5FIfG5xzLvBGiamoAYzzcqpBqga";
     private static final String CALLBACK_URL = "http://localhost:8080/playground2/oauth2client";
     private static final String OPBROWSER_STATE = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
+    private static final String TENANT_DOMAIN = "foo.com";
     private static final String SESSION_STATE = "18b2343e6edaec1c8b1208169ffa141d158156518135350be60dfbf6f41d340f" +
             ".W2Gf-RAzLUFy2xq_8tuM6A";
     String responseType[] = new String[]{"id_token", "token", "code"};
@@ -515,4 +523,38 @@ public class OIDCSessionManagementUtilTest {
         String clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(idtoken);
         Assert.assertEquals(clientId, CLIENT_ID, "Client ID is not as expected");
     }
+
+    @Test
+    public void testRemoveOPBrowserStateCookieAppliesProxyContextPath() {
+
+        Cookie opbsCookie = new Cookie(OIDCSessionConstants.OPBS_COOKIE_ID,
+                OPBROWSER_STATE + OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX);
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getCookies()).thenReturn(new Cookie[]{opbsCookie});
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        ServerConfiguration serverConfiguration = mock(ServerConfiguration.class);
+        when(serverConfiguration.getFirstProperty(IdentityCoreConstants.PROXY_CONTEXT_PATH)).thenReturn("auth");
+
+        PrivilegedCarbonContext.startTenantFlow();
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<ServerConfiguration> serverConfigurationStatic = mockStatic(ServerConfiguration.class)) {
+
+            identityTenantUtil.when(IdentityTenantUtil::isTenantedSessionsEnabled).thenReturn(true);
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(true);
+            identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(TENANT_DOMAIN);
+            identityTenantUtil.when(IdentityTenantUtil::isSuperTenantAppendInCookiePath).thenReturn(false);
+            serverConfigurationStatic.when(ServerConfiguration::getInstance).thenReturn(serverConfiguration);
+
+            OIDCSessionManagementUtil.removeOPBrowserStateCookie(request, response);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+
+        ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
+        verify(response).addCookie(cookieCaptor.capture());
+        Assert.assertEquals(cookieCaptor.getValue().getPath(), "/auth/t/" + TENANT_DOMAIN + "/",
+                "The proxy context path is not applied to the tenanted opbs cookie path");
+    }
+
 }
