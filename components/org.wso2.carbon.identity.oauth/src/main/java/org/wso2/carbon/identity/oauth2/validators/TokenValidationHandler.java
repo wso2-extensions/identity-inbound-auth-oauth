@@ -601,6 +601,10 @@ public class TokenValidationHandler {
                             scopesToBeValidated.add(scope);
                         }
                     }
+                    // Work on a clone so the shared cached AccessTokenDO is never mutated. OAuthCache returns the
+                    // same instance to all callers (no defensive copy); filtering its scopes in place would corrupt
+                    // the cached entry, breaking subsequent introspections and revocation cache-key matching.
+                    accessTokenDO = AccessTokenDO.clone(accessTokenDO);
                     accessTokenDO.setScope(scopesToBeValidated.toArray(new String[0]));
                 }
             } catch (IllegalArgumentException e) {
