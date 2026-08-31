@@ -529,13 +529,21 @@ public class OIDCLogoutServlet extends HttpServlet {
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
             /*
-             The tenant qualified organization endpoints are served in the root tenant, where a lookup by
-             client id alone cannot find an application registered in a sub organization, so the application
-             is resolved through the organization hierarchy when an accessing organization is present.
+             The tenant qualified organization endpoints are served in the root tenant, so a lookup by client
+             id alone resolves against the root tenant and cannot find an application registered in a sub
+             organization. When an accessing organization is present the request is on one of those
+             endpoints, so the application is looked up in that organization's own tenant instead. Without
+             an accessing organization the request is already served in the tenant that owns the
+             application, and the existing lookup is used.
             */
-            OAuthAppDO oAuthAppDO = StringUtils.isNotEmpty(accessingOrgId)
-                    ? OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId)
-                    : OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO oAuthAppDO;
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                String accessingTenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(accessingOrgId);
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            }
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
             // The application owner tenant, which issues when the request is served in that tenant.
