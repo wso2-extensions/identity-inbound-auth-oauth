@@ -54,6 +54,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.authzservermetadata.AuthzServerMetadataEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authzservermetadata.AuthzServerMetadataJsonResponseBuilderTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandlerTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtilsTest"/>
         </classes>
     </test>
 
