@@ -22,6 +22,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -703,12 +705,15 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
-            // If refresh token persistence is disabled and the user is not federated, do not store user attributes.
-            // When a user's profile is updated after the token is issued, the cache cannot be cleared because
-            // the Identity Server will not persist either the refresh token or the access token. As a result,
-            // outdated user attribute data would be returned on the next refresh grant.
-            // To mitigate this, user attributes are set to null.
-            if (!OAuth2Util.isRefreshTokenPersistenceEnabled() && !accessTokenBean.getAuthzUser().isFederatedUser()) {
+            /*
+             A refresh grant carries no re-authentication, so copying the attributes cached against the previous
+             access token freezes the claims at the values resolved during the original authentication - a role
+             assigned, or a first or last name changed, afterwards is reflected neither in the id_token nor at the
+             userinfo endpoint for the whole life of the refresh chain. For users whose claims are resolvable
+             locally the copied attributes are therefore dropped, which makes both surfaces re-resolve them.
+            */
+            if (accessTokenBean.getAuthzUser() != null
+                    && areClaimsResolvableLocally(accessTokenBean.getAuthzUser())) {
                 grantCacheEntry.setUserAttributes(null);
             }
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
@@ -728,5 +733,30 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
                         grantCacheEntry);
             }
         }
+    }
+
+    /**
+     * Check whether the claims of the given user can be re-resolved from a local user store.
+     * <p>
+     * This mirrors the user categories that the OIDC claims handler re-resolves claims for, so that the id_token
+     * and the userinfo endpoint cannot disagree on the same refresh response. Users federated from an identity
+     * provider are excluded, since their attributes originate from that provider and there is no local source to
+     * re-resolve them from. Organization SSO users are federated through the organization login identity provider
+     * too, but their claims are held in the organization's user store and are therefore re-resolvable.
+     *
+     * @param authorizedUser Authorized user of the token request.
+     * @return true if the claims of the user can be re-resolved locally.
+     */
+    private boolean areClaimsResolvableLocally(AuthenticatedUser authorizedUser) {
+
+        if (!authorizedUser.isFederatedUser()) {
+            return true;
+        }
+        /*
+         An organization SSO user is federated through the organization login identity provider, but the claims are
+         held in the organization's user store. Users federated from any other identity provider are left untouched,
+         so that their attributes are never dropped without a local source to re-resolve them from.
+        */
+        return OrganizationUserUtil.isOrganizationSsoUser(authorizedUser);
     }
 }
