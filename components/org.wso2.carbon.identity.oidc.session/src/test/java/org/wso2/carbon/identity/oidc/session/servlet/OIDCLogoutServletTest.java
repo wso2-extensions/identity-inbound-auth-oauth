@@ -682,7 +682,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     /**
      * Wire an application owned by the sub organization whose configured token issuer is the given
-     * tenant, and make the issuer of each tenant resolvable.
+     * tenant, and make the issuer of each tenant resolvable. The application is resolvable both by
+     * client id alone and within its own tenant, which are the two lookups the servlet uses.
      */
     private void mockApplicationWithIssuer(MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils,
                                            String issuerTenantDomain) throws Exception {
@@ -694,12 +695,45 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             oAuthAppDO.setIssuerDetails(issuerDetails);
         }
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE, SUB_ORG_TENANT))
+                .thenReturn(oAuthAppDO);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn(SUB_ORG_TENANT);
         lenient().when(mockOAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(true);
         issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUB_ORG_TENANT))
                 .thenReturn(SUB_ORG_ISSUER);
         issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(ROOT_ISSUER);
+    }
+
+    /**
+     * Wire the organization manager used while resolving the signing tenant, and put the request in the
+     * tenant qualified organization context, which is where the issuer of the token is consulted. Without
+     * an accessing organization the request is served in the tenant that owns the application and the
+     * issuer is not consulted at all, which is covered separately.
+     */
+    private OrganizationManager mockAccessingOrganization() throws Exception {
+
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        lenient().when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
+        /*
+         The application's own organization and the root of its hierarchy, used when the application has
+         no token issuer configured, which is the state of an application migrated from before the
+         setting existed.
+        */
+        lenient().when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT)).thenReturn(SUB_ORG_ID);
+        lenient().when(organizationManager.getPrimaryOrganizationId(SUB_ORG_ID)).thenReturn(ROOT_ORG_ID);
+        lenient().when(organizationManager.resolveTenantDomain(ROOT_ORG_ID))
+                .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(SUB_ORG_ID);
+        return organizationManager;
+    }
+
+    private void clearAccessingOrganization() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
     }
 
     @DataProvider(name = "signingTenantResolutionDataProvider")
@@ -769,30 +803,52 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, appIssuerTenant);
-            /*
-             The organization manager must resolve the organization in the issuer to the application owner
-             tenant. Without it the organization qualified branch fails for an unrelated reason and the
-             assertions on the origin of the issuer would pass whether or not the origin is checked.
-            */
-            OrganizationManager organizationManager = mock(OrganizationManager.class);
-            lenient().when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
-            /*
-             The application's own organization and the root of its hierarchy, used when the application has
-             no token issuer configured, which is the state of an application migrated from before the
-             setting existed.
-            */
-            lenient().when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT)).thenReturn(SUB_ORG_ID);
-            lenient().when(organizationManager.getPrimaryOrganizationId(SUB_ORG_ID)).thenReturn(ROOT_ORG_ID);
-            lenient().when(organizationManager.resolveTenantDomain(ROOT_ORG_ID))
-                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
-            OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+            mockAccessingOrganization();
             try {
                 Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
                         idTokenWithIssuer(issuerClaim));
                 assertEquals(resolved, expectedTenant);
             } finally {
-                OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+                clearAccessingOrganization();
             }
+        }
+    }
+
+    @DataProvider(name = "ownTenantRequestDataProvider")
+    public Object[][] ownTenantRequestDataProvider() {
+
+        /*
+         Issuer claims and the tenant each must resolve to when there is no accessing organization. The
+         request is then served in the tenant that owns the application, so any issuer resolves to that
+         tenant. A token carrying no issuer claim at all is still rejected, by the check that runs before
+         the application is looked up.
+        */
+        return new Object[][]{
+                {SUB_ORG_ISSUER, SUB_ORG_TENANT},
+                {ORG_QUALIFIED_ISSUER, SUB_ORG_TENANT},
+                {TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT},
+                {ROOT_ISSUER, SUB_ORG_TENANT},
+                {"https://evil.example.com/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT},
+                {null, null},
+        };
+    }
+
+    @Test(dataProvider = "ownTenantRequestDataProvider")
+    public void testResolveSigningTenantDomainWithoutAccessingOrganization(String issuerClaim,
+                                                                            String expectedTenant)
+            throws Exception {
+
+        /*
+         Without an accessing organization the request is already served in the tenant that owns the
+         application, so the token was issued in that same tenant and its key is the application owner
+         tenant key. The issuer claim is not consulted on this path.
+        */
+        try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
+                     mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
+            mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(issuerClaim));
+            assertEquals(resolved, expectedTenant);
         }
     }
 
@@ -804,16 +860,13 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
-            OrganizationManager organizationManager = mock(OrganizationManager.class);
-            when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
-            OIDCSessionManagementComponentServiceHolder.getInstance()
-                    .setOrganizationManager(organizationManager);
+            mockAccessingOrganization();
             try {
                 Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
                         idTokenWithIssuer(ORG_QUALIFIED_ISSUER));
                 assertEquals(resolved, SUB_ORG_TENANT);
             } finally {
-                OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+                clearAccessingOrganization();
             }
         }
     }
@@ -827,13 +880,14 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUPER_TENANT_DOMAIN_NAME);
-            /*
-             The organization manager is deliberately left unset. The tenant qualified form names the tenant
-             in the path, so it must resolve without reaching organization management at all.
-            */
-            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
-                    idTokenWithIssuer(TENANT_QUALIFIED_ISSUER));
-            assertEquals(resolved, SUB_ORG_TENANT);
+            mockAccessingOrganization();
+            try {
+                Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                        idTokenWithIssuer(TENANT_QUALIFIED_ISSUER));
+                assertEquals(resolved, SUB_ORG_TENANT);
+            } finally {
+                clearAccessingOrganization();
+            }
         }
     }
 
@@ -845,9 +899,14 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
-            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
-                    idTokenWithIssuer("https://localhost:9443/t/another-tenant/oauth2/token"));
-            assertEquals(resolved, null);
+            mockAccessingOrganization();
+            try {
+                Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                        idTokenWithIssuer("https://localhost:9443/t/another-tenant/oauth2/token"));
+                assertEquals(resolved, null);
+            } finally {
+                clearAccessingOrganization();
+            }
         }
     }
 
@@ -859,11 +918,16 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
-            issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUB_ORG_TENANT))
-                    .thenThrow(new NullPointerException("organization manager is not available"));
-            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
-                    idTokenWithIssuer(SUB_ORG_ISSUER));
-            assertEquals(resolved, null);
+            mockAccessingOrganization();
+            try {
+                issuerUtils.when(() -> OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(SUB_ORG_TENANT))
+                        .thenThrow(new NullPointerException("organization manager is not available"));
+                Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                        idTokenWithIssuer(SUB_ORG_ISSUER));
+                assertEquals(resolved, null);
+            } finally {
+                clearAccessingOrganization();
+            }
         }
     }
 

@@ -543,7 +543,15 @@ public class OIDCLogoutServlet extends HttpServlet {
                         .getOrganizationManager().resolveTenantDomain(accessingOrgId);
                 oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
             } else {
+                /*
+                 No accessing organization means the request is already served in the tenant that owns the
+                 application, which is the case for the organization qualified and tenant qualified
+                 endpoints of the organization itself and for the root organization. The token was issued
+                 in that same tenant, so the key to validate it with is the application owner tenant key
+                 and the issuer claim does not need to be consulted.
+                */
                 oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
             }
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
