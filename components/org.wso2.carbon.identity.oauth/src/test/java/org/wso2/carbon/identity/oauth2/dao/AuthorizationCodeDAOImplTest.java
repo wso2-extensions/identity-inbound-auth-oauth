@@ -30,6 +30,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -39,12 +40,16 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -100,6 +105,12 @@ public class AuthorizationCodeDAOImplTest {
     @Mock
     private UserStoreManager mockedUserStoreManager;
 
+    @Mock
+    private OAuthAppDO mockedOAuthAppDO;
+
+    @Mock
+    private OrganizationManager mockedOrganizationManager;
+
     private Connection connection;
 
     private AuthorizationCodeDAOImpl authorizationCodeDAO;
@@ -111,6 +122,9 @@ public class AuthorizationCodeDAOImplTest {
     private static final String USER_NAME = "user1";
     private static final String CALLBACK = "http://localhost:8080/redirect";
     private static final String DB_NAME = "testAuthzCODEDB";
+    private static final String ACCESSING_ORG_ID = "accessing-org-id";
+    private static final int ANOTHER_TENANT_ID = 4321;
+    private static final String ANOTHER_TENANT_DOMAIN = "another.tenant";
 
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
     private MockedStatic<OAuth2Util> oAuth2Util;
@@ -337,6 +351,107 @@ public class AuthorizationCodeDAOImplTest {
 
         Assert.assertNotNull(authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),
                 authzCodeDO.getAuthorizationCode()));
+    }
+
+    @Test
+    public void testValidateAuthorizationCodeOfApplicationSharedWithOrganization() throws Exception {
+
+        /*
+         * The application resides in DEFAULT_TENANT_ID and is shared with the organization serving the request.
+         * Resolving the tenant from the organization of the request yields ANOTHER_TENANT_ID, which does not own
+         * the application, hence the code has to be resolved through the organization hierarchy.
+         */
+        String consumerKey = UUID.randomUUID().toString();
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(), OAuthConstants.AuthorizationCodeState.ACTIVE);
+        mockValidateAuthorizationCodeDependencies();
+        mockTenantOfOrganization(ANOTHER_TENANT_DOMAIN, ANOTHER_TENANT_ID);
+        mockAppResolutionFromOrgHierarchy(consumerKey, DEFAULT_TENANT_DOMAIN);
+
+        setOrganizationContext();
+        try {
+            Assert.assertNotNull(authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),
+                    authzCodeDO.getAuthorizationCode()));
+        } finally {
+            clearOrganizationContext();
+        }
+    }
+
+    @Test
+    public void testValidateAuthorizationCodeWhenApplicationResidesInAnotherTenant() throws Exception {
+
+        // The organization hierarchy resolves a tenant which does not own the application.
+        String consumerKey = UUID.randomUUID().toString();
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(), OAuthConstants.AuthorizationCodeState.ACTIVE);
+        mockValidateAuthorizationCodeDependencies();
+        mockTenantOfOrganization(ANOTHER_TENANT_DOMAIN, ANOTHER_TENANT_ID);
+        mockAppResolutionFromOrgHierarchy(consumerKey, ANOTHER_TENANT_DOMAIN);
+
+        setOrganizationContext();
+        try {
+            Assert.assertNull(authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),
+                    authzCodeDO.getAuthorizationCode()));
+        } finally {
+            clearOrganizationContext();
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testValidateAuthorizationCodeWhenApplicationNotFoundInOrgHierarchy() throws Exception {
+
+        String consumerKey = UUID.randomUUID().toString();
+        AuthzCodeDO authzCodeDO = persistAuthorizationCode(consumerKey, UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(), OAuthConstants.AuthorizationCodeState.ACTIVE);
+        mockValidateAuthorizationCodeDependencies();
+        mockTenantOfOrganization(ANOTHER_TENANT_DOMAIN, ANOTHER_TENANT_ID);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, ACCESSING_ORG_ID))
+                .thenThrow(new InvalidOAuthClientException("Application not found."));
+
+        setOrganizationContext();
+        try {
+            authorizationCodeDAO.validateAuthorizationCode(authzCodeDO.getConsumerKey(),
+                    authzCodeDO.getAuthorizationCode());
+        } finally {
+            clearOrganizationContext();
+        }
+    }
+
+    private void mockValidateAuthorizationCodeDependencies() throws Exception {
+
+        OAuth2ServiceComponentHolder.setApplicationMgtService(mockedApplicationManagementService);
+        lenient().when(mockedApplicationManagementService.getServiceProviderByClientId(anyString(), any(),
+                anyString())).thenReturn(mockedServiceProvider);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomain(DEFAULT_TENANT_ID)).thenReturn("super.wso2");
+        oAuth2Util.when(() -> OAuth2Util.createAuthenticatedUser(anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(mockedAuthenticatedUser);
+        lenient().when(mockedOrganizationManager.resolveOrganizationId(anyString())).thenReturn(ACCESSING_ORG_ID);
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(mockedOrganizationManager);
+    }
+
+    private void mockTenantOfOrganization(String tenantDomain, int tenantId) throws Exception {
+
+        lenient().when(mockedOrganizationManager.resolveTenantDomain(ACCESSING_ORG_ID)).thenReturn(tenantDomain);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(tenantId);
+    }
+
+    private void mockAppResolutionFromOrgHierarchy(String consumerKey, String appTenantDomain) throws Exception {
+
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, ACCESSING_ORG_ID))
+                .thenReturn(mockedOAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(mockedOAuthAppDO)).thenReturn(appTenantDomain);
+    }
+
+    private void setOrganizationContext() {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(ACCESSING_ORG_ID);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(ACCESSING_ORG_ID);
+    }
+
+    private void clearOrganizationContext() {
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(null);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
     }
 
     @Test

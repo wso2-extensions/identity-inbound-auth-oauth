@@ -34,6 +34,8 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -234,11 +236,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             tenantId = IdentityTenantUtil.getLoginTenantId();
-            String appResidentOrganizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
-            if (StringUtils.isNotEmpty(appResidentOrganizationId)) {
-                tenantId = IdentityTenantUtil.getTenantId(OAuth2ServiceComponentHolder.getInstance()
-                        .getOrganizationManager().resolveTenantDomain(appResidentOrganizationId));
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getAccessingOrganizationId();
+            if (StringUtils.isNotEmpty(accessingOrgId)) {
+                tenantId = resolveAppResidentTenantId(consumerKey, accessingOrgId);
             }
             prepStmt.setInt(2, tenantId);
             //use hash value for search
@@ -276,10 +277,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                             "for client id " + consumerKey, e);
                 }
                 user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
-                if (StringUtils.isNotEmpty(appResidentOrganizationId)) {
+                if (StringUtils.isNotEmpty(accessingOrgId)) {
                     String userOrganizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                             .resolveOrganizationId(tenantDomain);
-                    user.setAccessingOrganization(appResidentOrganizationId);
+                    user.setAccessingOrganization(accessingOrgId);
                     user.setUserResidentOrganization(userOrganizationId);
                 }
 
@@ -1061,5 +1062,29 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             return Arrays.asList(scopes).contains(OAuthConstants.Scope.OPENID);
         }
         return false;
+    }
+
+    /**
+     * Resolve the id of the tenant in which the OAuth application resides.
+     * <p>
+     * The accessing organization is not necessarily the organization the application resides in, since an
+     * application shared with the organization still resides in an ancestor organization. Therefore the
+     * application is resolved through the organization hierarchy.
+     *
+     * @param consumerKey    Consumer key of the application.
+     * @param accessingOrgId Id of the organization the request came through.
+     * @return Id of the tenant in which the application resides.
+     * @throws IdentityOAuth2Exception If an error occurred while resolving the application.
+     */
+    private int resolveAppResidentTenantId(String consumerKey, String accessingOrgId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+            return IdentityTenantUtil.getTenantId(OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("No application found in the organization hierarchy of the " +
+                    "organization: " + accessingOrgId + " for the client id: " + consumerKey, e);
+        }
     }
 }
