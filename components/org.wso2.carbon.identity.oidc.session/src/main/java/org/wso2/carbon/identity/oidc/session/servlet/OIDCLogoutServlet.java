@@ -77,6 +77,7 @@ import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementCompo
 import org.wso2.carbon.identity.oidc.session.model.APIError;
 import org.wso2.carbon.identity.oidc.session.model.LogoutContext;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -556,6 +557,22 @@ public class OIDCLogoutServlet extends HttpServlet {
                     && tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils
                             .getIssuerLocation(issuerDetails.getIssuerTenantDomain()))) {
                 return issuerDetails.getIssuerTenantDomain();
+            }
+            /*
+             An application that predates the token issuer setting has no issuer configured, which is the
+             state of applications migrated from before the setting existed. Issuance then falls back to the
+             tenant serving the request, so the root organization of this application's own organization is
+             also a legitimate issuer for it. That is the same pair of tenants the setting itself allows.
+            */
+            if (issuerDetails == null || StringUtils.isEmpty(issuerDetails.getIssuerTenantDomain())) {
+                OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder
+                        .getInstance().getOrganizationManager();
+                String primaryTenantDomain = organizationManager.resolveTenantDomain(organizationManager
+                        .getPrimaryOrganizationId(organizationManager.resolveOrganizationId(appTenantDomain)));
+                if (tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils
+                        .getIssuerLocation(primaryTenantDomain))) {
+                    return primaryTenantDomain;
+                }
             }
             /*
              The qualified issuer forms, /t/<tenant-domain>/oauth2/token and /o/<organization-id>/oauth2/token,

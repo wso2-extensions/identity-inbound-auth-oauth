@@ -652,6 +652,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
     private static final String SUB_ORG_TENANT = "sub-org-tenant";
     private static final String SUB_ORG_ID = "9476b110-131d-4c74-89b6-b2a8f1a877d0";
+    private static final String ROOT_ORG_ID = "10084a8d-113f-4211-a0d5-efe36b082211";
     private static final String ROOT_ISSUER = "https://localhost:9443/oauth2/token";
     private static final String SUB_ORG_ISSUER =
             "https://localhost:9443/t/carbon.super/o/9476b110-131d-4c74-89b6-b2a8f1a877d0/oauth2/token";
@@ -746,6 +747,18 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {"http://localhost:9443/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT, null},
                 // A different port must not select a key.
                 {"https://localhost:9999/t/sub-org-tenant/oauth2/token", SUB_ORG_TENANT, null},
+                /*
+                 An application with no token issuer configured, the state of one migrated from before the
+                 setting existed. Issuance falls back to the tenant serving the request, so the root
+                 organization of the application's own organization is a legitimate issuer for it.
+                */
+                {ROOT_ISSUER, null, SUPER_TENANT_DOMAIN_NAME},
+                // The application's own tenant still selects its own key when it has no issuer configured.
+                {SUB_ORG_ISSUER, null, SUB_ORG_TENANT},
+                // An unrelated issuer is still refused when the application has no issuer configured.
+                {"https://localhost:9443/t/another-tenant/oauth2/token", null, null},
+                // A foreign origin is still refused when the application has no issuer configured.
+                {"https://evil.example.com/o/" + SUB_ORG_ID + "/oauth2/token", null, null},
         };
     }
 
@@ -763,6 +776,15 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             */
             OrganizationManager organizationManager = mock(OrganizationManager.class);
             lenient().when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
+            /*
+             The application's own organization and the root of its hierarchy, used when the application has
+             no token issuer configured, which is the state of an application migrated from before the
+             setting existed.
+            */
+            lenient().when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT)).thenReturn(SUB_ORG_ID);
+            lenient().when(organizationManager.getPrimaryOrganizationId(SUB_ORG_ID)).thenReturn(ROOT_ORG_ID);
+            lenient().when(organizationManager.resolveTenantDomain(ROOT_ORG_ID))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
             OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
             try {
                 Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
