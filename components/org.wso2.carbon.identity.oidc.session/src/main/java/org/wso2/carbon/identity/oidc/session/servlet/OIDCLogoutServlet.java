@@ -555,10 +555,6 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
-            // The application owner tenant, which issues when the request is served in that tenant.
-            if (tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(appTenantDomain))) {
-                return appTenantDomain;
-            }
             // The tenant of the token issuer configured on the application.
             IssuerDetails issuerDetails = oAuthAppDO.getIssuerDetails();
             if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())
