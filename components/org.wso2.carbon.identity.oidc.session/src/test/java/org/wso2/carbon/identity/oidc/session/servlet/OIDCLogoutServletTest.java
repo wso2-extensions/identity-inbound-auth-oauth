@@ -755,22 +755,30 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 {"http://localhost:9443/o/" + SUB_ORG_ID + "/oauth2/token", SUB_ORG_TENANT, null},
                 // A different port must not select a key.
                 {"https://localhost:9999/o/" + SUB_ORG_ID + "/oauth2/token", SUB_ORG_TENANT, null},
-                // The organization qualified issuer resolves to the owning organization's tenant.
-                {ORG_QUALIFIED_ISSUER, SUB_ORG_TENANT, SUB_ORG_TENANT},
+                /*
+                 The organization qualified form is not accepted. The relying party is expected to use the
+                 same endpoint form for login and for logout, so a token obtained through
+                 /o/<organization-id>/oauth2/token is logged out through that same form, where the request
+                 carries no accessing organization and never reaches this comparison.
+                */
+                {ORG_QUALIFIED_ISSUER, SUB_ORG_TENANT, null},
                 // An unrecognised issuer is rejected.
                 {"https://localhost:9443/some/other/path", SUB_ORG_TENANT, null},
                 // A token with no issuer claim is rejected.
                 {null, SUB_ORG_TENANT, null},
                 /*
-                 The tenant qualified issuer form, /t/<tenant-domain>/oauth2/token, which is produced when
-                 the relying party obtains the token through the tenant's own endpoints. The organization
-                 qualified form of the same tenant is a different string, so both must be recognised.
+                 The tenant qualified issuer form, /t/<tenant-domain>/oauth2/token, is not accepted either,
+                 for the same reason. It is produced when the relying party obtains the token through the
+                 tenant's own endpoints, and logout through those same endpoints does not reach here.
                 */
-                {TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT, SUB_ORG_TENANT},
-                // The application owner tenant is accepted regardless of the configured token issuer.
-                {TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, SUB_ORG_TENANT},
-                // The configured token issuer tenant is accepted in the tenant qualified form.
-                {ROOT_TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_DOMAIN_NAME},
+                {TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT, null},
+                {TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, null},
+                /*
+                 A path qualified form of the configured token issuer tenant is not accepted. When that
+                 tenant issues, the issuer claim is its own issuer location, which the configured token
+                 issuer check matches directly, so the server never produces this form.
+                */
+                {ROOT_TENANT_QUALIFIED_ISSUER, SUPER_TENANT_DOMAIN_NAME, null},
                 // The root tenant must not be selected when the application issues from the sub organization.
                 {ROOT_TENANT_QUALIFIED_ISSUER, SUB_ORG_TENANT, null},
                 // A tenant qualified issuer naming an unrelated tenant is not accepted.
@@ -787,8 +795,12 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                  organization of the application's own organization is a legitimate issuer for it.
                 */
                 {ROOT_ISSUER, null, SUPER_TENANT_DOMAIN_NAME},
-                // The application's own tenant still selects its own key when it has no issuer configured.
-                {SUB_ORG_ISSUER, null, SUB_ORG_TENANT},
+                /*
+                 An application with no issuer configured issues from its root organization, so only that
+                 issuer is accepted. A token carrying the organization's own issuer was obtained through a
+                 different endpoint form and is logged out through that same form.
+                */
+                {SUB_ORG_ISSUER, null, null},
                 // An unrelated issuer is still refused when the application has no issuer configured.
                 {"https://localhost:9443/t/another-tenant/oauth2/token", null, null},
                 // A foreign origin is still refused when the application has no issuer configured.
@@ -855,8 +867,9 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     @Test
     public void testResolveSigningTenantDomainWithOrganizationQualifiedIssuer() throws Exception {
 
-        // The organization qualified issuer resolves to the tenant of the organization that owns the
-        // application, which is how a token obtained through /o/<org-id>/oauth2/token is validated.
+        // A token obtained through /o/<org-id>/oauth2/token is logged out through that same endpoint form,
+        // where no accessing organization is set. Reaching this comparison with that issuer means the
+        // relying party crossed endpoint forms, which is not supported, so no key is selected.
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUB_ORG_TENANT);
@@ -864,7 +877,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             try {
                 Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
                         idTokenWithIssuer(ORG_QUALIFIED_ISSUER));
-                assertEquals(resolved, SUB_ORG_TENANT);
+                assertEquals(resolved, null);
             } finally {
                 clearAccessingOrganization();
             }
@@ -874,9 +887,9 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     @Test
     public void testResolveSigningTenantDomainWithTenantQualifiedIssuer() throws Exception {
 
-        // A token obtained through /t/<tenant-domain>/oauth2/token carries an issuer that names the tenant
-        // directly. It is signed by the same key as the organization qualified form of that tenant, so it
-        // must resolve to the same tenant.
+        // A token obtained through /t/<tenant-domain>/oauth2/token is logged out through that same endpoint
+        // form, where no accessing organization is set. Reaching this comparison with that issuer means the
+        // relying party crossed endpoint forms, which is not supported, so no key is selected.
         try (MockedStatic<OAuth2OIDCConfigOrgUsageScopeUtils> issuerUtils =
                      mockStatic(OAuth2OIDCConfigOrgUsageScopeUtils.class)) {
             mockApplicationWithIssuer(issuerUtils, SUPER_TENANT_DOMAIN_NAME);
@@ -884,7 +897,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             try {
                 Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
                         idTokenWithIssuer(TENANT_QUALIFIED_ISSUER));
-                assertEquals(resolved, SUB_ORG_TENANT);
+                assertEquals(resolved, null);
             } finally {
                 clearAccessingOrganization();
             }

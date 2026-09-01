@@ -84,8 +84,6 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -97,8 +95,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.servlet.Servlet;
 import javax.servlet.ServletException;
@@ -129,10 +125,6 @@ import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUt
 public class OIDCLogoutServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(OIDCLogoutServlet.class);
-    private static final Pattern TENANT_QUALIFIED_ISSUER_PATTERN =
-            Pattern.compile("/t/([^/]+)/oauth2/token$");
-    private static final Pattern ORGANIZATION_QUALIFIED_ISSUER_PATTERN =
-            Pattern.compile("/o/([^/]+)/oauth2/token$");
     private static final String REQUEST_PARAM_SP = "sp";
     private static final String UTF_8 = "UTF-8";
     private static final long serialVersionUID = -9203934217770142011L;
@@ -555,47 +547,11 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
 
-            // The tenant of the token issuer configured on the application.
-            IssuerDetails issuerDetails = oAuthAppDO.getIssuerDetails();
-            if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())
-                    && tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils
-                            .getIssuerLocation(issuerDetails.getIssuerTenantDomain()))) {
-                return issuerDetails.getIssuerTenantDomain();
-            }
-            /*
-             An application that predates the token issuer setting has no issuer configured, which is the
-             state of applications migrated from before the setting existed. Issuance then falls back to the
-             tenant serving the request, so the root organization of this application's own organization is
-             also a legitimate issuer for it. That is the same pair of tenants the setting itself allows.
-            */
-            if (issuerDetails == null || StringUtils.isEmpty(issuerDetails.getIssuerTenantDomain())) {
-                OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder
-                        .getInstance().getOrganizationManager();
-                String primaryTenantDomain = organizationManager.resolveTenantDomain(organizationManager
-                        .getPrimaryOrganizationId(organizationManager.resolveOrganizationId(appTenantDomain)));
-                if (tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils
-                        .getIssuerLocation(primaryTenantDomain))) {
-                    return primaryTenantDomain;
-                }
-            }
-            /*
-             The qualified issuer forms, /t/<tenant-domain>/oauth2/token and /o/<organization-id>/oauth2/token,
-             which are used when the relying party obtains the token through those endpoints. Both name a
-             tenant in the path. That tenant must be one of the two tenants that may issue for this
-             application, so that an issuer naming an unrelated tenant is not accepted, and the issuer must
-             have an origin this server builds.
-            */
-            String issuerTenant = tenantNamedByIssuer(tokenIssuer);
-            if (StringUtils.isNotEmpty(issuerTenant)
-                    && hasSameOrigin(tokenIssuer, OAuth2OIDCConfigOrgUsageScopeUtils
-                            .getIssuerLocation(appTenantDomain))) {
-                if (StringUtils.equals(appTenantDomain, issuerTenant)) {
-                    return appTenantDomain;
-                }
-                if (issuerDetails != null
-                        && StringUtils.equals(issuerDetails.getIssuerTenantDomain(), issuerTenant)) {
-                    return issuerTenant;
-                }
+            // The tenant that issues id tokens for this application. Its own issuer location is accepted
+            // as the issuer of the token.
+            String issuingTenantDomain = resolveIssuingTenantDomain(oAuthAppDO, appTenantDomain);
+            if (tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(issuingTenantDomain))) {
+                return issuingTenantDomain;
             }
             if (log.isDebugEnabled()) {
                 log.debug("The issuer of the id token does not match any issuer of the application. Client id: "
@@ -637,50 +593,28 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Compare the origin, that is the scheme and the authority, of two issuer values. The organization
-     * qualified issuer is matched on its organization segment, so the origin is checked separately to keep
-     * the key from being selected on the strength of a host this server did not issue for.
+     * Resolve the tenant that issues id tokens for an application. That is the token issuer configured on
+     * the application. An application that predates the token issuer setting has none configured, which is
+     * the state of applications migrated from before the setting existed. Issuance then falls back to the
+     * tenant serving the request, so the root organization of the application's own organization issues for
+     * it instead. Either way the result is one of the two tenants the setting itself allows.
      *
-     * @param issuer         issuer claim of the id token
-     * @param expectedIssuer an issuer built by this server
-     * @return true if both have the same origin
+     * @param oAuthAppDO      the application
+     * @param appTenantDomain tenant domain that owns the application
+     * @return the tenant domain that issues for this application
+     * @throws OrganizationManagementException if the organization of the application cannot be resolved
      */
-    private boolean hasSameOrigin(String issuer, String expectedIssuer) {
+    private String resolveIssuingTenantDomain(OAuthAppDO oAuthAppDO, String appTenantDomain)
+            throws OrganizationManagementException {
 
-        try {
-            URI issuerUri = new URI(issuer);
-            URI expectedUri = new URI(expectedIssuer);
-            return StringUtils.equalsIgnoreCase(issuerUri.getScheme(), expectedUri.getScheme())
-                    && StringUtils.equalsIgnoreCase(issuerUri.getAuthority(), expectedUri.getAuthority());
-        } catch (URISyntaxException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Could not compare the origin of the issuer: " + issuer, e);
-            }
-            return false;
+        IssuerDetails issuerDetails = oAuthAppDO.getIssuerDetails();
+        if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())) {
+            return issuerDetails.getIssuerTenantDomain();
         }
-    }
-
-    /**
-     * Read the tenant named by the path of a qualified issuer. A tenant is addressable in two ways, and each
-     * way names it differently while the signing key stays the same: /t/&lt;tenant-domain&gt;/oauth2/token names
-     * the tenant directly, and /o/&lt;organization-id&gt;/oauth2/token names the organization that owns it.
-     *
-     * @param issuer issuer claim of the id token
-     * @return the tenant domain named in the issuer, or null if the issuer names no tenant
-     * @throws OrganizationManagementException if the organization in the issuer cannot be resolved
-     */
-    private String tenantNamedByIssuer(String issuer) throws OrganizationManagementException {
-
-        Matcher tenantMatcher = TENANT_QUALIFIED_ISSUER_PATTERN.matcher(issuer);
-        if (tenantMatcher.find()) {
-            return tenantMatcher.group(1);
-        }
-        Matcher organizationMatcher = ORGANIZATION_QUALIFIED_ISSUER_PATTERN.matcher(issuer);
-        if (organizationMatcher.find()) {
-            return OIDCSessionManagementComponentServiceHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(organizationMatcher.group(1));
-        }
-        return null;
+        OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder.getInstance()
+                .getOrganizationManager();
+        return organizationManager.resolveTenantDomain(organizationManager.getPrimaryOrganizationId(
+                organizationManager.resolveOrganizationId(appTenantDomain)));
     }
 
     /**
