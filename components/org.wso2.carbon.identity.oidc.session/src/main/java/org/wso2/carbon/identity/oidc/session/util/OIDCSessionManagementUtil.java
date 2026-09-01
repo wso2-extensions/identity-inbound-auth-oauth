@@ -272,11 +272,13 @@ public class OIDCSessionManagementUtil {
                                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                                         .getOrganizationId();
                                 if (StringUtils.isNotEmpty(organizationId)) {
-                                    servletCookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX +
-                                            organizationId + "/");
+                                    servletCookie.setPath(FrameworkUtils.prependProxyContextPath(
+                                            FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX +
+                                                    organizationId + "/"));
                                 } else {
-                                    servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX +
-                                            tenantDomain + "/");
+                                    servletCookie.setPath(FrameworkUtils.prependProxyContextPath(
+                                            FrameworkConstants.TENANT_CONTEXT_PREFIX +
+                                                    tenantDomain + "/"));
                                 }
                             }
                         } else {
