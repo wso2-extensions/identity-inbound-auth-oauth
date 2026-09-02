@@ -59,9 +59,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
-import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -512,59 +510,35 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return extractTenantDomainFromIdToken(idToken);
             }
             String clientId = extractClientFromIdToken(idToken);
-            String tokenIssuer = extractIssuerFromIdToken(idToken);
-            if (StringUtils.isBlank(tokenIssuer)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("The id token does not carry an issuer claim. Client id: " + clientId);
-                }
-                return null;
-            }
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
             /*
+             No accessing organization means the request is already served in the tenant that owns the
+             application, which is the case for the organization qualified and tenant qualified endpoints of
+             the organization itself and for the root organization. The token was issued in that same tenant,
+             so the key to validate it with is the application owner tenant key.
+            */
+            if (StringUtils.isEmpty(accessingOrgId)) {
+                return OAuth2Util.getTenantDomainOfOauthApp(OAuth2Util.getAppInformationByClientId(clientId));
+            }
+            /*
              The tenant qualified organization endpoints are served in the root tenant, so a lookup by client
              id alone resolves against the root tenant and cannot find an application registered in a sub
-             organization. When an accessing organization is present the request is on one of those
-             endpoints, so the application is looked up in that organization's own tenant instead. Without
-             an accessing organization the request is already served in the tenant that owns the
-             application, and the existing lookup is used.
+             organization. The application is therefore looked up in the accessing organization's own tenant,
+             and validated with the key of the tenant that issues id tokens for it. The relying party is
+             expected to use the same endpoint form for login and for logout, so a token reaching here was
+             issued by that tenant.
             */
-            OAuthAppDO oAuthAppDO;
-            if (StringUtils.isNotEmpty(accessingOrgId)) {
-                String accessingTenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
-                        .getOrganizationManager().resolveTenantDomain(accessingOrgId);
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
-            } else {
-                /*
-                 No accessing organization means the request is already served in the tenant that owns the
-                 application, which is the case for the organization qualified and tenant qualified
-                 endpoints of the organization itself and for the root organization. The token was issued
-                 in that same tenant, so the key to validate it with is the application owner tenant key
-                 and the issuer claim does not need to be consulted.
-                */
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-            }
-            String appTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-
-            // The tenant that issues id tokens for this application. Its own issuer location is accepted
-            // as the issuer of the token.
-            String issuingTenantDomain = resolveIssuingTenantDomain(oAuthAppDO, appTenantDomain);
-            if (tokenIssuer.equals(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(issuingTenantDomain))) {
-                return issuingTenantDomain;
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("The issuer of the id token does not match any issuer of the application. Client id: "
-                        + clientId + ", issuer: " + tokenIssuer);
-            }
-            return null;
+            String accessingTenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
+                    .getOrganizationManager().resolveTenantDomain(accessingOrgId);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
+            return resolveIssuingTenantDomain(oAuthAppDO, OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while reading the id token.", e);
             }
             return null;
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException
-                 | OAuth2OIDCConfigOrgUsageScopeMgtServerException | OrganizationManagementException e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException | OrganizationManagementException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while resolving the tenant domain to validate the id token signature.", e);
             }
@@ -578,18 +552,6 @@ public class OIDCLogoutServlet extends HttpServlet {
             log.error("Error occurred while resolving the tenant domain to validate the id token signature.", e);
             return null;
         }
-    }
-
-    /**
-     * Read the issuer claim of the id token.
-     *
-     * @param idToken id token
-     * @return issuer claim, or null if it is not present
-     * @throws ParseException if the id token cannot be parsed
-     */
-    private String extractIssuerFromIdToken(String idToken) throws ParseException {
-
-        return SignedJWT.parse(idToken).getJWTClaimsSet().getIssuer();
     }
 
     /**
