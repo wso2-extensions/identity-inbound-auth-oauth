@@ -368,6 +368,17 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Invalid Refresh Token provided for Client with Client Id : %s", clientId));
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                        .resultMessage("The provided refresh token is invalid. No token was found for the given " +
+                                "refresh token and client id combination. The refresh token could have been " +
+                                "issued for a different application, already revoked or cleaned up after expiry.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
             throw new IdentityOAuth2Exception("Persisted access token data not found");
         }
         return true;
