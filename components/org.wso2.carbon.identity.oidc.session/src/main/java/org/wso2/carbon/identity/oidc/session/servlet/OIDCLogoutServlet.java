@@ -529,10 +529,17 @@ public class OIDCLogoutServlet extends HttpServlet {
              expected to use the same endpoint form for login and for logout, so a token reaching here was
              issued by that tenant.
             */
-            String accessingTenantDomain = OIDCSessionManagementComponentServiceHolder.getInstance()
-                    .getOrganizationManager().resolveTenantDomain(accessingOrgId);
+            OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder
+                    .getInstance().getOrganizationManager();
+            if (organizationManager == null) {
+                log.error("Organization management service is not available. The tenant domain to validate "
+                        + "the id token signature cannot be resolved.");
+                return null;
+            }
+            String accessingTenantDomain = organizationManager.resolveTenantDomain(accessingOrgId);
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
-            return resolveIssuingTenantDomain(oAuthAppDO, OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO));
+            return resolveIssuingTenantDomain(oAuthAppDO, OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO),
+                    organizationManager);
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while reading the id token.", e);
@@ -542,14 +549,6 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while resolving the tenant domain to validate the id token signature.", e);
             }
-            return null;
-        } catch (RuntimeException e) {
-            /*
-             Issuer resolution reaches services that may be unavailable, for example when organization
-             management is not active, and those fail with unchecked exceptions. Treat that as an
-             unresolved tenant so that the request is denied rather than failing with a server error.
-            */
-            log.error("Error occurred while resolving the tenant domain to validate the id token signature.", e);
             return null;
         }
     }
@@ -561,20 +560,20 @@ public class OIDCLogoutServlet extends HttpServlet {
      * tenant serving the request, so the root organization of the application's own organization issues for
      * it instead. Either way the result is one of the two tenants the setting itself allows.
      *
-     * @param oAuthAppDO      the application
-     * @param appTenantDomain tenant domain that owns the application
+     * @param oAuthAppDO          the application
+     * @param appTenantDomain     tenant domain that owns the application
+     * @param organizationManager the organization manager, already checked to be available
      * @return the tenant domain that issues for this application
      * @throws OrganizationManagementException if the organization of the application cannot be resolved
      */
-    private String resolveIssuingTenantDomain(OAuthAppDO oAuthAppDO, String appTenantDomain)
+    private String resolveIssuingTenantDomain(OAuthAppDO oAuthAppDO, String appTenantDomain,
+                                              OrganizationManager organizationManager)
             throws OrganizationManagementException {
 
         IssuerDetails issuerDetails = oAuthAppDO.getIssuerDetails();
         if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())) {
             return issuerDetails.getIssuerTenantDomain();
         }
-        OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder.getInstance()
-                .getOrganizationManager();
         return organizationManager.resolveTenantDomain(organizationManager.getPrimaryOrganizationId(
                 organizationManager.resolveOrganizationId(appTenantDomain)));
     }

@@ -881,15 +881,14 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     }
 
     @Test
-    public void testResolveSigningTenantDomainDeniesWhenResolutionFailsUnchecked() throws Exception {
+    public void testResolveSigningTenantDomainDeniesWhenOrganizationServiceUnavailable() throws Exception {
 
-        // Resolution reaches services that may be unavailable and fail with unchecked exceptions. The
+        // Organization management may not be active, in which case the service holder returns nothing. The
         // request must be denied rather than failing with a server error.
         mockApplication(SUPER_TENANT_DOMAIN_NAME);
-        OrganizationManager organizationManager = mockAccessingOrganization();
+        mockAccessingOrganization();
         try {
-            when(organizationManager.resolveTenantDomain(SUB_ORG_ID))
-                    .thenThrow(new NullPointerException("organization manager is not available"));
+            OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
             Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
                     idTokenWithIssuer(SUB_ORG_ISSUER));
             assertEquals(resolved, null);
