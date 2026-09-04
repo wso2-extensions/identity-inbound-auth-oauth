@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
@@ -74,6 +75,7 @@ import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementCompo
 import org.wso2.carbon.identity.oidc.session.model.APIError;
 import org.wso2.carbon.identity.oidc.session.model.LogoutContext;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
@@ -453,21 +455,24 @@ public class OIDCLogoutServlet extends HttpServlet {
      */
     private boolean validateIdToken(String idToken) {
 
-        String tenantDomain = getTenantDomainForSignatureValidation(idToken);
+        String tenantDomain = resolveSigningTenantDomain(idToken);
         if (StringUtils.isEmpty(tenantDomain)) {
             return false;
         }
-
         try {
-            RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
-                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getPublicKey();
+            RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance()
+                    .getCertificate(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)
+                    .getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
-
+            if (log.isDebugEnabled()) {
+                log.debug("Validating the id token signature with the tenant domain: " + tenantDomain);
+            }
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating id token signature for the id token: " + idToken);
+                log.debug("Error occurred while validating the id token signature with the tenant domain: "
+                        + tenantDomain, e);
             }
             return false;
         } catch (Exception e) {
@@ -477,52 +482,100 @@ public class OIDCLogoutServlet extends HttpServlet {
     }
 
     /**
-     * Get tenant domain for signature validation.
-     * There is a problem If Id token signed using SP's tenant and there is no direct way to get the tenant domain
-     * using client id. So have iterate all the Tenants until get the right client id.
+     * Resolve the single tenant domain whose key signed the id token.
+     * <p>
+     * The signing tenant is decided at issuance time by the endpoint form used by the relying party and by
+     * the token issuer configured on the application, so it cannot be derived from the application
+     * configuration alone. It is however recorded in the token: the issuer claim identifies exactly one
+     * issuing context. This method therefore matches the issuer claim against the issuers of the tenants
+     * that may legitimately issue for this application, and returns only the tenant that owns that issuer.
+     * A token is never validated against a key whose issuer does not match the token's own issuer claim.
+     * This mirrors the check already done for access tokens in
+     * {@code JWTUtils#getResidentIDPForIssuer}.
      *
      * @param idToken id token
-     * @return Tenant domain
+     * @return the tenant domain to validate the signature against, or null if the issuer is not recognised
      */
-    private String getTenantDomainForSignatureValidation(String idToken) {
+    private String resolveSigningTenantDomain(String idToken) {
 
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
         if (log.isDebugEnabled()) {
             log.debug("'SignJWTWithSPKey' property is set to : " + isJWTSignedWithSPKey);
         }
-        String tenantDomain;
-
         try {
-            String clientId = extractClientFromIdToken(idToken);
-            if (isJWTSignedWithSPKey) {
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-                if (log.isDebugEnabled()) {
-                    log.debug("JWT signature will be validated with the service provider's tenant domain : " +
-                            tenantDomain);
-                }
-            } else {
+            if (!isJWTSignedWithSPKey) {
                 if (log.isDebugEnabled()) {
                     log.debug("JWT signature will be validated with user tenant domain.");
                 }
-                tenantDomain = extractTenantDomainFromIdToken(idToken);
+                return extractTenantDomainFromIdToken(idToken);
             }
+            String clientId = extractClientFromIdToken(idToken);
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             No accessing organization means the request is already served in the tenant that owns the
+             application, which is the case for the organization qualified and tenant qualified endpoints of
+             the organization itself and for the root organization. The token was issued in that same tenant,
+             so the key to validate it with is the application owner tenant key.
+            */
+            if (StringUtils.isEmpty(accessingOrgId)) {
+                return OAuth2Util.getTenantDomainOfOauthApp(OAuth2Util.getAppInformationByClientId(clientId));
+            }
+            /*
+             The tenant qualified organization endpoints are served in the root tenant, so a lookup by client
+             id alone resolves against the root tenant and cannot find an application registered in a sub
+             organization. The application is therefore looked up in the accessing organization's own tenant,
+             and validated with the key of the tenant that issues id tokens for it. The relying party is
+             expected to use the same endpoint form for login and for logout, so a token reaching here was
+             issued by that tenant.
+            */
+            OrganizationManager organizationManager = OIDCSessionManagementComponentServiceHolder
+                    .getInstance().getOrganizationManager();
+            if (organizationManager == null) {
+                log.error("Organization management service is not available. The tenant domain to validate "
+                        + "the id token signature cannot be resolved.");
+                return null;
+            }
+            String accessingTenantDomain = organizationManager.resolveTenantDomain(accessingOrgId);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, accessingTenantDomain);
+            return resolveIssuingTenantDomain(oAuthAppDO, OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO),
+                    organizationManager);
         } catch (ParseException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while extracting client id from id token: " + idToken, e);
+                log.debug("Error occurred while reading the id token.", e);
             }
             return null;
-        } catch (IdentityOAuth2Exception e) {
-            log.error("Error occurred while getting oauth application information.", e);
-            return null;
-        } catch (InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException | OrganizationManagementException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while getting tenant domain for signature validation with id token: "
-                        + idToken, e);
+                log.debug("Error occurred while resolving the tenant domain to validate the id token signature.", e);
             }
             return null;
         }
-        return tenantDomain;
+    }
+
+    /**
+     * Resolve the tenant that issues id tokens for an application. That is the token issuer configured on
+     * the application. An application that predates the token issuer setting has none configured, which is
+     * the state of applications migrated from before the setting existed. Issuance then falls back to the
+     * tenant serving the request, so the root organization of the application's own organization issues for
+     * it instead. Either way the result is one of the two tenants the setting itself allows.
+     *
+     * @param oAuthAppDO          the application
+     * @param appTenantDomain     tenant domain that owns the application
+     * @param organizationManager the organization manager, already checked to be available
+     * @return the tenant domain that issues for this application
+     * @throws OrganizationManagementException if the organization of the application cannot be resolved
+     */
+    private String resolveIssuingTenantDomain(OAuthAppDO oAuthAppDO, String appTenantDomain,
+                                              OrganizationManager organizationManager)
+            throws OrganizationManagementException {
+
+        IssuerDetails issuerDetails = oAuthAppDO.getIssuerDetails();
+        if (issuerDetails != null && StringUtils.isNotEmpty(issuerDetails.getIssuerTenantDomain())) {
+            return issuerDetails.getIssuerTenantDomain();
+        }
+        return organizationManager.resolveTenantDomain(organizationManager.getPrimaryOrganizationId(
+                organizationManager.resolveOrganizationId(appTenantDomain)));
     }
 
     /**
@@ -1110,9 +1163,20 @@ public class OIDCLogoutServlet extends HttpServlet {
                 response.sendRedirect(getRedirectURL(redirectURL, request));
                 return;
             } catch (IdentityOAuth2Exception e) {
-                String msg = "Error occurred while decrypting the id token (JWE).";
+                /*
+                 getClientIdFromIdToken fails with this exception in exactly two cases. An encrypted id
+                 token that cannot be decrypted, and a non encrypted id token whose signature does not
+                 validate. Only the second carries the INVALID_ID_TOKEN sub error code, so report the
+                 reason that actually applies instead of labelling every case a JWE decryption failure.
+                */
+                String msg;
+                if (OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN.equals(e.getErrorCode())) {
+                    msg = "ID token signature validation failed.";
+                } else {
+                    msg = "Error occurred while decrypting the id token (JWE).";
+                }
                 if (log.isDebugEnabled()) {
-                    log.debug("Error occurred while decrypting the id token (JWE).", e);
+                    log.debug(msg, e);
                 }
                 redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));

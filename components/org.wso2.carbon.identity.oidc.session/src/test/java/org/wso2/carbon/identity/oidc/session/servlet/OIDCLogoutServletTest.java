@@ -45,9 +45,11 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
@@ -56,11 +58,15 @@ import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheEntry;
 import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheKey;
 import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -642,6 +648,253 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         Object expected = invokePrivateMethod(logoutServlet, "appendStateQueryParam",
                 postLogoutUrl, stateParam);
         assertEquals(expected, outputRedirectUrl);
+    }
+
+
+    private static final String SUB_ORG_TENANT = "sub-org-tenant";
+    private static final String SUB_ORG_ID = "9476b110-131d-4c74-89b6-b2a8f1a877d0";
+    private static final String ROOT_ORG_ID = "10084a8d-113f-4211-a0d5-efe36b082211";
+    private static final String ROOT_ISSUER = "https://localhost:9443/oauth2/token";
+    private static final String SUB_ORG_ISSUER =
+            "https://localhost:9443/t/carbon.super/o/9476b110-131d-4c74-89b6-b2a8f1a877d0/oauth2/token";
+    private static final String ORG_QUALIFIED_ISSUER =
+            "https://localhost:9443/o/9476b110-131d-4c74-89b6-b2a8f1a877d0/oauth2/token";
+    private static final String TENANT_QUALIFIED_ISSUER =
+            "https://localhost:9443/t/sub-org-tenant/oauth2/token";
+    private static final String ROOT_TENANT_QUALIFIED_ISSUER =
+            "https://localhost:9443/t/carbon.super/oauth2/token";
+
+    /**
+     * Build an unsigned id token carrying the given issuer and azp. Only the claims are read by the
+     * tenant resolution, so the signature is irrelevant here.
+     */
+    private String idTokenWithIssuer(String issuer) {
+
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"RS256\"}".getBytes(StandardCharsets.UTF_8));
+        String claims = issuer == null
+                ? "{\"azp\":\"" + CLIENT_ID_VALUE + "\",\"aud\":[\"" + CLIENT_ID_VALUE + "\"]}"
+                : "{\"azp\":\"" + CLIENT_ID_VALUE + "\",\"aud\":[\"" + CLIENT_ID_VALUE
+                        + "\"],\"iss\":\"" + issuer + "\"}";
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(claims.getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".c2ln";
+    }
+
+    /**
+     * Wire an application owned by the sub organization whose configured token issuer is the given
+     * tenant, and make the issuer of each tenant resolvable. The application is resolvable both by
+     * client id alone and within its own tenant, which are the two lookups the servlet uses.
+     */
+    /**
+     * Register an application owned by the sub organization tenant, optionally carrying a configured
+     * token issuer. A null issuer tenant domain leaves the application without one, which is the state of
+     * an application migrated from before the setting existed.
+     */
+    private void mockApplication(String issuerTenantDomain) throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        if (issuerTenantDomain != null) {
+            IssuerDetails issuerDetails = new IssuerDetails();
+            issuerDetails.setIssuerTenantDomain(issuerTenantDomain);
+            oAuthAppDO.setIssuerDetails(issuerDetails);
+        }
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE, SUB_ORG_TENANT))
+                .thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn(SUB_ORG_TENANT);
+        lenient().when(mockOAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(true);
+    }
+
+    /**
+     * Wire the organization manager used while resolving the signing tenant, and put the request in the
+     * tenant qualified organization context, which is where the issuer of the token is consulted. Without
+     * an accessing organization the request is served in the tenant that owns the application and the
+     * issuer is not consulted at all, which is covered separately.
+     */
+    private OrganizationManager mockAccessingOrganization() throws Exception {
+
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        lenient().when(organizationManager.resolveTenantDomain(SUB_ORG_ID)).thenReturn(SUB_ORG_TENANT);
+        /*
+         The application's own organization and the root of its hierarchy, used when the application has
+         no token issuer configured, which is the state of an application migrated from before the
+         setting existed.
+        */
+        lenient().when(organizationManager.resolveOrganizationId(SUB_ORG_TENANT)).thenReturn(SUB_ORG_ID);
+        lenient().when(organizationManager.getPrimaryOrganizationId(SUB_ORG_ID)).thenReturn(ROOT_ORG_ID);
+        lenient().when(organizationManager.resolveTenantDomain(ROOT_ORG_ID))
+                .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(SUB_ORG_ID);
+        return organizationManager;
+    }
+
+    private void clearAccessingOrganization() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+    }
+
+    @DataProvider(name = "signingTenantResolutionDataProvider")
+    public Object[][] signingTenantResolutionDataProvider() {
+
+        /*
+         The tenant that issues id tokens for the application, and the tenant its signature is validated
+         against, when the request carries an accessing organization. That is the tenant qualified
+         organization endpoint form, /t/<tenant-domain>/o/<organization-id>/.
+        */
+        return new Object[][]{
+                // The configured token issuer is the root organization, the default for a new application.
+                {SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_DOMAIN_NAME},
+                // The configured token issuer is the application's own organization.
+                {SUB_ORG_TENANT, SUB_ORG_TENANT},
+                /*
+                 An application with no token issuer configured, the state of one migrated from before the
+                 setting existed. Issuance falls back to the tenant serving the request, so the root
+                 organization of the application's own organization issues for it.
+                */
+                {null, SUPER_TENANT_DOMAIN_NAME},
+        };
+    }
+
+    @Test(dataProvider = "signingTenantResolutionDataProvider")
+    public void testResolveSigningTenantDomain(String configuredIssuerTenant, String expectedTenant)
+            throws Exception {
+
+        mockApplication(configuredIssuerTenant);
+        mockAccessingOrganization();
+        try {
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(SUB_ORG_ISSUER));
+            assertEquals(resolved, expectedTenant);
+        } finally {
+            clearAccessingOrganization();
+        }
+    }
+
+    @DataProvider(name = "issuerClaimDataProvider")
+    public Object[][] issuerClaimDataProvider() {
+
+        /*
+         The relying party is expected to use the same endpoint form for login and for logout, so a token
+         reaching this path was issued by the tenant the application is configured to issue from. The
+         issuer claim is therefore not consulted, and the signature check is what refuses a token that
+         this server did not issue.
+        */
+        return new Object[][]{
+                {SUB_ORG_ISSUER},
+                {ROOT_ISSUER},
+                {ORG_QUALIFIED_ISSUER},
+                {TENANT_QUALIFIED_ISSUER},
+                {"https://evil.example.com/o/" + SUB_ORG_ID + "/oauth2/token"},
+                {"https://localhost:9443/some/other/path"},
+                {null},
+        };
+    }
+
+    @Test(dataProvider = "issuerClaimDataProvider")
+    public void testResolveSigningTenantDomainIgnoresIssuerClaim(String issuerClaim) throws Exception {
+
+        mockApplication(SUPER_TENANT_DOMAIN_NAME);
+        mockAccessingOrganization();
+        try {
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(issuerClaim));
+            assertEquals(resolved, SUPER_TENANT_DOMAIN_NAME);
+        } finally {
+            clearAccessingOrganization();
+        }
+    }
+
+    @DataProvider(name = "ownTenantRequestDataProvider")
+    public Object[][] ownTenantRequestDataProvider() {
+
+        /*
+         Without an accessing organization the request is already served in the tenant that owns the
+         application, which is the case for the root organization and for the organization qualified and
+         tenant qualified endpoints of the organization itself. The application owner tenant is used
+         whatever the issuer claim carries.
+        */
+        return new Object[][]{
+                {SUB_ORG_ISSUER},
+                {ORG_QUALIFIED_ISSUER},
+                {TENANT_QUALIFIED_ISSUER},
+                {ROOT_ISSUER},
+                {"https://evil.example.com/t/sub-org-tenant/oauth2/token"},
+                {null},
+        };
+    }
+
+    @Test(dataProvider = "ownTenantRequestDataProvider")
+    public void testResolveSigningTenantDomainWithoutAccessingOrganization(String issuerClaim)
+            throws Exception {
+
+        mockApplication(SUPER_TENANT_DOMAIN_NAME);
+        Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                idTokenWithIssuer(issuerClaim));
+        assertEquals(resolved, SUB_ORG_TENANT);
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainDeniesUnparseableToken() throws Exception {
+
+        // The id token hint is a request parameter, so it is not necessarily a token this server issued.
+        mockApplication(SUPER_TENANT_DOMAIN_NAME);
+        Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain", "not.a.jwt");
+        assertEquals(resolved, null);
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainDeniesUnknownClient() throws Exception {
+
+        // The client id carried by the token is not registered here, so no tenant can be resolved.
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE, SUB_ORG_TENANT))
+                .thenThrow(new InvalidOAuthClientException("Cannot find an application for the client id."));
+        lenient().when(mockOAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(true);
+        mockAccessingOrganization();
+        try {
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(SUB_ORG_ISSUER));
+            assertEquals(resolved, null);
+        } finally {
+            clearAccessingOrganization();
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainDeniesWhenOrganizationResolutionFails() throws Exception {
+
+        // The accessing organization cannot be resolved to a tenant, so no key can be selected.
+        mockApplication(SUPER_TENANT_DOMAIN_NAME);
+        OrganizationManager organizationManager = mockAccessingOrganization();
+        try {
+            when(organizationManager.resolveTenantDomain(SUB_ORG_ID))
+                    .thenThrow(new OrganizationManagementException("organization not found"));
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(SUB_ORG_ISSUER));
+            assertEquals(resolved, null);
+        } finally {
+            clearAccessingOrganization();
+        }
+    }
+
+    @Test
+    public void testResolveSigningTenantDomainDeniesWhenOrganizationServiceUnavailable() throws Exception {
+
+        // Organization management may not be active, in which case the service holder returns nothing. The
+        // request must be denied rather than failing with a server error.
+        mockApplication(SUPER_TENANT_DOMAIN_NAME);
+        mockAccessingOrganization();
+        try {
+            OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+            Object resolved = invokePrivateMethod(logoutServlet, "resolveSigningTenantDomain",
+                    idTokenWithIssuer(SUB_ORG_ISSUER));
+            assertEquals(resolved, null);
+        } finally {
+            clearAccessingOrganization();
+        }
     }
 
     private void mockServiceURLBuilder(String context, MockedStatic<ServiceURLBuilder> serviceURLBuilder)
