@@ -61,7 +61,6 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -432,18 +431,21 @@ public class JWTUtils {
     public static String getSigningTenantDomain(JWTClaimsSet claimsSet, AccessTokenDO accessTokenDO)
             throws ParseException, IdentityOAuth2Exception {
 
-        Map<String, String> realm = (HashMap) claimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        Map realm = getRealmClaim(claimsSet);
         if (MapUtils.isNotEmpty(realm)) {
-            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+            String signingTenant = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            if (signingTenant != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from JWT's 'signing_tenant' claim.");
                 }
-                return realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
-            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                return signingTenant;
+            }
+            String tenant = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.TENANT);
+            if (tenant != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from JWT's 'tenant' claim.");
                 }
-                return realm.get(OAuthConstants.OIDCClaims.TENANT);
+                return tenant;
             }
         }
         if (accessTokenDO == null) {
@@ -490,6 +492,37 @@ public class JWTUtils {
             }
             return accessTokenDO.getAuthzUser().getTenantDomain();
         }
+    }
+
+    /**
+     * Retrieves the 'realm' claim of the given JWT as a Map. The claim is returned only when it is a JSON object;
+     * a 'realm' claim of any other type is treated as absent.
+     *
+     * Note that the concrete Map implementation depends on the JSON parser behind Nimbus, so the value must only
+     * ever be handled through the Map interface and never cast to a concrete type such as HashMap.
+     *
+     * @param claimsSet The JWTClaimsSet to read the 'realm' claim from.
+     * @return The 'realm' claim as a Map, or null if it is missing or not a JSON object.
+     */
+    private static Map getRealmClaim(JWTClaimsSet claimsSet) {
+
+        Object realm = claimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        return realm instanceof Map ? (Map) realm : null;
+    }
+
+    /**
+     * Retrieves a claim nested within the 'realm' claim as a String value. A nested claim holding any other JSON
+     * type is treated as absent, so that a malformed token falls back to the other tenant resolution paths instead
+     * of failing the whole validation flow.
+     *
+     * @param realm     The 'realm' claim of the JWT.
+     * @param claimName The name of the claim within 'realm' to read.
+     * @return The nested claim value as a String, or null if it is missing or not a String.
+     */
+    private static String getClaimWithinRealmAsString(Map realm, String claimName) {
+
+        Object value = realm.get(claimName);
+        return value instanceof String ? (String) value : null;
     }
 
     /**
@@ -561,15 +594,13 @@ public class JWTUtils {
             throws IdentityOAuth2Exception {
 
         X509Certificate x509Certificate = null;
-        Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        Map realm = getRealmClaim(jwtClaimsSet);
         // Get certificate from tenant if available in claims.
         if (MapUtils.isNotEmpty(realm)) {
-            String tenantDomain = null;
             // Get signed key tenant from JWT token or ID token based on claim key.
-            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
-                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
-            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
-                tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            String tenantDomain = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            if (tenantDomain == null) {
+                tenantDomain = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.TENANT);
             }
             if (tenantDomain != null) {
                 int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);

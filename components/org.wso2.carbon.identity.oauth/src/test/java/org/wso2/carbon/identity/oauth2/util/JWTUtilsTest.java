@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterClass;
@@ -46,14 +47,20 @@ import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @Listeners(MockitoTestNGListener.class)
@@ -90,6 +97,32 @@ public class JWTUtilsTest {
             "3pDI4B+vQipcfTjJqgPAWvUz903z61lRuAlJFPPD69l+IQ15z1Mfc7rgl0wmZLBU\n" +
             "HjVlGsFGQX6e10Rx/msN+NWxKJGf7Z6vxS8Qoc4nddUBnndCOvCVvgI9BThNv0cG\n" +
             "e3hB2nvCQvUJ/wfuj6i1PNfoM81nA2qEQfjY/QWuF4Ex/RYWBfASNU35TBRVc26R";
+
+    private static final String SIGNING_TENANT_DOMAIN = "signing.tenant.com";
+    private static final String USER_TENANT_DOMAIN = "user.tenant.com";
+
+    /*
+     These claim sets are deliberately built by parsing raw JSON rather than by JWTClaimsSet.Builder.
+     Nimbus deserializes a nested JSON object into com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap,
+     which implements Map but does NOT extend HashMap. A Builder-constructed claim set would keep whatever
+     Map implementation the test handed it and would therefore not exercise the cast at all.
+    */
+    private static final String CLAIMS_WITH_SIGNING_TENANT =
+            "{\"sub\":\"user1\",\"realm\":{\"signing_tenant\":\"" + SIGNING_TENANT_DOMAIN + "\"}}";
+    private static final String CLAIMS_WITH_TENANT =
+            "{\"sub\":\"user1\",\"realm\":{\"tenant\":\"" + USER_TENANT_DOMAIN + "\"}}";
+    private static final String CLAIMS_WITH_BOTH_TENANTS =
+            "{\"sub\":\"user1\",\"realm\":{\"tenant\":\"" + USER_TENANT_DOMAIN + "\","
+                    + "\"signing_tenant\":\"" + SIGNING_TENANT_DOMAIN + "\"}}";
+    private static final String CLAIMS_WITH_NON_STRING_SIGNING_TENANT =
+            "{\"sub\":\"user1\",\"realm\":{\"signing_tenant\":{\"name\":\"" + SIGNING_TENANT_DOMAIN + "\"}}}";
+    private static final String CLAIMS_WITH_NON_STRING_TENANT = "{\"sub\":\"user1\",\"realm\":{\"tenant\":42}}";
+    private static final String CLAIMS_WITH_NON_STRING_SIGNING_TENANT_AND_VALID_TENANT =
+            "{\"sub\":\"user1\",\"realm\":{\"signing_tenant\":true,"
+                    + "\"tenant\":\"" + USER_TENANT_DOMAIN + "\"}}";
+    private static final String CLAIMS_WITH_STRING_REALM = "{\"sub\":\"user1\",\"realm\":\"/alpha\"}";
+    private static final String CLAIMS_WITH_EMPTY_REALM = "{\"sub\":\"user1\",\"realm\":{}}";
+    private static final String CLAIMS_WITHOUT_REALM = "{\"sub\":\"user1\"}";
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
     private static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
@@ -227,6 +260,153 @@ public class JWTUtilsTest {
             JWTUtils.getResidentIDPIssuer("https://some-issuer", "client-id", SUPER_TENANT_DOMAIN_NAME,
                     "switched-org-id");
         }
+    }
+
+    /**
+     * Canary for the ClassCastException fixed in getSigningTenantDomain()/getCertificateFromClaims().
+     *
+     * Nimbus 10.x replaced json-smart with a shaded Gson parser, so a nested JSON object is no longer a
+     * net.minidev.json.JSONObject (which extends HashMap) but a LinkedTreeMap (which does not). Any code
+     * casting the 'realm' claim to a concrete HashMap therefore throws at runtime. If this assertion ever
+     * fails, the JSON parser behind JWTClaimsSet has changed again and every 'realm' consumer needs review.
+     */
+    @Test(description = "The parsed 'realm' claim is a Map but not a HashMap")
+    public void testRealmClaimIsNotDeserializedAsHashMap() throws Exception {
+
+        Object realm = JWTClaimsSet.parse(CLAIMS_WITH_SIGNING_TENANT).getClaim("realm");
+        assertTrue(realm instanceof Map, "The 'realm' claim must be readable as a java.util.Map. Actual type: "
+                + realm.getClass().getName());
+        assertFalse(realm instanceof HashMap, "The 'realm' claim is no longer a HashMap subtype, so it must only "
+                + "ever be cast to the Map interface. Actual type: " + realm.getClass().getName());
+    }
+
+    @Test(description = "getSigningTenantDomain resolves the tenant from the 'signing_tenant' claim")
+    public void testGetSigningTenantDomainFromSigningTenantClaim() throws Exception {
+
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_SIGNING_TENANT), null),
+                SIGNING_TENANT_DOMAIN);
+    }
+
+    @Test(description = "getSigningTenantDomain resolves the tenant from the 'tenant' claim")
+    public void testGetSigningTenantDomainFromTenantClaim() throws Exception {
+
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_TENANT), null),
+                USER_TENANT_DOMAIN);
+    }
+
+    @Test(description = "getSigningTenantDomain prefers 'signing_tenant' over 'tenant'")
+    public void testGetSigningTenantDomainPrefersSigningTenantClaim() throws Exception {
+
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_BOTH_TENANTS), null),
+                SIGNING_TENANT_DOMAIN);
+    }
+
+    /**
+     * A 'realm' claim carrying a plain string (an organization path, for instance) must be ignored rather
+     * than blowing up the token validation flow.
+     */
+    @Test(description = "getSigningTenantDomain falls back when the 'realm' claim is not a JSON object")
+    public void testGetSigningTenantDomainWithNonObjectRealmClaim() throws Exception {
+
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_STRING_REALM), null),
+                SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(description = "getSigningTenantDomain falls back when the 'realm' claim is an empty object")
+    public void testGetSigningTenantDomainWithEmptyRealmClaim() throws Exception {
+
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_EMPTY_REALM), null),
+                SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(description = "getSigningTenantDomain falls back when there is no 'realm' claim")
+    public void testGetSigningTenantDomainWithoutRealmClaim() throws Exception {
+
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITHOUT_REALM), null),
+                SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(description = "getSigningTenantDomain ignores a 'signing_tenant' claim that is not a String")
+    public void testGetSigningTenantDomainWithNonStringSigningTenantClaim() throws Exception {
+
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(
+                JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_SIGNING_TENANT), null),
+                SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(description = "getSigningTenantDomain ignores a 'tenant' claim that is not a String")
+    public void testGetSigningTenantDomainWithNonStringTenantClaim() throws Exception {
+
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+        assertEquals(JWTUtils.getSigningTenantDomain(JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_TENANT), null),
+                SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @Test(description = "getSigningTenantDomain falls back to 'tenant' when 'signing_tenant' is not a String")
+    public void testGetSigningTenantDomainFallsBackToTenantClaimOnNonStringSigningTenant() throws Exception {
+
+        assertEquals(JWTUtils.getSigningTenantDomain(
+                JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_SIGNING_TENANT_AND_VALID_TENANT), null),
+                USER_TENANT_DOMAIN);
+    }
+
+    @Test(description = "getCertificateFromClaims resolves the certificate of the 'signing_tenant' claim")
+    public void testGetCertificateFromClaimsWithSigningTenantClaim() throws Exception {
+
+        Certificate expectedCertificate = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME)).getCertificate("wso2carbon");
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(SIGNING_TENANT_DOMAIN)).thenReturn(1);
+            oAuth2Util.when(() -> OAuth2Util.getCertificate(SIGNING_TENANT_DOMAIN, 1)).thenReturn(expectedCertificate);
+
+            Optional<X509Certificate> certificate =
+                    JWTUtils.getCertificateFromClaims(JWTClaimsSet.parse(CLAIMS_WITH_SIGNING_TENANT));
+            assertTrue(certificate.isPresent());
+            assertEquals(certificate.get(), expectedCertificate);
+        }
+    }
+
+    @Test(description = "getCertificateFromClaims returns empty when the 'realm' claim is not a JSON object")
+    public void testGetCertificateFromClaimsWithNonObjectRealmClaim() throws Exception {
+
+        assertFalse(JWTUtils.getCertificateFromClaims(JWTClaimsSet.parse(CLAIMS_WITH_STRING_REALM)).isPresent());
+    }
+
+    @Test(description = "getCertificateFromClaims returns empty when the tenant claims are not Strings")
+    public void testGetCertificateFromClaimsWithNonStringTenantClaims() throws Exception {
+
+        assertFalse(JWTUtils.getCertificateFromClaims(
+                JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_SIGNING_TENANT)).isPresent());
+        assertFalse(JWTUtils.getCertificateFromClaims(
+                JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_TENANT)).isPresent());
+    }
+
+    @Test(description = "getCertificateFromClaims falls back to 'tenant' when 'signing_tenant' is not a String")
+    public void testGetCertificateFromClaimsFallsBackToTenantClaimOnNonStringSigningTenant() throws Exception {
+
+        Certificate expectedCertificate = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME)).getCertificate("wso2carbon");
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(USER_TENANT_DOMAIN)).thenReturn(2);
+            oAuth2Util.when(() -> OAuth2Util.getCertificate(USER_TENANT_DOMAIN, 2)).thenReturn(expectedCertificate);
+
+            Optional<X509Certificate> certificate = JWTUtils.getCertificateFromClaims(
+                    JWTClaimsSet.parse(CLAIMS_WITH_NON_STRING_SIGNING_TENANT_AND_VALID_TENANT));
+            assertTrue(certificate.isPresent());
+            assertEquals(certificate.get(), expectedCertificate);
+        }
+    }
+
+    @Test(description = "getCertificateFromClaims returns empty when there is no 'realm' claim")
+    public void testGetCertificateFromClaimsWithoutRealmClaim() throws Exception {
+
+        assertFalse(JWTUtils.getCertificateFromClaims(JWTClaimsSet.parse(CLAIMS_WITHOUT_REALM)).isPresent());
     }
 
     private void mockResidentIdP(MockedStatic<IdentityProviderManager> identityProviderManager,
