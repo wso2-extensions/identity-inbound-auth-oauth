@@ -326,6 +326,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
         propagateImpersonationInfo(tokReqMsgCtx);
+        propagateRequestedActorInfo(tokReqMsgCtx);
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
@@ -362,6 +363,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReqMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonator);
                 if (log.isDebugEnabled()) {
                     log.debug("Impersonation request identified for the user: " + impersonator);
+                }
+            }
+        }
+    }
+
+    private void propagateRequestedActorInfo(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
+            String requestedActor = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getAccessTokenExtendedAttributes().getParameters()
+                    .get(OAuthConstants.REQUESTED_ACTOR);
+            if (StringUtils.isNotBlank(requestedActor)) {
+                tokenReqMessageContext.setRequestedActor(requestedActor);
+                if (log.isDebugEnabled()) {
+                    log.debug("Propagating requested actor for the refreshed access token: " + requestedActor);
                 }
             }
         }
