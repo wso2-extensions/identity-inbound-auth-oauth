@@ -57,6 +57,21 @@ public class ActorTokenValidator {
     public static String validateAndGetSubject(String actorToken, String tenantDomain)
             throws IdentityOAuth2Exception {
 
+        return validateAndGetClaims(actorToken, tenantDomain).getSubject();
+    }
+
+    /**
+     * Validates the actor token JWT and returns its full claim set.
+     *
+     * @param actorToken   Raw JWT string representing the actor token.
+     * @param tenantDomain Tenant domain used for IDP lookup and issuer validation.
+     * @return The validated {@link JWTClaimsSet} of the actor token.
+     * @throws IdentityOAuth2Exception If the JWT is invalid, the signature fails,
+     *                                 the token is expired, or the issuer is unexpected.
+     */
+    public static JWTClaimsSet validateAndGetClaims(String actorToken, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
         SignedJWT signedJWT;
         try {
             signedJWT = JWTUtils.parseJWT(actorToken);
@@ -91,6 +106,6 @@ public class ActorTokenValidator {
                     + ", Received: " + jwtIssuer);
         }
 
-        return claimsSet.getSubject();
+        return claimsSet;
     }
 }
