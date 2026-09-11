@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
@@ -68,13 +69,15 @@ public class DeviceEndpoint {
     @Produces("application/json")
     public Response authorize(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap,
                               @Context HttpServletResponse response)
-            throws IdentityOAuth2Exception, OAuthSystemException {
+            throws IdentityOAuth2Exception, OAuthSystemException, InvalidApplicationClientException {
 
         OAuthClientAuthnContext oAuthClientAuthnContext =  getValidationObject(request);
 
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             return handleErrorResponse(oAuthClientAuthnContext);
         }
+
+        validateIfApplicationAccessEnabled(oAuthClientAuthnContext);
 
         // Wrap the request to avoid missing of request attributes.
         request = new OAuthRequestWrapper(request, paramMap);
@@ -111,6 +114,23 @@ public class DeviceEndpoint {
 
         if (!EndpointUtil.validateParams(request, paramMap)) {
             throw new TokenEndpointBadRequestException("Invalid request with repeated parameters.");
+        }
+    }
+
+    /**
+     * Validate whether the application is in the enabled state before issuing a device code. This mirrors the
+     * validation done by the token endpoint, so that a disabled application is rejected up front instead of being
+     * handed a device code that can never be exchanged.
+     *
+     * @param oAuthClientAuthnContext OAuth client authentication context.
+     * @throws InvalidApplicationClientException If the application is disabled.
+     * @throws OAuthSystemException              If an error occurred while retrieving the service provider.
+     */
+    private void validateIfApplicationAccessEnabled(OAuthClientAuthnContext oAuthClientAuthnContext)
+            throws InvalidApplicationClientException, OAuthSystemException {
+
+        if (StringUtils.isNotBlank(oAuthClientAuthnContext.getClientId())) {
+            EndpointUtil.validateAppAccess(oAuthClientAuthnContext.getClientId());
         }
     }
 
