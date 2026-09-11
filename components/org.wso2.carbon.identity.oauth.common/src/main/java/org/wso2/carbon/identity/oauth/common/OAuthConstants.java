@@ -690,6 +690,12 @@ public final class OAuthConstants {
         public static final String CIBA_SKIP_USER_VALIDATION = "cibaSkipUserValidation";
         public static final String CIBA_ALLOW_FEDERATED_USERS = "cibaAllowFederatedUsers";
 
+        public static final String TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP = "tokenExchange";
+        public static final String DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY =
+                "defaultRestrictScopeIssuanceForFederatedTokens";
+        public static final String RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE =
+                "tokenExchangeRestrictScopeIssuanceForFederatedTokens";
+
         public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
 

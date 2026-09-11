@@ -135,6 +135,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private long cibaAuthReqExpiryTime;
     private boolean cibaSkipUserValidation;
     private boolean cibaAllowFederatedUsers;
+
+    private Boolean restrictScopeIssuanceForFederatedTokens;
     private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
@@ -710,6 +712,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setCibaAllowFederatedUsers(boolean cibaAllowFederatedUsers) {
 
         this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
+    }
+
+    public Boolean isRestrictScopeIssuanceForFederatedTokens() {
+
+        return restrictScopeIssuanceForFederatedTokens;
+    }
+
+    public void setRestrictScopeIssuanceForFederatedTokens(Boolean restrictScopeIssuanceForFederatedTokens) {
+
+        this.restrictScopeIssuanceForFederatedTokens = restrictScopeIssuanceForFederatedTokens;
     }
 
     public IssuerDetails getIssuerDetails() {
