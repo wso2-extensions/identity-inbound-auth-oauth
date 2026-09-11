@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.UserSession
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
@@ -613,5 +614,24 @@ public class OAuthServiceComponent {
 
         log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
+    }
+
+    @Reference(
+            name = "compatibility.settings.service.component",
+            service = CompatibilitySettingsService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCompatibilitySettingsService"
+    )
+    protected void setCompatibilitySettingsService(CompatibilitySettingsService compatibilitySettingsService) {
+
+        log.debug("Setting the CompatibilitySettingsService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(compatibilitySettingsService);
+    }
+
+    protected void unsetCompatibilitySettingsService(CompatibilitySettingsService compatibilitySettingsService) {
+
+        log.debug("Unsetting the CompatibilitySettingsService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(null);
     }
 }

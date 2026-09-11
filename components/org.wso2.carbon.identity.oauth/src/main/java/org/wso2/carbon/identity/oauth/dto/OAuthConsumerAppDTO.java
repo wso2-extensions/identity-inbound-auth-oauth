@@ -132,6 +132,18 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
     }
 
+    private Boolean restrictScopeIssuanceForFederatedTokens;
+
+    public Boolean isRestrictScopeIssuanceForFederatedTokens() {
+
+        return restrictScopeIssuanceForFederatedTokens;
+    }
+
+    public void setRestrictScopeIssuanceForFederatedTokens(Boolean restrictScopeIssuanceForFederatedTokens) {
+
+        this.restrictScopeIssuanceForFederatedTokens = restrictScopeIssuanceForFederatedTokens;
+    }
+
     private IssuerDetails issuerDetails;
 
     // Fragment app flag. This will be used to identify whether the app is a fragment app or not.
