@@ -2063,7 +2063,8 @@ public class OAuthAdminServiceImpl {
             Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .getActiveAuthorizationCodesByConsumerKey(consumerKey);
             for (String authorizationCode : authorizationCodes) {
-                OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
+                OAuthCacheKey cacheKey = new OAuthCacheKey(
+                        OAuth2Util.buildCacheKeyStringForAuthzCode(consumerKey, authorizationCode));
                 OAuthCache.getInstance().clearCacheEntry(cacheKey);
             }
             if (LOG.isDebugEnabled()) {
