@@ -47,6 +47,9 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -139,6 +142,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.AUTHORIZATION_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.IMPLICIT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RESTRICT_FRAGMENT_COMPONENTS;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
@@ -1557,6 +1562,44 @@ public class OAuthAdminServiceImplTest {
         Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(object, value);
+    }
+
+    @DataProvider(name = "restrictScopeIssuanceDefaultData")
+    public Object[][] restrictScopeIssuanceDefaultData() {
+
+        return new Object[][]{
+                {"true", true},
+                {"false", false},
+                {null, false},
+        };
+    }
+
+    @Test(dataProvider = "restrictScopeIssuanceDefaultData")
+    public void testIsRestrictScopeIssuanceEnabledByDefault(String settingValue, boolean expected) throws Exception {
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            CompatibilitySettingsService compatibilitySettingsService = mock(CompatibilitySettingsService.class);
+            when(mockOAuthComponentServiceHolder.getCompatibilitySettingsService())
+                    .thenReturn(compatibilitySettingsService);
+
+            CompatibilitySettingGroup settingGroup = new CompatibilitySettingGroup();
+            settingGroup.setSettingGroup(TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP);
+            if (settingValue != null) {
+                settingGroup.addSetting(DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY,
+                        settingValue);
+            }
+            CompatibilitySetting compatibilitySetting = new CompatibilitySetting();
+            compatibilitySetting.addCompatibilitySetting(settingGroup);
+            when(compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(anyString(), anyString(),
+                    anyString())).thenReturn(compatibilitySetting);
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            Assert.assertEquals(invokePrivateMethod(oAuthAdminServiceImpl,
+                    "isRestrictScopeIssuanceEnabledByDefault", SUPER_TENANT_DOMAIN_NAME), expected);
+        }
     }
 
     private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {

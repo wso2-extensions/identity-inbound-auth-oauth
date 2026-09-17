@@ -438,6 +438,7 @@
                     <xs:element minOccurs="0" name="requestObjectSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="requirePushedAuthorizationRequests" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="restrictScopeIssuanceForFederatedTokens" nillable="true" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="sectorIdentifierURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
