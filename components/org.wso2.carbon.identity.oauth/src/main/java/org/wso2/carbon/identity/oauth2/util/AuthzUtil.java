@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.organization.agent.sharing.util.OrganizationSharedAgentUtil;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -410,14 +411,25 @@ public class AuthzUtil {
             throws IdentityOAuth2Exception {
 
         List<String> roleIds = new ArrayList<>();
-        try {
-            for (String roleName: roleNames) {
+        for (String roleName : roleNames) {
+            try {
                 roleIds.add(OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
                         .getRoleIdByName(roleName, roleAudience, roleAudienceId, tenantDomain));
+            } catch (IdentityRoleManagementClientException e) {
+                /*
+                The roles claim of a federated user can carry role names that are not defined for this audience in
+                this tenant. Roles created inside a sub organization reach the parent this way during organization
+                login. Such a role cannot grant any scope here, so it is skipped rather than failing the whole
+                authorization request.
+                */
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Skipping role name which is not resolvable for audience: " + roleAudience
+                            + " audience id: " + roleAudienceId + " in tenant domain: " + tenantDomain);
+                }
+            } catch (IdentityRoleManagementException e) {
+                throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role name : "
+                        + StringUtils.join(roleNames, ",") + " tenant domain : " + tenantDomain, e);
             }
-        } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role name : "
-                    + StringUtils.join(roleNames, ",") + " tenant domain : " + tenantDomain, e);
         }
         return roleIds;
     }

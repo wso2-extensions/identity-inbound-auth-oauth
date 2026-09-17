@@ -29,7 +29,9 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -40,6 +42,7 @@ import org.wso2.carbon.identity.organization.management.organization.agent.shari
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
@@ -66,6 +69,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.user.core.UserStoreConfigConstants.PRIMARY;
 
 /**
@@ -462,5 +466,54 @@ public class AuthzUtilTest {
                 .thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
         when(realmConfiguration.getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR)).thenReturn(",,,");
+    }
+    @Test
+    public void testFederatedUserRolesSkipUnresolvableRoleNames() throws Exception {
+
+        stubFederatedUserWithRolesClaim("resolvable1,unresolvable,resolvable2");
+        when(roleManagementService.getRoleIdByName("resolvable1", APPLICATION, APP_ID, TENANT_DOMAIN))
+                .thenReturn("role-id-1");
+        when(roleManagementService.getRoleIdByName("unresolvable", APPLICATION, APP_ID, TENANT_DOMAIN))
+                .thenThrow(new IdentityRoleManagementClientException("60005", "Role not found."));
+        when(roleManagementService.getRoleIdByName("resolvable2", APPLICATION, APP_ID, TENANT_DOMAIN))
+                .thenReturn("role-id-2");
+
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+            Assert.assertEquals(AuthzUtil.getUserRoles(authenticatedUser, APP_ID),
+                    Arrays.asList("role-id-1", "role-id-2"));
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testFederatedUserRolesFailOnServerErrorWhileResolvingRoleName() throws Exception {
+
+        stubFederatedUserWithRolesClaim("resolvable1");
+        when(roleManagementService.getRoleIdByName("resolvable1", APPLICATION, APP_ID, TENANT_DOMAIN))
+                .thenThrow(new IdentityRoleManagementException("65001", "Unexpected server error."));
+
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+            AuthzUtil.getUserRoles(authenticatedUser, APP_ID);
+        }
+    }
+
+    private void stubFederatedUserWithRolesClaim(String roleNames) throws Exception {
+
+        ApplicationManagementService applicationManagementService =
+                Mockito.mock(ApplicationManagementService.class);
+        oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getApplicationMgtService)
+                .thenReturn(applicationManagementService);
+        when(applicationManagementService.getAllowedAudienceForRoleAssociation(APP_ID, TENANT_DOMAIN))
+                .thenReturn(APPLICATION);
+        when(oAuth2ServiceComponentHolder.getRoleManagementServiceV2()).thenReturn(roleManagementService);
+
+        Map<ClaimMapping, String> userAttributes = new HashMap<>();
+        userAttributes.put(ClaimMapping.build(FrameworkConstants.IDP_MAPPED_USER_ROLES,
+                FrameworkConstants.IDP_MAPPED_USER_ROLES, null, false), roleNames);
+
+        when(authenticatedUser.isFederatedUser()).thenReturn(true);
+        when(authenticatedUser.getTenantDomain()).thenReturn(TENANT_DOMAIN);
+        when(authenticatedUser.getUserAttributes()).thenReturn(userAttributes);
     }
 }
