@@ -3723,9 +3723,12 @@ public class OAuthAdminServiceImpl {
      */
     private boolean isRestrictScopeIssuanceEnabledByDefault(String tenantDomain) {
 
+        if (StringUtils.isBlank(tenantDomain)) {
+            return false;
+        }
         CompatibilitySettingsService compatibilitySettingsService =
                 OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
-        if (compatibilitySettingsService == null || StringUtils.isBlank(tenantDomain)) {
+        if (compatibilitySettingsService == null) {
             return false;
         }
         try {
@@ -3735,10 +3738,7 @@ public class OAuthAdminServiceImpl {
                             DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY);
             CompatibilitySettingGroup group =
                     setting.getCompatibilitySetting(TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP);
-            if (group == null) {
-                return false;
-            }
-            return Boolean.parseBoolean(
+            return group != null && Boolean.parseBoolean(
                     group.getSettingValue(DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY));
         } catch (CompatibilitySettingException e) {
             if (LOG.isDebugEnabled()) {
