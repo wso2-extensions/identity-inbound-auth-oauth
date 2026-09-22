@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -98,6 +99,7 @@ public class JWTUtilsTest {
             "HjVlGsFGQX6e10Rx/msN+NWxKJGf7Z6vxS8Qoc4nddUBnndCOvCVvgI9BThNv0cG\n" +
             "e3hB2nvCQvUJ/wfuj6i1PNfoM81nA2qEQfjY/QWuF4Ex/RYWBfASNU35TBRVc26R";
 
+    private static final String ROOT_ORG_ID = "root-org-id";
     private static final String SIGNING_TENANT_DOMAIN = "signing.tenant.com";
     private static final String USER_TENANT_DOMAIN = "user.tenant.com";
 
@@ -259,6 +261,52 @@ public class JWTUtilsTest {
 
             JWTUtils.getResidentIDPIssuer("https://some-issuer", "client-id", SUPER_TENANT_DOMAIN_NAME,
                     "switched-org-id");
+        }
+    }
+
+    /*
+     getIDPForIssuer() indexes the ancestor list at getSubOrgStartLevel() - 1 but only verifies that the list
+     is non-empty, so any deployment that configures SubOrganizationStartLevel above the default of 1 can index
+     past the end of the list. getResidentIDPIssuer() guards the same access with a size check.
+    */
+    @Test(description = "getIDPForIssuer rejects an ancestor list shorter than the configured sub organization "
+            + "start level instead of indexing out of bounds",
+            expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testGetIDPForIssuerWithInsufficientAncestorList() throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementConfigUtil> configUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("false");
+
+            OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class);
+            holder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
+            when(holderInstance.isOrganizationManagementEnabled()).thenReturn(true);
+            OrganizationManager organizationManager = mock(OrganizationManager.class);
+            when(holderInstance.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(ROOT_ORG_ID);
+            // A root organization resolves to an ancestor list holding only itself.
+            when(organizationManager.getAncestorOrganizationIds(anyString()))
+                    .thenReturn(Arrays.asList(ROOT_ORG_ID));
+            /*
+             Deployments that nest sub organizations one level deeper configure a start level of 2, which puts
+             the root organization at index 1 of the ancestor list.
+            */
+            configUtil.when(() -> OrganizationManagementConfigUtil.getProperty(anyString())).thenReturn("2");
+            // Both organization IDs must be resolvable, otherwise the null guard short circuits the index access.
+            when(privilegedCarbonContext.getOrganizationId()).thenReturn(ROOT_ORG_ID);
+
+            try {
+                JWTUtils.getIDPForIssuer("https://some-issuer", SUPER_TENANT_DOMAIN_NAME, ROOT_ORG_ID);
+            } finally {
+                // The carbon context mock is shared across the class, so leave it as the other tests expect it.
+                when(privilegedCarbonContext.getOrganizationId()).thenReturn(null);
+            }
         }
     }
 

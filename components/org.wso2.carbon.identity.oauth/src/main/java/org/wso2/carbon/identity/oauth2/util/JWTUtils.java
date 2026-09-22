@@ -230,6 +230,12 @@ public class JWTUtils {
                 throw new IdentityOAuth2ClientException("No ancestors found for the organization ID: " + switchedOrgId);
             }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
+            if (switchedOrgOrgAncestors.size() <= depthOfRootOrg) {
+                // Client exception thrown since the organization ID (provided in JWT token) is not nested deep
+                // enough to hold a root organization at the configured sub organization start level.
+                throw new IdentityOAuth2ClientException(
+                        "Ancestor list size is insufficient for the organization ID: " + switchedOrgId);
+            }
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             // Bail out early if the organization IDs could not be resolved to avoid a NullPointerException.
             if (jwtIssuerOrgId == null || resourceResidentOrgId == null) {
