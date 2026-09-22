@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -61,6 +62,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @Listeners(MockitoTestNGListener.class)
@@ -219,9 +221,9 @@ public class JWTUtilsTest {
         }
     }
 
-    @Test(description = "getIDPForIssuer throws when the organization IDs cannot be resolved",
-            expectedExceptions = IdentityOAuth2Exception.class)
-    public void testGetIDPForIssuerWithUnresolvableOrgIds() throws Exception {
+    @Test(description = "getIDPForIssuer throws a client exception when the request has no organization context",
+            expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testGetIDPForIssuerWithoutOrganizationContext() throws Exception {
 
         IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
         try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
@@ -238,9 +240,9 @@ public class JWTUtilsTest {
         }
     }
 
-    @Test(description = "getResidentIDPIssuer throws when the organization IDs cannot be resolved",
-            expectedExceptions = IdentityOAuth2Exception.class)
-    public void testGetResidentIDPIssuerWithUnresolvableOrgIds() throws Exception {
+    @Test(description = "getResidentIDPIssuer throws a client exception when the request has no organization context",
+            expectedExceptions = IdentityOAuth2ClientException.class)
+    public void testGetResidentIDPIssuerWithoutOrganizationContext() throws Exception {
 
         IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
         try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
@@ -259,6 +261,59 @@ public class JWTUtilsTest {
 
             JWTUtils.getResidentIDPIssuer("https://some-issuer", "client-id", SUPER_TENANT_DOMAIN_NAME,
                     "switched-org-id");
+        }
+    }
+
+    @Test(description = "getIDPForIssuer throws a server exception when the issuer tenant has no organization")
+    public void testGetIDPForIssuerWithUnresolvableIssuerOrgId() throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementConfigUtil> configUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("false");
+            mockOrganizationManager(holder, configUtil, null);
+
+            try {
+                JWTUtils.getIDPForIssuer("https://some-issuer", SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
+                fail("Expected an IdentityOAuth2Exception when the issuer organization ID cannot be resolved.");
+            } catch (IdentityOAuth2Exception e) {
+                assertFalse(e instanceof IdentityOAuth2ClientException,
+                        "An unresolvable issuer organization ID is a server side fault, not a client error.");
+            }
+        }
+    }
+
+    @Test(description = "getResidentIDPIssuer throws a server exception when the issuer tenant has no organization")
+    public void testGetResidentIDPIssuerWithUnresolvableIssuerOrgId() throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP("https://stale-entity-id");
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OrganizationManagementConfigUtil> configUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class)) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)).thenReturn("false");
+            identityUtil.when(() -> IdentityUtil.getProperty(OAUTH_BUILD_ISSUER_WITH_HOSTNAME)).thenReturn("false");
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(false);
+            mockOrganizationManager(holder, configUtil, null);
+
+            try {
+                JWTUtils.getResidentIDPIssuer("https://some-issuer", "client-id", SUPER_TENANT_DOMAIN_NAME,
+                        "switched-org-id");
+                fail("Expected an IdentityOAuth2Exception when the issuer organization ID cannot be resolved.");
+            } catch (IdentityOAuth2Exception e) {
+                assertFalse(e instanceof IdentityOAuth2ClientException,
+                        "An unresolvable issuer organization ID is a server side fault, not a client error.");
+            }
         }
     }
 
@@ -420,12 +475,19 @@ public class JWTUtilsTest {
     private void mockOrganizationManager(MockedStatic<OAuth2ServiceComponentHolder> holder,
                                          MockedStatic<OrganizationManagementConfigUtil> configUtil) throws Exception {
 
+        mockOrganizationManager(holder, configUtil, "jwt-issuer-org-id");
+    }
+
+    private void mockOrganizationManager(MockedStatic<OAuth2ServiceComponentHolder> holder,
+                                         MockedStatic<OrganizationManagementConfigUtil> configUtil,
+                                         String jwtIssuerOrgId) throws Exception {
+
         OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class);
         holder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
         when(holderInstance.isOrganizationManagementEnabled()).thenReturn(true);
         OrganizationManager organizationManager = mock(OrganizationManager.class);
         when(holderInstance.getOrganizationManager()).thenReturn(organizationManager);
-        when(organizationManager.resolveOrganizationId(SUPER_TENANT_DOMAIN_NAME)).thenReturn("jwt-issuer-org-id");
+        when(organizationManager.resolveOrganizationId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(jwtIssuerOrgId);
         when(organizationManager.getAncestorOrganizationIds(anyString()))
                 .thenReturn(Arrays.asList("root-org-id", "child-org-id"));
         configUtil.when(() -> OrganizationManagementConfigUtil.getProperty(anyString())).thenReturn("2");
