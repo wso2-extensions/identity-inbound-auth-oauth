@@ -110,6 +110,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SECTOR_IDENTIFIER_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
@@ -1266,6 +1267,13 @@ public class OAuthAppDAO {
                 CIBA_ALLOW_FEDERATED_USERS, String.valueOf(oauthAppDO.isCibaAllowFederatedUsers()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        if (oauthAppDO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE,
+                    String.valueOf(oauthAppDO.isRestrictScopeIssuanceForFederatedTokens()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                     ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
@@ -2055,6 +2063,12 @@ public class OAuthAppDAO {
                     CIBA_ALLOW_FEDERATED_USERS,
                     String.valueOf(consumerAppDO.isCibaAllowFederatedUsers()));
 
+            if (consumerAppDO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE,
+                        String.valueOf(consumerAppDO.isRestrictScopeIssuanceForFederatedTokens()));
+            }
+
             if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
@@ -2328,6 +2342,14 @@ public class OAuthAppDAO {
         String cibaAllowFederatedUsers = getFirstPropertyValue(spOIDCProperties, CIBA_ALLOW_FEDERATED_USERS);
         if (cibaAllowFederatedUsers != null) {
             oauthApp.setCibaAllowFederatedUsers(Boolean.parseBoolean(cibaAllowFederatedUsers));
+        }
+
+        String restrictScopeIssuanceForFederatedTokens = getFirstPropertyValue(spOIDCProperties,
+                RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE);
+        if (restrictScopeIssuanceForFederatedTokens != null
+                && !restrictScopeIssuanceForFederatedTokens.equals("null")) {
+            oauthApp.setRestrictScopeIssuanceForFederatedTokens(
+                    Boolean.parseBoolean(restrictScopeIssuanceForFederatedTokens));
         }
 
         // Set issuer details if the issuer organization is available in the OIDC properties

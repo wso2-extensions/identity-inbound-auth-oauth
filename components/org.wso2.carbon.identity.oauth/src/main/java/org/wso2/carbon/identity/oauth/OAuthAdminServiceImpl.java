@@ -49,6 +49,10 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -134,6 +138,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
@@ -676,6 +682,10 @@ public class OAuthAdminServiceImpl {
                             throw handleClientError(INVALID_REQUEST,
                                     "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
                         }
+                        app.setRestrictScopeIssuanceForFederatedTokens(
+                                application.isRestrictScopeIssuanceForFederatedTokens() != null ?
+                                        application.isRestrictScopeIssuanceForFederatedTokens() :
+                                        isRestrictScopeIssuanceEnabledByDefault(tenantDomain));
                         boolean isSubOrg = OrganizationManagementUtil.isOrganization(tenantDomain);
                         /*
                          If the app is not registering under a primary organization, and it is not a fragment app,
@@ -1481,6 +1491,10 @@ public class OAuthAdminServiceImpl {
             if (oAuthAppDO.isCibaAllowFederatedUsers() && !oAuthAppDO.isCibaSkipUserValidation()) {
                 throw handleClientError(INVALID_REQUEST,
                         "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
+            }
+            if (consumerAppDTO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+                oAuthAppDO.setRestrictScopeIssuanceForFederatedTokens(
+                        consumerAppDTO.isRestrictScopeIssuanceForFederatedTokens());
             }
 
             if (isFAPIConformanceEnabled) {
@@ -3699,5 +3713,39 @@ public class OAuthAdminServiceImpl {
             }
         }
         appDO.setGracefulRefreshTokenReuseLimit(limit);
+    }
+
+    /**
+     * Check whether restricting scopes for federated subject tokens is enabled by default for the given tenant.
+     *
+     * @param tenantDomain Tenant domain of the application.
+     * @return true if the tenant default is enabled, false otherwise.
+     */
+    private boolean isRestrictScopeIssuanceEnabledByDefault(String tenantDomain) {
+
+        if (StringUtils.isBlank(tenantDomain)) {
+            return false;
+        }
+        CompatibilitySettingsService compatibilitySettingsService =
+                OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
+        if (compatibilitySettingsService == null) {
+            return false;
+        }
+        try {
+            CompatibilitySetting setting =
+                    compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                            TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP,
+                            DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY);
+            CompatibilitySettingGroup group =
+                    setting.getCompatibilitySetting(TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP);
+            return group != null && Boolean.parseBoolean(
+                    group.getSettingValue(DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY));
+        } catch (CompatibilitySettingException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Could not evaluate compatibility setting for tenant: " + tenantDomain +
+                        ". Scopes for federated subject tokens will not be restricted.", e);
+            }
+            return false;
+        }
     }
 }

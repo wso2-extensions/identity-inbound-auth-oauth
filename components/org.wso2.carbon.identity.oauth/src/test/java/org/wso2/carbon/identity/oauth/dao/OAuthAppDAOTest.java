@@ -1163,6 +1163,79 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @DataProvider(name = "testGetAppInformationWithRestrictScopeIssuanceData")
+    public Object[][] testGetAppInformationWithRestrictScopeIssuanceData() {
+
+        return new Object[][]{
+                {true},
+                {false},
+        };
+    }
+
+    @Test(dataProvider = "testGetAppInformationWithRestrictScopeIssuanceData")
+    public void testGetAppInformationWithRestrictScopeIssuanceForFederatedTokens(boolean restrictScopeIssuance)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+                defaultOAuthAppDO.setRestrictScopeIssuanceForFederatedTokens(restrictScopeIssuance);
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(oAuthAppDO);
+                assertEquals(oAuthAppDO.isRestrictScopeIssuanceForFederatedTokens(), restrictScopeIssuance);
+
+                oAuthAppDO.setRestrictScopeIssuanceForFederatedTokens(!restrictScopeIssuance);
+                appDAO.updateConsumerApplication(oAuthAppDO);
+                OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(retrievedOAuthAppDO);
+                assertEquals(retrievedOAuthAppDO.isRestrictScopeIssuanceForFederatedTokens(), !restrictScopeIssuance);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    @Test
+    public void testGetAppInformationWhenRestrictScopeIssuancePropertyIsAbsent() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
+
+                OAuthAppDO oAuthAppDO = new OAuthAppDAO().getAppInformation(CONSUMER_KEY);
+                assertNotNull(oAuthAppDO);
+                assertNull(oAuthAppDO.isRestrictScopeIssuanceForFederatedTokens());
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
     @DataProvider(name = "testGetAppInformationWithFapiProfileData")
     public Object[][] testGetAppInformationWithFapiProfileData() {
 
