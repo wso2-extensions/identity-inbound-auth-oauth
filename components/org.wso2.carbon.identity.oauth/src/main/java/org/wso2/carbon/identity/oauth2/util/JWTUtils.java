@@ -231,10 +231,21 @@ public class JWTUtils {
             }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-            // Bail out early if the organization IDs could not be resolved to avoid a NullPointerException.
-            if (jwtIssuerOrgId == null || resourceResidentOrgId == null) {
-                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
-                        + jwtIssuer);
+            /*
+             Server exception thrown since the token issuer's tenant domain could not be mapped to an organization,
+             which indicates inconsistent server side organization data.
+            */
+            if (jwtIssuerOrgId == null) {
+                throw new IdentityOAuth2Exception("Could not resolve an organization ID for the tenant domain: "
+                        + tenantDomain + " of the token with issuer name : " + jwtIssuer);
+            }
+            /*
+             Client exception thrown since the request was not resolved to an organization context, hence an
+             organization switched token cannot be validated against it.
+            */
+            if (resourceResidentOrgId == null) {
+                throw new IdentityOAuth2ClientException("No organization context found in the request to validate "
+                        + "the token with issuer name : " + jwtIssuer);
             }
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
@@ -347,10 +358,21 @@ public class JWTUtils {
                         "Ancestor list size is insufficient for the organization ID: " + switchedOrgId);
             }
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-            // Bail out early if the organization IDs could not be resolved to avoid a NullPointerException.
-            if (jwtIssuerOrgId == null || resourceResidentOrgId == null) {
-                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
-                        + jwtIssuer);
+            /*
+             Server exception thrown since the token issuer's tenant domain could not be mapped to an organization,
+             which indicates inconsistent server side organization data.
+            */
+            if (jwtIssuerOrgId == null) {
+                throw new IdentityOAuth2Exception("Could not resolve an organization ID for the tenant domain: "
+                        + tenantDomain + " of the token with issuer name : " + jwtIssuer);
+            }
+            /*
+             Client exception thrown since the request was not resolved to an organization context, hence an
+             organization switched token cannot be validated against it.
+            */
+            if (resourceResidentOrgId == null) {
+                throw new IdentityOAuth2ClientException("No organization context found in the request to validate "
+                        + "the token with issuer name : " + jwtIssuer);
             }
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
