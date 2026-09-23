@@ -35,7 +35,8 @@ public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenc
     protected static final Log LOG = LogFactory.getLog(EncryptionDecryptionPersistenceProcessor.class);
 
     /**
-     * Client ID is not to be decrypt as it's not encrypted
+     * Client ID is not to be decrypt as it's not encrypted.
+     *
      * @param processedClientId
      * @return
      * @throws IdentityOAuth2Exception
@@ -46,7 +47,8 @@ public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenc
     }
 
     /**
-     * Client ID is not required to be encrypted
+     * Client ID is not required to be encrypted.
+     *
      * @param clientId
      * @return
      * @throws IdentityOAuth2Exception
@@ -56,12 +58,26 @@ public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenc
         return clientId;
     }
 
+    /**
+     * Decrypts the preprocessed client secret.
+     * If decryption fails, the client secret may have been stored in plain text
+     * before encryption was enabled. It returns the plain text as-is for backward
+     * compatibility.
+     *
+     * @param processedClientSecret The processed client secret.
+     * @return The decrypted or plain text client secret.
+     * @throws IdentityOAuth2Exception If an error occurs during processing.
+     */
     @Override
     public String getPreprocessedClientSecret(String processedClientSecret) throws IdentityOAuth2Exception {
         try {
             return decrypt(processedClientSecret);
         } catch (CryptoException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving preprocessed client secret", e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Failed to decrypt client secret. The secret may be stored in plain text " +
+                        "(created before encryption was enabled). Returning as plain text.");
+            }
+            return processedClientSecret;
         }
     }
 
@@ -133,7 +149,7 @@ public class EncryptionDecryptionPersistenceProcessor implements TokenPersistenc
     }
 
     private String encrypt(String plainText) throws CryptoException {
-        return  CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(
+        return CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(
                 plainText.getBytes(Charsets.UTF_8));
     }
 
