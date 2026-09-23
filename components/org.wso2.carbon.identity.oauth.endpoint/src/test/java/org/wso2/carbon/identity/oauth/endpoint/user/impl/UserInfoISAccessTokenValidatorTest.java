@@ -184,6 +184,10 @@ public class UserInfoISAccessTokenValidatorTest {
         return new Object[][]{
                 {token, null},
                 {"Bearer", null},
+                {"   Bearer " + token, null},
+                {"Bearer " + token + " extra", null},
+                {"Bearer   " + token, null},
+                {"Bearer " + token + "   ", null},
                 {null, "application/text"},
                 {null, ""},
         };
