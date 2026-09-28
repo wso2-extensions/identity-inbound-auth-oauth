@@ -8,13 +8,13 @@
            psql -h <host> -U <user> -d <db> -v ON_ERROR_STOP=1 -f postgre.sql
         (or, from an already-open psql session: \i postgre.sql)
      2. Execute it with your schema:
-            CALL hash_consumer_secrets( schemaName, batchSize);
-          Example: CALL hash_consumer_secrets('public', 500);
+            CALL HashConsumerSecrets( schemaName, batchSize);
+          Example: CALL HashConsumerSecrets('public', 500);
      3. Optionally drop it after the migration:
-           DROP PROCEDURE hash_consumer_secrets(TEXT, INT);
+           DROP PROCEDURE HashConsumerSecrets(TEXT, INT);
 ======================================================================= */
 
-CREATE OR REPLACE PROCEDURE hash_consumer_secrets(
+CREATE OR REPLACE PROCEDURE HashConsumerSecrets(
     schema_name TEXT DEFAULT 'public',
     batch_size  INT  DEFAULT 500
 )
