@@ -76,7 +76,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
     private static final Set<String> NON_NEGATIVE_INTEGER_SCHEMA_KEYWORDS = Set.of("minItems", "maxItems",
-            "minLength", "maxLength", "minProperties", "maxProperties");
+            "minLength", "maxLength", "minProperties", "maxProperties", "minContains", "maxContains");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;

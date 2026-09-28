@@ -110,10 +110,14 @@ public class AuthorizationDetailsSchemaValidatorTest {
         Map<String, Object> nameSchema = this.getPropertySchema(schema, "name");
         assertTrue(actionsSchema.get("minItems") instanceof Double);
         assertTrue(actionsSchema.get("maxItems") instanceof Double);
+        assertTrue(actionsSchema.get("minContains") instanceof Double);
+        assertTrue(actionsSchema.get("maxContains") instanceof Double);
         assertTrue(nameSchema.get("minLength") instanceof Double);
         assertTrue(nameSchema.get("maxLength") instanceof Double);
         assertEquals(actionsSchema.get("minItems"), 1.0d);
         assertEquals(actionsSchema.get("maxItems"), 3.0d);
+        assertEquals(actionsSchema.get("minContains"), 1.0d);
+        assertEquals(actionsSchema.get("maxContains"), 1.0d);
         assertEquals(nameSchema.get("minLength"), 1.0d);
         assertEquals(nameSchema.get("maxLength"), 20.0d);
     }
@@ -126,6 +130,18 @@ public class AuthorizationDetailsSchemaValidatorTest {
         testAuthorizationDetail.setType(TEST_TYPE);
         testAuthorizationDetail.setName("test_name_v1");
         testAuthorizationDetail.setActions(Arrays.asList("initiate", "cancel", "confirm", "revoke"));
+
+        this.uut.isSchemaCompliant(this.getTestSchemaWithDoubleIntegerKeywords(), testAuthorizationDetail);
+    }
+
+    @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenMapSchemaViolatesNormalizedMaxContains()
+            throws AuthorizationDetailsProcessingException {
+
+        TestDAOUtils.TestAuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setName("test_name_v1");
+        testAuthorizationDetail.setActions(Arrays.asList("initiate", "initiate"));
 
         this.uut.isSchemaCompliant(this.getTestSchemaWithDoubleIntegerKeywords(), testAuthorizationDetail);
     }
@@ -284,11 +300,17 @@ public class AuthorizationDetailsSchemaValidatorTest {
         final Map<String, Object> items = new HashMap<>();
         items.put("type", "string");
 
+        final Map<String, Object> contains = new HashMap<>();
+        contains.put("const", "initiate");
+
         final Map<String, Object> actions = new HashMap<>();
         actions.put("type", "array");
         actions.put("items", items);
         actions.put("minItems", 1.0d);
         actions.put("maxItems", 3.0d);
+        actions.put("contains", contains);
+        actions.put("minContains", 1.0d);
+        actions.put("maxContains", 1.0d);
 
         final Map<String, Object> type = new HashMap<>();
         type.put("type", "string");
