@@ -187,6 +187,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -265,6 +266,32 @@ public class AuthzUtil {
     public static final String SPACE_SEPARATOR = " ";
     private static boolean isCacheAvailable = false;
     private static final String RESPONSE_MODE = "response_mode";
+
+    /*
+     * Authorization request parameters that are recorded verbatim in diagnostic logs. Any parameter
+     * that is not in this allow-list (and not in MASKED_DIAGNOSTIC_LOG_PARAMS) is omitted from
+     * diagnostic logs, so only known parameters are recorded and newly introduced parameters are not
+     * logged unless explicitly added here. Case-insensitive.
+     */
+    private static final Set<String> LOGGABLE_DIAGNOSTIC_LOG_PARAMS;
+
+    /*
+     * Authorization request parameters that are recorded in diagnostic logs only after masking.
+     * Case-insensitive.
+     */
+    private static final Set<String> MASKED_DIAGNOSTIC_LOG_PARAMS;
+
+    static {
+        Set<String> loggableParams = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Collections.addAll(loggableParams, CLIENT_ID, REDIRECT_URI, SCOPE,
+                OAuthConstants.OAuth20Params.RESPONSE_TYPE, RESPONSE_MODE);
+        LOGGABLE_DIAGNOSTIC_LOG_PARAMS = Collections.unmodifiableSet(loggableParams);
+
+        Set<String> maskedParams = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Collections.addAll(maskedParams, FrameworkConstants.USERNAME, STATE, LOGIN_HINT);
+        MASKED_DIAGNOSTIC_LOG_PARAMS = Collections.unmodifiableSet(maskedParams);
+    }
+
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
     private static final String CODE_CHALLENGE = "code_challenge";
@@ -679,6 +706,34 @@ public class AuthzUtil {
                 && !isJSON(authorizationResponseDTO.getRedirectUrl());
     }
 
+    /**
+     * Adds only allow-listed authorization request parameters to the diagnostic log. Parameters in
+     * {@link #MASKED_DIAGNOSTIC_LOG_PARAMS} are recorded after masking, parameters in
+     * {@link #LOGGABLE_DIAGNOSTIC_LOG_PARAMS} are recorded verbatim, and every other parameter is
+     * omitted entirely.
+     *
+     * @param oAuthMessage         OAuth message.
+     * @param diagnosticLogBuilder Diagnostic log builder.
+     */
+    private static void addAllowedInputParamsToDiagnosticLog(OAuthMessage oAuthMessage,
+                                                             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder) {
+
+        if (oAuthMessage.getRequest() == null || MapUtils.isEmpty(oAuthMessage.getRequest().getParameterMap())) {
+            return;
+        }
+        oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
+            if (ArrayUtils.isEmpty(value)) {
+                return;
+            }
+            if (MASKED_DIAGNOSTIC_LOG_PARAMS.contains(key)) {
+                diagnosticLogBuilder.inputParam(key, Arrays.stream(value).map(LoggerUtils::getMaskedContent)
+                        .collect(Collectors.toList()));
+            } else if (LOGGABLE_DIAGNOSTIC_LOG_PARAMS.contains(key)) {
+                diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
+            }
+        });
+    }
+
     public static Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
             URISyntaxException, ConsentHandlingFailedException, OAuthProblemException {
 
@@ -686,13 +741,7 @@ public class AuthzUtil {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.RECEIVE_CONSENT_RESPONSE);
-            if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-                    if (ArrayUtils.isNotEmpty(value)) {
-                        diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
-                    }
-                });
-            }
+            addAllowedInputParamsToDiagnosticLog(oAuthMessage, diagnosticLogBuilder);
             diagnosticLogBuilder.resultMessage("Successfully received consent response.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
@@ -1156,13 +1205,7 @@ public class AuthzUtil {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHENTICATION_RESPONSE);
-            if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-                    if (ArrayUtils.isNotEmpty(value)) {
-                        diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
-                    }
-                });
-            }
+            addAllowedInputParamsToDiagnosticLog(oAuthMessage, diagnosticLogBuilder);
             diagnosticLogBuilder.resultMessage("Received authentication response from Framework.")
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
@@ -1644,21 +1687,7 @@ public class AuthzUtil {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
-            if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-                    if (ArrayUtils.isNotEmpty(value)) {
-                        if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
-                            String[] maskedValue = Arrays.copyOf(value, value.length);
-                            Arrays.setAll(maskedValue, i ->
-                                    LoggerUtils.isLogMaskingEnable ?
-                                            LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
-                            diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
-                        } else {
-                            diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
-                        }
-                    }
-                });
-            }
+            addAllowedInputParamsToDiagnosticLog(oAuthMessage, diagnosticLogBuilder);
             String userAgentHeader = oAuthMessage.getRequest().getHeader("User-Agent");
             if (StringUtils.isNotEmpty(userAgentHeader)) {
                 UserAgent userAgent = new UserAgent(userAgentHeader);
