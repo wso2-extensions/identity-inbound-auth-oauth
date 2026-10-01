@@ -1151,26 +1151,26 @@ public final class OAuthUtil {
                     */
                     authenticatedUser.setUserName(authenticatedUser.getUserId());
 
-                    Optional<User> user = getUser(userResidentTenant, authenticatedUserName);
-                    if (user.isPresent()) {
-                        authenticatedOrgUser = new AuthenticatedUser();
-                        authenticatedOrgUser.setUserName(authenticatedUserName);
-                        authenticatedOrgUser.setUserResidentOrganization(authenticatedUser.
-                                getUserResidentOrganization());
-                        authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
-                        authenticatedOrgUser.setFederatedUser(false);
-                        authenticatedOrgUser.setUserStoreDomain(user.get().getUserStoreDomain());
-                        String userTenantDomain = OAuthComponentServiceHolder.getInstance().
-                                getOrganizationManager()
-                                .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-                        authenticatedOrgUser.setTenantDomain(userTenantDomain);
+                    // Build the authenticated org user object.
+                    authenticatedOrgUser = new AuthenticatedUser();
+                    authenticatedOrgUser.setUserName(authenticatedUserName);
+                    authenticatedOrgUser.setUserResidentOrganization(authenticatedUser.
+                            getUserResidentOrganization());
+                    authenticatedOrgUser.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
+                    authenticatedOrgUser.setFederatedUser(false);
+                    String effectiveUserStoreDomain = userStoreDomain;
+                    if (StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+                        effectiveUserStoreDomain = getUserStoreDomainOfParentUser(authenticatedUser.getUserId(),
+                                userResidentTenant);
                     }
+                    authenticatedOrgUser.setUserStoreDomain(effectiveUserStoreDomain);
+                    String userTenantDomain = OAuthComponentServiceHolder.getInstance().
+                            getOrganizationManager()
+                            .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+                    authenticatedOrgUser.setTenantDomain(userTenantDomain);
                 }
             } catch (OrganizationManagementException | UserIdNotFoundException e) {
                 throw new UserStoreException("Error occurred while constructing the authenticated user.", e);
-            } catch (IdentityApplicationManagementException e) {
-                throw new UserStoreException("Error occurred while getting the user details for the" +
-                        " authenticated user.", e);
             }
         }
 
