@@ -48,6 +48,12 @@ public class CibaConstants {
     public static final String NOTIFICATION_CHANNEL = "notification_channel";
     public static final String AUTH_URL = "auth_url";
 
+    // Local claim URI of the agent owner attribute, used for agent CIBA owner binding.
+    public static final String AGENT_OWNER_CLAIM_URI = "http://wso2.org/claims/agent/Owner";
+
+    // OIDC claim dialect URI, used to resolve the token claim name of a local claim.
+    public static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+
     // CIBA User Authentication Endpoint constants.
     public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
     public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_authorize";
