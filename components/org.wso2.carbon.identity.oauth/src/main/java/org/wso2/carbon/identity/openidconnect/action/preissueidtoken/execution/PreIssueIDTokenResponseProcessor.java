@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.openidconnect.action.preissueidtoken.model.PreIs
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -351,7 +352,9 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
             }
 
             Object claimValue = claim.getValue();
-            if (isValidPrimitiveValue(claimValue) || isValidListValue(claimValue)) {
+            if (isValidPrimitiveValue(claimValue)
+                    || isValidListValue(claimValue)
+                    || isValidMapValue(claimValue)) {
                 responseIDTokenDTO.getCustomOIDCClaims().put(claim.getName(), claim.getValue());
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Claim added.");
             } else {
@@ -400,6 +403,15 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         }
         List<?> list = (List<?>) value;
         return list.stream().allMatch(item -> item instanceof String);
+    }
+
+    private boolean isValidMapValue(Object value) {
+
+        if (!(value instanceof Map<?, ?>)) {
+            return false;
+        }
+        Map<?, ?> map = (Map<?, ?>) value;
+        return true;
     }
 
     private OperationExecutionResult handleRemoveOperation(PerformableOperation operation, IDToken requestedIDToken,
@@ -455,9 +467,15 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
                                                        IDToken requestIDToken,
                                                        IDTokenDTO responseIDTokenDTO) {
 
-       ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
-       IDToken.Claim claim = requestIDToken.getClaim(claimPathInfo.getClaimName());
+        List<String> pathSegments = extractNestedClaimPath(operation.getPath());
 
+        // Nested removal
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
+            return removeNestedClaim(pathSegments, requestIDToken, responseIDTokenDTO, operation);
+        }
+
+        ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
+        IDToken.Claim claim = requestIDToken.getClaim(claimPathInfo.getClaimName());
         if (claim == null) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "Claim not found.");
@@ -469,6 +487,57 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         } else {
             return removePrimitiveTypeClaim(operation, claimPathInfo, responseIDTokenDTO);
         }
+    }
+
+    private OperationExecutionResult removeNestedClaim(List<String> pathSegments, IDToken requestIDToken,
+                                                       IDTokenDTO responseIDTokenDTO,
+                                                       PerformableOperation operation) {
+
+        String rootClaimName = pathSegments.get(0);
+        List<String> nestedPath = pathSegments.subList(1, pathSegments.size());
+
+        IDToken.Claim rootClaim = requestIDToken.getClaim(rootClaimName);
+        if (rootClaim == null || !(rootClaim.getValue() instanceof Map)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Root claim is not a complex object.");
+        }
+
+        Map<String, Object> rootValue = new HashMap<>((Map<String, Object>) rootClaim.getValue());
+        boolean removed = removeFromNestedMap(rootValue, nestedPath, 0);
+        if (!removed) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Nested claim not found.");
+        }
+
+        if (rootValue.isEmpty()) {
+            responseIDTokenDTO.getCustomOIDCClaims().remove(rootClaimName);
+        } else {
+            responseIDTokenDTO.getCustomOIDCClaims().put(rootClaimName, rootValue);
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Nested claim removed.");
+    }
+
+    private boolean removeFromNestedMap(Map<String, Object> current, List<String> path, int index) {
+
+        String key = path.get(index);
+        if (index == path.size() - 1) {
+            return current.remove(key) != null;
+        }
+
+        Object next = current.get(key);
+        if (!(next instanceof Map)) {
+            return false;
+        }
+
+        return removeFromNestedMap((Map<String, Object>) next, path, index + 1);
+    }
+
+    private List<String> extractNestedClaimPath(String operationPath) {
+
+        String relativePath = operationPath.substring(CLAIMS_PATH_PREFIX.length());
+        return List.of(relativePath.split("/"));
     }
 
     private OperationExecutionResult removeClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
@@ -570,6 +639,13 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
                                                         IDToken requestIDToken,
                                                         IDTokenDTO responseIDTokenDTO) {
 
+        List<String> pathSegments = extractNestedClaimPath(operation.getPath());
+
+        // Nested replace
+        if (pathSegments.size() > 1 && !isArrayIndexPath(pathSegments)) {
+            return replaceNestedClaim(pathSegments, requestIDToken, responseIDTokenDTO, operation);
+        }
+
         ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
         IDToken.Claim claim = requestIDToken.getClaim(claimPathInfo.getClaimName());
 
@@ -583,6 +659,63 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
         } else {
             return replacePrimitiveTypeClaim(operation, claimPathInfo, responseIDTokenDTO);
         }
+    }
+
+    private OperationExecutionResult replaceNestedClaim(List<String> pathSegments, IDToken requestIDToken,
+                                                        IDTokenDTO responseIDTokenDTO,
+                                                        PerformableOperation operation) {
+
+        String rootClaimName = pathSegments.get(0);
+        List<String> nestedPath = pathSegments.subList(1, pathSegments.size());
+
+        IDToken.Claim rootClaim = requestIDToken.getClaim(rootClaimName);
+        if (rootClaim == null || !(rootClaim.getValue() instanceof Map)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Root claim is not a complex object.");
+        }
+
+        Map<String, Object> rootValue = new HashMap<>((Map<String, Object>) rootClaim.getValue());
+
+        boolean replaced = replaceInNestedMap(rootValue, nestedPath, 0, operation.getValue());
+        if (!replaced) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Nested claim not found.");
+        }
+
+        if (rootValue.isEmpty()) {
+            responseIDTokenDTO.getCustomOIDCClaims().remove(rootClaimName);
+        } else {
+            responseIDTokenDTO.getCustomOIDCClaims().put(rootClaimName, rootValue);
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Nested claim replaced.");
+    }
+
+    private boolean replaceInNestedMap(Map<String, Object> current, List<String> path, int index, Object newValue) {
+
+        String key = path.get(index);
+
+        if (index == path.size() - 1) {
+            if (newValue == null) {
+                return current.remove(key) != null;
+            }
+            current.put(key, newValue);
+            return true;
+        }
+
+        Object next = current.get(key);
+        if (!(next instanceof Map)) {
+            return false;
+        }
+        boolean updated = replaceInNestedMap((Map<String, Object>) next, path, index + 1, newValue);
+
+        Map<String, Object> nextMap = (Map<String, Object>) next;
+        if (updated && nextMap.isEmpty()) {
+            current.remove(key);
+        }
+
+        return updated;
     }
 
     private OperationExecutionResult replaceClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
@@ -678,6 +811,25 @@ public class PreIssueIDTokenResponseProcessor implements ActionExecutionResponse
 
         Matcher matcher = STRING_OR_URI_PATTERN.matcher(input);
         return matcher.matches();
+    }
+
+    private boolean isArrayIndexPath(List<String> pathSegments) {
+
+        if (pathSegments.size() != 2) {
+            return false;
+        }
+
+        String lastSegment = pathSegments.get(1);
+        if (LAST_ELEMENT_CHARACTER.equals(lastSegment)) {
+            return true;
+        }
+
+        try {
+            Integer.parseInt(lastSegment);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private ClaimPathInfo parseOperationPath(String operationPath) {
