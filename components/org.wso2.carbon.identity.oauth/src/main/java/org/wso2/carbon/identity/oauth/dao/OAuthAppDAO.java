@@ -2479,17 +2479,19 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Add a newly generated client secret to the given application and update it as the latest secret in
+     * Add the given client secret to the application and update it as the latest secret in
      * IDN_OAUTH_CONSUMER_APPS. Before adding, the client secret limit is enforced, and for an application not yet
      * migrated to the consumer secrets table, the existing secret of IDN_OAUTH_CONSUMER_APPS is seeded into it.
      * Callers must gate this operation behind the multiple client secrets configuration.
      *
      * @param consumerKeyId       Integer ID of the OAuth consumer application.
+     * @param newSecret           Plaintext of the secret to add, or null to generate one.
      * @param newSecretExpiryTime Expiry time of the new secret in epoch milliseconds, or null if it does not expire.
      * @return {@link OAuthConsumerSecretDO} of the newly created secret.
      * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
      */
-    public OAuthConsumerSecretDO addOAuthConsumerSecret(int consumerKeyId, Long newSecretExpiryTime)
+    public OAuthConsumerSecretDO addOAuthConsumerSecret(int consumerKeyId, String newSecret,
+                                                        Long newSecretExpiryTime)
             throws IdentityOAuthAdminException {
 
         Connection connection = null;
@@ -2515,9 +2517,10 @@ public class OAuthAppDAO {
                                 + "than %d secrets.", clientSecretLimit));
             }
 
-            // 2. Insert the newly generated secret into the new secrets table.
-            String newSecret = OAuthUtil.getRandomNumberSecure();
-            OAuthConsumerSecretDO newSecretDO = buildConsumerSecretDO(consumerKeyId, newSecret, newSecretExpiryTime);
+            // 2. Insert the new secret into the new secrets table, generating one when the caller did not supply it.
+            String secretToAdd = newSecret != null ? newSecret : OAuthUtil.getRandomNumberSecure();
+            OAuthConsumerSecretDO newSecretDO = buildConsumerSecretDO(consumerKeyId, secretToAdd,
+                    newSecretExpiryTime);
             insertOAuthConsumerSecretToSecretsTable(connection, newSecretDO);
 
             // 3. Update IDN_OAUTH_CONSUMER_APPS with the new secret as the latest.
@@ -2527,7 +2530,7 @@ public class OAuthAppDAO {
             /* The caller receives the plaintext of the new secret; the stored form was only for persistence.
                With hashing enabled this is the only time the plaintext is disclosed: later retrievals return
                the stored hash. */
-            newSecretDO.setSecretValue(newSecret);
+            newSecretDO.setSecretValue(secretToAdd);
             return newSecretDO;
         } catch (IdentityOAuthAdminException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);

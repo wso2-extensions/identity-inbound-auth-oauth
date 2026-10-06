@@ -2463,7 +2463,7 @@ public class OAuthAdminServiceImplTest {
         // Each client secret operation exercised against a missing application.
         return new Object[][]{
                 {"createOAuthClientSecret", (ClientSecretOperation) service ->
-                        service.createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, (Long) null)},
+                        service.createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, null, null)},
                 {"removeOAuthClientSecret", (ClientSecretOperation) service ->
                         service.removeOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "secret-id")},
                 {"getOAuthClientSecrets", (ClientSecretOperation) service ->
@@ -2508,14 +2508,15 @@ public class OAuthAdminServiceImplTest {
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                     (mock, context) ->
-                            when(mock.addOAuthConsumerSecret(anyInt(), any())).thenReturn(createdSecret))) {
+                            when(mock.addOAuthConsumerSecret(anyInt(), any(), any())).thenReturn(createdSecret))) {
                 OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl()
-                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, requestedExpirySeconds);
+                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, null,
+                                requestedExpirySeconds);
 
                 // The requested expiry (epoch seconds) is validated and persisted in milliseconds.
                 ArgumentCaptor<Long> persistedExpiryCaptor = ArgumentCaptor.forClass(Long.class);
                 verify(mockedConstruction.constructed().get(0))
-                        .addOAuthConsumerSecret(anyInt(), persistedExpiryCaptor.capture());
+                        .addOAuthConsumerSecret(anyInt(), any(), persistedExpiryCaptor.capture());
                 Assert.assertEquals(persistedExpiryCaptor.getValue(), expectedExpiryMillis);
 
                 Assert.assertEquals(response.getSecretId(), "new-secret-id");
@@ -2694,6 +2695,79 @@ public class OAuthAdminServiceImplTest {
         }
     }
 
+    @Test(description = "Creating a client secret with a caller provided value hands that value to the DAO instead "
+            + "of letting a secret be generated")
+    public void testCreateOAuthClientSecretWithProvidedSecret() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        OAuthConsumerSecretDO createdSecret = new OAuthConsumerSecretDO();
+        createdSecret.setSecretId("new-secret-id");
+        createdSecret.setSecretValue("provided-secret-value");
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) ->
+                            when(mock.addOAuthConsumerSecret(anyInt(), any(), any())).thenReturn(createdSecret))) {
+                OAuthClientSecretResponseDTO response = new OAuthAdminServiceImpl().createOAuthClientSecret(
+                        CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, "provided-secret-value", null);
+
+                ArgumentCaptor<String> providedSecretCaptor = ArgumentCaptor.forClass(String.class);
+                verify(mockedConstruction.constructed().get(0))
+                        .addOAuthConsumerSecret(anyInt(), providedSecretCaptor.capture(), any());
+                Assert.assertEquals(providedSecretCaptor.getValue(), "provided-secret-value");
+
+                Assert.assertEquals(response.getSecretValue(), "provided-secret-value");
+                Assert.assertTrue(response.isLatest(), "A newly created secret is the latest secret.");
+            }
+        }
+    }
+
+    @DataProvider(name = "invalidProvidedClientSecret")
+    public Object[][] invalidProvidedClientSecret() {
+
+        // A blank secret and a secret longer than the persisted column are both rejected.
+        return new Object[][]{
+                {"   "},
+                {StringUtils.repeat("a", 2049)}
+        };
+    }
+
+    @Test(description = "Creating a client secret with a blank or oversized caller provided value is rejected",
+            dataProvider = "invalidProvidedClientSecret")
+    public void testCreateOAuthClientSecretRejectsInvalidProvidedSecret(String providedSecret) {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setId(1);
+        appDO.setOauthConsumerKey(CONSUMER_KEY);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExpiryTimeInPast(anyLong())).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
+
+            try {
+                new OAuthAdminServiceImpl().createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME,
+                        providedSecret, null);
+                Assert.fail("Creating a client secret with an invalid provided value should be rejected.");
+            } catch (IdentityOAuthAdminException e) {
+                Assert.assertTrue(e instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+            }
+        }
+    }
+
     @DataProvider(name = "invalidClientSecretExpiry")
     public Object[][] invalidClientSecretExpiry() {
 
@@ -2721,7 +2795,8 @@ public class OAuthAdminServiceImplTest {
 
             try {
                 new OAuthAdminServiceImpl()
-                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, requestedExpirySeconds);
+                        .createOAuthClientSecret(CONSUMER_KEY, SUPER_TENANT_DOMAIN_NAME, null,
+                                requestedExpirySeconds);
                 Assert.fail("Creating a client secret with an invalid expiry should be rejected.");
             } catch (IdentityOAuthAdminException e) {
                 Assert.assertTrue(e instanceof IdentityOAuthClientException);
