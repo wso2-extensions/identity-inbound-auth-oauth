@@ -95,6 +95,7 @@ import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFA
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 
 /*
  * Unit tests for OAuthAppDAO
@@ -1814,6 +1815,25 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             assertEquals(appDAO.getAppInformation(CONSUMER_KEY, TENANT_ID).getOauthConsumerSecret(),
                     PROVIDED_CONSUMER_SECRET,
                     "The provided secret should become the latest client secret of the application.");
+        });
+    }
+
+    @Test(description = "Adding a client secret whose processed form does not fit the secret value column is "
+            + "rejected as an invalid request rather than failing on the insert")
+    public void testAddOAuthConsumerSecretRejectsOversizedProcessedSecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            try {
+                appDAO.addOAuthConsumerSecret(appDO.getId(), StringUtils.repeat("a", 2049), null);
+                fail("A secret whose processed form exceeds the column width should be rejected.");
+            } catch (IdentityOAuthClientException e) {
+                assertEquals(e.getErrorCode(), INVALID_REQUEST.getErrorCode());
+            }
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 1,
+                    "The rejected secret should not be persisted.");
         });
     }
 

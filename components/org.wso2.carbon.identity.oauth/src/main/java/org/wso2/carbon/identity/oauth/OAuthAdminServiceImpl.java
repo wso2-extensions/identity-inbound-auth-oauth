@@ -175,9 +175,6 @@ public class OAuthAdminServiceImpl {
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
-    /* Length of the CONSUMER_SECRET column of IDN_OAUTH_CONSUMER_APPS and of the SECRET_VALUE column of
-       IDN_OAUTH_CONSUMER_SECRETS. */
-    private static final int MAX_CLIENT_SECRET_LENGTH = 2048;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
     private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
             "OAuth.AllowIssuerSelectionForSubOrgApplications";
@@ -817,22 +814,17 @@ public class OAuthAdminServiceImpl {
 
     /**
      * Validate a client secret value supplied by the caller. A null value denotes a generated secret and is
-     * always accepted.
+     * always accepted. The length is not validated here: what the column has to hold is the processed form of
+     * the secret, which the configured client secret persistence processor produces, so that bound is enforced
+     * in {@link OAuthAppDAO#addOAuthConsumerSecret(int, String, Long)} against the processed value.
      *
      * @param secretValue Plaintext of the secret to add.
-     * @throws IdentityOAuthAdminException if the provided value is blank or longer than the persisted column.
+     * @throws IdentityOAuthAdminException if the provided value is blank.
      */
     private void validateProvidedClientSecret(String secretValue) throws IdentityOAuthAdminException {
 
-        if (secretValue == null) {
-            return;
-        }
-        if (StringUtils.isBlank(secretValue)) {
+        if (secretValue != null && StringUtils.isBlank(secretValue)) {
             throw handleClientError(INVALID_REQUEST, "The provided client secret cannot be blank.");
-        }
-        if (secretValue.length() > MAX_CLIENT_SECRET_LENGTH) {
-            throw handleClientError(INVALID_REQUEST, String.format(
-                    "The provided client secret cannot be longer than %d characters.", MAX_CLIENT_SECRET_LENGTH));
         }
     }
 

@@ -157,6 +157,9 @@ public class OAuthAppDAO {
     private static final String CONSUMER_APPS_TABLE_NAME = "IDN_OAUTH_CONSUMER_APPS";
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
+    /* Width of IDN_OAUTH_CONSUMER_SECRETS.SECRET_VALUE and of IDN_OAUTH_CONSUMER_APPS.CONSUMER_SECRET. */
+    private static final int MAX_PROCESSED_CLIENT_SECRET_LENGTH = 2048;
+
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isClientSecretHashingDisabled();
 
@@ -2521,6 +2524,12 @@ public class OAuthAppDAO {
             String secretToAdd = newSecret != null ? newSecret : OAuthUtil.getRandomNumberSecure();
             OAuthConsumerSecretDO newSecretDO = buildConsumerSecretDO(consumerKeyId, secretToAdd,
                     newSecretExpiryTime);
+            /* What the column has to hold is the processed secret, and the configured persistence processor can
+               make that substantially longer than the plaintext, so the bound is checked after processing. */
+            if (newSecretDO.getSecretValue().length() > MAX_PROCESSED_CLIENT_SECRET_LENGTH) {
+                throw new IdentityOAuthClientException(Error.INVALID_REQUEST.getErrorCode(),
+                        "The provided client secret is too long to be persisted.");
+            }
             insertOAuthConsumerSecretToSecretsTable(connection, newSecretDO);
 
             // 3. Update IDN_OAUTH_CONSUMER_APPS with the new secret as the latest.

@@ -2731,19 +2731,10 @@ public class OAuthAdminServiceImplTest {
         }
     }
 
-    @DataProvider(name = "invalidProvidedClientSecret")
-    public Object[][] invalidProvidedClientSecret() {
+    @Test(description = "Creating a client secret with a blank caller provided value is rejected")
+    public void testCreateOAuthClientSecretRejectsBlankProvidedSecret() {
 
-        // A blank secret and a secret longer than the persisted column are both rejected.
-        return new Object[][]{
-                {"   "},
-                {StringUtils.repeat("a", 2049)}
-        };
-    }
-
-    @Test(description = "Creating a client secret with a blank or oversized caller provided value is rejected",
-            dataProvider = "invalidProvidedClientSecret")
-    public void testCreateOAuthClientSecretRejectsInvalidProvidedSecret(String providedSecret) {
+        String providedSecret = "   ";
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setId(1);
