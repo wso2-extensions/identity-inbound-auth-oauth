@@ -137,6 +137,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_T
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomainWithOrgHierarchy;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USER_ID_CLAIM_URI;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -1291,6 +1292,14 @@ public class AccessTokenIssuer {
 
     private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
             throws org.wso2.carbon.user.core.UserStoreException, IdentityException {
+
+        // The user id claim is stored as the user's unique id, hence it can be resolved without a user store call.
+        if (USER_ID_CLAIM_URI.equals(subjectClaimUri)) {
+            String userId = authenticatedUser.getUserId();
+            if (StringUtils.isNotBlank(userId)) {
+                return userId;
+            }
+        }
 
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
