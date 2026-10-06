@@ -1298,16 +1298,9 @@ public class AccessTokenIssuer {
         The user id and username claims are stored as the user's unique id and username when the user is created,
         hence they can be resolved without a user store call.
         */
-        if (USER_ID_CLAIM_URI.equals(subjectClaimUri)) {
-            String userId = authenticatedUser.getUserId();
-            if (StringUtils.isNotBlank(userId)) {
-                return userId;
-            }
-        } else if (USERNAME_CLAIM_URI.equals(subjectClaimUri)) {
-            String userName = authenticatedUser.getUserName();
-            if (StringUtils.isNotBlank(userName)) {
-                return userName;
-            }
+        String subjectClaim = USER_ID_CLAIM_URI.equals(subjectClaimUri) ? authenticatedUser.getUserId() : USERNAME_CLAIM_URI.equals(subjectClaimUri) ? authenticatedUser.getUserName() : null;
+        if (StringUtils.isNotBlank(subjectClaim)) {
+            return subjectClaim;
         }
 
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
