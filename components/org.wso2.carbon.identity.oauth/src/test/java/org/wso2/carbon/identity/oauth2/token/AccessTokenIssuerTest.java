@@ -24,6 +24,8 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
@@ -54,6 +56,8 @@ import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth2.TestConstants.DEVICE_CODE;
 import static org.wso2.carbon.identity.oauth2.TestConstants.SESSION_ID;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USERNAME_CLAIM_URI;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USER_ID_CLAIM_URI;
 
 import org.apache.commons.logging.Log;
 import java.lang.reflect.Field;
@@ -995,4 +999,40 @@ public class AccessTokenIssuerTest {
 //
 //        when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
 //    }
+
+    private static final String TEST_USER_ID = "7b8a1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d";
+    private static final String TEST_USERNAME = "john";
+
+    @DataProvider(name = "localSubjectClaimData")
+    public Object[][] localSubjectClaimData() {
+
+        // Each row: {subject claim uri, expected subject}.
+        return new Object[][]{
+                {USER_ID_CLAIM_URI, TEST_USER_ID},
+                {USERNAME_CLAIM_URI, TEST_USERNAME}
+        };
+    }
+
+    @Test(dataProvider = "localSubjectClaimData")
+    public void testSubjectClaimIsResolvedWithoutUserStoreCall(String subjectClaimUri, String expectedSubject)
+            throws Exception {
+
+        AuthenticatedUser authenticatedUser = Mockito.mock(AuthenticatedUser.class);
+        when(authenticatedUser.getUserId()).thenReturn(TEST_USER_ID);
+        when(authenticatedUser.getUserName()).thenReturn(TEST_USERNAME);
+
+        try (MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(IdentityTenantUtil.class)) {
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("getSubjectClaimFromUserStore",
+                    String.class, AuthenticatedUser.class);
+            method.setAccessible(true);
+            Object subject = method.invoke(issuer, subjectClaimUri, authenticatedUser);
+
+            Assert.assertEquals(subject, expectedSubject,
+                    "Subject claim should be resolved from the authenticated user.");
+            // The user store should not be reached at all for these claims.
+            mockedTenantUtil.verify(() -> IdentityTenantUtil.getRealm(anyString(), anyString()), never());
+        }
+    }
 }
