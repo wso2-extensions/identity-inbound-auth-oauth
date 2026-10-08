@@ -55,6 +55,22 @@ public class EncryptionDecryptionPersistenceProcessorTest {
     }
 
     @Test
+    public void testGetPreprocessedClientSecretWithSuccessfulDecryption()
+            throws CryptoException, IdentityOAuth2Exception {
+
+        try (MockedStatic<CryptoUtil> cryptoUtil = mockStatic(CryptoUtil.class)) {
+            CryptoUtil mockCryptoUtil = mock(CryptoUtil.class);
+            byte[] decryptedSecret = "decryptedSecret".getBytes(StandardCharsets.UTF_8);
+            when(mockCryptoUtil.base64DecodeAndDecrypt("encryptedSecret")).thenReturn(decryptedSecret);
+            cryptoUtil.when(() -> CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
+                    any(RegistryService.class))).thenReturn(mockCryptoUtil);
+            cryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtil);
+
+            assertEquals(testclass.getPreprocessedClientSecret("encryptedSecret"), "decryptedSecret");
+        }
+    }
+
+    @Test
     public void testGetPreprocessed() throws CryptoException, IdentityOAuth2Exception {
 
         try (MockedStatic<CryptoUtil> cryptoUtil = mockStatic(CryptoUtil.class)) {
@@ -65,7 +81,6 @@ public class EncryptionDecryptionPersistenceProcessorTest {
                     any(RegistryService.class))).thenReturn(mockCryptoUtil);
             cryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtil);
 
-            assertEquals(testclass.getPreprocessedClientSecret("test"), "test");
             assertEquals(testclass.getPreprocessedAuthzCode("test"), "test");
             assertEquals(testclass.getPreprocessedRefreshToken("test"), "test");
             assertEquals(testclass.getPreprocessedAccessTokenIdentifier("test"), "test");
@@ -131,8 +146,17 @@ public class EncryptionDecryptionPersistenceProcessorTest {
         }
     }
 
-    @Test(expectedExceptions = IdentityOAuth2Exception.class)
-    public void testIdentityOAuth2ExceptionForGetPreprocessedClientSecret()
+    /**
+     * Tests the backward compatibility of getPreprocessedClientSecret.
+     * When decryption fails with CryptoException, the client secret may have been stored
+     * in plain text before encryption was enabled. The method should return the plain text
+     * value as-is for backward compatibility, instead of throwing an exception.
+     *
+     * @throws CryptoException if cryptography operation fails
+     * @throws IdentityOAuth2Exception if OAuth2 error occurs
+     */
+    @Test
+    public void testGetPreprocessedClientSecretWithPlainTextFallback()
             throws CryptoException, IdentityOAuth2Exception {
 
         try (MockedStatic<CryptoUtil> cryptoUtil = mockStatic(CryptoUtil.class)) {
@@ -141,7 +165,8 @@ public class EncryptionDecryptionPersistenceProcessorTest {
             cryptoUtil.when(() -> CryptoUtil.getDefaultCryptoUtil(any(ServerConfigurationService.class),
                     any(RegistryService.class))).thenReturn(mockCryptoUtil);
             cryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtil);
-            testclass.getPreprocessedClientSecret("test");
+
+            assertEquals(testclass.getPreprocessedClientSecret("plainTextSecret"), "plainTextSecret");
         }
     }
 
