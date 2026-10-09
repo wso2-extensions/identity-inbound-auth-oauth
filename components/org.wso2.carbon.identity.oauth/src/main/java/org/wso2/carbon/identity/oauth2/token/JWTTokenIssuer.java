@@ -58,6 +58,7 @@ import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 
 import java.io.ByteArrayInputStream;
 import java.security.Key;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -374,7 +375,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
+            String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
             if (isRefreshToken) {
