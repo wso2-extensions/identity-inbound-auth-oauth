@@ -52,6 +52,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.oauth.cache.AppInfoCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheKeyTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKeyTest"/>
@@ -73,6 +74,7 @@
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
             <class name="org.wso2.carbon.identity.oauth.user.UserInfoEndpointExceptionTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimCacheKeyTest"/>
@@ -124,6 +126,7 @@
         <classes>
             <class name="org.wso2.carbon.identity.oauth.cache.AppInfoCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKeyTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheKeyTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKeyTest"/>
@@ -145,6 +148,7 @@
             <class name="org.wso2.carbon.identity.oauth.OAuthServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessorTest"/>
             <class name="org.wso2.carbon.identity.oauth.tokenvaluegenerator.SHA256GeneratorTest"/>
             <class name="org.wso2.carbon.identity.oauth.user.UserInfoEndpointExceptionTest"/>
             <class name="org.wso2.carbon.identity.oauth.util.ClaimCacheKeyTest"/>
