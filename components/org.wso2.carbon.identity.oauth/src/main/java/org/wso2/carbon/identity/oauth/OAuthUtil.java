@@ -872,10 +872,21 @@ public final class OAuthUtil {
                         application.getSpProperties() != null && Arrays.stream(application.getSpProperties()).
                         anyMatch(property -> "isFragmentApp".equals(property.getName())
                                 && "true".equals(property.getValue())))) {
-                    associatedApplication = SharedAppResolveDAO.getMainApplication(
+                    String mainApplication = SharedAppResolveDAO.getMainApplication(
                             associatedApplication, authenticatedUser.getAccessingOrganization());
-                    int mainAppTenantId = applicationManagementService.getTenantIdByApp(associatedApplication);
-                    appTenantDomain = IdentityTenantUtil.getTenantDomain(mainAppTenantId);
+                    if (mainApplication != null) {
+                        associatedApplication = mainApplication;
+                        int mainAppTenantId = applicationManagementService.getTenantIdByApp(associatedApplication);
+                        appTenantDomain = IdentityTenantUtil.getTenantDomain(mainAppTenantId);
+                    } else {
+                        /*
+                         * No parent (main) application found: the role is associated with a standalone
+                         * sub-organization application. Resolve the tenant domain from the accessing
+                         * organization so the lookup at the call-site targets the correct tenant.
+                         */
+                        appTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                                .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+                    }
                 }
             }
         } catch (IdentityOAuth2Exception e) {
