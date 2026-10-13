@@ -770,25 +770,29 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Create a new client secret for the given OAuth application.
+     * Create a new client secret for the given OAuth application. The secret value is taken from the caller when
+     * one is provided, which allows an existing secret to be carried over from another identity provider during a
+     * migration; otherwise a secret is generated.
      *
      * @param consumerKey  Consumer key (client ID) of the OAuth application.
      * @param tenantDomain Tenant domain of the application.
+     * @param secretValue  Optional plaintext of the secret to add, where null denotes a generated secret.
      * @param expiryTime   Optional absolute expiry time as Unix epoch seconds, where zero or null denotes a
      *                     never-expiring secret.
      * @return {@link OAuthClientSecretResponseDTO} containing the created client secret information.
      * @throws IdentityOAuthAdminException if the operation is not supported or persistence fails.
      */
     public OAuthClientSecretResponseDTO createOAuthClientSecret(String consumerKey, String tenantDomain,
-            Long expiryTime) throws IdentityOAuthAdminException {
+            String secretValue, Long expiryTime) throws IdentityOAuthAdminException {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Creating a new client secret for consumer key: " + consumerKey);
         }
         OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
         validateClientSecretExpiryTime(expiryTime, true);
+        validateProvidedClientSecret(secretValue);
         OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        OAuthConsumerSecretDO consumerSecret = oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO.getId(),
+        OAuthConsumerSecretDO consumerSecret = oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO.getId(), secretValue,
                 getClientSecretExpiryTimeInMillis(expiryTime));
         // The cached application entry carries the client secrets; evict it after the rotation.
         AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
@@ -806,6 +810,22 @@ public class OAuthAdminServiceImpl {
         // As the most recently created, the new secret is the latest secret of the application.
         clientSecretResponse.setLatest(true);
         return clientSecretResponse;
+    }
+
+    /**
+     * Validate a client secret value supplied by the caller. A null value denotes a generated secret and is
+     * always accepted. The length is not validated here: what the column has to hold is the processed form of
+     * the secret, which the configured client secret persistence processor produces, so that bound is enforced
+     * in {@link OAuthAppDAO#addOAuthConsumerSecret(int, String, Long)} against the processed value.
+     *
+     * @param secretValue Plaintext of the secret to add.
+     * @throws IdentityOAuthAdminException if the provided value is blank.
+     */
+    private void validateProvidedClientSecret(String secretValue) throws IdentityOAuthAdminException {
+
+        if (secretValue != null && StringUtils.isBlank(secretValue)) {
+            throw handleClientError(INVALID_REQUEST, "The provided client secret cannot be blank.");
+        }
     }
 
     /**
