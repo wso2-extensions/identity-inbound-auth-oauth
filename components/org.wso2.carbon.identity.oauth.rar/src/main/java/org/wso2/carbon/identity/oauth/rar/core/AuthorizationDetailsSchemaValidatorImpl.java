@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.rar.core;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.Draft;
 import io.vertx.json.schema.JsonSchema;
@@ -37,6 +38,9 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
@@ -68,6 +72,10 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
+    private static final List<String> DEREFERENCE_ANNOTATIONS =
+            Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
+    private static final List<String> DYNAMIC_REF_KEYWORD = Collections.singletonList("$dynamicRef");
+    private static final List<String> PROPERTY_NAME_KEYWORDS = Arrays.asList("dependentRequired", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -129,10 +137,59 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
         // Validate the jsonSchema if present, otherwise validate the schema itself against json-schema DRAFT202012
         final Validator validator = (jsonSchema != null)
-                ? this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions)
+                ? this.buildSchemaValidator(jsonSchema, jsonInput)
                 : this.schemaRepository.validator(this.jsonSchemaOptions.getDraft().getIdentifier());
 
         return validator.validate(jsonInput);
+    }
+
+    private Validator buildSchemaValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
+
+        if (canDereference(jsonSchema, jsonInput)) {
+            try {
+                // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
+                return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+            } catch (RuntimeException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Unable to dereference the authorization details schema. " +
+                            "Validating without dereferencing.", e);
+                }
+            }
+        }
+        return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
+    }
+
+    private static boolean canDereference(final JsonObject jsonSchema, final JsonObject jsonInput) {
+
+        // Vert.x does not implement the dynamic scope of "$dynamicRef" and accepts payloads that such a schema
+        // rejects. Remove this check once https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in
+        // the vertx-json-schema in use.
+        if (containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORD)) {
+            return false;
+        }
+        // Dereferencing adds the annotation keys to the schema objects, including the "dependentRequired" and
+        // "dependencies" objects whose keys Vert.x reads as property names. An input using one of the annotation
+        // keys would then fail against such a schema.
+        return !(containsAnyKey(jsonSchema, PROPERTY_NAME_KEYWORDS)
+                && containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS));
+    }
+
+    private static boolean containsAnyKey(final Object json, final List<String> keys) {
+
+        if (json instanceof JsonObject) {
+            for (final Map.Entry<String, Object> entry : (JsonObject) json) {
+                if (keys.contains(entry.getKey()) || containsAnyKey(entry.getValue(), keys)) {
+                    return true;
+                }
+            }
+        } else if (json instanceof JsonArray) {
+            for (final Object item : (JsonArray) json) {
+                if (containsAnyKey(item, keys)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.rar;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.json.JsonObject;
+import io.vertx.json.schema.SchemaException;
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -37,6 +38,11 @@ import java.util.Map;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEFS;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEPENDENT_REQUIRED;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DUPLICATE_ID;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DYNAMIC_REF;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_TYPE;
 
 /**
@@ -61,6 +67,105 @@ public class AuthorizationDetailsSchemaValidatorTest {
 
         assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA, testAuthorizationDetail));
         assertTrue(this.uut.isSchemaCompliant(this.getTestSchema(), testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldReturnTrue_whenAuthorizationDetailIsCompliantWithSchemaUsingDefs()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEFS, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEFS).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenAuthorizationDetailViolatesDefs()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("cancel"));
+
+        this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEFS).getMap(), testAuthorizationDetail);
+    }
+
+    @Test
+    public void shouldReturnTrue_whenSchemaCannotBeDereferencedAndAuthorizationDetailIsSchemaCompliant()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DUPLICATE_ID, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DUPLICATE_ID).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenSchemaCannotBeDereferencedAndIsViolated()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("cancel"));
+
+        this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DUPLICATE_ID, testAuthorizationDetail);
+    }
+
+    @Test
+    public void shouldReturnTrue_whenAuthorizationDetailUsesDereferenceAnnotationKey()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("__absolute_uri__", "test_value");
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldReturnTrue_whenSchemaUsingDefsReceivesDereferenceAnnotationKey()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+        testAuthorizationDetail.setDetail("__absolute_uri__", "test_value");
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEFS, testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldReturnTrue_whenSchemaDereferencingFailsWithUnexpectedError()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test(expectedExceptions = {SchemaException.class},
+            expectedExceptionsMessageRegExp = "(?s)Unresolved \\$ref item.*")
+    public void shouldValidateWithoutDereferencing_whenSchemaUsesDynamicRef()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("bar-item", Collections.singletonMap("content", "test_value"));
+
+        // Without dereferencing, the schema's "$ref" to "item" is unresolved. With dereferencing, Vert.x would
+        // accept this authorization detail although "content" must be an integer.
+        this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DYNAMIC_REF, testAuthorizationDetail);
     }
 
     @Test

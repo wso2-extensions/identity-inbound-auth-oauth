@@ -34,6 +34,29 @@ public class TestConstants {
     public static final String TEST_SCHEMA = "{\"type\":\"object\",\"required\":[\"type\"],\"properties\":" +
             "{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]},\"actions\":{\"type\":\"array\"," +
             "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEFS = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]}," +
+            "\"actions\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/$defs/action\"}}}," +
+            "\"$defs\":{\"action\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}";
+    public static final String TEST_SCHEMA_WITH_DUPLICATE_ID = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"$id\":\"https://example.com/dup\",\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"actions\":{\"$id\":\"https://example.com/dup\",\"type\":\"array\"," +
+            "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"__absolute_uri__\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"actions\":[\"type\"]}}";
+    public static final String TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"$ref\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"$ref\":[\"type\"]}}";
+    // A "$dynamicRef" case Vert.x resolves wrongly when dereferenced: "content" must be an integer.
+    public static final String TEST_SCHEMA_WITH_DYNAMIC_REF = "{\"$id\":\"https://example.com/main\"," +
+            "\"type\":\"object\",\"properties\":{\"bar-item\":{\"$ref\":\"item\"}},\"$defs\":{\"bar\":" +
+            "{\"$id\":\"bar\",\"type\":\"array\",\"items\":{\"$ref\":\"item\"},\"$defs\":{\"item\":" +
+            "{\"$id\":\"item\",\"type\":\"object\",\"properties\":{\"content\":{\"$dynamicRef\":\"#content\"}}," +
+            "\"$defs\":{\"defaultContent\":{\"$dynamicAnchor\":\"content\",\"type\":\"integer\"}}}," +
+            "\"content\":{\"$dynamicAnchor\":\"content\",\"type\":\"string\"}}}}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation
