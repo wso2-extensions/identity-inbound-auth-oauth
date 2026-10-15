@@ -75,6 +75,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     private static final List<String> DEREFERENCE_ANNOTATIONS =
             Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
     private static final List<String> DYNAMIC_REF_KEYWORD = Collections.singletonList("$dynamicRef");
+    private static final List<String> PROPERTY_NAME_KEYWORDS = Arrays.asList("dependentRequired", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -144,12 +145,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private Validator buildSchemaValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
 
-        // Dereferencing adds these annotation keys to the schema objects. Vert.x reads the keys of some of those
-        // objects (e.g. "dependentRequired") as property names, so an input using one of them is not dereferenced.
-        // A schema using "$dynamicRef" is not dereferenced either: Vert.x does not implement the dynamic scope of
-        // "$dynamicRef" and accepts payloads that such a schema rejects. Remove this "$dynamicRef" check once
-        // https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in the vertx-json-schema in use.
-        if (!containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS) && !containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORD)) {
+        if (canDereference(jsonSchema, jsonInput)) {
             try {
                 // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
                 return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
@@ -161,6 +157,21 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             }
         }
         return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
+    }
+
+    private static boolean canDereference(final JsonObject jsonSchema, final JsonObject jsonInput) {
+
+        // Vert.x does not implement the dynamic scope of "$dynamicRef" and accepts payloads that such a schema
+        // rejects. Remove this check once https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in
+        // the vertx-json-schema in use.
+        if (containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORD)) {
+            return false;
+        }
+        // Dereferencing adds the annotation keys to the schema objects, including the "dependentRequired" and
+        // "dependencies" objects whose keys Vert.x reads as property names. An input using one of the annotation
+        // keys would then fail against such a schema.
+        return !(containsAnyKey(jsonSchema, PROPERTY_NAME_KEYWORDS)
+                && containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS));
     }
 
     private static boolean containsAnyKey(final Object json, final List<String> keys) {

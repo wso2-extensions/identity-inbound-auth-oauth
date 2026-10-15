@@ -130,6 +130,18 @@ public class AuthorizationDetailsSchemaValidatorTest {
     }
 
     @Test
+    public void shouldReturnTrue_whenSchemaUsingDefsReceivesDereferenceAnnotationKey()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+        testAuthorizationDetail.setDetail("__absolute_uri__", "test_value");
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEFS, testAuthorizationDetail));
+    }
+
+    @Test
     public void shouldReturnTrue_whenSchemaDereferencingFailsWithUnexpectedError()
             throws AuthorizationDetailsProcessingException {
 
