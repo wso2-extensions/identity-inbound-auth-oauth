@@ -42,6 +42,14 @@ public class TestConstants {
             "\"properties\":{\"type\":{\"$id\":\"https://example.com/dup\",\"type\":\"string\"," +
             "\"enum\":[\"test_type_v1\"]},\"actions\":{\"$id\":\"https://example.com/dup\",\"type\":\"array\"," +
             "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"__absolute_uri__\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"actions\":[\"type\"]}}";
+    public static final String TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"$ref\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"$ref\":[\"type\"]}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation

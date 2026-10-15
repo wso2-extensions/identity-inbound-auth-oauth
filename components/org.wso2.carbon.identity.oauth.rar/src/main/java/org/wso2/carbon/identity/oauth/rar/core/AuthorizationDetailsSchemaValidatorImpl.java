@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.rar.core;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.Draft;
 import io.vertx.json.schema.JsonSchema;
@@ -27,7 +28,6 @@ import io.vertx.json.schema.JsonSchemaOptions;
 import io.vertx.json.schema.JsonSchemaValidationException;
 import io.vertx.json.schema.OutputFormat;
 import io.vertx.json.schema.OutputUnit;
-import io.vertx.json.schema.SchemaException;
 import io.vertx.json.schema.SchemaRepository;
 import io.vertx.json.schema.Validator;
 import org.apache.commons.collections.CollectionUtils;
@@ -38,6 +38,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
@@ -69,6 +71,8 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
+    private static final List<String> DEREFERENCE_ANNOTATIONS =
+            Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -130,24 +134,46 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
         // Validate the jsonSchema if present, otherwise validate the schema itself against json-schema DRAFT202012
         final Validator validator = (jsonSchema != null)
-                ? this.buildSchemaValidator(jsonSchema)
+                ? this.buildSchemaValidator(jsonSchema, jsonInput)
                 : this.schemaRepository.validator(this.jsonSchemaOptions.getDraft().getIdentifier());
 
         return validator.validate(jsonInput);
     }
 
-    private Validator buildSchemaValidator(final JsonObject jsonSchema) {
+    private Validator buildSchemaValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
 
-        try {
-            // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
-            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
-        } catch (SchemaException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Unable to dereference the authorization details schema. " +
-                        "Validating without dereferencing.", e);
+        // Dereferencing adds these annotation keys to the schema objects. Vert.x reads the keys of some of those
+        // objects (e.g. "dependentRequired") as property names, so an input using one of them is not dereferenced.
+        if (!containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS)) {
+            try {
+                // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
+                return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+            } catch (RuntimeException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Unable to dereference the authorization details schema. " +
+                            "Validating without dereferencing.", e);
+                }
             }
-            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
         }
+        return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
+    }
+
+    private static boolean containsAnyKey(final Object json, final List<String> keys) {
+
+        if (json instanceof JsonObject) {
+            for (final Map.Entry<String, Object> entry : (JsonObject) json) {
+                if (keys.contains(entry.getKey()) || containsAnyKey(entry.getValue(), keys)) {
+                    return true;
+                }
+            }
+        } else if (json instanceof JsonArray) {
+            for (final Object item : (JsonArray) json) {
+                if (containsAnyKey(item, keys)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

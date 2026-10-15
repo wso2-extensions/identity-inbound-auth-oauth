@@ -38,7 +38,9 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEFS;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DUPLICATE_ID;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_TYPE;
 
 /**
@@ -111,6 +113,31 @@ public class AuthorizationDetailsSchemaValidatorTest {
         testAuthorizationDetail.setActions(Collections.singletonList("cancel"));
 
         this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DUPLICATE_ID, testAuthorizationDetail);
+    }
+
+    @Test
+    public void shouldReturnTrue_whenAuthorizationDetailUsesDereferenceAnnotationKey()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("__absolute_uri__", "test_value");
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldReturnTrue_whenSchemaDereferencingFailsWithUnexpectedError()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED).getMap(),
+                testAuthorizationDetail));
     }
 
     @Test
