@@ -40,6 +40,7 @@ import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEFS;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DUPLICATE_ID;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DYNAMIC_REF;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_TYPE;
 
@@ -138,6 +139,22 @@ public class AuthorizationDetailsSchemaValidatorTest {
         assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED, testAuthorizationDetail));
         assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED).getMap(),
                 testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldNotAcceptAuthorizationDetail_whenSchemaUsesDynamicRefAndAuthorizationDetailViolatesIt() {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("bar-item", Collections.singletonMap("content", "test_value"));
+
+        boolean isAccepted;
+        try {
+            isAccepted = this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DYNAMIC_REF, testAuthorizationDetail);
+        } catch (AuthorizationDetailsProcessingException | RuntimeException e) {
+            isAccepted = false;
+        }
+        assertFalse(isAccepted);
     }
 
     @Test

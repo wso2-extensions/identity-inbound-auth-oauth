@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessi
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -73,6 +74,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
     private static final List<String> DEREFERENCE_ANNOTATIONS =
             Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
+    private static final List<String> DYNAMIC_REF_KEYWORD = Collections.singletonList("$dynamicRef");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -144,7 +146,10 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
         // Dereferencing adds these annotation keys to the schema objects. Vert.x reads the keys of some of those
         // objects (e.g. "dependentRequired") as property names, so an input using one of them is not dereferenced.
-        if (!containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS)) {
+        // A schema using "$dynamicRef" is not dereferenced either: Vert.x does not implement the dynamic scope of
+        // "$dynamicRef" and accepts payloads that such a schema rejects. Remove this "$dynamicRef" check once
+        // https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in the vertx-json-schema in use.
+        if (!containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS) && !containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORD)) {
             try {
                 // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
                 return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);

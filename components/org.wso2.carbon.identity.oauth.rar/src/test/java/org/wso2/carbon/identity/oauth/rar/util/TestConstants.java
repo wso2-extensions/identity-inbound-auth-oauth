@@ -50,6 +50,13 @@ public class TestConstants {
             "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
             "\"enum\":[\"test_type_v1\"]},\"$ref\":{\"type\":\"string\"}}," +
             "\"dependentRequired\":{\"$ref\":[\"type\"]}}";
+    // A "$dynamicRef" case Vert.x resolves wrongly when dereferenced: "content" must be an integer.
+    public static final String TEST_SCHEMA_WITH_DYNAMIC_REF = "{\"$id\":\"https://example.com/main\"," +
+            "\"type\":\"object\",\"properties\":{\"bar-item\":{\"$ref\":\"item\"}},\"$defs\":{\"bar\":" +
+            "{\"$id\":\"bar\",\"type\":\"array\",\"items\":{\"$ref\":\"item\"},\"$defs\":{\"item\":" +
+            "{\"$id\":\"item\",\"type\":\"object\",\"properties\":{\"content\":{\"$dynamicRef\":\"#content\"}}," +
+            "\"$defs\":{\"defaultContent\":{\"$dynamicAnchor\":\"content\",\"type\":\"integer\"}}}," +
+            "\"content\":{\"$dynamicAnchor\":\"content\",\"type\":\"string\"}}}}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation
