@@ -37,6 +37,8 @@ import java.util.Map;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEFS;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DUPLICATE_ID;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_TYPE;
 
 /**
@@ -61,6 +63,54 @@ public class AuthorizationDetailsSchemaValidatorTest {
 
         assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA, testAuthorizationDetail));
         assertTrue(this.uut.isSchemaCompliant(this.getTestSchema(), testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldReturnTrue_whenAuthorizationDetailIsCompliantWithSchemaUsingDefs()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEFS, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEFS).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenAuthorizationDetailViolatesDefs()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("cancel"));
+
+        this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEFS).getMap(), testAuthorizationDetail);
+    }
+
+    @Test
+    public void shouldReturnTrue_whenSchemaCannotBeDereferencedAndAuthorizationDetailIsSchemaCompliant()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("initiate"));
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DUPLICATE_ID, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DUPLICATE_ID).getMap(),
+                testAuthorizationDetail));
+    }
+
+    @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenSchemaCannotBeDereferencedAndIsViolated()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setActions(Collections.singletonList("cancel"));
+
+        this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DUPLICATE_ID, testAuthorizationDetail);
     }
 
     @Test

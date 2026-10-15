@@ -27,6 +27,7 @@ import io.vertx.json.schema.JsonSchemaOptions;
 import io.vertx.json.schema.JsonSchemaValidationException;
 import io.vertx.json.schema.OutputFormat;
 import io.vertx.json.schema.OutputUnit;
+import io.vertx.json.schema.SchemaException;
 import io.vertx.json.schema.SchemaRepository;
 import io.vertx.json.schema.Validator;
 import org.apache.commons.collections.CollectionUtils;
@@ -129,10 +130,24 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
         // Validate the jsonSchema if present, otherwise validate the schema itself against json-schema DRAFT202012
         final Validator validator = (jsonSchema != null)
-                ? this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions)
+                ? this.buildSchemaValidator(jsonSchema)
                 : this.schemaRepository.validator(this.jsonSchemaOptions.getDraft().getIdentifier());
 
         return validator.validate(jsonInput);
+    }
+
+    private Validator buildSchemaValidator(final JsonObject jsonSchema) {
+
+        try {
+            // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
+            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+        } catch (SchemaException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to dereference the authorization details schema. " +
+                        "Validating without dereferencing.", e);
+            }
+            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
+        }
     }
 
     /**

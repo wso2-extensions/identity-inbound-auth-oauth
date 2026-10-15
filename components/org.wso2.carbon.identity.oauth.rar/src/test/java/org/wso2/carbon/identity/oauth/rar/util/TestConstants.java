@@ -34,6 +34,14 @@ public class TestConstants {
     public static final String TEST_SCHEMA = "{\"type\":\"object\",\"required\":[\"type\"],\"properties\":" +
             "{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]},\"actions\":{\"type\":\"array\"," +
             "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEFS = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]}," +
+            "\"actions\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/$defs/action\"}}}," +
+            "\"$defs\":{\"action\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}";
+    public static final String TEST_SCHEMA_WITH_DUPLICATE_ID = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"$id\":\"https://example.com/dup\",\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"actions\":{\"$id\":\"https://example.com/dup\",\"type\":\"array\"," +
+            "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation
