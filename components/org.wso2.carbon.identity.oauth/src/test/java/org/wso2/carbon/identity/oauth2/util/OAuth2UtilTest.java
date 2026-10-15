@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -48,6 +49,8 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.core.util.KeyStoreUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -108,6 +111,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
@@ -131,14 +135,21 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.ECGenParameterSpec;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -159,6 +170,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -4879,5 +4891,98 @@ public class OAuth2UtilTest {
 
             OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
         }
+    }
+
+    @Test(description = "Test signing a JWT with ES256 using the super tenant EC key")
+    public void testSignJWTWithES256() throws Exception {
+
+        String ecAlias = "wso2carbon_ec";
+        KeyStore ecKeyStore = KeyStore.getInstance("PKCS12");
+        try (InputStream keyStoreStream = Files.newInputStream(Paths.get(
+                System.getProperty(CarbonBaseConstants.CARBON_HOME), "keyStore", "ec", "ec-keystore.p12"))) {
+            ecKeyStore.load(keyStoreStream, "wso2carbon".toCharArray());
+        }
+        ECPrivateKey ecPrivateKey = (ECPrivateKey) ecKeyStore.getKey(ecAlias, "wso2carbon".toCharArray());
+        X509Certificate ecCertificate = (X509Certificate) ecKeyStore.getCertificate(ecAlias);
+
+        when(identityKeyStoreResolver.getKeyStoreName(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn("wso2carbon.jks");
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(ecKeyStore);
+        KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
+        when(keyStoreManager.getDefaultPrivateKey(ecAlias)).thenReturn(ecPrivateKey);
+
+        try (MockedStatic<KeyStoreUtil> keyStoreUtil = mockStatic(KeyStoreUtil.class, CALLS_REAL_METHODS);
+             MockedStatic<KeyStoreManager> keyStoreManagerStatic = mockStatic(KeyStoreManager.class)) {
+            keyStoreUtil.when(() -> KeyStoreUtil.getTenantECKeyAlias(SUPER_TENANT_DOMAIN_NAME)).thenReturn(ecAlias);
+            keyStoreManagerStatic.when(() -> KeyStoreManager.getInstance(-1234)).thenReturn(keyStoreManager);
+            OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
+
+            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder().subject("admin").build();
+            SignedJWT signedJWT = (SignedJWT) OAuth2Util.signJWT(claimsSet, JWSAlgorithm.ES256,
+                    SUPER_TENANT_DOMAIN_NAME);
+
+            assertEquals(signedJWT.getHeader().getAlgorithm(), JWSAlgorithm.ES256);
+            assertTrue(signedJWT.verify(new ECDSAVerifier((ECPublicKey) ecCertificate.getPublicKey())),
+                    "JWT should be verifiable with the EC public key.");
+            assertEquals(signedJWT.getHeader().getKeyID(),
+                    OAuth2Util.getKID(ecCertificate, JWSAlgorithm.ES256, SUPER_TENANT_DOMAIN_NAME),
+                    "kid should be derived from the EC certificate.");
+            assertEquals(signedJWT.getJWTClaimsSet().getSubject(), "admin");
+        } finally {
+            OAuth2ServiceComponentHolder.setKeyIDProvider(null);
+        }
+    }
+
+    @Test(description = "Test resolving the EC private key from the tenant keystore")
+    public void testGetECPrivateKeyForTenant() throws Exception {
+
+        String tenantKeyStoreName = "tenant-com.jks";
+        KeyPair ecKeyPair = generateECKeyPair();
+        when(identityKeyStoreResolver.getKeyStoreName(tenantDomain,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(tenantKeyStoreName);
+        KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
+        when(keyStoreManager.getPrivateKey(tenantKeyStoreName, tenantDomain + "_ec"))
+                .thenReturn(ecKeyPair.getPrivate());
+
+        try (MockedStatic<KeyStoreManager> keyStoreManagerStatic = mockStatic(KeyStoreManager.class)) {
+            keyStoreManagerStatic.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
+
+            assertEquals(OAuth2Util.getECPrivateKey(tenantDomain), ecKeyPair.getPrivate());
+        }
+    }
+
+    @Test(description = "Test EC private key resolution fails when the EC key is not available",
+            expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = "EC private key not found.*")
+    public void testGetECPrivateKeyWhenKeyNotFound() throws Exception {
+
+        String tenantKeyStoreName = "tenant-com.jks";
+        when(identityKeyStoreResolver.getKeyStoreName(tenantDomain,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(tenantKeyStoreName);
+        KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
+        when(keyStoreManager.getPrivateKey(tenantKeyStoreName, tenantDomain + "_ec")).thenReturn(null);
+
+        try (MockedStatic<KeyStoreManager> keyStoreManagerStatic = mockStatic(KeyStoreManager.class)) {
+            keyStoreManagerStatic.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
+            OAuth2Util.getECPrivateKey(tenantDomain);
+        }
+    }
+
+    @Test(description = "Test EC private key resolution is rejected for a custom OAuth keystore",
+            expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = "EC based algorithms are not supported with the custom keystore.*")
+    public void testGetECPrivateKeyWithCustomKeyStore() throws Exception {
+
+        when(identityKeyStoreResolver.getKeyStoreName(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn("CUSTOM/oauth.jks");
+        OAuth2Util.getECPrivateKey(SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    private KeyPair generateECKeyPair() throws Exception {
+
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        keyPairGenerator.initialize(new ECGenParameterSpec("secp256r1"));
+        return keyPairGenerator.generateKeyPair();
     }
 }
