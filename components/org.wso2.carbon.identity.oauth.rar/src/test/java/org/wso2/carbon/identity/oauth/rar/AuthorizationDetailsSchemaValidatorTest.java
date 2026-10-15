@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.rar;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.json.JsonObject;
+import io.vertx.json.schema.SchemaException;
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -153,20 +154,18 @@ public class AuthorizationDetailsSchemaValidatorTest {
                 testAuthorizationDetail));
     }
 
-    @Test
-    public void shouldNotAcceptAuthorizationDetail_whenSchemaUsesDynamicRefAndAuthorizationDetailViolatesIt() {
+    @Test(expectedExceptions = {SchemaException.class},
+            expectedExceptionsMessageRegExp = "(?s)Unresolved \\$ref item.*")
+    public void shouldValidateWithoutDereferencing_whenSchemaUsesDynamicRef()
+            throws AuthorizationDetailsProcessingException {
 
         AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
         testAuthorizationDetail.setDetail("bar-item", Collections.singletonMap("content", "test_value"));
 
-        boolean isAccepted;
-        try {
-            isAccepted = this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DYNAMIC_REF, testAuthorizationDetail);
-        } catch (AuthorizationDetailsProcessingException | RuntimeException e) {
-            isAccepted = false;
-        }
-        assertFalse(isAccepted);
+        // Without dereferencing, the schema's "$ref" to "item" is unresolved. With dereferencing, Vert.x would
+        // accept this authorization detail although "content" must be an integer.
+        this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DYNAMIC_REF, testAuthorizationDetail);
     }
 
     @Test
