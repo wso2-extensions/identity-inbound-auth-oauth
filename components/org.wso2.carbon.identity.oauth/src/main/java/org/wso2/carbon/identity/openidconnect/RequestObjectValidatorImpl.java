@@ -168,17 +168,19 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
         String tokenEPUrl = oAuth2Parameters.isMtlsRequest() ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
                 getTokenEpURL(oAuth2Parameters.getTenantDomain());
-        List<String> acceptedAudiences = new ArrayList<>();
-        acceptedAudiences.add(tokenEPUrl);
-        /* When FAPI 2.0 is enabled for the organization, the OP issuer identifier differs from the token endpoint
-           URL. Hence, the issuer identifier is also accepted as the audience of the request object. */
+        List<String> audience = requestObject.getClaimsSet().getAudience();
+        // When FAPI 2.0 is enabled for the organization, the OP issuer identifier differs from the token endpoint
+        // URL. Hence, the issuer identifier is also accepted as the audience of the request object.
         if (OAuth2Util.isFapi2Enabled(oAuth2Parameters.getTenantDomain())) {
+            List<String> acceptedAudiences = new ArrayList<>();
+            acceptedAudiences.add(tokenEPUrl);
             String issuer = getIssuer(oAuth2Parameters);
             if (StringUtils.isNotEmpty(issuer)) {
                 acceptedAudiences.add(issuer);
             }
+            return validateAudiences(acceptedAudiences, audience);
         }
-        return validateAudience(acceptedAudiences, requestObject.getClaimsSet().getAudience());
+        return validateAudience(tokenEPUrl, audience);
     }
 
     private String getIssuer(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
@@ -186,9 +188,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         try {
             return OAuth2Util.getIdTokenIssuer(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.isMtlsRequest());
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error while resolving the issuer of the tenant: " + oAuth2Parameters.getTenantDomain(), e);
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Server Error while validating " +
-                    "audience of Request Object.");
+                    "audience of Request Object.", e);
         }
     }
 
@@ -405,7 +406,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      */
     protected boolean validateAudience(String currentAudience, List<String> audience) {
 
-        return validateAudience(Collections.singletonList(currentAudience), audience);
+        return validateAudiences(Collections.singletonList(currentAudience), audience);
     }
 
     /**
@@ -415,7 +416,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      * @param audience          Audience values of the request object.
      * @return True if any of the audience values is accepted.
      */
-    protected boolean validateAudience(List<String> acceptedAudiences, List<String> audience) {
+    private boolean validateAudiences(List<String> acceptedAudiences, List<String> audience) {
 
         for (String aud : audience) {
             if (acceptedAudiences.contains(aud)) {
