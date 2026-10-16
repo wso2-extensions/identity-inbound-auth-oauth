@@ -170,11 +170,13 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         if (audience.contains(tokenEPUrl)) {
             return true;
         }
-        /* The OP issuer identifier is also a valid audience for the request object. This is required when the
-           issuer differs from the token endpoint, e.g. when FAPI 2.0 is enabled for the organization. */
-        String issuer = getIssuer(oAuth2Parameters);
-        if (StringUtils.isNotEmpty(issuer) && audience.contains(issuer)) {
-            return true;
+        /* When FAPI 2.0 is enabled for the organization, the OP issuer identifier differs from the token endpoint
+           URL. Hence, the issuer identifier is also accepted as the audience of the request object. */
+        if (OAuth2Util.isFapi2Enabled(oAuth2Parameters.getTenantDomain())) {
+            String issuer = getIssuer(oAuth2Parameters);
+            if (StringUtils.isNotEmpty(issuer) && audience.contains(issuer)) {
+                return true;
+            }
         }
         return validateAudience(tokenEPUrl, audience);
     }

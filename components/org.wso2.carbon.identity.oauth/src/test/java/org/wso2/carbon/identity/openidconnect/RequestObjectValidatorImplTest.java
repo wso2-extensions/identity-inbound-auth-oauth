@@ -348,22 +348,25 @@ public class RequestObjectValidatorImplTest {
         String tokenEpUrl = "https://localhost:9443/oauth2/token";
         String issuer = "https://localhost:9443";
         return new Object[][]{
-                {Arrays.asList(tokenEpUrl), issuer, true},
-                {Arrays.asList(issuer), issuer, true},
-                {Arrays.asList("https://localhost:9443/oauth2/par", issuer), issuer, true},
-                {Arrays.asList(issuer), tokenEpUrl, false},
-                {Arrays.asList(issuer), null, false},
-                {Arrays.asList("https://invalid.audience"), issuer, false},
+                {Arrays.asList(tokenEpUrl), issuer, true, true},
+                {Arrays.asList(tokenEpUrl), issuer, false, true},
+                {Arrays.asList(issuer), issuer, true, true},
+                {Arrays.asList(issuer), issuer, false, false},
+                {Arrays.asList("https://localhost:9443/oauth2/par", issuer), issuer, true, true},
+                {Arrays.asList(issuer), tokenEpUrl, true, false},
+                {Arrays.asList(issuer), null, true, false},
+                {Arrays.asList("https://invalid.audience"), issuer, true, false},
         };
     }
 
     @Test(dataProvider = "audienceDataProvider")
-    public void testIsValidAudience(List<String> audience, String issuer, boolean expected)
+    public void testIsValidAudience(List<String> audience, String issuer, boolean isFapi2Enabled, boolean expected)
             throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled(SUPER_TENANT_DOMAIN_NAME)).thenReturn(isFapi2Enabled);
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(SUPER_TENANT_DOMAIN_NAME, false)).thenReturn(issuer);
 
             RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
