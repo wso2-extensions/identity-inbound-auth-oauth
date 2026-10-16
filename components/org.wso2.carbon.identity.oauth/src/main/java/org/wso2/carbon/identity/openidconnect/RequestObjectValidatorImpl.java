@@ -167,7 +167,27 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String tokenEPUrl = oAuth2Parameters.isMtlsRequest() ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
                 getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
+        if (audience.contains(tokenEPUrl)) {
+            return true;
+        }
+        /* The OP issuer identifier is also a valid audience for the request object. This is required when the
+           issuer differs from the token endpoint, e.g. when FAPI 2.0 is enabled for the organization. */
+        String issuer = getIssuer(oAuth2Parameters);
+        if (StringUtils.isNotEmpty(issuer) && audience.contains(issuer)) {
+            return true;
+        }
         return validateAudience(tokenEPUrl, audience);
+    }
+
+    private String getIssuer(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+
+        try {
+            return OAuth2Util.getIdTokenIssuer(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.isMtlsRequest());
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while resolving the issuer of the tenant: " + oAuth2Parameters.getTenantDomain(), e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Server Error while validating " +
+                    "audience of Request Object.");
+        }
     }
 
     private boolean checkExpirationTime(RequestObject requestObject) throws RequestObjectException {
