@@ -149,8 +149,30 @@ public class UserInfoISAccessTokenValidatorTest {
                         "DPoP header is required with DPoP tokens"},
                 {dpopAuthHeaderWithToken, contentTypeHeaderValue, " ",
                         "DPoP header is required with DPoP tokens"},
-                // Unsupported token scheme
+                // Unsupported token scheme (Updated to reflect accurate error message)
                 {"Basic " + token, contentTypeHeaderValue, null,
+                        "Invalid Authorization header format"},
+
+                // Accepted: 1*SP permits more than one space between scheme and token.
+                {"Bearer  " + token, contentTypeHeaderValue, null, null},
+
+                // Accepted: leading/trailing OWS (SP/HTAB) is not part of the field value
+                {"  Bearer " + token, contentTypeHeaderValue, null, null},
+                {"Bearer " + token + "  ", contentTypeHeaderValue, null, null},
+                {"\tBearer " + token, contentTypeHeaderValue, null, null},
+
+                // Rejected: any content after the token violates the grammar.
+                {"Bearer " + token + " extra", contentTypeHeaderValue, null,
+                        "Invalid Authorization header format"},
+                {"Bearer " + token + " 123", contentTypeHeaderValue, null,
+                        "Invalid Authorization header format"},
+
+                // Rejected: a tab is not SP, so it is not a valid scheme/token separator.
+                {"Bearer\t" + token, contentTypeHeaderValue, null,
+                        "Invalid Authorization header format"},
+
+                // Rejected: scheme present but token missing.
+                {"Bearer", contentTypeHeaderValue, null,
                         "Bearer token missing"},
         };
     }
