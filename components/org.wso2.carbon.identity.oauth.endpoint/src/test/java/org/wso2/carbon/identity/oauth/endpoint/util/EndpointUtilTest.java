@@ -782,6 +782,74 @@ public class EndpointUtilTest {
         }
     }
 
+    @DataProvider(name = "provideRepeatedParamsAcrossQueryAndBody")
+    public Object[][] provideRepeatedParamsAcrossQueryAndBody() {
+
+        // Servlet parameter maps as the container exposes them once the query string and the form body are merged.
+        Map<String, String[]> grantTypeInQueryAndBody = new HashedMap();
+        grantTypeInQueryAndBody.put("grant_type", new String[]{"client_credentials", "client_credentials"});
+
+        Map<String, String[]> grantTypeRepeatedInQuery = new HashedMap();
+        grantTypeRepeatedInQuery.put("grant_type", new String[]{"client_credentials", "authorization_code"});
+
+        Map<String, String[]> grantTypeOnceInQueryTwiceInBody = new HashedMap();
+        grantTypeOnceInQueryTwiceInBody.put("grant_type",
+                new String[]{"client_credentials", "client_credentials", "client_credentials"});
+
+        Map<String, String[]> grantTypeNotRepeated = new HashedMap();
+        grantTypeNotRepeated.put("grant_type", new String[]{"client_credentials"});
+
+        Map<String, String[]> noRequestParams = new HashedMap();
+
+        List<String> twoValues = new ArrayList<>();
+        twoValues.add("client_credentials");
+        twoValues.add("client_credentials");
+        MultivaluedMap<String, String> grantTypeRepeatedInParamMap = new MultivaluedHashMap<>();
+        grantTypeRepeatedInParamMap.put("grant_type", twoValues);
+
+        String queryWithGrantType = "grant_type=client_credentials";
+        String queryWithGrantTypeTwice = "grant_type=client_credentials&grant_type=authorization_code";
+
+        return new Object[][]{
+                // queryString, paramMap, requestParams, tenantQualifiedUrlsEnabled, expectedValid
+                {queryWithGrantType, null, grantTypeInQueryAndBody, false, true},
+                {queryWithGrantType, null, grantTypeInQueryAndBody, true, false},
+                {queryWithGrantTypeTwice, null, grantTypeRepeatedInQuery, false, false},
+                {queryWithGrantType, null, grantTypeOnceInQueryTwiceInBody, false, false},
+                {null, grantTypeRepeatedInParamMap, noRequestParams, false, false},
+                // The JAX-RS map carries the merged values too, so the same relaxation must apply to it.
+                {queryWithGrantType, grantTypeRepeatedInParamMap, noRequestParams, false, true},
+                {queryWithGrantType, null, grantTypeNotRepeated, false, true},
+                {"grant_type", null, grantTypeInQueryAndBody, false, true},
+                {"grant%5Ftype=client_credentials", null, grantTypeInQueryAndBody, false, true},
+                // %ZZ cannot be decoded, so the name does not match and the parameter stays repeated.
+                {"grant%ZZtype=client_credentials", null, grantTypeInQueryAndBody, false, false},
+                {null, null, grantTypeInQueryAndBody, false, false}
+        };
+    }
+
+    @Test(dataProvider = "provideRepeatedParamsAcrossQueryAndBody")
+    public void testValidateParamsForRepeatedParamsAcrossQueryAndBody(String queryString, Object paramObject,
+                                                                      Map<String, String[]> requestParams,
+                                                                      boolean tenantQualifiedUrlsEnabled,
+                                                                      boolean expected) {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled)
+                    .thenReturn(tenantQualifiedUrlsEnabled);
+
+            lenient().when(mockedHttpServletRequest.getQueryString()).thenReturn(queryString);
+            lenient().when(mockedHttpServletRequest.getParameterMap()).thenReturn(requestParams);
+
+            boolean isValid = EndpointUtil.validateParams(mockedHttpServletRequest, mockedHttpServletResponse,
+                    (MultivaluedMap<String, String>) paramObject);
+            Assert.assertEquals(isValid, expected);
+        }
+    }
+
     @Test
     public void testGetLoginPageURLFromCache() throws Exception {
 

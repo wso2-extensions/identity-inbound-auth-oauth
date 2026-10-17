@@ -119,6 +119,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -1354,7 +1355,7 @@ public class EndpointUtil {
         }
         if (paramMap != null) {
             for (Map.Entry<String, List<String>> paramEntry : paramMap.entrySet()) {
-                if (paramEntry.getValue().size() > 1) {
+                if (isRepeatedParam(request, paramEntry.getKey(), paramEntry.getValue().size())) {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + paramEntry.getKey());
                     }
@@ -1372,7 +1373,7 @@ public class EndpointUtil {
         if (request.getParameterMap() != null) {
             Map<String, String[]> map = request.getParameterMap();
             for (Map.Entry<String, String[]> entry : map.entrySet()) {
-                if (entry.getValue().length > 1) {
+                if (isRepeatedParam(request, entry.getKey(), entry.getValue().length)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Repeated param found:" + entry.getKey());
 
@@ -1389,6 +1390,76 @@ public class EndpointUtil {
             }
         }
         return true;
+    }
+
+    /**
+     * Tells whether a parameter is genuinely repeated within the query string or within the body.
+     * With tenant qualified URLs disabled a valve reads a request parameter before JAX-RS reads the body, so the
+     * container merges the query string and the form body into one parameter map. A parameter sent once in each
+     * place then looks repeated, and one such merged copy is discounted here. Nothing is merged when tenant
+     * qualified URLs are enabled, so the count is taken as it is.
+     *
+     * @param request     Request being validated.
+     * @param paramName   Parameter name.
+     * @param occurrences Times the parameter appears in the map being checked.
+     * @return True if the parameter is repeated within a single place.
+     */
+    private static boolean isRepeatedParam(HttpServletRequest request, String paramName, int occurrences) {
+
+        if (occurrences <= 1) {
+            return false;
+        }
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            return true;
+        }
+        // A parameter present once in the query string accounts for at most one merged copy.
+        if (getQueryStringOccurrences(request, paramName) == 1) {
+            return occurrences - 1 > 1;
+        }
+        return true;
+    }
+
+    /**
+     * Counts how many times a parameter appears in the query string.
+     *
+     * @param request   Request being validated.
+     * @param paramName Parameter name, as the container decoded it.
+     * @return Times the parameter appears in the query string.
+     */
+    private static int getQueryStringOccurrences(HttpServletRequest request, String paramName) {
+
+        String queryString = request.getQueryString();
+        if (StringUtils.isBlank(queryString) || StringUtils.isBlank(paramName)) {
+            return 0;
+        }
+        int occurrences = 0;
+        for (String queryParam : queryString.split("&")) {
+            int index = queryParam.indexOf('=');
+            String name = index == -1 ? queryParam : queryParam.substring(0, index);
+            if (paramName.equals(decodeParamName(name))) {
+                occurrences++;
+            }
+        }
+        return occurrences;
+    }
+
+    /**
+     * Decodes a query string parameter name so it can be compared with the name the container decoded.
+     * A name that cannot be decoded is returned unchanged, and simply will not match.
+     *
+     * @param name Parameter name as it appears in the query string.
+     * @return Decoded parameter name.
+     */
+    private static String decodeParamName(String name) {
+
+        try {
+            return URLDecoder.decode(name, UTF_8);
+        } catch (UnsupportedEncodingException | IllegalArgumentException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not decode query string param name: " + name);
+            }
+            return name;
+        }
     }
 
     public static boolean validateParams(OAuthMessage oAuthMessage, MultivaluedMap<String, String> paramMap) {
