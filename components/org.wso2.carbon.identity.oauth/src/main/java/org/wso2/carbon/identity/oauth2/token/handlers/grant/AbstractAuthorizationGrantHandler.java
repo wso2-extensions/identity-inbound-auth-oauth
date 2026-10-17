@@ -89,6 +89,7 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
@@ -655,6 +656,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (tokReqMsgCtx.isImpersonationRequest()) {
             accessTokenExtendedAttributes =
                     addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
+                    accessTokenExtendedAttributes);
+        }
+        if (StringUtils.isNotBlank(tokReqMsgCtx.getRequestedActor())) {
+            accessTokenExtendedAttributes =
+                    addExtendedAttribute(REQUESTED_ACTOR, tokReqMsgCtx.getRequestedActor(),
                     accessTokenExtendedAttributes);
         }
         // Add any new extended attributes here using @addExtendedAttribute.

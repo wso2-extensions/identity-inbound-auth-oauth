@@ -45,7 +45,8 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
                 .equalsIgnoreCase(context.getAuthorizedUser().getUserStoreDomain())) {
             additionalClaims.put(AUT, AGENT);
         } else if ((GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
-                || CIBA_GRANT_TYPE.equals(context.getOauth2AccessTokenReqDTO().getGrantType()))
+                || CIBA_GRANT_TYPE.equals(context.getOauth2AccessTokenReqDTO().getGrantType())
+                || GrantType.REFRESH_TOKEN.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType()))
                 && context.getRequestedActor() != null) {
 
             additionalClaims.put(ACT, Collections.singletonMap(SUB, context.getRequestedActor()));
