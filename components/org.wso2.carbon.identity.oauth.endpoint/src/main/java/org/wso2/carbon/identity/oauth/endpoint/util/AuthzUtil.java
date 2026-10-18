@@ -891,9 +891,12 @@ public class AuthzUtil {
                 the claims which are not in the OIDC claims will be saved as consent denied.
             */
             if (value != null) {
-                // Remove the claims which dont have values given by the user.
-                value.setRequestedClaims(removeConsentRequestedNullUserAttributes(value.getRequestedClaims(),
-                        loggedInUser.getUserAttributes(), spTenantDomain));
+                /* Remove the claims which dont have values given by the user. Skipped for the same reason as
+                   in handlePreConsent, so that a claim the user was asked about is also recorded. */
+                if (!isLegacyFederatedClaimHandlingEnabled(oAuthMessage)) {
+                    value.setRequestedClaims(removeConsentRequestedNullUserAttributes(value.getRequestedClaims(),
+                            loggedInUser.getUserAttributes(), spTenantDomain));
+                }
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain, false);
                 value.setRequestedClaims(requestedOidcClaimsList);
@@ -1225,6 +1228,11 @@ public class AuthzUtil {
         authorizationResponseDTO.setFormPostRedirectPage(formPostRedirectPage);
 
         if (isAuthnResultFound(authnResult)) {
+            /* Read before the result is removed below, since consent is handled later in this request. */
+            if (Boolean.TRUE.equals(
+                    authnResult.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))) {
+                oAuthMessage.setProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING, true);
+            }
             removeAuthenticationResult(oAuthMessage, sessionDataKeyFromLogin);
 
             if (authnResult.isAuthenticated()) {
@@ -3624,13 +3632,13 @@ public class AuthzUtil {
                 log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
                         + clientId + "  of tenantDomain: " + tenantDomain + " excluding existing consents.");
             }
-            preConsent = handlePreConsentExcludingExistingConsents(oauth2Params, user);
+            preConsent = handlePreConsentExcludingExistingConsents(oauth2Params, user, oAuthMessage);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Initiating consent handling for user: " + user.toFullQualifiedUsername() + " for client_id: "
                         + clientId + "  of tenantDomain: " + tenantDomain + " including existing consents.");
             }
-            preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user);
+            preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, user, oAuthMessage);
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -3702,17 +3710,19 @@ public class AuthzUtil {
     }
 
     private static String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params,
-                                                                    AuthenticatedUser user)
+                                                                    AuthenticatedUser user,
+                                                                    OAuthMessage oAuthMessage)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
-        return handlePreConsent(oauth2Params, user, false);
+        return handlePreConsent(oauth2Params, user, false, oAuthMessage);
     }
 
     private static String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params,
-                                                                    AuthenticatedUser user)
+                                                                    AuthenticatedUser user,
+                                                                    OAuthMessage oAuthMessage)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
-        return handlePreConsent(oauth2Params, user, true);
+        return handlePreConsent(oauth2Params, user, true, oAuthMessage);
     }
 
     /**
@@ -3728,7 +3738,7 @@ public class AuthzUtil {
      * @throws OAuthSystemException
      */
     private static String handlePreConsent(OAuth2Parameters oauth2Params, AuthenticatedUser user,
-                                           boolean useExistingConsents)
+                                           boolean useExistingConsents, OAuthMessage oAuthMessage)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         String additionalQueryParam = StringUtils.EMPTY;
@@ -3787,10 +3797,15 @@ public class AuthzUtil {
                 String requestClaimsQueryParam = null;
                 // Get the mandatory claims and append as query param.
                 String mandatoryClaimsQueryParam = null;
-                // Remove the claims which dont have values given by the user.
-                claimsForApproval.setRequestedClaims(
-                        removeConsentRequestedNullUserAttributes(claimsForApproval.getRequestedClaims(),
-                                user.getUserAttributes(), spTenantDomain));
+                /* Remove the claims which dont have values given by the user. Skipped when the federated
+                   claims were handled the way releases before IS 6.0.0 handled them: a claim the service
+                   provider requested can be left unresolved there, and those releases still asked the user
+                   to consent to it. */
+                if (!isLegacyFederatedClaimHandlingEnabled(oAuthMessage)) {
+                    claimsForApproval.setRequestedClaims(
+                            removeConsentRequestedNullUserAttributes(claimsForApproval.getRequestedClaims(),
+                                    user.getUserAttributes(), spTenantDomain));
+                }
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain, false);
                 if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
@@ -3882,6 +3897,20 @@ public class AuthzUtil {
             }
         }
         return filteredRequestedClaims;
+    }
+
+    /**
+     * Whether the federated claims of this flow were handled the way releases before IS 6.0.0 handled them.
+     * The framework records it on the authentication result and handleAuthenticationResponse copies it onto the
+     * OAuth message, which is read here because the authentication result is removed before consent is handled.
+     *
+     * @param oAuthMessage OAuth message of the request.
+     * @return true when the claims were handled that way.
+     */
+    private static boolean isLegacyFederatedClaimHandlingEnabled(OAuthMessage oAuthMessage) {
+
+        return oAuthMessage != null && Boolean.TRUE.equals(
+                oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING));
     }
 
     /**
@@ -4129,7 +4158,8 @@ public class AuthzUtil {
             throws ConsentHandlingFailedException, OAuthSystemException, OAuthProblemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
-        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
+        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser,
+                oAuthMessage);
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -4170,7 +4200,8 @@ public class AuthzUtil {
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
-        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser);
+        String preConsent = handlePreConsentIncludingExistingConsents(oauth2Params, authenticatedUser,
+                oAuthMessage);
 
         if (isConsentFromUserRequired(preConsent)) {
             String sessionDataKeyFromLogin = getSessionDataKeyFromLogin(oAuthMessage);

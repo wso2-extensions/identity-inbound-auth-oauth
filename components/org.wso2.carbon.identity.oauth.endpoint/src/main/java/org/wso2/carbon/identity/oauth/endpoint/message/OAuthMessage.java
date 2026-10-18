@@ -83,6 +83,11 @@ public class OAuthMessage {
             this.setProperty(OAuthConstants.IMPERSONATING_ACTOR,
                     resultFromConsent.getAuthzReqMsgCtx().getProperty(OAuthConstants.IMPERSONATING_ACTOR));
         }
+        if (resultFromConsent != null && resultFromConsent.getAuthzReqMsgCtx() != null
+                && Boolean.TRUE.equals(resultFromConsent.getAuthzReqMsgCtx()
+                        .getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))) {
+            this.setProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING, true);
+        }
     }
 
     public Object getProperty(String key) {

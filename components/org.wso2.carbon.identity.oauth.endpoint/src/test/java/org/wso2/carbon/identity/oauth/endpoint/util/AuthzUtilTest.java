@@ -2866,4 +2866,64 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                     "sessionContextIdentifier should be copied from SessionDataCacheEntry");
         }
     }
+
+    @DataProvider(name = "legacyFederatedClaimHandlingDataProvider")
+    public Object[][] legacyFederatedClaimHandlingData() {
+
+        return new Object[][]{
+                // value carried on the OAuth message, whether the consent claim filter is skipped
+                {null, false},
+                {Boolean.FALSE, false},
+                {"true", false},
+                {1, false},
+                {Boolean.TRUE, true},
+        };
+    }
+
+    /**
+     * The consent claim filter is skipped only when the framework recorded that the federated claims were
+     * handled the way releases before IS 6.0.0 handled them. Anything other than a Boolean true on the OAuth
+     * message leaves the filter in place, so an unrelated value cannot switch the behaviour on by accident.
+     */
+    @Test(dataProvider = "legacyFederatedClaimHandlingDataProvider")
+    public void testConsentFilterIsSkippedOnlyForTheRecordedFlag(Object carried, boolean expected)
+            throws Exception {
+
+        OAuthMessage oAuthMessage = mock(OAuthMessage.class);
+        when(oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))
+                .thenReturn(carried);
+
+        Method method = AuthzUtil.class.getDeclaredMethod(
+                "isLegacyFederatedClaimHandlingEnabled", OAuthMessage.class);
+        method.setAccessible(true);
+        Assert.assertEquals(method.invoke(null, oAuthMessage), expected,
+                "Consent filter skipping did not match the value carried on the OAuth message: " + carried);
+    }
+
+    /**
+     * A missing OAuth message must leave the filter in place rather than throw.
+     */
+    @Test
+    public void testConsentFilterIsKeptWhenThereIsNoOAuthMessage() throws Exception {
+
+        Method method = AuthzUtil.class.getDeclaredMethod(
+                "isLegacyFederatedClaimHandlingEnabled", OAuthMessage.class);
+        method.setAccessible(true);
+        Assert.assertEquals(method.invoke(null, (OAuthMessage) null), false);
+    }
+
+    /**
+     * Both the prompt and the recording of consent take the OAuth message, so both can reach the flag. The
+     * recording path is a separate request, which is why the flag has to travel on the session data cache
+     * entry rather than on the message alone.
+     */
+    @Test
+    public void testBothConsentPathsTakeTheOAuthMessage() throws Exception {
+
+        Assert.assertNotNull(AuthzUtil.class.getDeclaredMethod("handlePreConsent",
+                OAuth2Parameters.class, AuthenticatedUser.class, boolean.class, OAuthMessage.class),
+                "handlePreConsent must take the OAuth message to reach the flag.");
+        Assert.assertNotNull(AuthzUtil.class.getDeclaredMethod("handlePostConsent", OAuthMessage.class),
+                "handlePostConsent must take the OAuth message to reach the flag.");
+    }
 }
