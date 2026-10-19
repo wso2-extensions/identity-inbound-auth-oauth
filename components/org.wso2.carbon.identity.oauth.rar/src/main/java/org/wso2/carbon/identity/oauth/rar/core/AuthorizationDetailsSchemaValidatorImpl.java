@@ -38,8 +38,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -76,6 +78,11 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
     private static final List<String> DYNAMIC_REF_KEYWORD = Collections.singletonList("$dynamicRef");
     private static final List<String> PROPERTY_NAME_KEYWORDS = Arrays.asList("dependentRequired", "dependencies");
+    private static final String ABSOLUTE_REF_ANNOTATION = "__absolute_ref__";
+    // Keywords whose subschemas are applied to the same input location as the schema that holds them.
+    private static final List<String> IN_PLACE_KEYWORDS = Arrays.asList("not", "if", "then", "else");
+    private static final List<String> IN_PLACE_ARRAY_KEYWORDS = Arrays.asList("allOf", "anyOf", "oneOf");
+    private static final List<String> IN_PLACE_MAP_KEYWORDS = Arrays.asList("dependentSchemas", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -133,30 +140,166 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
         return true;
     }
 
-    private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput) {
+    private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput)
+            throws AuthorizationDetailsProcessingException {
+
+        if (jsonSchema != null) {
+            final Validator dereferencedValidator = this.buildDereferencedValidator(jsonSchema, jsonInput);
+            if (dereferencedValidator != null) {
+                return validateDereferenced(dereferencedValidator, jsonInput);
+            }
+        }
 
         // Validate the jsonSchema if present, otherwise validate the schema itself against json-schema DRAFT202012
         final Validator validator = (jsonSchema != null)
-                ? this.buildSchemaValidator(jsonSchema, jsonInput)
+                ? this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions)
                 : this.schemaRepository.validator(this.jsonSchemaOptions.getDraft().getIdentifier());
 
         return validator.validate(jsonInput);
     }
 
-    private Validator buildSchemaValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
+    /**
+     * Builds a validator that resolves the schema's internal references (e.g. "#/$defs/..."). Returns null when the
+     * schema must be validated without dereferencing, as before.
+     */
+    private Validator buildDereferencedValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
 
-        if (canDereference(jsonSchema, jsonInput)) {
-            try {
-                // Dereference the schema so that its internal references (e.g. "#/$defs/...") are resolvable.
-                return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
-            } catch (RuntimeException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Unable to dereference the authorization details schema. " +
-                            "Validating without dereferencing.", e);
+        if (!canDereference(jsonSchema, jsonInput)) {
+            return null;
+        }
+        try {
+            final Validator validator =
+                    this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+            // Vert.x follows a "$ref" loop that never moves into the input until the stack overflows.
+            if (this.hasReferenceLoop(jsonSchema)) {
+                log.debug("The authorization details schema has a $ref loop. Validating without dereferencing.");
+                return null;
+            }
+            return validator;
+        } catch (RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to dereference the authorization details schema. " +
+                        "Validating without dereferencing.", e);
+            }
+            return null;
+        }
+    }
+
+    private static OutputUnit validateDereferenced(final Validator validator, final JsonObject jsonInput)
+            throws AuthorizationDetailsProcessingException {
+
+        try {
+            return validator.validate(jsonInput);
+        } catch (StackOverflowError e) {
+            // A recursive schema is applied once per nesting level of the input, so a deeply nested input can
+            // exhaust the stack. Reject such an input as invalid.
+            log.debug("The authorization details input is nested too deeply to validate against the schema.");
+            throw new AuthorizationDetailsProcessingException(VALIDATION_FAILED_ERR_MSG);
+        }
+    }
+
+    /**
+     * Checks whether the dereferenced schema has a loop of subschemas that are all applied to the same input
+     * location: "$ref" and the in-place applicators. "$ref" targets are resolved with a Vert.x lookup built the same
+     * way as the one the validator uses.
+     */
+    private boolean hasReferenceLoop(final JsonObject jsonSchema) {
+
+        final SchemaRepository lookup =
+                SchemaRepository.create(this.jsonSchemaOptions).dereference(JsonSchema.of(jsonSchema));
+        final List<Map<?, ?>> schemaObjects = new ArrayList<>();
+        collectObjects(jsonSchema.getMap(), schemaObjects);
+
+        // Depth-first search. FALSE: on the current path, TRUE: fully explored.
+        final Map<Map<?, ?>, Boolean> states = new IdentityHashMap<>();
+        for (final Map<?, ?> schemaObject : schemaObjects) {
+            if (hasLoopFrom(schemaObject, lookup, states)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasLoopFrom(final Map<?, ?> schemaObject, final SchemaRepository lookup,
+                                       final Map<Map<?, ?>, Boolean> states) {
+
+        final Boolean state = states.get(schemaObject);
+        if (state != null) {
+            return !state;
+        }
+        states.put(schemaObject, Boolean.FALSE);
+        for (final Map<?, ?> next : getInPlaceSubschemas(schemaObject, lookup)) {
+            if (hasLoopFrom(next, lookup, states)) {
+                return true;
+            }
+        }
+        states.put(schemaObject, Boolean.TRUE);
+        return false;
+    }
+
+    private static List<Map<?, ?>> getInPlaceSubschemas(final Map<?, ?> schemaObject, final SchemaRepository lookup) {
+
+        final List<Map<?, ?>> subschemas = new ArrayList<>();
+        final Object absoluteRef = schemaObject.get(ABSOLUTE_REF_ANNOTATION);
+        if (absoluteRef instanceof String) {
+            addObject(lookup.find((String) absoluteRef), subschemas);
+        }
+        for (final String keyword : IN_PLACE_KEYWORDS) {
+            addObject(schemaObject.get(keyword), subschemas);
+        }
+        for (final String keyword : IN_PLACE_ARRAY_KEYWORDS) {
+            for (final Object item : asList(schemaObject.get(keyword))) {
+                addObject(item, subschemas);
+            }
+        }
+        for (final String keyword : IN_PLACE_MAP_KEYWORDS) {
+            final Map<?, ?> map = asMap(schemaObject.get(keyword));
+            if (map != null) {
+                for (final Object value : map.values()) {
+                    addObject(value, subschemas);
                 }
             }
         }
-        return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions);
+        return subschemas;
+    }
+
+    private static void collectObjects(final Object json, final List<Map<?, ?>> objects) {
+
+        final Map<?, ?> map = asMap(json);
+        if (map != null) {
+            objects.add(map);
+            for (final Object value : map.values()) {
+                collectObjects(value, objects);
+            }
+        } else {
+            for (final Object item : asList(json)) {
+                collectObjects(item, objects);
+            }
+        }
+    }
+
+    private static void addObject(final Object json, final List<Map<?, ?>> objects) {
+
+        final Map<?, ?> map = asMap(json);
+        if (map != null) {
+            objects.add(map);
+        }
+    }
+
+    private static Map<?, ?> asMap(final Object json) {
+
+        if (json instanceof JsonObject) {
+            return ((JsonObject) json).getMap();
+        }
+        return (json instanceof Map) ? (Map<?, ?>) json : null;
+    }
+
+    private static List<?> asList(final Object json) {
+
+        if (json instanceof JsonArray) {
+            return ((JsonArray) json).getList();
+        }
+        return (json instanceof List) ? (List<?>) json : Collections.emptyList();
     }
 
     private static boolean canDereference(final JsonObject jsonSchema, final JsonObject jsonInput) {

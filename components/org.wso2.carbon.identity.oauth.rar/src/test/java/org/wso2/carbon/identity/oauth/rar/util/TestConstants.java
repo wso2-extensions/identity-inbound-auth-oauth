@@ -57,6 +57,14 @@ public class TestConstants {
             "{\"$id\":\"item\",\"type\":\"object\",\"properties\":{\"content\":{\"$dynamicRef\":\"#content\"}}," +
             "\"$defs\":{\"defaultContent\":{\"$dynamicAnchor\":\"content\",\"type\":\"integer\"}}}," +
             "\"content\":{\"$dynamicAnchor\":\"content\",\"type\":\"string\"}}}}}";
+    // A "$ref" loop that never moves into the input.
+    public static final String TEST_SCHEMA_WITH_REFERENCE_LOOP = "{\"type\":\"object\",\"$ref\":\"#/$defs/a\"," +
+            "\"$defs\":{\"a\":{\"$ref\":\"#/$defs/b\"},\"b\":{\"allOf\":[{\"$ref\":\"#/$defs/a\"}]}}}";
+    // A recursive schema: each "child" is one level deeper in the input. The nested "allOf"s make validation use far
+    // more stack per level than serialising the input does.
+    public static final String TEST_SCHEMA_WITH_RECURSION = "{\"$ref\":\"#/$defs/node\",\"$defs\":{\"node\":" +
+            "{\"type\":\"object\",\"allOf\":[{\"allOf\":[{\"allOf\":[{\"allOf\":[{\"properties\":" +
+            "{\"child\":{\"$ref\":\"#/$defs/node\"}}}]}]}]}]}}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation

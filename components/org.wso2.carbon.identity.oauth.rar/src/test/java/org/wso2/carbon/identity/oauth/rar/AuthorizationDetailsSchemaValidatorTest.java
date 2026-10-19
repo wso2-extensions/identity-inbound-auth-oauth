@@ -42,6 +42,8 @@ import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DUPLICATE_ID;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DYNAMIC_REF;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_RECURSION;
+import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_REFERENCE_LOOP;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_TYPE;
 
@@ -168,6 +170,53 @@ public class AuthorizationDetailsSchemaValidatorTest {
         this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DYNAMIC_REF, testAuthorizationDetail);
     }
 
+    @Test(expectedExceptions = {SchemaException.class},
+            expectedExceptionsMessageRegExp = "(?s)Unresolved \\$ref #/\\$defs/a.*")
+    public void shouldValidateWithoutDereferencing_whenSchemaHasReferenceLoop()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+
+        // Without dereferencing, the "$ref" is unresolved, as before. With dereferencing, Vert.x would follow the
+        // loop until the stack overflows.
+        this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_REFERENCE_LOOP, testAuthorizationDetail);
+    }
+
+    @Test
+    public void shouldReturnTrue_whenRecursiveSchemaReceivesNestedAuthorizationDetail()
+            throws AuthorizationDetailsProcessingException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("child", nestedChildren(5));
+
+        assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_RECURSION, testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldThrowAuthorizationDetailsProcessingException_whenInputIsNestedTooDeeplyForRecursiveSchema()
+            throws InterruptedException {
+
+        AuthorizationDetail testAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        testAuthorizationDetail.setType(TEST_TYPE);
+        testAuthorizationDetail.setDetail("child", nestedChildren(500));
+
+        // Validate on a thread with a small stack, so that the recursion exhausts it.
+        final Throwable[] thrown = new Throwable[1];
+        final Thread thread = new Thread(null, () -> {
+            try {
+                this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_RECURSION, testAuthorizationDetail);
+            } catch (Throwable t) {
+                thrown[0] = t;
+            }
+        }, "deep-input-validation", 512 * 1024);
+        thread.start();
+        thread.join();
+
+        assertTrue(thrown[0] instanceof AuthorizationDetailsProcessingException, String.valueOf(thrown[0]));
+    }
+
     @Test
     public void shouldReturnFalse_whenSchemaIsEmpty() throws AuthorizationDetailsProcessingException {
 
@@ -217,6 +266,15 @@ public class AuthorizationDetailsSchemaValidatorTest {
                 "\"properties\":[{\"type\":{\"type\":\"string\"}}]}";
 
         assertFalse(this.uut.isValidSchema(invalidSchema));
+    }
+
+    private Map<String, Object> nestedChildren(final int depth) {
+
+        Map<String, Object> child = new HashMap<>();
+        for (int i = 1; i < depth; i++) {
+            child = Collections.singletonMap("child", child);
+        }
+        return child;
     }
 
     private Map<String, Object> getTestSchema() {
