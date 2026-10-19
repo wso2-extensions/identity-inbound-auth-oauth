@@ -692,6 +692,7 @@ public class OAuthAppDAO {
                         handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
                                 spTenantDomain, oauthApp);
                         oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                        oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
                     }
                 }
 
@@ -785,6 +786,7 @@ public class OAuthAppDAO {
                         String spTenantDomain = authenticatedUser.getTenantDomain();
                         handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                         oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                        oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
 
                         oauthAppList.add(oauthApp);
                     }
