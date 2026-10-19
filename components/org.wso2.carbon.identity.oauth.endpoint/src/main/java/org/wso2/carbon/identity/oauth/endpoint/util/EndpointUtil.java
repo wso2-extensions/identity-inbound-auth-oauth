@@ -766,6 +766,7 @@ public class EndpointUtil {
                     }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     persistImpersonationInfoToSessionDataCache(entry, oAuthMessage);
+                    persistLegacyFederatedClaimHandlingToSessionDataCache(entry, oAuthMessage);
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
                     if (log.isDebugEnabled()) {
@@ -810,6 +811,34 @@ public class EndpointUtil {
         if (impersonatingActor != null) {
             entry.getAuthzReqMsgCtx().addProperty(IMPERSONATING_ACTOR, impersonatingActor);
             entry.getAuthzReqMsgCtx().setImpersonationRequest(true);
+        }
+    }
+
+    /**
+     * Carry the federated claim handling flag across the consent round trip. The entry cached here is read back
+     * when the user submits consent, where the same claims are resolved again to record the receipt.
+     *
+     * @param entry        Session data cache entry cached under the consent key.
+     * @param oAuthMessage OAuth message of the current request.
+     */
+    protected static void persistLegacyFederatedClaimHandlingToSessionDataCache(SessionDataCacheEntry entry,
+                                                                               OAuthMessage oAuthMessage) {
+
+        if (oAuthMessage == null || entry == null || entry.getAuthzReqMsgCtx() == null) {
+            if (entry != null && entry.getAuthzReqMsgCtx() == null && oAuthMessage != null
+                    && Boolean.TRUE.equals(
+                            oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))
+                    && log.isDebugEnabled()) {
+                log.debug("There is no authorization request context on the session data cache entry, so the "
+                        + "federated claim handling flag cannot be carried across the consent round trip. The "
+                        + "consent record will be written without the claims that resolved to no value.");
+            }
+            return;
+        }
+        if (Boolean.TRUE.equals(
+                oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))) {
+            entry.getAuthzReqMsgCtx().addProperty(
+                    FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING, true);
         }
     }
 

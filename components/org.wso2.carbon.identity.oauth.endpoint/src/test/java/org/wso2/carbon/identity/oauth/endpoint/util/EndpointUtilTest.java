@@ -50,6 +50,7 @@ import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -99,6 +100,7 @@ import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -1100,5 +1102,71 @@ public class EndpointUtilTest {
 
         EndpointUtil.persistImpersonationInfoToSessionDataCache(sessionDataCacheEntry, oAuthMessage);
         assertEquals(authzReqMsgCtx.isImpersonationRequest(), expected);
+    }
+
+    /**
+     * The prompt and the recording of consent happen in different requests, so the flag has to travel on the
+     * session data cache entry. That entry is the one re-cached under the consent key.
+     */
+    @Test
+    public void testLegacyHandlingFlagIsPersistedForTheConsentRequest() throws Exception {
+
+        OAuthAuthzReqMessageContext authzReqMsgCtx =
+                new OAuthAuthzReqMessageContext(new OAuth2AuthorizeReqDTO());
+        SessionDataCacheEntry entry = new SessionDataCacheEntry();
+        entry.setAuthzReqMsgCtx(authzReqMsgCtx);
+
+        OAuthMessage oAuthMessage = mock(OAuthMessage.class);
+        when(oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))
+                .thenReturn(Boolean.TRUE);
+
+        invokePersistFedClaimFilteringInfo(entry, oAuthMessage);
+
+        Assert.assertEquals(
+                authzReqMsgCtx.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING),
+                Boolean.TRUE, "The flag did not reach the entry that survives the consent round trip.");
+    }
+
+    /**
+     * Nothing is written when the framework did not record the flag, so an ordinary flow carries nothing
+     * extra across the consent round trip.
+     */
+    @Test
+    public void testNothingIsPersistedWhenTheFlagWasNotRecorded() throws Exception {
+
+        OAuthAuthzReqMessageContext authzReqMsgCtx =
+                new OAuthAuthzReqMessageContext(new OAuth2AuthorizeReqDTO());
+        SessionDataCacheEntry entry = new SessionDataCacheEntry();
+        entry.setAuthzReqMsgCtx(authzReqMsgCtx);
+
+        for (Object carried : new Object[]{null, Boolean.FALSE, "true"}) {
+            OAuthMessage oAuthMessage = mock(OAuthMessage.class);
+            when(oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))
+                    .thenReturn(carried);
+            invokePersistFedClaimFilteringInfo(entry, oAuthMessage);
+            Assert.assertNull(
+                    authzReqMsgCtx.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING),
+                    "A value that is not Boolean true was carried across the consent round trip: " + carried);
+        }
+    }
+
+    /**
+     * An entry without an authorization request context, and a missing OAuth message, must be tolerated.
+     */
+    @Test
+    public void testPersistingTheFlagToleratesMissingState() throws Exception {
+
+        invokePersistFedClaimFilteringInfo(new SessionDataCacheEntry(), mock(OAuthMessage.class));
+        invokePersistFedClaimFilteringInfo(null, mock(OAuthMessage.class));
+        invokePersistFedClaimFilteringInfo(new SessionDataCacheEntry(), null);
+    }
+
+    private void invokePersistFedClaimFilteringInfo(SessionDataCacheEntry entry, OAuthMessage oAuthMessage)
+            throws Exception {
+
+        Method method = EndpointUtil.class.getDeclaredMethod("persistLegacyFederatedClaimHandlingToSessionDataCache",
+                SessionDataCacheEntry.class, OAuthMessage.class);
+        method.setAccessible(true);
+        method.invoke(null, entry, oAuthMessage);
     }
 }
