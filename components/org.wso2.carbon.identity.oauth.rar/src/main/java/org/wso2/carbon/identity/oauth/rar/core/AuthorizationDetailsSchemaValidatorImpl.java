@@ -199,9 +199,9 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     }
 
     /**
-     * Checks whether the dereferenced schema has a loop of subschemas that are all applied to the same input
-     * location: "$ref" and the in-place applicators. "$ref" targets are resolved with a Vert.x lookup built the same
-     * way as the one the validator uses.
+     * Checks whether the schema has a "$ref" loop that never moves deeper into the input, e.g. {"$ref": "#"}.
+     * Follows "$ref" and the keywords that apply a subschema to the same input value (allOf, not, if, ...),
+     * resolving each "$ref" the same way as the validator does.
      */
     private boolean hasReferenceLoop(final JsonObject jsonSchema) {
 
