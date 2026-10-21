@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -64,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OpaqueRSAKeyTestProvider;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -71,9 +71,12 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -548,6 +551,29 @@ public class JWTTokenIssuerTest {
                                    long expectedExpiry, boolean ppidEnabled, boolean hexifyRequired, boolean enableX5t,
                                    boolean enableX5ts256) throws Exception {
 
+        assertSignJWTWithRSA(authzReqMessageContext, tokenReqMessageContext, hexifyRequired, enableX5t,
+                enableX5ts256, SHA256_WITH_RSA, false);
+    }
+
+    @DataProvider(name = "opaqueKeySignatureAlgorithms")
+    public Object[][] opaqueKeySignatureAlgorithms() {
+
+        return new Object[][]{{SHA256_WITH_RSA}, {"PS256"}};
+    }
+
+    @Test(dataProvider = "opaqueKeySignatureAlgorithms")
+    public void testSignJWTWithRSAUsingOpaqueKey(String signatureAlgorithm) throws Exception {
+
+        // A key held in an HSM: not an RSAPrivateKey and no encoding. x5t headers need the certificate encoding,
+        // which the simulated certificate does not have, so they are disabled here.
+        Object[] row = provideClaimSetData()[0];
+        assertSignJWTWithRSA(row[0], row[1], false, false, false, signatureAlgorithm, true);
+    }
+
+    private void assertSignJWTWithRSA(Object authzReqMessageContext, Object tokenReqMessageContext,
+                                      boolean hexifyRequired, boolean enableX5t, boolean enableX5ts256,
+                                      String signatureAlgorithm, boolean opaqueKey) throws Exception {
+
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
@@ -569,6 +595,18 @@ public class JWTTokenIssuerTest {
                     System.getProperty(CarbonBaseConstants.CARBON_HOME));
             RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
             Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
+            PrivateKey signingKey = rsaPrivateKey;
+            PublicKey verificationKey = cert.getPublicKey();
+            if (opaqueKey) {
+                OpaqueRSAKeyTestProvider hsmProvider = new OpaqueRSAKeyTestProvider(2048);
+                signingKey = hsmProvider.getPrivateKey();
+                verificationKey = hsmProvider.getPublicKey();
+                X509Certificate hsmCertificate = mock(X509Certificate.class);
+                when(hsmCertificate.getPublicKey()).thenReturn(verificationKey);
+                cert = hsmCertificate;
+                oAuth2Util.when(() -> OAuth2Util.getSigningKeyStoreProvider(anyString(), any()))
+                        .thenReturn(hsmProvider);
+            }
             oAuth2Util.when(() -> OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
             oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenCallRealMethod();
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any(), anyBoolean()))
@@ -590,10 +628,8 @@ public class JWTTokenIssuerTest {
             identityUtil.when(() -> IdentityUtil.getProperty(JWT_X5T_ENABLED))
                     .thenReturn(String.valueOf(enableX5t));
 
-            oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
-            JWSSigner signer = new RSASSASigner(rsaPrivateKey);
-            oAuth2Util.when(() -> OAuth2Util.createJWSSigner(any())).thenReturn(signer);
-            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_RSA);
+            oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(signingKey);
+            when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(signatureAlgorithm);
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
@@ -607,7 +643,11 @@ public class JWTTokenIssuerTest {
                     (OAuthTokenReqMessageContext) tokenReqMessageContext,
                     (OAuthAuthzReqMessageContext) authzReqMessageContext);
             SignedJWT signedJWT = SignedJWT.parse(jwtToken);
-            if (!hexifyRequired) {
+            if (opaqueKey) {
+                assertTrue(signedJWT.verify(new RSASSAVerifier((RSAPublicKey) verificationKey)));
+                assertEquals(signedJWT.getHeader().getAlgorithm().getName(),
+                        "PS256".equals(signatureAlgorithm) ? "PS256" : "RS256");
+            } else if (!hexifyRequired) {
                 validateX5tInJWT(jwtToken, cert);
             }
             assertNotNull(jwtToken);
@@ -1633,8 +1673,6 @@ public class JWTTokenIssuerTest {
                     .thenAnswer((Answer<Void>) invocation -> null);
 
             oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
-            JWSSigner signer = new RSASSASigner(rsaPrivateKey);
-            oAuth2Util.when(() -> OAuth2Util.createJWSSigner(any())).thenReturn(signer);
             when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_RSA);
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);

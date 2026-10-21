@@ -63,8 +63,8 @@ import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -696,11 +696,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
+            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
+            if (!(privateKey instanceof PrivateKey)) {
+                throw new IdentityOAuth2Exception("The signing key of tenant: " + tenantDomain +
+                        " is not a private key.");
+            }
+            JWSSigner signer = OAuth2Util.createJWSSigner((PrivateKey) privateKey,
+                    OAuth2Util.getSigningKeyStoreProvider(tenantDomain, privateKey), certificate);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint;
 
-            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
             if (OAuth2Util.isJWTX5tHexifyingRequired()) {
                 // Handle x5t.
                 if (IdentityUtil.getProperty(JWT_X5T_ENABLED) == null) {
