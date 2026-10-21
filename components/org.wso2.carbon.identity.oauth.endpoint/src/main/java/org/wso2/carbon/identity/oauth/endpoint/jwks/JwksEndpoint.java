@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -122,17 +122,7 @@ public class JwksEndpoint {
                 tenantDomain = getTenantDomain();
                 final KeyStore keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
                         IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
-                List<CertificateInfo> certificateInfoList = new ArrayList<>();
-                Enumeration enumeration = keystore.aliases();
-                while (enumeration.hasMoreElements()) {
-                    String alias = (String) enumeration.nextElement();
-                    if (keystore.isKeyEntry(alias)) {
-                        CertificateInfo certificateInfo = new CertificateInfo(keystore.getCertificate(alias), alias);
-                        certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
-                        certificateInfoList.add(certificateInfo);
-                    }
-                }
-                return buildResponse(certificateInfoList);
+                return buildResponse(getPublishableCertificateInfoList(keystore));
             }
         } catch (Exception e) {
             String errorMessage = "Error while generating the keyset for tenant domain: " + tenantDomain;
@@ -154,15 +144,41 @@ public class JwksEndpoint {
 
         final KeyStore keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
                 IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        return getPublishableCertificateInfoList(keystore);
+    }
+
+    /**
+     * Collect the certificate information of the key pairs in a key store that can be published in the JWKS: private
+     * key entries with an X.509 certificate. Other entries, such as secret keys or private keys without a certificate
+     * (possible in a PKCS#11 token), are skipped.
+     *
+     * @param keystore Key store of the tenant.
+     * @return Certificate information of the publishable key pairs.
+     * @throws KeyStoreException If there is an error accessing the key store.
+     */
+    private static List<CertificateInfo> getPublishableCertificateInfoList(KeyStore keystore)
+            throws KeyStoreException {
+
         List<CertificateInfo> certificateInfoList = new ArrayList<>();
-        Enumeration enumeration = keystore.aliases();
+        Enumeration<String> enumeration = keystore.aliases();
         while (enumeration.hasMoreElements()) {
-            String alias = (String) enumeration.nextElement();
-            if (keystore.isKeyEntry(alias)) {
-                CertificateInfo certificateInfo = new CertificateInfo(keystore.getCertificate(alias), alias);
-                certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
-                certificateInfoList.add(certificateInfo);
+            String alias = enumeration.nextElement();
+            if (!keystore.entryInstanceOf(alias, KeyStore.PrivateKeyEntry.class)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Skipping key store entry: " + alias + " for JWKS. It is not a private key entry.");
+                }
+                continue;
             }
+            Certificate certificate = keystore.getCertificate(alias);
+            if (!(certificate instanceof X509Certificate)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Skipping key store entry: " + alias + " for JWKS. It has no X.509 certificate.");
+                }
+                continue;
+            }
+            CertificateInfo certificateInfo = new CertificateInfo(certificate, alias);
+            certificateInfo.setCertificateChain(keystore.getCertificateChain(alias));
+            certificateInfoList.add(certificateInfo);
         }
         return certificateInfoList;
     }

@@ -595,7 +595,7 @@ public class JwksEndpointTest {
         java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
                 java.util.Arrays.asList("badAlias"));
         when(mockKeystore.aliases()).thenReturn(aliases);
-        when(mockKeystore.isKeyEntry("badAlias")).thenReturn(true);
+        when(mockKeystore.entryInstanceOf("badAlias", KeyStore.PrivateKeyEntry.class)).thenReturn(true);
         when(mockKeystore.getCertificate("badAlias")).thenReturn(badCert);
         when(mockKeystore.getCertificateChain("badAlias")).thenReturn(new Certificate[]{badCert});
 
@@ -663,6 +663,61 @@ public class JwksEndpointTest {
             assertTrue(result.contains("Error while generating the keyset"));
         } finally {
             // Reset static mock to original resolver for subsequent tests
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+        }
+    }
+
+    @Test
+    public void testJwksSkipsEntriesThatAreNotKeyPairsWithCertificates() throws Exception {
+
+        // A PKCS#11 token can hold secret keys and private keys without a certificate next to the signing key pair.
+        KeyStore softwareKeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
+        KeyStore mixedKeyStore = KeyStore.getInstance("PKCS12");
+        mixedKeyStore.load(null, null);
+        mixedKeyStore.setKeyEntry("wso2carbon", softwareKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray()),
+                "wso2carbon".toCharArray(), softwareKeyStore.getCertificateChain("wso2carbon"));
+        javax.crypto.KeyGenerator aesKeyGenerator = javax.crypto.KeyGenerator.getInstance("AES");
+        aesKeyGenerator.init(256);
+        mixedKeyStore.setEntry("secret-key", new KeyStore.SecretKeyEntry(aesKeyGenerator.generateKey()),
+                new KeyStore.PasswordProtection("wso2carbon".toCharArray()));
+
+        String expected = jwksForKeyStore(softwareKeyStore);
+        String result = jwksForKeyStore(mixedKeyStore);
+        assertTrue(result.contains("keys"), result);
+        assertEquals(new JSONObject(result).getJSONArray("keys").length(),
+                new JSONObject(expected).getJSONArray("keys").length(), "Only the key pair must be published.");
+    }
+
+    private String jwksForKeyStore(KeyStore keyStore) throws Exception {
+
+        IdentityKeyStoreResolver mockResolver = mock(IdentityKeyStoreResolver.class);
+        when(mockResolver.getKeyStore(anyString(), any())).thenReturn(keyStore);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance).thenReturn(mockResolver);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                    .thenReturn(JWSAlgorithm.RS256);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                    .thenReturn(JWSAlgorithm.RS512);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                    .thenReturn(JWSAlgorithm.RS384);
+            oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                    .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                            "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+            identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("false");
+            return jwksEndpoint.jwks();
+        } finally {
             identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
                     .thenReturn(identityKeyStoreResolver);
         }
@@ -830,7 +885,7 @@ public class JwksEndpointTest {
                 java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
                         java.util.Arrays.asList("testAlias"));
                 when(mockKeystore.aliases()).thenReturn(aliases);
-                when(mockKeystore.isKeyEntry("testAlias")).thenReturn(true);
+                when(mockKeystore.entryInstanceOf("testAlias", KeyStore.PrivateKeyEntry.class)).thenReturn(true);
                 when(mockKeystore.getCertificate("testAlias")).thenReturn(mockCert);
                 when(mockKeystore.getCertificateChain("testAlias")).thenReturn(null);
 
