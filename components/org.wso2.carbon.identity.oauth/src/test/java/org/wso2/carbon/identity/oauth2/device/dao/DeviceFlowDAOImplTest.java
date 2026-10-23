@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.device.dao;
 
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -32,11 +33,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Calendar;
+import java.util.Date;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,6 +55,8 @@ public class DeviceFlowDAOImplTest {
         return new Object[][] {
                 {Constants.PENDING, -600000L, -1200000L, DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN},
                 {Constants.PENDING, -600000L, 0L, DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN},
+                {Constants.PENDING, 0L, -1200000L, DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN},
+                {Constants.PENDING, 0L, 0L, DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN},
                 {Constants.PENDING, 600000L, -1200000L, DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING},
                 {Constants.PENDING, 600000L, 0L, DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN},
                 {Constants.EXPIRED, 600000L, -1200000L, DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN},
@@ -66,7 +71,7 @@ public class DeviceFlowDAOImplTest {
         Connection connection = mock(Connection.class);
         PreparedStatement statement = mock(PreparedStatement.class);
         ResultSet resultSet = mock(ResultSet.class);
-        long now = System.currentTimeMillis();
+        long now = 1700000000000L;
         when(connection.prepareStatement(anyString())).thenReturn(statement);
         when(statement.executeQuery()).thenReturn(resultSet);
         when(resultSet.next()).thenReturn(true);
@@ -75,7 +80,9 @@ public class DeviceFlowDAOImplTest {
         when(resultSet.getLong(3)).thenReturn(600000L);
         when(resultSet.getTimestamp(eq(4), any(Calendar.class))).thenReturn(new Timestamp(now + expiryOffset));
 
-        try (MockedStatic<IdentityDatabaseUtil> databaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+        try (MockedStatic<IdentityDatabaseUtil> databaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedConstruction<Date> dates = mockConstruction(Date.class,
+                     (date, context) -> when(date.getTime()).thenReturn(now))) {
             databaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
 
             IdentityOAuth2Exception error = Assert.expectThrows(IdentityOAuth2Exception.class,

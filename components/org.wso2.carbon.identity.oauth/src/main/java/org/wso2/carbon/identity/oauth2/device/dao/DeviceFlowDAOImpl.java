@@ -253,7 +253,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
     private void handleAuthorizationPending(String deviceStatus, Timestamp newPollTime, DeviceFlowDO deviceFlowDO)
             throws IdentityOAuth2Exception {
 
-        if (EXPIRED.equals(deviceStatus) || deviceFlowDO.getExpiryTime().getTime() < newPollTime.getTime()) {
+        if (EXPIRED.equals(deviceStatus) || deviceFlowDO.getExpiryTime().getTime() <= newPollTime.getTime()) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
                     DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
         }
