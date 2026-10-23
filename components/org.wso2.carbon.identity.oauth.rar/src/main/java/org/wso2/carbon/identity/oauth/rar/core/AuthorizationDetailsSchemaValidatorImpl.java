@@ -35,6 +35,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
@@ -47,6 +48,7 @@ import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATE_SCHEMA_REFERENCES_CONFIG;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG;
 
 /**
@@ -83,6 +85,16 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     private static final List<String> IN_PLACE_KEYWORDS = Arrays.asList("not", "if", "then", "else");
     private static final List<String> IN_PLACE_ARRAY_KEYWORDS = Arrays.asList("allOf", "anyOf", "oneOf");
     private static final List<String> IN_PLACE_MAP_KEYWORDS = Arrays.asList("dependentSchemas", "dependencies");
+    private static final String REF_KEYWORD = "$ref";
+    private static final String DYNAMIC_REF_KEYWORD_NAME = "$dynamicRef";
+    // Keywords whose values are subschemas: one subschema, an array of subschemas, or a map of subschemas.
+    private static final List<String> SUBSCHEMA_KEYWORDS = Arrays.asList("additionalItems", "unevaluatedItems",
+            "items", "contains", "additionalProperties", "unevaluatedProperties", "propertyNames", "not", "if",
+            "then", "else");
+    private static final List<String> SUBSCHEMA_ARRAY_KEYWORDS =
+            Arrays.asList("prefixItems", "items", "allOf", "anyOf", "oneOf");
+    private static final List<String> SUBSCHEMA_MAP_KEYWORDS = Arrays.asList("$defs", "definitions", "properties",
+            "patternProperties", "dependentSchemas", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -137,7 +149,90 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             throw new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
                     buildSchemaValidationErrorMessage(outputUnit, e)), e);
         }
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG))) {
+            this.assertReferencesResolvable(this.parseJsonObject(schema));
+        }
         return true;
+    }
+
+    /**
+     * Rejects a schema whose references can never be resolved when an authorization detail is validated: one that
+     * uses "$dynamicRef", has a "$ref" that does not resolve, or has a "$ref" loop.
+     */
+    private void assertReferencesResolvable(final JsonObject jsonSchema)
+            throws AuthorizationDetailsProcessingException {
+
+        final List<Map<?, ?>> subschemas = new ArrayList<>();
+        collectSubschemas(jsonSchema.getMap(), subschemas);
+
+        boolean hasReference = false;
+        for (final Map<?, ?> subschema : subschemas) {
+            if (subschema.containsKey(DYNAMIC_REF_KEYWORD_NAME)) {
+                throw invalidSchema("\"$dynamicRef\" is not supported");
+            }
+            hasReference |= subschema.get(REF_KEYWORD) instanceof String;
+        }
+        if (!hasReference) {
+            return;
+        }
+
+        try {
+            this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+            final SchemaRepository lookup = this.buildLookup(jsonSchema);
+            for (final Map<?, ?> subschema : subschemas) {
+                final Object ref = subschema.get(REF_KEYWORD);
+                if (ref instanceof String && !this.isResolvable(subschema.get(ABSOLUTE_REF_ANNOTATION), lookup)) {
+                    throw invalidSchema("\"$ref\": \"" + ref + "\" cannot be resolved");
+                }
+            }
+            if (hasReferenceLoop(jsonSchema, lookup)) {
+                throw invalidSchema("it has a \"$ref\" loop that never moves deeper into the input");
+            }
+        } catch (RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to resolve the references of the authorization details schema.", e);
+            }
+            throw invalidSchema("its references cannot be resolved");
+        }
+    }
+
+    private boolean isResolvable(final Object absoluteRef, final SchemaRepository lookup) {
+
+        // A reference resolves to the schema itself or to a meta-schema preloaded in the shared repository.
+        return absoluteRef instanceof String && (lookup.find((String) absoluteRef) != null
+                || this.schemaRepository.find((String) absoluteRef) != null);
+    }
+
+    private static AuthorizationDetailsProcessingException invalidSchema(final String reason) {
+
+        return new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
+                reason));
+    }
+
+    private static void collectSubschemas(final Map<?, ?> schema, final List<Map<?, ?>> subschemas) {
+
+        subschemas.add(schema);
+        for (final Map.Entry<?, ?> entry : schema.entrySet()) {
+            final Object keyword = entry.getKey();
+            final Map<?, ?> map = asMap(entry.getValue());
+            if (map != null && SUBSCHEMA_KEYWORDS.contains(keyword)) {
+                collectSubschemas(map, subschemas);
+            } else if (map != null && SUBSCHEMA_MAP_KEYWORDS.contains(keyword)) {
+                for (final Object value : map.values()) {
+                    final Map<?, ?> subschema = asMap(value);
+                    if (subschema != null) {
+                        collectSubschemas(subschema, subschemas);
+                    }
+                }
+            } else if (SUBSCHEMA_ARRAY_KEYWORDS.contains(keyword)) {
+                for (final Object item : asList(entry.getValue())) {
+                    final Map<?, ?> subschema = asMap(item);
+                    if (subschema != null) {
+                        collectSubschemas(subschema, subschemas);
+                    }
+                }
+            }
+        }
     }
 
     private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput)
@@ -171,7 +266,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             final Validator validator =
                     this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
             // Vert.x follows a "$ref" loop that never moves into the input until the stack overflows.
-            if (this.hasReferenceLoop(jsonSchema)) {
+            if (hasReferenceLoop(jsonSchema, this.buildLookup(jsonSchema))) {
                 log.debug("The authorization details schema has a $ref loop. Validating without dereferencing.");
                 return null;
             }
@@ -199,14 +294,20 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
     }
 
     /**
+     * Builds a Vert.x lookup of the schema's subschemas, the same way the validator does when it dereferences.
+     */
+    private SchemaRepository buildLookup(final JsonObject jsonSchema) {
+
+        return SchemaRepository.create(this.jsonSchemaOptions).dereference(JsonSchema.of(jsonSchema));
+    }
+
+    /**
      * Checks whether the schema has a "$ref" loop that never moves deeper into the input, e.g. {"$ref": "#"}.
      * Follows "$ref" and the keywords that apply a subschema to the same input value (allOf, not, if, ...),
      * resolving each "$ref" the same way as the validator does.
      */
-    private boolean hasReferenceLoop(final JsonObject jsonSchema) {
+    private static boolean hasReferenceLoop(final JsonObject jsonSchema, final SchemaRepository lookup) {
 
-        final SchemaRepository lookup =
-                SchemaRepository.create(this.jsonSchemaOptions).dereference(JsonSchema.of(jsonSchema));
         final List<Map<?, ?>> schemaObjects = new ArrayList<>();
         collectObjects(jsonSchema.getMap(), schemaObjects);
 

@@ -22,8 +22,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.SchemaException;
 import org.apache.commons.lang3.StringUtils;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidatorImpl;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
@@ -35,8 +38,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATE_SCHEMA_REFERENCES_CONFIG;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEFS;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_SCHEMA_WITH_DEPENDENT_REQUIRED;
@@ -215,6 +220,66 @@ public class AuthorizationDetailsSchemaValidatorTest {
         thread.join();
 
         assertTrue(thrown[0] instanceof AuthorizationDetailsProcessingException, String.valueOf(thrown[0]));
+    }
+
+    @DataProvider(name = "schemasWithUnresolvableReferences")
+    public Object[][] schemasWithUnresolvableReferences() {
+
+        return new Object[][]{
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/missing\"}}}"},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"https://example.com/a.json\"}}}"},
+                {"{\"type\":\"object\",\"$defs\":{\"unused\":{\"$ref\":\"#/$defs/missing\"}}}"},
+                {TEST_SCHEMA_WITH_REFERENCE_LOOP},
+                {TEST_SCHEMA_WITH_DYNAMIC_REF},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$id\":\"https://example.com/dup\"}," +
+                        "\"b\":{\"$id\":\"https://example.com/dup\",\"$ref\":\"#/$defs/c\"}}," +
+                        "\"$defs\":{\"c\":{\"type\":\"string\"}}}"}
+        };
+    }
+
+    @Test(dataProvider = "schemasWithUnresolvableReferences",
+            expectedExceptions = {AuthorizationDetailsProcessingException.class})
+    public void shouldThrowAuthorizationDetailsProcessingException_whenRegisteredSchemaReferencesCannotResolve(
+            final String schema) throws AuthorizationDetailsProcessingException {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("true");
+            this.uut.isValidSchema(schema);
+        }
+    }
+
+    @DataProvider(name = "schemasWithResolvableReferences")
+    public Object[][] schemasWithResolvableReferences() {
+
+        return new Object[][]{
+                {TEST_SCHEMA_WITH_DEFS},
+                {TEST_SCHEMA_WITH_RECURSION},
+                {TEST_SCHEMA_WITH_DUPLICATE_ID},
+                {TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED},
+                {"{\"type\":\"object\",\"properties\":{\"s\":" +
+                        "{\"$ref\":\"https://json-schema.org/draft/2020-12/schema\"}}}"},
+                {"{\"type\":\"object\",\"x-extension\":{\"$ref\":\"#/nowhere\"}}"}
+        };
+    }
+
+    @Test(dataProvider = "schemasWithResolvableReferences")
+    public void shouldReturnTrue_whenRegisteredSchemaReferencesResolve(final String schema)
+            throws AuthorizationDetailsProcessingException {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("true");
+            assertTrue(this.uut.isValidSchema(schema));
+        }
+    }
+
+    @Test(dataProvider = "schemasWithUnresolvableReferences")
+    public void shouldReturnTrue_whenReferenceValidationIsDisabledAndReferencesCannotResolve(final String schema)
+            throws AuthorizationDetailsProcessingException {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("false");
+            assertTrue(this.uut.isValidSchema(schema));
+        }
     }
 
     @Test
