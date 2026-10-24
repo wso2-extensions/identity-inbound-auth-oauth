@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -65,6 +66,12 @@ public class AccessTokenEventUtil {
 
     private static final Log LOG = LogFactory.getLog(AccessTokenEventUtil.class);
     private static final String APP_DAO = "OAuthAppDO";
+    /*
+     Name of the event property carrying the identifier of the user's profile in the organization it is accessing.
+     It is kept here so that only this bundle changes; it belongs in OAuthConstants.EventProperty next to the other
+     token event properties once this is upstreamed. The webhook event handlers read the same name.
+     */
+    private static final String SHARED_USER_ID = "SHARED_USER_ID";
 
     /**
      * Publishes a token revoke event for a particular user.
@@ -199,14 +206,31 @@ public class AccessTokenEventUtil {
 
         Map<String, Object> properties = new HashMap<>();
         if (user != null) {
+            String userId = null;
             try {
-                properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getUserId());
+                userId = user.getUserId();
+                properties.put(IdentityEventConstants.EventProperty.USER_ID, userId);
             } catch (UserIdNotFoundException e) {
                 LOG.debug("Error retrieving user Id for tenant: " + user.getTenantDomain(), e);
             }
             properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
             properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
             properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
+            /*
+             The organization the token belonged to and the organization the user resides in, stated the same way
+             as for a token issue so that a consumer of the event can tell the two apart: they differ for a user
+             shared into the organization the token was for, and the tenant the revocation is performed in says
+             nothing about either.
+             */
+            String accessingOrganizationId = StringUtils.isNotBlank(user.getAccessingOrganization())
+                    ? user.getAccessingOrganization() : StringUtils.EMPTY;
+            properties.put(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+            properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
+                    resolveUserResidentOrganizationId(user,
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()));
+            properties.put(IdentityEventConstants.EventProperty.IS_FEDERATED_USER, user.isFederatedUser());
+            properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER, user.isOrganizationUser());
+            properties.put(SHARED_USER_ID, resolveSharedUserId(user, userId, accessingOrganizationId));
         }
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID,
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
@@ -398,7 +422,10 @@ public class AccessTokenEventUtil {
                 properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER,
                         tokReqMsgCtx.getAuthorizedUser().isOrganizationUser());
                 properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
-                        tokReqMsgCtx.getAuthorizedUser().getUserResidentOrganization());
+                        resolveUserResidentOrganizationId(tokReqMsgCtx.getAuthorizedUser(), tenantDomain));
+                properties.put(SHARED_USER_ID, resolveSharedUserId(tokReqMsgCtx.getAuthorizedUser(),
+                        String.valueOf(properties.get(IdentityEventConstants.EventProperty.USER_ID)),
+                        accessingOrganizationId));
             }
 
             properties.put(IdentityEventConstants.EventProperty.IAT, tokReqMsgCtx.getAccessTokenIssuedTime());
@@ -496,6 +523,90 @@ public class AccessTokenEventUtil {
         } catch (IdentityEventException e) {
             LOG.error("Error occurred publishing event " + IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, e);
         }
+    }
+
+    /**
+     * Organization the user the token was issued for resides in, when it is not the one the token was issued in.
+     * <p>
+     * The authenticated user rebuilt for a token request names that organization only on the flows that resolve it,
+     * such as the organization login flow. On the enhanced organization login flow the user authenticates against
+     * the organization it resides in while the token is issued in the organization owning the application, and the
+     * rebuilt user leaves the organization unnamed. The tenant the user resides in still names it, so the
+     * organization of that tenant is used when the user itself does not carry one.
+     *
+     * @param authorizedUser      User the token was issued for.
+     * @param issuingTenantDomain Tenant the token was issued in.
+     * @return Organization the user resides in, or an empty value when the user resides in the organization the
+     * token was issued in or when it cannot be told.
+     */
+    private static String resolveUserResidentOrganizationId(AuthenticatedUser authorizedUser,
+                                                            String issuingTenantDomain) {
+
+        String userResidentOrganizationId = authorizedUser.getUserResidentOrganization();
+        if (StringUtils.isNotBlank(userResidentOrganizationId)) {
+            return userResidentOrganizationId;
+        }
+        String userTenantDomain = authorizedUser.getTenantDomain();
+        if (StringUtils.isBlank(userTenantDomain) || StringUtils.equals(userTenantDomain, issuingTenantDomain)) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            OrganizationManager organizationManager =
+                    OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+            if (organizationManager != null) {
+                return organizationManager.resolveOrganizationId(userTenantDomain);
+            }
+        } catch (OrganizationManagementException e) {
+            LOG.debug("Error while resolving the organization of the tenant the user resides in: " +
+                    userTenantDomain, e);
+        }
+        return StringUtils.EMPTY;
+    }
+
+    /**
+     * Identifier of the user's profile in the organization it is accessing.
+     * <p>
+     * A user shared into an organization has a profile of its own there, apart from the one in the organization it
+     * resides in, and a consumer of the event needs it to address the user in the organization the token is for.
+     * The user carries that identifier only on the flows that resolve it, such as the ones issuing claims, so it
+     * is resolved from the user's association with the organization when the user itself does not carry it.
+     *
+     * @param authorizedUser           User the token was issued for.
+     * @param associatedUserId         Identifier of the user in the organization it resides in.
+     * @param accessingOrganizationId  Organization the user is accessing.
+     * @return Identifier of that profile, or an empty value for a user that is not shared or when it cannot be
+     * resolved.
+     */
+    private static String resolveSharedUserId(AuthenticatedUser authorizedUser, String associatedUserId,
+                                              String accessingOrganizationId) {
+
+        if (!authorizedUser.isSharedUser()) {
+            return StringUtils.EMPTY;
+        }
+        /*
+         The resolved profile is reused only when it belongs to the organization being accessed. The identifier
+         is set together with the organization it was resolved for, so one carried over from another organization
+         names a profile the subscriber of this event cannot resolve; the association is looked up instead.
+         */
+        if (StringUtils.isNotBlank(authorizedUser.getSharedUserId()) &&
+                StringUtils.equals(authorizedUser.getUserSharedOrganizationId(), accessingOrganizationId)) {
+            return authorizedUser.getSharedUserId();
+        }
+        if (StringUtils.isBlank(associatedUserId) || StringUtils.isBlank(accessingOrganizationId)) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService()
+                    .getUserAssociationOfAssociatedUserByOrgId(associatedUserId, accessingOrganizationId);
+            if (userAssociation != null) {
+                return userAssociation.getUserId();
+            }
+        } catch (OrganizationManagementException e) {
+            LOG.debug("Error while resolving the shared profile of user: " + associatedUserId +
+                    " in organization: " + accessingOrganizationId, e);
+        }
+        return StringUtils.EMPTY;
     }
 
     private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {
