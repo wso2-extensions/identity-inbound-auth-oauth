@@ -95,6 +95,7 @@ import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFA
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
 import static org.wso2.carbon.identity.oauth.Error.DUPLICATE_OAUTH_CLIENT;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 
 /*
  * Unit tests for OAuthAppDAO
@@ -145,6 +146,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String ADDITIONAL_CONSUMER_SECRET_1 = "additional-consumer-secret-1";
     private static final String ADDITIONAL_CONSUMER_SECRET_2 = "additional-consumer-secret-2";
     private static final String REPLACED_CONSUMER_SECRET = "replaced-consumer-secret";
+    private static final String PROVIDED_CONSUMER_SECRET = "provided-consumer-secret";
     private static final int MAX_SECRET_COUNT = 4;
 
     @Mock
@@ -1792,6 +1794,49 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         });
     }
 
+    @Test(description = "Adding a client secret with a caller provided value persists that value as the latest "
+            + "secret of the application instead of a generated one")
+    public void testAddOAuthConsumerSecretWithProvidedSecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            OAuthConsumerSecretDO createdSecret =
+                    appDAO.addOAuthConsumerSecret(appDO.getId(), PROVIDED_CONSUMER_SECRET, null);
+
+            assertEquals(createdSecret.getSecretValue(), PROVIDED_CONSUMER_SECRET,
+                    "The provided secret should be returned to the caller as the created secret.");
+            List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
+            assertEquals(consumerSecrets.size(), 2,
+                    "The provided secret should be added alongside the existing secret.");
+            assertNotNull(findSecretByValue(consumerSecrets, PROVIDED_CONSUMER_SECRET),
+                    "The provided secret should be persisted as it is.");
+            assertEquals(appDAO.getAppInformation(CONSUMER_KEY, TENANT_ID).getOauthConsumerSecret(),
+                    PROVIDED_CONSUMER_SECRET,
+                    "The provided secret should become the latest client secret of the application.");
+        });
+    }
+
+    @Test(description = "Adding a client secret whose processed form does not fit the secret value column is "
+            + "rejected as an invalid request rather than failing on the insert")
+    public void testAddOAuthConsumerSecretRejectsOversizedProcessedSecret() throws Exception {
+
+        runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            addOAuthApplication(appDO, TENANT_ID);
+
+            try {
+                appDAO.addOAuthConsumerSecret(appDO.getId(), StringUtils.repeat("a", 2049), null);
+                fail("A secret whose processed form exceeds the column width should be rejected.");
+            } catch (IdentityOAuthClientException e) {
+                assertEquals(e.getErrorCode(), INVALID_REQUEST.getErrorCode());
+            }
+            assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 1,
+                    "The rejected secret should not be persisted.");
+        });
+    }
+
     @Test(description = "Adding a client secret once the configured MaxSecretCount is reached fails with "
             + "CLIENT_SECRET_LIMIT_REACHED")
     public void testAddOAuthConsumerSecretLimitReached() throws Exception {
@@ -1800,11 +1845,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
-            appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
             assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 2);
 
             try {
-                appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+                appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
                 fail("Adding a client secret beyond the configured limit did not fail as expected.");
             } catch (IdentityOAuthAdminException e) {
                 assertTrue(e instanceof IdentityOAuthClientException);
@@ -1823,7 +1868,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
 
-            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), expiryTime);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null, expiryTime);
             advanceSecretCreatedTime(connection, createdSecret.getSecretId());
             assertNotNull(createdSecret.getSecretId());
             assertNotNull(createdSecret.getSecretValue(), "The generated plaintext secret should be returned once.");
@@ -1843,7 +1888,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
-            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
 
             OAuthConsumerSecretDO fetchedSecret =
                     appDAO.getOAuthConsumerSecret(createdSecret.getSecretId(), appDO.getId());
@@ -1861,7 +1906,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
-            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
             advanceSecretCreatedTime(connection, createdSecret.getSecretId());
 
             assertEquals(appDAO.getLatestOAuthConsumerSecretId(appDO.getId()), createdSecret.getSecretId(),
@@ -1876,7 +1921,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         runWithMaxClientSecretCount(MAX_SECRET_COUNT, (appDAO, connection) -> {
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             addOAuthApplication(appDO, TENANT_ID);
-            appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
 
             List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
             String nonLatestSecretId = consumerSecrets.get(consumerSecrets.size() - 1).getSecretId();
@@ -1935,7 +1980,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             // Before the call the un-migrated application exposes only the single synthetic default secret.
             assertEquals(appDAO.getOAuthConsumerSecrets(appDO.getId()).size(), 1);
 
-            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null);
+            OAuthConsumerSecretDO createdSecret = appDAO.addOAuthConsumerSecret(appDO.getId(), null, null);
 
             List<OAuthConsumerSecretDO> consumerSecrets = appDAO.getOAuthConsumerSecrets(appDO.getId());
             assertEquals(consumerSecrets.size(), 2,
