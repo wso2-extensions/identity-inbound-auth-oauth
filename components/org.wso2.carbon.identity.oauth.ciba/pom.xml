@@ -162,6 +162,8 @@
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.claim.metadata.mgt.*;
+                            version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.multi.attribute.login.mgt.*;
                             version ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.store.*;
