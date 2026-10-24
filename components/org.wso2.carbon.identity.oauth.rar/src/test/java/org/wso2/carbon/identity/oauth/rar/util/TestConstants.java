@@ -34,6 +34,37 @@ public class TestConstants {
     public static final String TEST_SCHEMA = "{\"type\":\"object\",\"required\":[\"type\"],\"properties\":" +
             "{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]},\"actions\":{\"type\":\"array\"," +
             "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEFS = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"test_type_v1\"]}," +
+            "\"actions\":{\"type\":\"array\",\"items\":{\"$ref\":\"#/$defs/action\"}}}," +
+            "\"$defs\":{\"action\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}";
+    public static final String TEST_SCHEMA_WITH_DUPLICATE_ID = "{\"type\":\"object\",\"required\":[\"type\"]," +
+            "\"properties\":{\"type\":{\"$id\":\"https://example.com/dup\",\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"actions\":{\"$id\":\"https://example.com/dup\",\"type\":\"array\"," +
+            "\"items\":{\"type\":\"string\",\"enum\":[\"initiate\"]}}}}";
+    public static final String TEST_SCHEMA_WITH_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"__absolute_uri__\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"actions\":[\"type\"]}}";
+    public static final String TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED = "{\"type\":\"object\"," +
+            "\"required\":[\"type\"],\"properties\":{\"type\":{\"type\":\"string\"," +
+            "\"enum\":[\"test_type_v1\"]},\"$ref\":{\"type\":\"string\"}}," +
+            "\"dependentRequired\":{\"$ref\":[\"type\"]}}";
+    // A "$dynamicRef" case Vert.x resolves wrongly when dereferenced: "content" must be an integer.
+    public static final String TEST_SCHEMA_WITH_DYNAMIC_REF = "{\"$id\":\"https://example.com/main\"," +
+            "\"type\":\"object\",\"properties\":{\"bar-item\":{\"$ref\":\"item\"}},\"$defs\":{\"bar\":" +
+            "{\"$id\":\"bar\",\"type\":\"array\",\"items\":{\"$ref\":\"item\"},\"$defs\":{\"item\":" +
+            "{\"$id\":\"item\",\"type\":\"object\",\"properties\":{\"content\":{\"$dynamicRef\":\"#content\"}}," +
+            "\"$defs\":{\"defaultContent\":{\"$dynamicAnchor\":\"content\",\"type\":\"integer\"}}}," +
+            "\"content\":{\"$dynamicAnchor\":\"content\",\"type\":\"string\"}}}}}";
+    // A "$ref" loop that never moves into the input.
+    public static final String TEST_SCHEMA_WITH_REFERENCE_LOOP = "{\"type\":\"object\",\"$ref\":\"#/$defs/a\"," +
+            "\"$defs\":{\"a\":{\"$ref\":\"#/$defs/b\"},\"b\":{\"allOf\":[{\"$ref\":\"#/$defs/a\"}]}}}";
+    // A recursive schema: each "child" is one level deeper in the input. The nested "allOf"s make validation use far
+    // more stack per level than serialising the input does.
+    public static final String TEST_SCHEMA_WITH_RECURSION = "{\"$ref\":\"#/$defs/node\",\"$defs\":{\"node\":" +
+            "{\"type\":\"object\",\"allOf\":[{\"allOf\":[{\"allOf\":[{\"allOf\":[{\"properties\":" +
+            "{\"child\":{\"$ref\":\"#/$defs/node\"}}}]}]}]}]}}}";
 
     private TestConstants() {
         // Private constructor to prevent instantiation
