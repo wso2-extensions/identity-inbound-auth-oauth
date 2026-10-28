@@ -28,6 +28,7 @@ public class DiscoveryUtil {
 
     public static final String OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY = "OAuth" +
             ".UseEntityIdAsIssuerInOidcDiscovery";
+    public static final String CLIENT_ID_METADATA_DOCUMENT_SUPPORTED = "OAuth.ClientIdMetadataDocumentSupported";
 
     /**
      * Resident Idp entity id is honoured as the OIDC issuer location based on the configuration. This addresses
@@ -43,4 +44,11 @@ public class DiscoveryUtil {
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }
 
+    /**
+     * Whether the discovery metadata advertises support for OAuth Client ID Metadata Documents. Disabled by default.
+     */
+    public static boolean isClientIdMetadataDocumentSupported() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(CLIENT_ID_METADATA_DOCUMENT_SUPPORTED));
+    }
 }

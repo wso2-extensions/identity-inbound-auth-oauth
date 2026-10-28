@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -441,6 +442,57 @@ public class ProviderConfigBuilderTest {
             OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
             assertNotNull(response);
             assertEquals(response.getConfigMap().get("authorization_response_iss_parameter_supported"), Boolean.TRUE);
+        }
+    }
+
+    @DataProvider
+    public Object[][] clientIdMetadataDocumentSupportedFlags() {
+
+        return new Object[][]{
+                {true, Boolean.TRUE},
+                {false, null}
+        };
+    }
+
+    @Test(dataProvider = "clientIdMetadataDocumentSupportedFlags")
+    public void testBuildOIDProviderConfigClientIdMetadataDocumentSupported(boolean enabled, Boolean expected)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<DiscoveryUtil> discoveryUtil = mockStatic(DiscoveryUtil.class);
+             MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
+                     mockStatic(AuthorizationDetailsProcessorFactory.class)) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance)
+                    .thenReturn(mockOidcDiscoveryDataHolder);
+
+            when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
+                    .thenReturn(new ArrayList<>());
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(
+                    idTokenSignatureAlgorithm);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                    .thenReturn(JWSAlgorithm.RS256);
+            discoveryUtil.when(DiscoveryUtil::isClientIdMetadataDocumentSupported).thenReturn(enabled);
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+            AuthorizationDetailsProcessorFactory factoryMock = spy(AuthorizationDetailsProcessorFactory.class);
+            doReturn(Collections.emptySet()).when(factoryMock).getSupportedAuthorizationDetailTypes();
+            factoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(factoryMock);
+
+            OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            assertEquals(response.getClientIdMetadataDocumentSupported(), expected);
+            assertEquals(response.getConfigMap().get("client_id_metadata_document_supported"), expected);
         }
     }
 }

@@ -90,6 +90,7 @@ public class OIDProviderConfigResponse {
     private String[] authorizationDetailsTypesSupported;
     private String backchannelAuthenticationEndpoint;
     private Boolean authorizationResponseIssParameterSupported;
+    private Boolean clientIdMetadataDocumentSupported;
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
@@ -574,6 +575,16 @@ public class OIDProviderConfigResponse {
         this.authorizationResponseIssParameterSupported = authorizationResponseIssParameterSupported;
     }
 
+    public Boolean getClientIdMetadataDocumentSupported() {
+
+        return clientIdMetadataDocumentSupported;
+    }
+
+    public void setClientIdMetadataDocumentSupported(Boolean clientIdMetadataDocumentSupported) {
+
+        this.clientIdMetadataDocumentSupported = clientIdMetadataDocumentSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -657,6 +668,8 @@ public class OIDProviderConfigResponse {
                 this.backchannelAuthenticationEndpoint);
         configMap.put(DiscoveryConstants.AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED,
                 this.authorizationResponseIssParameterSupported);
+        configMap.put(DiscoveryConstants.CLIENT_ID_METADATA_DOCUMENT_SUPPORTED,
+                this.clientIdMetadataDocumentSupported);
         return configMap;
     }
 }

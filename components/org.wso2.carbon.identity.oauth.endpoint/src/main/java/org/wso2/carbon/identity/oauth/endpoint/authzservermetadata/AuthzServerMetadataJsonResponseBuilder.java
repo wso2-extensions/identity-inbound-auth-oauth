@@ -52,7 +52,8 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "device_authorization_endpoint",
             "tls_client_certificate_bound_access_tokens",
             "mtls_endpoint_aliases",
-            "authorization_details_types_supported"
+            "authorization_details_types_supported",
+            "client_id_metadata_document_supported"
     };
 
     public static String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {

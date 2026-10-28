@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.discovery;
 
 import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
@@ -27,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
+import static org.wso2.carbon.identity.discovery.DiscoveryUtil.CLIENT_ID_METADATA_DOCUMENT_SUPPORTED;
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY;
 
 /**
@@ -56,6 +58,27 @@ public class DiscoveryUtilTest {
             identityUtil.when(() -> IdentityUtil.getProperty(eq(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY)))
                     .thenReturn(Boolean.FALSE.toString());
             assertEquals(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery(), false);
+        }
+    }
+
+    @DataProvider
+    public Object[][] clientIdMetadataDocumentSupportedConfigs() {
+
+        return new Object[][]{
+                {null, false},
+                {"", false},
+                {"false", false},
+                {"true", true}
+        };
+    }
+
+    @Test(dataProvider = "clientIdMetadataDocumentSupportedConfigs")
+    public void testIsClientIdMetadataDocumentSupported(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(eq(CLIENT_ID_METADATA_DOCUMENT_SUPPORTED)))
+                    .thenReturn(configValue);
+            assertEquals(DiscoveryUtil.isClientIdMetadataDocumentSupported(), expected);
         }
     }
 }

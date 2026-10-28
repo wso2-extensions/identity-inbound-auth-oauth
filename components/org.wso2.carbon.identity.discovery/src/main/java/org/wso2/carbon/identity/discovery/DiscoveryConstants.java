@@ -415,4 +415,13 @@ public class DiscoveryConstants {
      */
     public static final String AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED =
             "authorization_response_iss_parameter_supported";
+
+    /**
+     * client_id_metadata_document_supported
+     * OPTIONAL. Boolean value specifying whether the authorization server supports clients that use an HTTPS URL
+     * pointing to a Client ID Metadata Document as their client_id.
+     * @see <a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/">
+     * draft-ietf-oauth-client-id-metadata-document</a>
+     */
+    public static final String CLIENT_ID_METADATA_DOCUMENT_SUPPORTED = "client_id_metadata_document_supported";
 }

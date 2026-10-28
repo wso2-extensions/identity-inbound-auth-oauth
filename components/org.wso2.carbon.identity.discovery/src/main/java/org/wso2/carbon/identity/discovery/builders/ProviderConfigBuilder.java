@@ -39,6 +39,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isClientIdMetadataDocumentSupported;
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.OAUTH_CIBA_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
@@ -169,6 +170,9 @@ public class ProviderConfigBuilder {
         // `authorization_response_iss` should be true for FAPI 2.0 compliance.
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
             providerConfig.setAuthorizationResponseIssParameterSupported(Boolean.TRUE);
+        }
+        if (isClientIdMetadataDocumentSupported()) {
+            providerConfig.setClientIdMetadataDocumentSupported(Boolean.TRUE);
         }
         return providerConfig;
     }
