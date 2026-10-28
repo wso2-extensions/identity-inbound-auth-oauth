@@ -524,6 +524,10 @@ public class AccessTokenIssuer {
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
+            Object errorDetailCode = tokReqMsgCtx.getProperty(OAuthConstants.ERROR_DETAIL_CODE);
+            if (errorDetailCode != null) {
+                tokenRespDTO.setErrorDetailCode(errorDetailCode.toString());
+            }
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;

@@ -228,6 +228,10 @@ public final class OAuthConstants {
     public static final String OAUTH_INTERCEPTOR_PROXY = "OauthDataInterceptorHandlerProxy";
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
+    // Property carrying the detailed (non RFC 6749) error code of a failed token request.
+    public static final String ERROR_DETAIL_CODE = "ERROR_DETAIL_CODE";
+    // Name of the token error response field that carries the detailed error code.
+    public static final String ERROR_CODE_PARAM = "error_code";
     public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
     public static final String TRANSPORT_ENDPOINT_ADDRESS = "org.apache.cxf.transport.endpoint.address";
 

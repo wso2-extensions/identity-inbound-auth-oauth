@@ -353,11 +353,15 @@ public class OAuth2TokenEndpoint {
             return handleServerError();
         } else {
             // Otherwise send back HTTP 400 Status Code
-            OAuthResponse response = OAuthASResponse
+            OAuthASResponse.OAuthErrorResponseBuilder errorResponseBuilder = OAuthASResponse
                     .errorResponse(HttpServletResponse.SC_BAD_REQUEST)
                     .setError(oauth2AccessTokenResp.getErrorCode())
-                    .setErrorDescription(oauth2AccessTokenResp.getErrorMsg())
-                    .buildJSONMessage();
+                    .setErrorDescription(oauth2AccessTokenResp.getErrorMsg());
+            if (StringUtils.isNotBlank(oauth2AccessTokenResp.getErrorDetailCode())) {
+                errorResponseBuilder.setParam(OAuthConstants.ERROR_CODE_PARAM,
+                        oauth2AccessTokenResp.getErrorDetailCode());
+            }
+            OAuthResponse response = errorResponseBuilder.buildJSONMessage();
 
             ResponseHeader[] headers = oauth2AccessTokenResp.getResponseHeaders();
             ResponseBuilder respBuilder = Response.status(response.getResponseStatus());
