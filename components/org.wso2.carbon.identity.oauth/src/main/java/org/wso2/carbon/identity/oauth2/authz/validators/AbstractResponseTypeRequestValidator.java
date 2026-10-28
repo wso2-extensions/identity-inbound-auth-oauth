@@ -36,6 +36,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,6 +59,8 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
 
     private static final Log log = LogFactory.getLog(AbstractResponseTypeRequestValidator.class);
     private static final String APP_STATE_ACTIVE = "ACTIVE";
+    private static final String LOOPBACK_IPV4_ADDRESS = "127.0.0.1";
+    private static final String LOOPBACK_IPV6_ADDRESS = "[::1]";
     protected final List<String> parametersToValidate = new ArrayList<>();
 
     @Override
@@ -338,10 +342,13 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             log.debug("Comparing provided callback URL: " + callbackURI + " with configured callback: " +
                     registeredCallbackUrl);
         }
-        if (callbackURI.matches(OAuthConstants.LOOPBACK_IP_REGEX)) {
+        if (isLoopbackIPCallbackURI(callbackURI)) {
             callbackURI = callbackURI.replaceFirst(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
             if (regexp != null) {
                 regexp = regexp.replaceAll(OAuthConstants.LOOPBACK_IP_PORT_REGEX, StringUtils.EMPTY);
+                if (OAuth2Util.isLiteralCharactersEnforcedInCallback()) {
+                    regexp = OAuth2Util.getRegexWithEnforcedLiteralCharacters(regexp);
+                }
                 if (!callbackURI.matches(regexp)) {
                     log.debug("Regex might contain port number capture group/groups for loopback ip address");
                     return false;
@@ -386,5 +393,27 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         return matchWithoutEnforcingLiteralCharacters;
+    }
+
+    /**
+     * Check whether the host of the callback url is a loopback IP address (127.0.0.1 or [::1]).
+     *
+     * @param callbackURI Callback url in the request.
+     * @return True if the host of the callback url is a loopback IP address.
+     */
+    private boolean isLoopbackIPCallbackURI(String callbackURI) {
+
+        if (!callbackURI.matches(OAuthConstants.LOOPBACK_IP_REGEX)) {
+            return false;
+        }
+        try {
+            String host = new URI(callbackURI).getHost();
+            return LOOPBACK_IPV4_ADDRESS.equals(host) || LOOPBACK_IPV6_ADDRESS.equals(host);
+        } catch (URISyntaxException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid callback url: " + callbackURI, e);
+            }
+            return false;
+        }
     }
 }

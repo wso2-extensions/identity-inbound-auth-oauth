@@ -102,6 +102,24 @@ public class AbstractResponseTypeRequestValidatorCallbackURITest {
                         "https://127.0.0.2:8089/callback", "false", false},
                 {"regexp=((https://127.0.0.2:)([8][0]{2}[0-7])(/callback))",
                         "https://127.0.0.2:8007/callback", "false", true},
+
+                // Non-loopback callback URLs that contain a loopback IP address.
+                {CALLBACK_URL_REGEXP_PREFIX + "https://app.example.com/cb.*",
+                        "https://app-example.com/cb?x=127.0.0.1", "true", false},
+                {CALLBACK_URL_REGEXP_PREFIX + "https://app.example.com/cb.*",
+                        "https://app.example.com/cb?x=127.0.0.1", "true", true},
+                {CALLBACK_URL_REGEXP_PREFIX + "https://app.example.com/cb.*",
+                        "https://app-example.com/cb#[::1]", "true", false},
+                {CALLBACK_URL_REGEXP_PREFIX + "https://app.example.com/cb.*",
+                        "https://127.0.0.1.example.org/cb", "true", false},
+
+                // Literal characters in a regex with a loopback callback URL.
+                {CALLBACK_URL_REGEXP_PREFIX + "http://127.0.0.1/cb.v1", "http://127.0.0.1:9000/cbxv1", "true", false},
+                {CALLBACK_URL_REGEXP_PREFIX + "http://127.0.0.1/cb.v1", "http://127.0.0.1:9000/cbxv1", "false", true},
+                {CALLBACK_URL_REGEXP_PREFIX + "http://127.0.0.1/cb.v1", "http://127.0.0.1:9000/cb.v1", "true", true},
+                {CALLBACK_URL_REGEXP_PREFIX + "(http://127.0.0.1/cb|https://app.example.com/cb)",
+                        "http://127.0.0.1:5000/cb", "true", true},
+                {"http://[::1]:8080/callback", "http://[::1]:9090/callback", "true", true},
         };
     }
 
