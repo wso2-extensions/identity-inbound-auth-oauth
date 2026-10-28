@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2016-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -56,7 +56,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.security.interfaces.RSAPrivateKey;
+import java.security.Key;
+import java.security.PrivateKey;
 import java.text.ParseException;
 import java.util.Set;
 
@@ -446,10 +447,15 @@ public class OIDCSessionManagementUtil {
     public static JWT decryptWithRSA(String tenantDomain, String idToken) throws IdentityOAuth2Exception {
 
         try {
-            RSAPrivateKey privateKey = (RSAPrivateKey) IdentityKeyStoreResolver.getInstance()
+            Key key = IdentityKeyStoreResolver.getInstance()
                     .getPrivateKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+            if (!(key instanceof PrivateKey)) {
+                throw new IdentityOAuth2Exception("The decryption key of tenant: " + tenantDomain +
+                        " is not a private key.");
+            }
+            PrivateKey privateKey = (PrivateKey) key;
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(idToken);
-            RSADecrypter decrypter = new RSADecrypter(privateKey);
+            RSADecrypter decrypter = OAuth2Util.createRSADecrypter(privateKey);
             encryptedJWT.decrypt(decrypter);
             return encryptedJWT;
         } catch (ParseException | JOSEException e) {

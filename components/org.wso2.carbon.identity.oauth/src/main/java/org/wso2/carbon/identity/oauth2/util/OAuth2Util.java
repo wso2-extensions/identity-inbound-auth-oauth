@@ -31,6 +31,7 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.ECDHEncrypter;
+import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -3731,6 +3732,22 @@ public class OAuth2Util {
             }
         }
         return signer;
+    }
+
+    /**
+     * Create an RSA JWE decrypter for a private key of the server.
+     * <p>
+     * The key may be one whose key material is not accessible, such as a key held in an HSM. No provider is named for
+     * the key decryption: JCA selects the provider that accepts the key for the JWE algorithm. With SunPKCS11 keys
+     * that is SunPKCS11 for {@code RSA1_5} and the server's PKCS11 OAEP provider for {@code RSA-OAEP} and
+     * {@code RSA-OAEP-256}; naming the key store provider would rule out OAEP, which SunPKCS11 does not offer.
+     *
+     * @param privateKey RSA private key.
+     * @return RSA decrypter.
+     */
+    public static RSADecrypter createRSADecrypter(PrivateKey privateKey) {
+
+        return new RSADecrypter(privateKey);
     }
 
     /**
