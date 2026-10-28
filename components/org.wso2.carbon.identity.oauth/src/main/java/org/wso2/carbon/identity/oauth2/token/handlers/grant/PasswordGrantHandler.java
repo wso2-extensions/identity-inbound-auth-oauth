@@ -104,6 +104,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final Log log = LogFactory.getLog(PasswordGrantHandler.class);
     private static final String INVALID_CREDENTIALS_ERROR_CODE = "17002";
+    private static final String AUTHENTICATION_FAILED_MESSAGE = "Authentication failed for";
     private static final String OAUTH2 = "oauth2";
     private static final String IS_INITIAL_LOGIN = "isInitialLogin";
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
@@ -149,11 +150,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             authenticatedUser = validateUserCredentials(tokenReq, serviceProvider);
         } catch (IdentityOAuth2Exception e) {
             String detailCode = resolveErrorDetailCode(e);
+            // Do not disclose the account state when the failure reason is configured to be hidden.
+            if (!OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant()
+                    && StringUtils.contains(e.getMessage(), AUTHENTICATION_FAILED_MESSAGE)) {
+                detailCode = INVALID_CREDENTIALS_ERROR_CODE;
+            }
             if (detailCode != null) {
-                // Do not disclose the account state when the failure reason is configured to be hidden.
-                if (!OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant()) {
-                    detailCode = INVALID_CREDENTIALS_ERROR_CODE;
-                }
                 tokReqMsgCtx.addProperty(OAuthConstants.ERROR_DETAIL_CODE, detailCode);
             }
             throw e;
@@ -172,7 +174,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             return null;
         }
         // The masking utility leaves very short values as they are.
-        return username.length() <= 2 ? StringUtils.repeat("*", username.length())
+        int codePointCount = username.codePointCount(0, username.length());
+        return codePointCount <= 2 ? StringUtils.repeat("*", codePointCount)
                 : LoggerUtils.getMaskedContent(username);
     }
 
