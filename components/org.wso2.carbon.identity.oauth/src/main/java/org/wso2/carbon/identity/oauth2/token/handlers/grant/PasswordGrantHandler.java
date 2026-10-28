@@ -51,8 +51,8 @@ import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRe
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -150,6 +150,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         } catch (IdentityOAuth2Exception e) {
             String detailCode = resolveErrorDetailCode(e);
             if (detailCode != null) {
+                // Do not disclose the account state when the failure reason is configured to be hidden.
+                if (!OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant()) {
+                    detailCode = INVALID_CREDENTIALS_ERROR_CODE;
+                }
                 tokReqMsgCtx.addProperty(OAuthConstants.ERROR_DETAIL_CODE, detailCode);
             }
             throw e;
@@ -164,7 +168,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static String getMaskedUserIdentifier(OAuth2AccessTokenReqDTO tokenReq) {
 
         String username = OAuth2Util.getUserIdentifierFromRequest(tokenReq);
-        return username == null ? null : LoggerUtils.getMaskedContent(username);
+        if (username == null) {
+            return null;
+        }
+        // The masking utility leaves very short values as they are.
+        return username.length() <= 2 ? StringUtils.repeat("*", username.length())
+                : LoggerUtils.getMaskedContent(username);
     }
 
     /**
