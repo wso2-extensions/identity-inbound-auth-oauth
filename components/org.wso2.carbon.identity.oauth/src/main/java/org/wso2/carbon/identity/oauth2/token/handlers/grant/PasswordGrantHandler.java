@@ -165,6 +165,17 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     /**
+     * Builds the invalid credentials message. The error code prefix is added only when failure reasons are shown, so
+     * that the description is the same as the other hidden authentication failures otherwise.
+     */
+    private static String getInvalidCredentialsMessage(OAuth2AccessTokenReqDTO tokenReq,
+                                                       boolean isShowAuthFailureReason) {
+
+        String message = AUTHENTICATION_FAILED_MESSAGE + " " + getMaskedUserIdentifier(tokenReq);
+        return isShowAuthFailureReason ? INVALID_CREDENTIALS_ERROR_CODE + " " + message : message;
+    }
+
+    /**
      * Returns the username of the request masked, so that it is not echoed back in error responses.
      */
     private static String getMaskedUserIdentifier(OAuth2AccessTokenReqDTO tokenReq) {
@@ -503,16 +514,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                     (tokenReq.getResourceOwnerUsername()))) {
-                throw new IdentityOAuth2Exception(INVALID_CREDENTIALS_ERROR_CODE + " Authentication failed for "
-                        + getMaskedUserIdentifier(tokenReq));
+                throw new IdentityOAuth2Exception(getInvalidCredentialsMessage(tokenReq, isShowAuthFailureReason));
             }
             username = tokenReq.getResourceOwnerUsername();
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 // For tenant qualified urls, no need to send fully qualified username in response.
                 username = tenantAwareUserName;
             }
-            throw new IdentityOAuth2Exception(INVALID_CREDENTIALS_ERROR_CODE + " Authentication failed for "
-                    + getMaskedUserIdentifier(tokenReq));
+            throw new IdentityOAuth2Exception(getInvalidCredentialsMessage(tokenReq, isShowAuthFailureReason));
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
