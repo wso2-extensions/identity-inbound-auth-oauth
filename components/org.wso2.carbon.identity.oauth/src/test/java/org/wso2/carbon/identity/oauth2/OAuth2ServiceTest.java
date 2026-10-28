@@ -430,6 +430,8 @@ public class OAuth2ServiceTest {
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
         oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain)).thenReturn(tenantDomain);
         oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId, tenantDomain)).thenReturn(oAuthAppDO);
+        oAuth2Util.when(OAuth2Util::isLiteralCharactersEnforcedInCallback).thenReturn(true);
+        oAuth2Util.when(() -> OAuth2Util.getRegexWithEnforcedLiteralCharacters(any())).thenCallRealMethod();
         return oAuthAppDO;
     }
 

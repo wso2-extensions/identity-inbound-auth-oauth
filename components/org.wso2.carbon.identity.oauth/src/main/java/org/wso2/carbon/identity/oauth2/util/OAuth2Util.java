@@ -6719,6 +6719,48 @@ public class OAuth2Util {
     }
 
     /**
+     * Escape the regex metacharacters ({@code .}, {@code +}, {@code ?}) of a stored callback regex when they are
+     * immediately followed by a letter or digit (e.g. {@code .com}, {@code .org}) so that they are matched as
+     * literals instead of wildcards. Structural regex tokens (grouping, alternation) and intentional quantifiers
+     * such as {@code .*}, {@code .+} or {@code .{n}} are left untouched, and already-escaped characters are not
+     * escaped again.
+     * <p>
+     * This mirrors the escaping applied by the OAuth2 authorization callback validator so that every
+     * redirect_uri / post_logout_redirect_uri matcher enforces literal characters consistently and a stored
+     * callback such as {@code good.example.com} does not match a look-alike host such as {@code good-example.com}.
+     *
+     * @param regexp The stored callback regex (without the {@code regexp=} prefix). May be {@code null}.
+     * @return The regex with literal characters escaped, or {@code null} if the input was {@code null}.
+     */
+    public static String getRegexWithEnforcedLiteralCharacters(String regexp) {
+
+        if (regexp == null) {
+            return null;
+        }
+        return regexp
+                .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
+                .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
+                .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+    }
+
+    /**
+     * Whether literal-character enforcement is enabled for callback / redirect_uri regex matching. Controlled by
+     * the {@code OAuth.Callback.EnforceLiteralCharacters} configuration; enabled by default when the property is
+     * not set.
+     *
+     * @return {@code true} if literal characters must be enforced (the default), {@code false} otherwise.
+     */
+    public static boolean isLiteralCharactersEnforcedInCallback() {
+
+        String enforceLiteralCharactersInCallbackValue = IdentityUtil.getProperty(
+                OAuthConstants.ENFORCE_LITERAL_CHARACTERS_IN_CALLBACK);
+        if (StringUtils.isBlank(enforceLiteralCharactersInCallbackValue)) {
+            return true;
+        }
+        return Boolean.parseBoolean(enforceLiteralCharactersInCallbackValue);
+    }
+
+    /**
      * Resolve Console application callback url for a specific tenant based on the callback url configured in toml.
      *
      * @param tenantDomain Tenant domain.

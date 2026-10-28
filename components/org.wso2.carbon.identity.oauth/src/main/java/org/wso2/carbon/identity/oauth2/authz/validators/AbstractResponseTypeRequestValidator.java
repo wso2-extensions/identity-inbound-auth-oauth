@@ -360,12 +360,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         Escape (.), (+), (?) only when followed by a letter/digit (so .com, .org, etc. get escaped),
         but don't touch .* or .+ or .{n} .
          */
-        String escapedSpecialCharRegexp = regexp
-                .replaceAll("(?<!\\\\)\\.(?=[A-Za-z0-9])", "\\\\.")
-                .replaceAll("(?<!\\\\)\\+(?=[A-Za-z0-9])", "\\\\+")
-                .replaceAll("(?<!\\\\)\\?(?=[A-Za-z0-9])", "\\\\?");
+        String escapedSpecialCharRegexp = OAuth2Util.getRegexWithEnforcedLiteralCharacters(regexp);
         boolean matchWithEnforcedLiteralCharacters = callbackURI.matches(escapedSpecialCharRegexp);
-        if (isLiteralCharactersEnforcedInCallback()) {
+        if (OAuth2Util.isLiteralCharactersEnforcedInCallback()) {
             return matchWithEnforcedLiteralCharacters;
         }
 
@@ -389,16 +386,5 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
 
         return matchWithoutEnforcingLiteralCharacters;
-    }
-
-    private boolean isLiteralCharactersEnforcedInCallback() {
-
-        String enforceLiteralCharactersInCallbackValue = IdentityUtil.getProperty(
-                "OAuth.Callback.EnforceLiteralCharacters");
-        if (StringUtils.isBlank(enforceLiteralCharactersInCallbackValue)) {
-            return true;
-        }
-
-        return Boolean.parseBoolean(enforceLiteralCharactersInCallbackValue);
     }
 }

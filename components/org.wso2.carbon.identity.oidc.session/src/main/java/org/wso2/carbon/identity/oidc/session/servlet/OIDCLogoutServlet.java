@@ -653,6 +653,11 @@ public class OIDCLogoutServlet extends HttpServlet {
         String regexp = null;
         if (registeredCallbackUri.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             regexp = registeredCallbackUri.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            if (OAuth2Util.isLiteralCharactersEnforcedInCallback()) {
+                // Escape regex metacharacters in the stored callback so a look-alike host (e.g. good-example.com)
+                // is not matched by a literal callback (e.g. good.example.com), consistent with the authorize path.
+                regexp = OAuth2Util.getRegexWithEnforcedLiteralCharacters(regexp);
+            }
         }
 
         if (regexp != null && postLogoutUri.matches(regexp)) {
