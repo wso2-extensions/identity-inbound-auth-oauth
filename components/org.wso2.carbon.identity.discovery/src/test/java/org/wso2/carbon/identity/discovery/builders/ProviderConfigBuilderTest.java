@@ -22,6 +22,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.cimd.ClientIdMetadataDocumentService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -65,6 +67,7 @@ public class ProviderConfigBuilderTest {
 
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
     private ProviderConfigBuilder providerConfigBuilder;
+    private MockedStatic<ClientIdMetadataDocumentService> cimdService;
 
     @Mock
     private ClaimMetadataManagementService mockClaimMetadataManagementService;
@@ -76,6 +79,14 @@ public class ProviderConfigBuilderTest {
     public void setUp() throws Exception {
 
         providerConfigBuilder = new ProviderConfigBuilder();
+        // The tenant's CIMD setting is read from its resident IdP, which these tests do not set up.
+        cimdService = mockStatic(ClientIdMetadataDocumentService.class);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        cimdService.close();
     }
 
     @Test
@@ -449,13 +460,14 @@ public class ProviderConfigBuilderTest {
     public Object[][] clientIdMetadataDocumentSupportedFlags() {
 
         return new Object[][]{
-                {true, Boolean.TRUE},
-                {false, null}
+                {true, Boolean.TRUE, new String[]{"client_secret_basic", "private_key_jwt", "none"}},
+                {false, null, new String[]{"client_secret_basic", "private_key_jwt"}}
         };
     }
 
     @Test(dataProvider = "clientIdMetadataDocumentSupportedFlags")
-    public void testBuildOIDProviderConfigClientIdMetadataDocumentSupported(boolean enabled, Boolean expected)
+    public void testBuildOIDProviderConfigClientIdMetadataDocumentSupported(boolean enabled, Boolean expected,
+                                                                            String[] expectedAuthMethods)
             throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
@@ -463,7 +475,6 @@ public class ProviderConfigBuilderTest {
              MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
                      mockStatic(OIDCDiscoveryDataHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<DiscoveryUtil> discoveryUtil = mockStatic(DiscoveryUtil.class);
              MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
                      mockStatic(AuthorizationDetailsProcessorFactory.class)) {
             OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
@@ -482,7 +493,10 @@ public class ProviderConfigBuilderTest {
                     idTokenSignatureAlgorithm);
             oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
                     .thenReturn(JWSAlgorithm.RS256);
-            discoveryUtil.when(DiscoveryUtil::isClientIdMetadataDocumentSupported).thenReturn(enabled);
+            oAuth2Util.when(OAuth2Util::getSupportedClientAuthMethods)
+                    .thenReturn(new String[]{"client_secret_basic", "private_key_jwt"});
+            cimdService.when(() -> ClientIdMetadataDocumentService.isEnabled(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(enabled);
             when(mockOidProviderRequest.getTenantDomain()).thenReturn(
                     MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
@@ -493,6 +507,7 @@ public class ProviderConfigBuilderTest {
             OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
             assertEquals(response.getClientIdMetadataDocumentSupported(), expected);
             assertEquals(response.getConfigMap().get("client_id_metadata_document_supported"), expected);
+            assertEquals(response.getTokenEndpointAuthMethodsSupported(), expectedAuthMethods);
         }
     }
 }

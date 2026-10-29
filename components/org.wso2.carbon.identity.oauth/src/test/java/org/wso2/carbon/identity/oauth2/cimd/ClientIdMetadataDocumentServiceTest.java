@@ -23,7 +23,12 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,17 +48,23 @@ public class ClientIdMetadataDocumentServiceTest {
     private static final String CLAUDE = "https://claude.ai/oauth/mcp-oauth-client-metadata";
     private static final String CHATGPT = "https://chatgpt.com/oauth/client.json";
     private static final String VSCODE = "https://vscode.dev/oauth/client-metadata.json";
+    private static final String TENANT = "example.com";
 
     private MockedStatic<IdentityUtil> identityUtil;
+    private MockedStatic<IdentityProviderManager> identityProviderManagerStatic;
+    private IdentityProviderManager identityProviderManager;
     private ClientIdMetadataDocumentFetcher fetcher;
     private ClientIdMetadataDocumentService service;
 
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws Exception {
 
+        // IdentityUtil is mocked so the application name check uses its default pattern.
         identityUtil = mockStatic(IdentityUtil.class);
-        identityUtil.when(() -> IdentityUtil.getProperty(ClientIdMetadataDocumentService.ENABLED_CONFIG))
-                .thenReturn("true");
+        identityProviderManager = mock(IdentityProviderManager.class);
+        identityProviderManagerStatic = mockStatic(IdentityProviderManager.class);
+        identityProviderManagerStatic.when(IdentityProviderManager::getInstance).thenReturn(identityProviderManager);
+        when(identityProviderManager.getResidentIdP(TENANT)).thenReturn(residentIdp("true"));
         fetcher = mock(ClientIdMetadataDocumentFetcher.class);
         service = new ClientIdMetadataDocumentService(fetcher);
     }
@@ -62,6 +73,7 @@ public class ClientIdMetadataDocumentServiceTest {
     public void tearDown() {
 
         identityUtil.close();
+        identityProviderManagerStatic.close();
     }
 
     @Test
@@ -73,7 +85,7 @@ public class ClientIdMetadataDocumentServiceTest {
                 "\"grant_types\":[\"authorization_code\",\"refresh_token\"],\"response_types\":[\"code\"]," +
                 "\"token_endpoint_auth_method\":\"none\"}");
 
-        ClientIdMetadataDocument document = service.preview(CLAUDE);
+        ClientIdMetadataDocument document = service.preview(CLAUDE, TENANT);
 
         assertEquals(document.getClientId(), CLAUDE);
         assertEquals(document.getClientName(), "Claude");
@@ -94,7 +106,7 @@ public class ClientIdMetadataDocumentServiceTest {
                 "\"token_endpoint_auth_method\":\"private_key_jwt\"," +
                 "\"jwks_uri\":\"https://chatgpt.com/oauth/jwks.json\"}");
 
-        ClientIdMetadataDocument document = service.preview(CHATGPT);
+        ClientIdMetadataDocument document = service.preview(CHATGPT, TENANT);
 
         assertEquals(document.getTokenEndpointAuthMethod(), "private_key_jwt");
         assertEquals(document.getJwksUri(), "https://chatgpt.com/oauth/jwks.json");
@@ -108,7 +120,7 @@ public class ClientIdMetadataDocumentServiceTest {
                 "\"grant_types\":[\"authorization_code\",\"refresh_token\"," +
                 "\"urn:ietf:params:oauth:grant-type:device_code\"],\"token_endpoint_auth_method\":\"none\"}");
 
-        ClientIdMetadataDocument document = service.preview(VSCODE);
+        ClientIdMetadataDocument document = service.preview(VSCODE, TENANT);
 
         assertEquals(document.getClientName(), "vscode.dev");
         assertEquals(document.getGrantTypes(), Arrays.asList("authorization_code", "refresh_token"));
@@ -122,7 +134,7 @@ public class ClientIdMetadataDocumentServiceTest {
         when(fetcher.fetch(CLAUDE)).thenReturn(document("\"redirect_uris\":[\"https://claude.ai/cb\"]," +
                 "\"token_endpoint_auth_method\":\"none\""));
 
-        assertEquals(service.preview(CLAUDE).getGrantTypes(), Collections.singletonList("authorization_code"));
+        assertEquals(service.preview(CLAUDE, TENANT).getGrantTypes(), Collections.singletonList("authorization_code"));
     }
 
     @Test
@@ -131,14 +143,22 @@ public class ClientIdMetadataDocumentServiceTest {
         when(fetcher.fetch(CLAUDE)).thenReturn(document("\"client_name\":\"Claude (Beta)\"," +
                 "\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"none\""));
 
-        assertEquals(service.preview(CLAUDE).getClientName(), "claude.ai");
+        assertEquals(service.preview(CLAUDE, TENANT).getClientName(), "claude.ai");
     }
 
     @Test
     public void testPreviewRejectedWhenDisabled() throws Exception {
 
-        identityUtil.when(() -> IdentityUtil.getProperty(ClientIdMetadataDocumentService.ENABLED_CONFIG))
-                .thenReturn("false");
+        when(identityProviderManager.getResidentIdP(TENANT)).thenReturn(residentIdp("false"));
+
+        assertRejected(CLAUDE, "CIMD-60007");
+        verify(fetcher, never()).fetch(anyString());
+    }
+
+    @Test
+    public void testPreviewRejectedWhenTenantHasNoSetting() throws Exception {
+
+        when(identityProviderManager.getResidentIdP(TENANT)).thenReturn(residentIdp(null));
 
         assertRejected(CLAUDE, "CIMD-60007");
         verify(fetcher, never()).fetch(anyString());
@@ -221,6 +241,12 @@ public class ClientIdMetadataDocumentServiceTest {
                         "\"jwks\":{\"keys\":[]}", "CIMD-60004"},
                 {"\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"private_key_jwt\"," +
                         "\"jwks_uri\":\"https://10.0.0.1/jwks\"", "CIMD-60004"},
+                {"\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"private_key_jwt\"," +
+                        "\"jwks_uri\":\"https://internal.example.com/jwks\"", "CIMD-60004"},
+                {"\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"private_key_jwt\"," +
+                        "\"jwks_uri\":\"https://keys.claude.ai/jwks\"", "CIMD-60004"},
+                {"\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"private_key_jwt\"," +
+                        "\"jwks_uri\":\"https://claude.ai:8443/jwks\"", "CIMD-60004"},
                 {"\"redirect_uris\":[\"https://claude.ai/cb\"],\"token_endpoint_auth_method\":\"none\"," +
                         "\"grant_types\":[\"client_credentials\"]", "CIMD-60005"},
         };
@@ -265,7 +291,7 @@ public class ClientIdMetadataDocumentServiceTest {
     private void assertRejected(String url, String code) {
 
         try {
-            service.preview(url);
+            service.preview(url, TENANT);
             fail("Expected the preview to be rejected: " + url);
         } catch (ClientIdMetadataDocumentException e) {
             assertEquals(e.getErrorMessage().getCode(), code, url);
@@ -275,5 +301,20 @@ public class ClientIdMetadataDocumentServiceTest {
     private static String document(String fields) {
 
         return "{\"client_id\":\"" + CLAUDE + "\"," + fields + "}";
+    }
+
+    private static IdentityProvider residentIdp(String setting) {
+
+        FederatedAuthenticatorConfig oidcConfig = new FederatedAuthenticatorConfig();
+        oidcConfig.setName(IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        if (setting != null) {
+            Property property = new Property();
+            property.setName(ClientIdMetadataDocumentService.TENANT_SETTING);
+            property.setValue(setting);
+            oidcConfig.setProperties(new Property[]{property});
+        }
+        IdentityProvider residentIdp = new IdentityProvider();
+        residentIdp.setFederatedAuthenticatorConfigs(new FederatedAuthenticatorConfig[]{oidcConfig});
+        return residentIdp;
     }
 }

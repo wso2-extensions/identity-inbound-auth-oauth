@@ -23,8 +23,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.conn.util.InetAddressUtils;
+import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
+import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,9 +56,12 @@ public class ClientIdMetadataDocumentService {
 
     private static final Log LOG = LogFactory.getLog(ClientIdMetadataDocumentService.class);
 
-    static final String ENABLED_CONFIG = "OAuth.ClientIdMetadataDocumentSupported";
+    /**
+     * Tenant OAuth2 setting, a property of the resident IdP's OIDC configuration, that turns on CIMD. Off when absent.
+     */
+    public static final String TENANT_SETTING = "enableClientIdMetadataDocument";
 
-    static final String AUTH_METHOD_NONE = "none";
+    public static final String AUTH_METHOD_NONE = "none";
     static final String AUTH_METHOD_PRIVATE_KEY_JWT = "private_key_jwt";
     static final String GRANT_AUTHORIZATION_CODE = "authorization_code";
     static final String GRANT_REFRESH_TOKEN = "refresh_token";
@@ -89,15 +97,39 @@ public class ClientIdMetadataDocumentService {
     }
 
     /**
+     * Whether a tenant has turned on Client ID Metadata Document support in its OAuth2 settings.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return {@code true} if enabled. Off by default, and when the setting cannot be read.
+     */
+    public static boolean isEnabled(String tenantDomain) {
+
+        try {
+            IdentityProvider residentIdp = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+            FederatedAuthenticatorConfig oidcConfig = residentIdp == null ? null :
+                    IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                            residentIdp.getFederatedAuthenticatorConfigs(),
+                            IdentityApplicationConstants.Authenticator.OIDC.NAME);
+            return oidcConfig != null && Boolean.parseBoolean(
+                    IdentityApplicationManagementUtil.getPropertyValue(oidcConfig.getProperties(), TENANT_SETTING));
+        } catch (IdentityProviderManagementException e) {
+            LOG.error("Error while reading the Client ID Metadata Document setting of tenant: " + tenantDomain, e);
+            return false;
+        }
+    }
+
+    /**
      * Retrieve and validate the document at a Client Identifier URL.
      *
-     * @param clientId Client Identifier URL.
+     * @param clientId     Client Identifier URL.
+     * @param tenantDomain Tenant domain of the caller, whose setting decides whether CIMD is enabled.
      * @return Values to register.
      * @throws ClientIdMetadataDocumentException If CIMD is disabled, or the URL or the document is not accepted.
      */
-    public ClientIdMetadataDocument preview(String clientId) throws ClientIdMetadataDocumentException {
+    public ClientIdMetadataDocument preview(String clientId, String tenantDomain)
+            throws ClientIdMetadataDocumentException {
 
-        if (!Boolean.parseBoolean(IdentityUtil.getProperty(ENABLED_CONFIG))) {
+        if (!isEnabled(tenantDomain)) {
             throw new ClientIdMetadataDocumentException(CIMD_DISABLED);
         }
         URI clientIdUri = validateClientIdUrl(clientId);
@@ -116,7 +148,7 @@ public class ClientIdMetadataDocumentService {
         Object authMethod = document.get("token_endpoint_auth_method");
         String jwksUri = null;
         if (AUTH_METHOD_PRIVATE_KEY_JWT.equals(authMethod)) {
-            jwksUri = validateJwksUri(document);
+            jwksUri = validateJwksUri(clientIdUri, document);
         } else if (!AUTH_METHOD_NONE.equals(authMethod)) {
             // An absent method means client_secret_basic (RFC 7591), which is not supported.
             throw new ClientIdMetadataDocumentException(INVALID_CLIENT_AUTHENTICATION);
@@ -203,7 +235,8 @@ public class ClientIdMetadataDocumentService {
         return redirectUris;
     }
 
-    private static String validateJwksUri(Map<String, Object> document) throws ClientIdMetadataDocumentException {
+    private static String validateJwksUri(URI clientIdUri, Map<String, Object> document)
+            throws ClientIdMetadataDocumentException {
 
         Object jwksUri = document.get("jwks_uri");
         // The console stores a JWKS URI certificate only, so an inline jwks is not supported.
@@ -212,7 +245,10 @@ public class ClientIdMetadataDocumentService {
         }
         try {
             URI uri = new URI((String) jwksUri);
-            if (!HTTPS.equals(uri.getScheme()) || !isDnsHost(uri.getHost()) || uri.getRawUserInfo() != null) {
+            // IS fetches the JWKS at the token endpoint without the preview guards, so it must come from the origin
+            // that preview already checked.
+            if (!HTTPS.equals(uri.getScheme()) || !clientIdUri.getHost().equalsIgnoreCase(uri.getHost())
+                    || !isDefaultHttpsPort(uri) || uri.getRawUserInfo() != null) {
                 throw new ClientIdMetadataDocumentException(INVALID_CLIENT_AUTHENTICATION);
             }
         } catch (URISyntaxException e) {

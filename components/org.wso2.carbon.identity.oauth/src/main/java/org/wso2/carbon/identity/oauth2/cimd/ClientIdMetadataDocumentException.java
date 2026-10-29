@@ -58,14 +58,15 @@ public class ClientIdMetadataDocumentException extends Exception {
                 "Each redirect URI must be https on the same origin as the Client Identifier URL, or http " +
                         "on 127.0.0.1 or [::1]."),
         INVALID_CLIENT_AUTHENTICATION("CIMD-60004", "Unsupported client authentication.",
-                "The token_endpoint_auth_method must be none, or private_key_jwt with an https jwks_uri. " +
+                "The token_endpoint_auth_method must be none, or private_key_jwt with a jwks_uri on the same " +
+                        "origin as the Client Identifier URL. " +
                         "Client secrets are not supported."),
         INVALID_GRANT_TYPES("CIMD-60005", "Unsupported grant types.",
                 "The grant_types must include authorization_code."),
         VALUE_TOO_LONG("CIMD-60006", "Value too long.",
                 "A value in the client metadata document exceeds the length the server can store."),
         CIMD_DISABLED("CIMD-60007", "Client ID Metadata Documents are disabled.",
-                "Client ID Metadata Document support is not enabled in this deployment."),
+                "Client ID Metadata Document support is not enabled in the organization's OAuth2 settings."),
         TOO_MANY_PREVIEWS("CIMD-60008", "Too many previews in progress.",
                 "Wait for the other client metadata document previews in this organization to finish.");
 
