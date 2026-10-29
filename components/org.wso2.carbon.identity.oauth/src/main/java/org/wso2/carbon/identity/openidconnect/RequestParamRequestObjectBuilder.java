@@ -130,8 +130,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
             JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
-            // The key can be held in an HSM; JCA selects the provider that accepts it (see
-            // OAuth2Util#createRSADecrypter).
+            // The key can be held in an HSM (see validateDecryptorMode).
             PrivateKey privateKey = getPrivateKey(oAuth2Parameters);
             JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
@@ -185,6 +184,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (encryptionAlgorithm == null) {
             log.debug("Request Object Encryption Algorithm is not found.");
         }
+        // No provider is named: JCA selects the provider that accepts the key. With a key held in an HSM through
+        // SunPKCS11 that is SunPKCS11 for RSA1_5 and the server's PKCS11 OAEP provider for RSA-OAEP and RSA-OAEP-256.
+        // Naming the key store provider would rule out OAEP, which SunPKCS11 does not offer.
         return new RSADecrypter(privateKey);
     }
 
@@ -230,12 +232,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
 
         String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
-        Key key = OAuth2Util.getPrivateKey(tenantDomain, tenantId);
-        if (!(key instanceof PrivateKey)) {
-            throw new IdentityOAuth2Exception("The decryption key of tenant: " + tenantDomain +
-                    " is not a private key.");
-        }
-        return (PrivateKey) key;
+        return OAuth2Util.asPrivateKey(OAuth2Util.getPrivateKey(tenantDomain, tenantId), tenantDomain);
     }
 
     /**

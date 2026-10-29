@@ -56,7 +56,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.security.Key;
 import java.security.PrivateKey;
 import java.text.ParseException;
 import java.util.Set;
@@ -447,15 +446,12 @@ public class OIDCSessionManagementUtil {
     public static JWT decryptWithRSA(String tenantDomain, String idToken) throws IdentityOAuth2Exception {
 
         try {
-            Key key = IdentityKeyStoreResolver.getInstance()
-                    .getPrivateKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
-            if (!(key instanceof PrivateKey)) {
-                throw new IdentityOAuth2Exception("The decryption key of tenant: " + tenantDomain +
-                        " is not a private key.");
-            }
-            PrivateKey privateKey = (PrivateKey) key;
+            PrivateKey privateKey = OAuth2Util.asPrivateKey(IdentityKeyStoreResolver.getInstance().getPrivateKey(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH), tenantDomain);
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(idToken);
-            RSADecrypter decrypter = OAuth2Util.createRSADecrypter(privateKey);
+            // The key can be held in an HSM. No provider is named: JCA selects the provider that accepts the key
+            // (SunPKCS11 for RSA1_5, the server's PKCS11 OAEP provider for RSA-OAEP and RSA-OAEP-256).
+            RSADecrypter decrypter = new RSADecrypter(privateKey);
             encryptedJWT.decrypt(decrypter);
             return encryptedJWT;
         } catch (ParseException | JOSEException e) {

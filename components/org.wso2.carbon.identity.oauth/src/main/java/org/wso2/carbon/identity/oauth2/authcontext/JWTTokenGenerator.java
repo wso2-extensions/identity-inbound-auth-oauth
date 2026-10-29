@@ -61,7 +61,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.security.Key;
-import java.security.PrivateKey;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -401,11 +400,7 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             }
             Key privateKey = IdentityKeyStoreResolver.getInstance().getPrivateKey(tenantDomain,
                     IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
-            if (!(privateKey instanceof PrivateKey)) {
-                throw new IdentityOAuth2Exception("The signing key of tenant: " + tenantDomain +
-                        " is not a private key.");
-            }
-            JWSSigner signer = OAuth2Util.createJWSSigner((PrivateKey) privateKey,
+            JWSSigner signer = OAuth2Util.createJWSSigner(OAuth2Util.asPrivateKey(privateKey, tenantDomain),
                     OAuth2Util.getSigningKeyStoreProvider(tenantDomain, privateKey),
                     OAuth2Util.getCertificate(tenantDomain));
             signedJWT.sign(signer);

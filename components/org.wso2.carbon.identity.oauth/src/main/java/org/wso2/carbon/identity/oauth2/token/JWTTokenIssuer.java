@@ -696,12 +696,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
+            PrivateKey signingKey = OAuth2Util.asPrivateKey(privateKey, tenantDomain);
             Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
-            if (!(privateKey instanceof PrivateKey)) {
-                throw new IdentityOAuth2Exception("The signing key of tenant: " + tenantDomain +
-                        " is not a private key.");
-            }
-            JWSSigner signer = OAuth2Util.createJWSSigner((PrivateKey) privateKey,
+            JWSSigner signer = OAuth2Util.createJWSSigner(signingKey,
                     OAuth2Util.getSigningKeyStoreProvider(tenantDomain, privateKey), certificate);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint;
@@ -737,8 +734,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
 
-            headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
-                    (JWSAlgorithm) signatureAlgorithm, tenantDomain));
+            headerBuilder.keyID(OAuth2Util.getKID(certificate, (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
             if (isRefreshToken) {
                 // Set the required "typ" header "rt+jwt" for refresh tokens issued by the issuer

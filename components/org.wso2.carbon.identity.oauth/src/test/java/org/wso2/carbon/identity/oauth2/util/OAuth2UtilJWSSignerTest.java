@@ -18,17 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
-import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEHeader;
-import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.Payload;
-import com.nimbusds.jose.crypto.RSADecrypter;
-import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -44,12 +37,13 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -67,8 +61,9 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
 /**
- * Tests for creating JWS signers and RSA JWE decrypters for software keys and for keys whose key material is not
- * accessible (keys held in an HSM), and for resolving the key store provider of the OAuth signing key.
+ * Tests for creating JWS signers for software keys and for keys whose key material is not accessible (keys held in
+ * an HSM), and for resolving the key store provider of the OAuth signing key. JWE decryption with such keys is tested
+ * through RequestParamRequestObjectBuilder and OIDCSessionManagementUtil.
  */
 public class OAuth2UtilJWSSignerTest {
 
@@ -177,6 +172,33 @@ public class OAuth2UtilJWSSignerTest {
     }
 
     @Test
+    public void testNonRSAKeyIsRejected() throws Exception {
+
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(256);
+        PrivateKey ecKey = generator.generateKeyPair().getPrivate();
+
+        IdentityOAuth2Exception e = expectThrows(IdentityOAuth2Exception.class,
+                () -> OAuth2Util.createJWSSigner(ecKey, null, null));
+        assertTrue(e.getMessage().contains("RSA"), e.getMessage());
+        // Also with weak keys allowed, where the key size is not checked.
+        System.setProperty(ALLOW_WEAK_RSA_SIGNER_KEY, "true");
+        expectThrows(IdentityOAuth2Exception.class, () -> OAuth2Util.createJWSSigner(ecKey, null, null));
+    }
+
+    @Test
+    public void testSoftwareKeyMaterialIsNotCopied() throws Exception {
+
+        // getEncoded() returns a new copy of a software key's private key material; only the format is read.
+        RSAPrivateKey key = new NoEncodingRSAPrivateKey((RSAPrivateKey) softwareKeyPair.getPrivate());
+
+        assertNull(OAuth2Util.createJWSSigner(key, hsmProvider, null).getJCAContext().getProvider());
+        try (MockedStatic<IdentityKeyStoreResolver> resolverStatic = mockStatic(IdentityKeyStoreResolver.class)) {
+            assertNull(OAuth2Util.getSigningKeyStoreProvider(TENANT_DOMAIN, key));
+        }
+    }
+
+    @Test
     public void testGetSigningKeyStoreProviderForSoftwareKey() throws Exception {
 
         try (MockedStatic<IdentityKeyStoreResolver> resolverStatic = mockStatic(IdentityKeyStoreResolver.class)) {
@@ -249,72 +271,6 @@ public class OAuth2UtilJWSSignerTest {
         }
     }
 
-    @Test
-    public void testCreateRSADecrypterWithSoftwareKey() throws Exception {
-
-        RSADecrypter decrypter = OAuth2Util.createRSADecrypter(softwareKeyPair.getPrivate());
-
-        assertNull(decrypter.getJCAContext().getKeyEncryptionProvider());
-        assertEquals(decryptJWE(encryptJWE(JWEAlgorithm.RSA_OAEP_256, (RSAPublicKey) softwareKeyPair.getPublic()),
-                decrypter), "secret");
-    }
-
-    @DataProvider(name = "jweAlgorithms")
-    public Object[][] jweAlgorithms() {
-
-        return new Object[][]{{JWEAlgorithm.RSA1_5}, {JWEAlgorithm.RSA_OAEP}, {JWEAlgorithm.RSA_OAEP_256},
-                {JWEAlgorithm.RSA_OAEP_512}};
-    }
-
-    @Test(dataProvider = "jweAlgorithms")
-    public void testCreateRSADecrypterWithOpaqueKey(JWEAlgorithm algorithm) throws Exception {
-
-        // Like SunPKCS11 together with the server's PKCS11 OAEP provider, registered after the JDK providers.
-        OpaqueRSAKeyTestProvider token = new OpaqueRSAKeyTestProvider(2048, true);
-        Security.addProvider(token);
-        try {
-            RSADecrypter decrypter = OAuth2Util.createRSADecrypter(token.getPrivateKey());
-
-            // No provider is named: JCA selects the provider that accepts the key.
-            assertNull(decrypter.getJCAContext().getKeyEncryptionProvider());
-            assertEquals(decryptJWE(encryptJWE(algorithm, (RSAPublicKey) token.getPublicKey()), decrypter),
-                    "secret");
-        } finally {
-            Security.removeProvider(token.getName());
-        }
-    }
-
-    @Test
-    public void testOpaqueKeyRSAOAEPNeedsProviderSupport() throws Exception {
-
-        // SunPKCS11 alone: PKCS#1 v1.5 only, so RSA-OAEP JWEs cannot be decrypted with the key.
-        OpaqueRSAKeyTestProvider token = new OpaqueRSAKeyTestProvider(2048, false);
-        Security.addProvider(token);
-        try {
-            RSADecrypter decrypter = OAuth2Util.createRSADecrypter(token.getPrivateKey());
-            String jwe = encryptJWE(JWEAlgorithm.RSA_OAEP_256, (RSAPublicKey) token.getPublicKey());
-            expectThrows(JOSEException.class, () -> decryptJWE(jwe, decrypter));
-            assertEquals(decryptJWE(encryptJWE(JWEAlgorithm.RSA1_5, (RSAPublicKey) token.getPublicKey()),
-                    decrypter), "secret");
-        } finally {
-            Security.removeProvider(token.getName());
-        }
-    }
-
-    private static String encryptJWE(JWEAlgorithm algorithm, RSAPublicKey publicKey) throws JOSEException {
-
-        JWEObject jwe = new JWEObject(new JWEHeader(algorithm, EncryptionMethod.A256GCM), new Payload("secret"));
-        jwe.encrypt(new RSAEncrypter(publicKey));
-        return jwe.serialize();
-    }
-
-    private static String decryptJWE(String jwe, RSADecrypter decrypter) throws Exception {
-
-        JWEObject jweObject = JWEObject.parse(jwe);
-        jweObject.decrypt(decrypter);
-        return jweObject.getPayload().toString();
-    }
-
     private static boolean signAndVerify(JWSSigner signer, JWSAlgorithm algorithm, RSAPublicKey publicKey)
             throws JOSEException {
 
@@ -328,5 +284,49 @@ public class OAuth2UtilJWSSignerTest {
         X509Certificate certificate = mock(X509Certificate.class);
         when(certificate.getPublicKey()).thenReturn(publicKey);
         return certificate;
+    }
+
+    /**
+     * A software RSA key whose getEncoded() fails, to show that it is not called.
+     */
+    private static final class NoEncodingRSAPrivateKey implements RSAPrivateKey {
+
+        private static final long serialVersionUID = 1L;
+        private final RSAPrivateKey key;
+
+        NoEncodingRSAPrivateKey(RSAPrivateKey key) {
+
+            this.key = key;
+        }
+
+        @Override
+        public BigInteger getPrivateExponent() {
+
+            return key.getPrivateExponent();
+        }
+
+        @Override
+        public BigInteger getModulus() {
+
+            return key.getModulus();
+        }
+
+        @Override
+        public String getAlgorithm() {
+
+            return key.getAlgorithm();
+        }
+
+        @Override
+        public String getFormat() {
+
+            return key.getFormat();
+        }
+
+        @Override
+        public byte[] getEncoded() {
+
+            throw new AssertionError("getEncoded() must not be called.");
+        }
     }
 }

@@ -59,7 +59,9 @@ import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -687,6 +689,27 @@ public class JwksEndpointTest {
         assertTrue(result.contains("keys"), result);
         assertEquals(new JSONObject(result).getJSONArray("keys").length(),
                 new JSONObject(expected).getJSONArray("keys").length(), "Only the key pair must be published.");
+    }
+
+    @Test
+    public void testJwksSkipsPrivateKeyWithoutCertificate() throws Exception {
+
+        // A PKCS#11 token can hold a private key without a certificate object; its entry has no certificate.
+        KeyStore softwareKeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
+        KeyStore tokenKeyStore = mock(KeyStore.class);
+        when(tokenKeyStore.aliases()).thenReturn(Collections.enumeration(Arrays.asList("wso2carbon", "no-cert")));
+        when(tokenKeyStore.entryInstanceOf(anyString(), eq(KeyStore.PrivateKeyEntry.class))).thenReturn(true);
+        when(tokenKeyStore.getCertificate("wso2carbon")).thenReturn(softwareKeyStore.getCertificate("wso2carbon"));
+        when(tokenKeyStore.getCertificateChain("wso2carbon"))
+                .thenReturn(softwareKeyStore.getCertificateChain("wso2carbon"));
+        when(tokenKeyStore.getCertificate("no-cert")).thenReturn(null);
+
+        String expected = jwksForKeyStore(softwareKeyStore);
+        String result = jwksForKeyStore(tokenKeyStore);
+        // One key pair is published once per signing algorithm.
+        assertEquals(new JSONObject(result).getJSONArray("keys").length(),
+                new JSONObject(expected).getJSONArray("keys").length(),
+                "Only the key pair with a certificate must be published. " + result);
     }
 
     private String jwksForKeyStore(KeyStore keyStore) throws Exception {
