@@ -37,6 +37,7 @@ public class OAuth2AccessTokenRespDTO {
     boolean error;
     String errorCode;
     String errorMsg;
+    String errorDetailCode;
     long expiresIn;
     long expiresInMillis;
     private long refreshTokenExpiresInMillis;
@@ -115,6 +116,14 @@ public class OAuth2AccessTokenRespDTO {
 
     public void setErrorMsg(String errorMsg) {
         this.errorMsg = errorMsg;
+    }
+
+    public String getErrorDetailCode() {
+        return errorDetailCode;
+    }
+
+    public void setErrorDetailCode(String errorDetailCode) {
+        this.errorDetailCode = errorDetailCode;
     }
 
     public long getExpiresIn() {

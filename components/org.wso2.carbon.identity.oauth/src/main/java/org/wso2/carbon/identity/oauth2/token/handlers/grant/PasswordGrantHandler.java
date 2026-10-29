@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -102,6 +103,8 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private static final Log log = LogFactory.getLog(PasswordGrantHandler.class);
+    private static final String INVALID_CREDENTIALS_ERROR_CODE = "17002";
+    private static final String AUTHENTICATION_FAILED_MESSAGE = "Authentication failed for";
     private static final String OAUTH2 = "oauth2";
     private static final String IS_INITIAL_LOGIN = "isInitialLogin";
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
@@ -142,9 +145,70 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenReq.setResourceOwnerUsername(userNameWithTenant);
         }
 
-        AuthenticatedUser authenticatedUser = validateUserCredentials(tokenReq, serviceProvider);
+        AuthenticatedUser authenticatedUser;
+        try {
+            authenticatedUser = validateUserCredentials(tokenReq, serviceProvider);
+        } catch (IdentityOAuth2Exception e) {
+            String detailCode = resolveErrorDetailCode(e);
+            // Do not disclose the account state when the failure reason is configured to be hidden.
+            if (!OAuthServerConfiguration.getInstance().isShowAuthFailureReasonForPasswordGrant()
+                    && StringUtils.contains(e.getMessage(), AUTHENTICATION_FAILED_MESSAGE)) {
+                detailCode = INVALID_CREDENTIALS_ERROR_CODE;
+            }
+            if (detailCode != null) {
+                tokReqMsgCtx.addProperty(OAuthConstants.ERROR_DETAIL_CODE, detailCode);
+            }
+            throw e;
+        }
         setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, authenticatedUser);
         return true;
+    }
+
+    /**
+     * Builds the invalid credentials message. The error code prefix is added only when failure reasons are shown, so
+     * that the description is the same as the other hidden authentication failures otherwise.
+     */
+    private static String getInvalidCredentialsMessage(OAuth2AccessTokenReqDTO tokenReq,
+                                                       boolean isShowAuthFailureReason) {
+
+        String message = AUTHENTICATION_FAILED_MESSAGE + " " + getMaskedUserIdentifier(tokenReq);
+        return isShowAuthFailureReason ? INVALID_CREDENTIALS_ERROR_CODE + " " + message : message;
+    }
+
+    /**
+     * Returns the username of the request masked, so that it is not echoed back in error responses.
+     */
+    private static String getMaskedUserIdentifier(OAuth2AccessTokenReqDTO tokenReq) {
+
+        String username = OAuth2Util.getUserIdentifierFromRequest(tokenReq);
+        if (username == null) {
+            return null;
+        }
+        // The masking utility leaves very short values as they are.
+        int codePointCount = username.codePointCount(0, username.length());
+        return codePointCount <= 2 ? StringUtils.repeat("*", codePointCount)
+                : LoggerUtils.getMaskedContent(username);
+    }
+
+    /**
+     * Resolves the user store / identity error code (e.g. 17002, 17005) behind an authentication failure so that
+     * it can be returned in a field of its own, apart from the RFC 6749 error code.
+     */
+    private static String resolveErrorDetailCode(IdentityOAuth2Exception e) {
+
+        if (e.getMessage() != null && e.getMessage().startsWith(INVALID_CREDENTIALS_ERROR_CODE + " ")) {
+            return INVALID_CREDENTIALS_ERROR_CODE;
+        }
+        for (Throwable t = e.getCause(); t != null; t = t.getCause()) {
+            if (t instanceof UserStoreClientException && StringUtils.isNotBlank(((UserStoreClientException) t)
+                    .getErrorCode())) {
+                return ((UserStoreClientException) t).getErrorCode();
+            }
+            if (t instanceof IdentityException && StringUtils.isNotBlank(((IdentityException) t).getErrorCode())) {
+                return ((IdentityException) t).getErrorCode();
+            }
+        }
+        return null;
     }
 
     private Optional<AuthenticatedUser>  authenticateUserAtUserStore(OAuth2AccessTokenReqDTO tokenReq, String userId,
@@ -218,7 +282,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                                 "trying to authenticate for the user: %s ", serviceProvider.getApplicationName(),
                         tokenReq.getResourceOwnerUsername()));
                 throw new IdentityOAuth2Exception(
-                        "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
+                        "Authentication failed for " + getMaskedUserIdentifier(tokenReq));
             }
 
             AuthenticationRequest authenticationRequest = new AuthenticationRequest();
@@ -450,16 +514,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
                     (tokenReq.getResourceOwnerUsername()))) {
-                throw new IdentityOAuth2Exception(
-                        "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
+                throw new IdentityOAuth2Exception(getInvalidCredentialsMessage(tokenReq, isShowAuthFailureReason));
             }
             username = tokenReq.getResourceOwnerUsername();
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 // For tenant qualified urls, no need to send fully qualified username in response.
                 username = tenantAwareUserName;
             }
-            throw new IdentityOAuth2Exception(
-                    "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq));
+            throw new IdentityOAuth2Exception(getInvalidCredentialsMessage(tokenReq, isShowAuthFailureReason));
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
@@ -469,7 +531,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 message = e.getErrorCode() + " " + e.getMessage();
             }
             message = isShowAuthFailureReason ?
-                    message : "Authentication failed for " + OAuth2Util.getUserIdentifierFromRequest(tokenReq);
+                    message : "Authentication failed for " + getMaskedUserIdentifier(tokenReq);
             throw new IdentityOAuth2Exception(message, e);
         } catch (UserStoreException e) {
             if (isPublishPasswordGrantLoginEnabled) {
@@ -496,10 +558,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
             }
             message = isShowAuthFailureReason ? message : "Authentication failed for " +
-                    OAuth2Util.getUserIdentifierFromRequest(tokenReq);
+                    getMaskedUserIdentifier(tokenReq);
             throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
-            String message = "Authentication failed for the user: " + OAuth2Util.getUserIdentifierFromRequest(tokenReq);
+            String message = "Authentication failed for the user: " + getMaskedUserIdentifier(tokenReq);
             if (log.isDebugEnabled()) {
                 log.debug(message, e);
             }
