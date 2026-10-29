@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.Servlet;
@@ -61,8 +62,9 @@ public class AuthzServerMetadataServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private static final Log log = LogFactory.getLog(AuthzServerMetadataServlet.class);
+    // Group 1 is the tenant of a tenant issuer path.
     private static final Pattern ALLOWED_PATH_PATTERN =
-            Pattern.compile("^/(oauth2/token|t/[^/]+/oauth2/token)$");
+            Pattern.compile("^/(?:oauth2/token|t/([^/]+)/oauth2/token)$");
     private static final String[] AUTHZ_SERVER_METADATA_FIELDS = {
             "issuer",
             "authorization_endpoint",
@@ -84,19 +86,27 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             "device_authorization_endpoint",
             "tls_client_certificate_bound_access_tokens",
             "mtls_endpoint_aliases",
-            "authorization_details_types_supported"
+            "authorization_details_types_supported",
+            "client_id_metadata_document_supported"
     };
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-        if (!isValidPath(request.getPathInfo())) {
+        String pathInfo = request.getPathInfo();
+        Matcher pathMatcher = StringUtils.isBlank(pathInfo) ? null : ALLOWED_PATH_PATTERN.matcher(pathInfo);
+        if (pathMatcher == null || !pathMatcher.matches()) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
 
-        String tenantDomain = (String) IdentityUtil.threadLocalProperties.get()
-                .get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        // The metadata URL carries the issuer path (RFC 8414), so a tenant issuer path names the tenant. The tenant
+        // in the request context is not set for this URL form.
+        String tenantDomain = pathMatcher.group(1);
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = (String) IdentityUtil.threadLocalProperties.get()
+                    .get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        }
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
@@ -131,14 +141,5 @@ public class AuthzServerMetadataServlet extends HttpServlet {
             response.setContentType("application/json");
             response.getWriter().print("Error in reading configuration.");
         }
-    }
-
-    private boolean isValidPath(String pathInfo) {
-
-        if (StringUtils.isBlank(pathInfo)) {
-            return false;
-        }
-
-        return AuthzServerMetadataServlet.ALLOWED_PATH_PATTERN.matcher(pathInfo).matches();
     }
 }

@@ -72,4 +72,30 @@ public class AuthzServerMetadataJsonResponseBuilderTest {
 
         Assert.assertNotNull(result);
     }
+
+    @Test
+    public void testGetConfigStringIncludesClientIdMetadataDocumentSupported() {
+
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put("client_id_metadata_document_supported", Boolean.TRUE);
+        when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+
+        String result = AuthzServerMetadataJsonResponseBuilder
+                .getAuthzServerMetadataConfigString(oidProviderConfigResponse);
+
+        Assert.assertTrue(result.contains("\"client_id_metadata_document_supported\":true"));
+    }
+
+    @Test
+    public void testGetConfigStringOmitsClientIdMetadataDocumentSupportedWhenUnset() {
+
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put("client_id_metadata_document_supported", null);
+        when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+
+        String result = AuthzServerMetadataJsonResponseBuilder
+                .getAuthzServerMetadataConfigString(oidProviderConfigResponse);
+
+        Assert.assertFalse(result.contains("client_id_metadata_document_supported"));
+    }
 }

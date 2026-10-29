@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.oauth2.agent.services.AgentConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.cimd.ClientIdMetadataDocumentService;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
@@ -288,6 +289,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(OAuth2TokenValidationService.class.getName(), tokenValidationService, null);
             OAuthClientAuthnService clientAuthnService = new OAuthClientAuthnService();
             bundleContext.registerService(OAuthClientAuthnService.class.getName(), clientAuthnService, null);
+            bundleContext.registerService(ClientIdMetadataDocumentService.class.getName(),
+                    new ClientIdMetadataDocumentService(), null);
             BasicAuthClientAuthenticator basicAuthClientAuthenticator = new BasicAuthClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), basicAuthClientAuthenticator,
                     null);

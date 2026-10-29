@@ -32,15 +32,18 @@ import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.cimd.ClientIdMetadataDocumentService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.OAUTH_CIBA_GRANT_TYPE;
+import static org.wso2.carbon.identity.oauth2.cimd.ClientIdMetadataDocumentService.AUTH_METHOD_NONE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildServiceUrl;
 
@@ -169,6 +172,16 @@ public class ProviderConfigBuilder {
         // `authorization_response_iss` should be true for FAPI 2.0 compliance.
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
             providerConfig.setAuthorizationResponseIssParameterSupported(Boolean.TRUE);
+        }
+        if (ClientIdMetadataDocumentService.isEnabled(tenantDomain)) {
+            providerConfig.setClientIdMetadataDocumentSupported(Boolean.TRUE);
+            // CIMD clients without keys authenticate with "none"; clients such as Claude use CIMD only if it is listed.
+            String[] authMethods = providerConfig.getTokenEndpointAuthMethodsSupported();
+            if (authMethods != null && !Arrays.asList(authMethods).contains(AUTH_METHOD_NONE)) {
+                authMethods = Arrays.copyOf(authMethods, authMethods.length + 1);
+                authMethods[authMethods.length - 1] = AUTH_METHOD_NONE;
+                providerConfig.setTokenEndpointAuthMethodsSupported(authMethods);
+            }
         }
         return providerConfig;
     }
