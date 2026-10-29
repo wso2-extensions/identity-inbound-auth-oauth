@@ -35,9 +35,12 @@ import java.io.PrintWriter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -91,6 +94,63 @@ public class AuthzServerMetadataServletTest {
             verify(printWriter).print(body.capture());
             assertEquals(body.getValue().contains("\"client_id_metadata_document_supported\":true"),
                     expectedInResponse);
+        }
+    }
+
+    @DataProvider
+    public Object[][] issuerPaths() {
+
+        return new Object[][]{
+                {"/t/cimdb.test/oauth2/token", "cimdb.test"},
+                {"/oauth2/token", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME}
+        };
+    }
+
+    @Test(dataProvider = "issuerPaths")
+    public void testDoGetUsesTenantOfIssuerPath(String pathInfo, String expectedTenant) throws Exception {
+
+        when(request.getPathInfo()).thenReturn(pathInfo);
+        when(response.getWriter()).thenReturn(printWriter);
+
+        OIDProviderConfigResponse configResponse = new OIDProviderConfigResponse();
+        configResponse.setIssuer("https://localhost:9443" + pathInfo);
+        DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
+        when(mockProcessor.getResponse(eq(request), eq(expectedTenant))).thenReturn(configResponse);
+
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+            processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+
+            new AuthzServerMetadataServlet().doGet(request, response);
+
+            verify(mockProcessor).getResponse(request, expectedTenant);
+            verify(response).setStatus(HttpServletResponse.SC_OK);
+        }
+    }
+
+    @DataProvider
+    public Object[][] invalidPaths() {
+
+        return new Object[][]{
+                {null},
+                {"/t/a/b/oauth2/token"},
+                {"/t//oauth2/token"},
+                {"/oauth2/token/extra"}
+        };
+    }
+
+    @Test(dataProvider = "invalidPaths")
+    public void testDoGetRejectsInvalidPath(String pathInfo) throws Exception {
+
+        when(request.getPathInfo()).thenReturn(pathInfo);
+        DefaultOIDCProcessor mockProcessor = mock(DefaultOIDCProcessor.class);
+
+        try (MockedStatic<DefaultOIDCProcessor> processorStatic = mockStatic(DefaultOIDCProcessor.class)) {
+            processorStatic.when(DefaultOIDCProcessor::getInstance).thenReturn(mockProcessor);
+
+            new AuthzServerMetadataServlet().doGet(request, response);
+
+            verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
+            verify(mockProcessor, never()).getResponse(any(), anyString());
         }
     }
 }
