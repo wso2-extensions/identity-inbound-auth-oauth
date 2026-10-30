@@ -169,6 +169,7 @@ public class OIDCRequestObjectUtilTest {
 
                 oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+                oAuth2Util.when(() -> OAuth2Util.asPrivateKey(any(), anyString())).thenCallRealMethod();
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
@@ -234,6 +235,7 @@ public class OIDCRequestObjectUtilTest {
 
             oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
             oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+            oAuth2Util.when(() -> OAuth2Util.asPrivateKey(any(), anyString())).thenCallRealMethod();
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
