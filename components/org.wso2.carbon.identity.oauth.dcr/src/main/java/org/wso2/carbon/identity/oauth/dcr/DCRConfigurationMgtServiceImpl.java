@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
 import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -198,7 +199,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
             }
             if (StringUtils.isEmpty(fapiProfile)) {
                 if (Boolean.TRUE.equals(dcrConfiguration.getEnableFapiEnforcement())) {
-                    dcrConfiguration.setFapiProfile(FapiProfileEnum.FAPI1_ADVANCED);
+                    dcrConfiguration.setFapiProfile(FapiUtil.getDefaultFapiProfile());
                 }
             } else {
                 dcrConfiguration.setFapiProfile(FapiProfileEnum.fromValue(fapiProfile));

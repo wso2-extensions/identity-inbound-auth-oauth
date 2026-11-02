@@ -1328,6 +1328,51 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @DataProvider(name = "testGetAppInformationWithDefaultFapiProfileData")
+    public Object[][] testGetAppInformationWithDefaultFapiProfileData() {
+
+        return new Object[][]{
+                // FAPI version configured in IS 7.1, expected FAPI profile.
+                {"1", "FAPI1_ADVANCED"},
+                {"2", "FAPI2_SECURITY"},
+        };
+    }
+
+    /**
+     * Verifies that a FAPI conformant application persisted without a FAPI profile gets the default FAPI profile,
+     * which is FAPI 2.0 Security Profile when FAPI 2.0 is enabled by the IS 7.1 server configuration.
+     */
+    @Test(dataProvider = "testGetAppInformationWithDefaultFapiProfileData")
+    public void testGetAppInformationWithDefaultFapiProfile(String fapiVersion, String expectedFapiProfile)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            when(mockedServerConfig.getFapiVersion()).thenReturn(fapiVersion);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+                defaultOAuthAppDO.setFapiConformanceEnabled(true);
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                OAuthAppDO retrievedAppDO = new OAuthAppDAO().getAppInformation(CONSUMER_KEY);
+                assertNotNull(retrievedAppDO);
+                assertEquals(retrievedAppDO.getFapiProfile(), expectedFapiProfile);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAppInformationWithExceptions() throws Exception {
 

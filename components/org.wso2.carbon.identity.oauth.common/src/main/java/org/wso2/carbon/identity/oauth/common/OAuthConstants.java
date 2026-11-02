@@ -351,6 +351,19 @@ public final class OAuthConstants {
     }
 
     /**
+     * Define FAPI versions of the IS 7.1 FAPI version configuration.
+     */
+    public static class FAPIVersions {
+
+        public static final String FAPI1_ADVANCED = "1";
+        public static final String FAPI2 = "2";
+
+        private FAPIVersions() {
+
+        }
+    }
+
+    /**
      * Define OAuth1.0a request parameters.
      */
     public static class OAuth10AParams {

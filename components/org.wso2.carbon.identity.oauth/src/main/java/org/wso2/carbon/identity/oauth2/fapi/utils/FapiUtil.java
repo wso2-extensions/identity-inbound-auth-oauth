@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
@@ -213,16 +214,46 @@ public class FapiUtil {
     /**
      * Returns the default FAPI configuration used when no tenant-specific configuration has been stored.
      * FAPI enforcement is enabled by default with FAPI 1.0 Advanced as the sole supported profile,
-     * preserving backwards compatibility for tenants that already have FAPI applications.
+     * preserving backwards compatibility for tenants that already have FAPI applications. When FAPI 2.0 is
+     * enabled by the IS 7.1 server configuration, FAPI 2.0 Security Profile is supported as well.
      *
-     * @return a FapiConfig with enabled=true and [FAPI1_ADVANCED] as supported profiles.
+     * @return a FapiConfig with enabled=true and the default supported profiles.
      */
     public static FapiConfig getDefaultConfiguration() {
 
         FapiConfig fapiConfig = new FapiConfig();
         fapiConfig.setEnabled(true);
-        fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+        if (isFapi2EnabledByServerConfig()) {
+            fapiConfig.setSupportedProfiles(
+                    Arrays.asList(FapiProfileEnum.FAPI1_ADVANCED, FapiProfileEnum.FAPI2_SECURITY));
+        } else {
+            fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+        }
         return fapiConfig;
+    }
+
+    /**
+     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration.
+     *
+     * @return FAPI 2.0 Security Profile when FAPI 2.0 is enabled by the IS 7.1 server configuration,
+     * FAPI 1.0 Advanced otherwise.
+     */
+    public static FapiProfileEnum getDefaultFapiProfile() {
+
+        return isFapi2EnabledByServerConfig() ? FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED;
+    }
+
+    /**
+     * Check whether FAPI 2.0 is enabled by the IS 7.1 server configuration ([oauth.oidc] fapi.version = "2").
+     * In IS 7.1, the configuration enabled FAPI 2.0 for every FAPI conformant application in the server. It is
+     * retained for deployments migrated from IS 7.1 and only changes the defaults. Stored configurations take
+     * priority.
+     *
+     * @return Whether FAPI 2.0 is enabled by the server configuration.
+     */
+    public static boolean isFapi2EnabledByServerConfig() {
+
+        return OAuthConstants.FAPIVersions.FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion());
     }
 
     private static void addAttribute(List<Attribute> attributeList, String key, String value) {
