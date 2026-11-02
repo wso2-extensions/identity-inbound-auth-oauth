@@ -206,6 +206,8 @@ import java.security.Key;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -394,6 +396,8 @@ public class OAuth2Util {
     private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
     // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
     private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
+    // Minimum RSA signing key size enforced when weak keys are not allowed (same limit as Nimbus RSASSASigner).
+    private static final int MIN_RSA_SIGNER_KEY_SIZE = 2048;
     public static final String JWT_X5T_HEXIFY_REQUIRED = "OAuth.JWTX5tHexifyingRequired";
     public static final String JWT_X5T_S256_ENABLED = "OAuth.JWTX5tS256Enabled";
     public static final String JWT_X5T_ENABLED = "OAuth.JWTX5tEnabled";
@@ -3671,7 +3675,10 @@ public class OAuth2Util {
      *
      * @param privateKey RSA Private key.
      * @return JWSSigner
+     * @deprecated Use {@link #createJWSSigner(PrivateKey, Provider, Certificate)}, which also supports private keys
+     * whose key material is not accessible, such as keys held in an HSM.
      */
+    @Deprecated
     public static JWSSigner createJWSSigner(RSAPrivateKey privateKey) {
 
         boolean allowWeakKey = Boolean.parseBoolean(System.getProperty(ALLOW_WEAK_RSA_SIGNER_KEY));
@@ -3680,6 +3687,124 @@ public class OAuth2Util {
                     " will be allowed for signing.");
         }
         return new RSASSASigner(privateKey, allowWeakKey);
+    }
+
+    /**
+     * Create a JWSSigner for an RSA private key using the server level configurations.
+     * <p>
+     * Software keys are handled exactly as in {@link #createJWSSigner(RSAPrivateKey)}. For a private key whose key
+     * material is not accessible (for example a key held in an HSM through the SunPKCS11 provider), the signer is
+     * bound to the given provider. Otherwise JCA may select a provider that cannot use the key before it sees the key
+     * (for example for PS256). The minimum key size cannot be read from such a key, so it is checked against the
+     * public key of the given certificate.
+     *
+     * @param privateKey  RSA private key.
+     * @param provider    JCA provider of the key store that holds the key. Used only when the key material is not
+     *                    accessible. Can be null.
+     * @param certificate Certificate of the key. Used to check the key size when the key material is not accessible.
+     *                    Can be null for software keys.
+     * @return JWSSigner.
+     * @throws IdentityOAuth2Exception If the key is not an RSA key, is weaker than allowed, or its size cannot be
+     *                                 determined.
+     */
+    public static JWSSigner createJWSSigner(PrivateKey privateKey, Provider provider, Certificate certificate)
+            throws IdentityOAuth2Exception {
+
+        if (privateKey == null || !"RSA".equalsIgnoreCase(privateKey.getAlgorithm())) {
+            throw new IdentityOAuth2Exception("The signing key must be an RSA private key. Key algorithm: " +
+                    (privateKey == null ? null : privateKey.getAlgorithm()));
+        }
+        boolean allowWeakKey = Boolean.parseBoolean(System.getProperty(ALLOW_WEAK_RSA_SIGNER_KEY));
+        if (allowWeakKey && log.isDebugEnabled()) {
+            log.debug("System flag 'allow_weak_rsa_signer_key' is enabled. So weak keys (key length less than 2048) " +
+                    "will be allowed for signing.");
+        }
+        if (!isKeyMaterialInaccessible(privateKey)) {
+            return new RSASSASigner(privateKey, allowWeakKey);
+        }
+
+        // Nimbus skips its key size check when it cannot read the modulus, so check it from the certificate.
+        if (!allowWeakKey) {
+            validateRSASignerKeySize(certificate);
+        }
+        RSASSASigner signer = new RSASSASigner(privateKey, allowWeakKey);
+        if (provider != null) {
+            signer.getJCAContext().setProvider(provider);
+            if (log.isDebugEnabled()) {
+                log.debug("Signing key material is not accessible. Using the key store provider: " +
+                        provider.getName());
+            }
+        }
+        return signer;
+    }
+
+    /**
+     * Get the JCA provider of the key store that holds the OAuth signing key of a tenant, when that key's material is
+     * not accessible (for example a key held in an HSM). The key store is resolved in the same way as the signing key,
+     * so key store mappings such as {@code [keystore.mapping.oauth]} apply.
+     *
+     * @param tenantDomain Tenant domain of the signing key.
+     * @param privateKey   The signing key resolved for the tenant.
+     * @return The key store provider, or null if the key material is accessible (software keys).
+     * @throws IdentityOAuth2Exception If the key store cannot be resolved.
+     */
+    public static Provider getSigningKeyStoreProvider(String tenantDomain, Key privateKey)
+            throws IdentityOAuth2Exception {
+
+        if (!isKeyMaterialInaccessible(privateKey)) {
+            return null;
+        }
+        try {
+            return IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getProvider();
+        } catch (IdentityKeyStoreResolverException e) {
+            throw new IdentityOAuth2Exception("Error while resolving the key store of the signing key of tenant: " +
+                    tenantDomain, e);
+        }
+    }
+
+    /**
+     * Check whether the key material of an RSA private key is not accessible in the JVM, as for keys held in an HSM.
+     * Such keys do not implement {@link RSAPrivateKey} or have no encoding format. The format is checked instead of
+     * the encoding, because {@link Key#getEncoded()} returns a new copy of a software key's private key material.
+     *
+     * @param key RSA private key.
+     * @return True if the key material is not accessible.
+     */
+    private static boolean isKeyMaterialInaccessible(Key key) {
+
+        return !(key instanceof RSAPrivateKey) || key.getFormat() == null;
+    }
+
+    private static void validateRSASignerKeySize(Certificate certificate) throws IdentityOAuth2Exception {
+
+        if (certificate == null || !(certificate.getPublicKey() instanceof RSAPublicKey)) {
+            throw new IdentityOAuth2Exception("Cannot determine the size of the RSA signing key. No RSA certificate " +
+                    "is available for a signing key whose key material is not accessible.");
+        }
+        int keySize = ((RSAPublicKey) certificate.getPublicKey()).getModulus().bitLength();
+        if (keySize < MIN_RSA_SIGNER_KEY_SIZE) {
+            throw new IdentityOAuth2Exception("The RSA signing key size " + keySize + " is less than the minimum " +
+                    "allowed size " + MIN_RSA_SIGNER_KEY_SIZE + ". Set the system property '" +
+                    ALLOW_WEAK_RSA_SIGNER_KEY + "' to allow weak keys.");
+        }
+    }
+
+    /**
+     * Get a key resolved for a tenant as a {@link PrivateKey}. The key may be one whose key material is not
+     * accessible, such as a key held in an HSM, so it is not cast to {@link RSAPrivateKey}.
+     *
+     * @param key          Key resolved for the tenant.
+     * @param tenantDomain Tenant domain.
+     * @return The private key.
+     * @throws IdentityOAuth2Exception If the key is not a private key.
+     */
+    public static PrivateKey asPrivateKey(Key key, String tenantDomain) throws IdentityOAuth2Exception {
+
+        if (!(key instanceof PrivateKey)) {
+            throw new IdentityOAuth2Exception("The key of tenant: " + tenantDomain + " is not a private key.");
+        }
+        return (PrivateKey) key;
     }
 
     /**
@@ -3736,10 +3861,11 @@ public class OAuth2Util {
             }
 
             Key privateKey = getPrivateKey(tenantDomain);
-            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
-            JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            headerBuilder.keyID(getKID(getCertificate(tenantDomain), signatureAlgorithm, tenantDomain));
             Certificate certificate = getCertificate(tenantDomain);
+            JWSSigner signer = OAuth2Util.createJWSSigner(asPrivateKey(privateKey, tenantDomain),
+                    getSigningKeyStoreProvider(tenantDomain, privateKey), certificate);
+            JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
+            headerBuilder.keyID(getKID(certificate, signatureAlgorithm, tenantDomain));
 
             if (isJWTX5tHexifyingRequired()) {
                 // Handle x5t.

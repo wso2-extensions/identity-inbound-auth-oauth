@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2016-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -56,7 +56,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.security.interfaces.RSAPrivateKey;
+import java.security.PrivateKey;
 import java.text.ParseException;
 import java.util.Set;
 
@@ -446,9 +446,11 @@ public class OIDCSessionManagementUtil {
     public static JWT decryptWithRSA(String tenantDomain, String idToken) throws IdentityOAuth2Exception {
 
         try {
-            RSAPrivateKey privateKey = (RSAPrivateKey) IdentityKeyStoreResolver.getInstance()
-                    .getPrivateKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+            PrivateKey privateKey = OAuth2Util.asPrivateKey(IdentityKeyStoreResolver.getInstance().getPrivateKey(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH), tenantDomain);
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(idToken);
+            // The key can be held in an HSM. No provider is named: JCA selects the provider that accepts the key
+            // (SunPKCS11 for RSA1_5, the server's PKCS11 OAEP provider for RSA-OAEP and RSA-OAEP-256).
             RSADecrypter decrypter = new RSADecrypter(privateKey);
             encryptedJWT.decrypt(decrypter);
             return encryptedJWT;

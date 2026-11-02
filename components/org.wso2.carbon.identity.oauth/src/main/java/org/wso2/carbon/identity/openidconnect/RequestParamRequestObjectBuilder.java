@@ -130,7 +130,8 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
             JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
-            PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
+            // The key can be held in an HSM (see validateDecryptorMode).
+            PrivateKey privateKey = getPrivateKey(oAuth2Parameters);
             JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
 
@@ -183,6 +184,9 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (encryptionAlgorithm == null) {
             log.debug("Request Object Encryption Algorithm is not found.");
         }
+        // No provider is named: JCA selects the provider that accepts the key. With a key held in an HSM through
+        // SunPKCS11 that is SunPKCS11 for RSA1_5 and the server's PKCS11 OAEP provider for RSA-OAEP and RSA-OAEP-256.
+        // Naming the key store provider would rule out OAEP, which SunPKCS11 does not offer.
         return new RSADecrypter(privateKey);
     }
 
@@ -217,6 +221,29 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         return requestObject.split(JWT_PART_DELIMITER).length == NUMBER_OF_PARTS_IN_JWE;
     }
 
+    /**
+     * Get the private key used to decrypt request objects.
+     *
+     * @param oAuth2Parameters OAuth2 parameters of the request.
+     * @return Private key. It can be a key whose key material is not accessible, such as a key held in an HSM.
+     * @throws IdentityOAuth2Exception If the key cannot be retrieved or is not a private key.
+     */
+    protected PrivateKey getPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
+
+        String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
+        int tenantId = OAuth2Util.getTenantId(tenantDomain);
+        return OAuth2Util.asPrivateKey(OAuth2Util.getPrivateKey(tenantDomain, tenantId), tenantDomain);
+    }
+
+    /**
+     * Get the private key used to decrypt request objects as an RSA private key.
+     *
+     * @param oAuth2Parameters OAuth2 parameters of the request.
+     * @return RSA private key.
+     * @throws IdentityOAuth2Exception If the key cannot be retrieved.
+     * @deprecated Use {@link #getPrivateKey(OAuth2Parameters)}, which also supports keys held in an HSM.
+     */
+    @Deprecated
     protected RSAPrivateKey getRSAPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
         String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
         int tenantId = OAuth2Util.getTenantId(tenantDomain);

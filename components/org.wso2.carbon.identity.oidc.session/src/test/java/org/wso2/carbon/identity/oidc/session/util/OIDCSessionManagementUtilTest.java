@@ -66,7 +66,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 
 /*
@@ -480,6 +482,34 @@ public class OIDCSessionManagementUtilTest {
                     IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
                     IdentityKeyStoreResolverException.class);
             assertThrows(() -> OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken));
+        }
+    }
+
+    @Test(description = "decryptWithRSA accepts HSM keys and names no provider for the key decryption")
+    public void testDecryptWithRSAUsingOpaqueKey() throws Exception {
+
+        String idToken = "sample-id-token";
+        try (MockedStatic<EncryptedJWT> mockEncryptedJWT = mockStatic(EncryptedJWT.class);
+             MockedStatic<IdentityKeyStoreResolver> mockIdentityKeyStoreResolver = mockStatic(
+                     IdentityKeyStoreResolver.class)) {
+            EncryptedJWT encryptedJWT = mock(EncryptedJWT.class);
+            mockEncryptedJWT.when(() -> EncryptedJWT.parse(idToken)).thenReturn(encryptedJWT);
+            IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+            mockIdentityKeyStoreResolver.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+            // A key held in an HSM: not an RSAPrivateKey and no encoding.
+            java.security.PrivateKey hsmKey = mock(java.security.PrivateKey.class);
+            when(hsmKey.getAlgorithm()).thenReturn("RSA");
+            when(identityKeyStoreResolver.getPrivateKey("carbon.super",
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(hsmKey);
+            ArgumentCaptor<RSADecrypter> decrypterArgumentCaptor = ArgumentCaptor.forClass(RSADecrypter.class);
+            doAnswer(invocation -> null).when(encryptedJWT).decrypt(decrypterArgumentCaptor.capture());
+
+            OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken);
+            RSADecrypter rsaDecrypter = decrypterArgumentCaptor.getValue();
+            assertEquals(rsaDecrypter.getPrivateKey(), hsmKey);
+            // JCA selects the provider that accepts the key (SunPKCS11 or the server's PKCS11 OAEP provider).
+            assertNull(rsaDecrypter.getJCAContext().getKeyEncryptionProvider());
         }
     }
 
