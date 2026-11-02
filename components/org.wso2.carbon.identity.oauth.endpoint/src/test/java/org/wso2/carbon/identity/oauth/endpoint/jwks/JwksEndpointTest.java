@@ -597,7 +597,7 @@ public class JwksEndpointTest {
         java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
                 java.util.Arrays.asList("badAlias"));
         when(mockKeystore.aliases()).thenReturn(aliases);
-        when(mockKeystore.entryInstanceOf("badAlias", KeyStore.PrivateKeyEntry.class)).thenReturn(true);
+        when(mockKeystore.isKeyEntry("badAlias")).thenReturn(true);
         when(mockKeystore.getCertificate("badAlias")).thenReturn(badCert);
         when(mockKeystore.getCertificateChain("badAlias")).thenReturn(new Certificate[]{badCert});
 
@@ -673,7 +673,7 @@ public class JwksEndpointTest {
     @Test
     public void testJwksSkipsEntriesThatAreNotKeyPairsWithCertificates() throws Exception {
 
-        // A PKCS#11 token can hold secret keys and private keys without a certificate next to the signing key pair.
+        // A PKCS#11 token or a PKCS12 key store can hold secret keys next to the signing key pair.
         KeyStore softwareKeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
         KeyStore mixedKeyStore = KeyStore.getInstance("PKCS12");
         mixedKeyStore.load(null, null);
@@ -694,11 +694,12 @@ public class JwksEndpointTest {
     @Test
     public void testJwksSkipsPrivateKeyWithoutCertificate() throws Exception {
 
-        // A PKCS#11 token can hold a private key without a certificate object; its entry has no certificate.
+        // SunPKCS11 does not list a private key without a matching certificate, but other key store
+        // implementations can return a key entry without a certificate.
         KeyStore softwareKeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon");
         KeyStore tokenKeyStore = mock(KeyStore.class);
         when(tokenKeyStore.aliases()).thenReturn(Collections.enumeration(Arrays.asList("wso2carbon", "no-cert")));
-        when(tokenKeyStore.entryInstanceOf(anyString(), eq(KeyStore.PrivateKeyEntry.class))).thenReturn(true);
+        when(tokenKeyStore.isKeyEntry(anyString())).thenReturn(true);
         when(tokenKeyStore.getCertificate("wso2carbon")).thenReturn(softwareKeyStore.getCertificate("wso2carbon"));
         when(tokenKeyStore.getCertificateChain("wso2carbon"))
                 .thenReturn(softwareKeyStore.getCertificateChain("wso2carbon"));
@@ -908,7 +909,7 @@ public class JwksEndpointTest {
                 java.util.Enumeration<String> aliases = java.util.Collections.enumeration(
                         java.util.Arrays.asList("testAlias"));
                 when(mockKeystore.aliases()).thenReturn(aliases);
-                when(mockKeystore.entryInstanceOf("testAlias", KeyStore.PrivateKeyEntry.class)).thenReturn(true);
+                when(mockKeystore.isKeyEntry("testAlias")).thenReturn(true);
                 when(mockKeystore.getCertificate("testAlias")).thenReturn(mockCert);
                 when(mockKeystore.getCertificateChain("testAlias")).thenReturn(null);
 

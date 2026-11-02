@@ -148,9 +148,9 @@ public class JwksEndpoint {
     }
 
     /**
-     * Collect the certificate information of the key pairs in a key store that can be published in the JWKS: private
-     * key entries with an X.509 certificate. Other entries, such as secret keys or private keys without a certificate
-     * (possible in a PKCS#11 token), are skipped.
+     * Collect the certificate information of the key pairs in a key store that can be published in the JWKS: key
+     * entries with an X.509 certificate. Other entries, such as secret keys (possible in a PKCS#11 token or a PKCS12
+     * key store), are skipped.
      *
      * @param keystore Key store of the tenant.
      * @return Certificate information of the publishable key pairs.
@@ -163,16 +163,12 @@ public class JwksEndpoint {
         Enumeration<String> enumeration = keystore.aliases();
         while (enumeration.hasMoreElements()) {
             String alias = enumeration.nextElement();
-            if (!keystore.entryInstanceOf(alias, KeyStore.PrivateKeyEntry.class)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Skipping key store entry: " + alias + " for JWKS. It is not a private key entry.");
-                }
-                continue;
-            }
             Certificate certificate = keystore.getCertificate(alias);
-            if (!(certificate instanceof X509Certificate)) {
+            // isKeyEntry is also true for secret key entries, which have no certificate.
+            if (!keystore.isKeyEntry(alias) || !(certificate instanceof X509Certificate)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Skipping key store entry: " + alias + " for JWKS. It has no X.509 certificate.");
+                    log.debug("Skipping key store entry: " + alias
+                            + " for JWKS. It is not a key pair with an X.509 certificate.");
                 }
                 continue;
             }
