@@ -65,7 +65,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
-import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -863,7 +863,7 @@ public class DCRMService {
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
             oAuthConsumerApp.setFapiProfile(dcrConfiguration.getFapiProfile() != null
                     ? dcrConfiguration.getFapiProfile().value()
-                    : FapiProfileEnum.FAPI1_ADVANCED.value()
+                    : FapiUtil.getDefaultFapiProfile().value()
             );
         }
 
