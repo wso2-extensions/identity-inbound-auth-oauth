@@ -1553,6 +1553,33 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "residentIdpIssuerData")
+    public Object[][] residentIdpIssuerData() {
+
+        return new Object[][]{
+                // JWT issuer, whether FAPI 2.0 is enabled for the tenant, expected result.
+                {FAPI2_ENTITY_ID, true, true},
+                {FAPI2_ENTITY_ID, false, true},
+                {"https://localhost:9443/t/wso2.com", true, true},
+                {"https://localhost:9443/t/wso2.com", false, false},
+                {"https://localhost:9443/t/other.com", true, false},
+        };
+    }
+
+    @Test(dataProvider = "residentIdpIssuerData")
+    public void testIsResidentIdpIssuer(String jwtIssuer, boolean isFapi2Enabled, boolean expected)
+            throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, "1", isFapi2Enabled);
+
+            assertEquals(OAuth2Util.isResidentIdpIssuer(jwtIssuer, FAPI2_ENTITY_ID, FAPI2_TENANT_DOMAIN), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
     private void mockFapi2Issuers(MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil,
                                   String fapiVersion, boolean isFapi2Enabled) throws Exception {
 

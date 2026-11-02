@@ -7040,6 +7040,26 @@ public class OAuth2Util {
      * @return Resident Identity Provider if exists, else null.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
+    /**
+     * Check whether the given JWT issuer is an issuer of the resident IdP of the tenant. When FAPI 2.0 is enabled for
+     * the tenant, the issuer differs from the resident IdP entity ID. Both are accepted, so that JWTs issued before
+     * FAPI 2.0 was enabled for the tenant are still accepted.
+     *
+     * @param jwtIssuer           Issuer of the JWT.
+     * @param residentIdpEntityId Entity ID of the resident IdP.
+     * @param tenantDomain        Tenant domain.
+     * @return Whether the JWT issuer is an issuer of the resident IdP.
+     * @throws IdentityOAuth2Exception If an error occurs while building the issuer.
+     */
+    public static boolean isResidentIdpIssuer(String jwtIssuer, String residentIdpEntityId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.equals(jwtIssuer, residentIdpEntityId)) {
+            return true;
+        }
+        return isFapi2Enabled(tenantDomain) && StringUtils.equals(jwtIssuer, getIdTokenIssuer(tenantDomain));
+    }
+
     private static IdentityProvider getResidentIDPForIssuer(String tenantDomain, String jwtIssuer)
             throws IdentityOAuth2Exception {
 
@@ -7058,7 +7078,7 @@ public class OAuth2Util {
             issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
         }
-        return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
+        return isResidentIdpIssuer(jwtIssuer, issuer, tenantDomain) ? residentIdentityProvider : null;
     }
 
     public static boolean isExistingUser(String userName, String tenantDomain) throws UserStoreException {
