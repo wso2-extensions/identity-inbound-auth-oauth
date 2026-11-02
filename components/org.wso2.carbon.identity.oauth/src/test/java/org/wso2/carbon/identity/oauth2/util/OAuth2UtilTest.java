@@ -1538,6 +1538,34 @@ public class OAuth2UtilTest {
         };
     }
 
+    @DataProvider(name = "fapi2PortalAppIdTokenIssuerData")
+    public Object[][] fapi2PortalAppIdTokenIssuerData() {
+
+        return new Object[][]{
+                // Client ID, FAPI version configured in IS 7.1, expected issuer.
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "2", FAPI2_ENTITY_ID},
+                {clientId, "1", "https://localhost:9443/t/wso2.com"},
+        };
+    }
+
+    @Test(dataProvider = "fapi2PortalAppIdTokenIssuerData")
+    public void testGetIdTokenIssuerForPortalAppsWithFapi2(String clientID, String fapiVersion, String expected)
+            throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, true);
+
+            assertEquals(OAuth2Util.getIdTokenIssuer(FAPI2_TENANT_DOMAIN, clientID, false), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
     @Test(dataProvider = "fapi2IdTokenIssuerData")
     public void testGetIdTokenIssuerWithFapiVersionConfig(String fapiVersion, boolean isFapi2Enabled,
                                                          String expected) throws Exception {
