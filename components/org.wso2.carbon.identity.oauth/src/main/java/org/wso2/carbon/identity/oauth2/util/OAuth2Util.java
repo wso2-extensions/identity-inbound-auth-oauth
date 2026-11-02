@@ -5237,9 +5237,13 @@ public class OAuth2Util {
                 }
             }
 
-            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                return oidcIssuerEpUrl;
+            /* The Console and My Account expect the token endpoint as the issuer and are not FAPI 2.0 clients.
+            Hence, the FAPI 2.0 issuer is not used for them. */
+            if (!PORTAL_APP_IDS.contains(clientId)) {
+                final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
+                if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                    return oidcIssuerEpUrl;
+                }
             }
         }
 
