@@ -5173,6 +5173,15 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
+            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
+            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
+            if (FapiUtil.isFapi2EnabledByServerConfig()) {
+                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
+                if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                    return residentIdpEntityId;
+                }
+            }
+
             final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
             if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
                 return oidcIssuerEpUrl;
@@ -5218,6 +5227,15 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+
+            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
+            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
+            if (FapiUtil.isFapi2EnabledByServerConfig()) {
+                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
+                if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                    return residentIdpEntityId;
+                }
+            }
 
             final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
             if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
