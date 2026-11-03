@@ -24,6 +24,7 @@ import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.PlainJWT;
@@ -48,6 +49,7 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.Key;
 import java.security.PrivateKey;
+import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 
@@ -130,7 +132,12 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 applicationRequestObjectEncryptionAlgorithm = encryptedJWT.getHeader().getAlgorithm().getName();
             }
             JWEAlgorithm encryptionAlgorithm = JWEAlgorithm.parse(applicationRequestObjectEncryptionAlgorithm);
-            PrivateKey privateKey = getRSAPrivateKey(oAuth2Parameters);
+            PrivateKey privateKey;
+            if (isECDHAlgorithm(encryptionAlgorithm)) {
+                privateKey = getECPrivateKey(oAuth2Parameters);
+            } else {
+                privateKey = getRSAPrivateKey(oAuth2Parameters);
+            }
             JWEDecrypter decrypter = validateDecryptorMode(encryptionAlgorithm, privateKey);
             encryptedJWT.decrypt(decrypter);
 
@@ -183,7 +190,21 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         if (encryptionAlgorithm == null) {
             log.debug("Request Object Encryption Algorithm is not found.");
         }
+        if (isECDHAlgorithm(encryptionAlgorithm)) {
+            return new ECDHDecrypter((ECPrivateKey) privateKey);
+        }
         return new RSADecrypter(privateKey);
+    }
+
+    /**
+     * Check whether the given encryption algorithm is an ECDH-ES based key agreement algorithm.
+     *
+     * @param encryptionAlgorithm Encryption algorithm.
+     * @return True if the algorithm belongs to the ECDH-ES family.
+     */
+    private boolean isECDHAlgorithm(JWEAlgorithm encryptionAlgorithm) {
+
+        return encryptionAlgorithm != null && JWEAlgorithm.Family.ECDH_ES.contains(encryptionAlgorithm);
     }
 
     /**
@@ -222,6 +243,11 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
         Key key = OAuth2Util.getPrivateKey(tenantDomain, tenantId);
         return (RSAPrivateKey) key;
+    }
+
+    protected ECPrivateKey getECPrivateKey(OAuth2Parameters oAuth2Parameters) throws IdentityOAuth2Exception {
+
+        return OAuth2Util.getECPrivateKey(getTenantDomainForDecryption(oAuth2Parameters));
     }
 
     /**
