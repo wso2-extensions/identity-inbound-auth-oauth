@@ -93,6 +93,8 @@ import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageS
 import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImpl;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -546,7 +548,8 @@ public class OAuthAdminServiceImpl {
                         app.setExtendRenewedRefreshTokenExpiryTime(
                                 application.getExtendRenewedRefreshTokenExpiryTime());
                         if (isFAPIConformanceEnabled) {
-                            validateFAPIBindingType(application.getTokenBindingType());
+                            validateFAPIBindingType(application.getTokenBindingType(),
+                                    application.getFapiProfile());
                         } else {
                             validateBindingType(application.getTokenBindingType());
                         }
@@ -1108,7 +1111,7 @@ public class OAuthAdminServiceImpl {
      * Financial-grade API (FAPI) security requirements.
      *
      * <p>FAPI mandates sender-constrained access tokens. The allowed token binding
-     * mechanisms depend on the enabled FAPI version:
+     * mechanisms depend on the FAPI profile of the application:
      *
      * <ul>
      *     <li><b>FAPI 2.0</b>: MTLS (RFC8705) or DPoP (RFC9449)</li>
@@ -1118,9 +1121,10 @@ public class OAuthAdminServiceImpl {
      * <p>If {@code bindingType} is {@code null}, validation is skipped.
      *
      * @param bindingType token binding type configured for the application
-     * @throws IdentityOAuthAdminException if the configured binding type is not permitted for the active FAPI version
+     * @param fapiProfile FAPI profile of the application. If it is not set, the default FAPI profile is used.
+     * @throws IdentityOAuthAdminException if the configured binding type is not permitted for the FAPI profile
      */
-    private void validateFAPIBindingType(String bindingType)
+    private void validateFAPIBindingType(String bindingType, String fapiProfile)
             throws IdentityOAuthAdminException {
 
         // Supported token binding types.
@@ -1135,7 +1139,8 @@ public class OAuthAdminServiceImpl {
          *  * MTLS as described in [RFC8705],
          *  * DPoP as described in [RFC9449];"
          */
-        if (OAuth2Util.isFapi2Enabled(getAppTenantDomain())) {
+        if (FapiProfileEnum.FAPI2_SECURITY.value().equals(
+                StringUtils.defaultIfBlank(fapiProfile, FapiUtil.getDefaultFapiProfile().value()))) {
             if (isMtls || isDpop) {
                 return;
             }
@@ -1331,7 +1336,7 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
             oAuthAppDO.setExtendRenewedRefreshTokenExpiryTime(consumerAppDTO.getExtendRenewedRefreshTokenExpiryTime());
             if (isFAPIConformanceEnabled) {
-                validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType(), consumerAppDTO.getFapiProfile());
             } else {
                 validateBindingType(consumerAppDTO.getTokenBindingType());
             }

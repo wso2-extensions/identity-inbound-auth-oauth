@@ -83,6 +83,8 @@ import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -1289,6 +1291,46 @@ public class OAuthAdminServiceImplTest {
                 Assert.assertEquals(((IdentityOAuthClientException) ex.getTargetException()).getErrorCode(),
                         Error.INVALID_REQUEST.getErrorCode());
             }
+        }
+    }
+
+    @DataProvider(name = "fapiBindingTypeData")
+    public Object[][] fapiBindingTypeData() {
+
+        return new Object[][]{
+                // Binding type, FAPI profile of the application, default FAPI profile, expected to be valid.
+                {"certificate", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {null, "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"DPoP", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"None", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"certificate", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {"DPoP", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {null, "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"None", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, false},
+                // No FAPI profile in the request: the default FAPI profile is used.
+                {"DPoP", null, FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"DPoP", null, FapiProfileEnum.FAPI2_SECURITY, true},
+        };
+    }
+
+    @Test(dataProvider = "fapiBindingTypeData")
+    public void testValidateFAPIBindingType(String bindingType, String fapiProfile, FapiProfileEnum defaultProfile,
+                                            boolean expected) throws Exception {
+
+        try (MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
+            fapiUtil.when(FapiUtil::getDefaultFapiProfile).thenReturn(defaultProfile);
+            OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+            boolean isValid = true;
+            try {
+                invokePrivateMethod(oAuthAdminService, "validateFAPIBindingType",
+                        new Class<?>[]{String.class, String.class}, bindingType, fapiProfile);
+            } catch (InvocationTargetException e) {
+                Assert.assertTrue(e.getTargetException() instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e.getTargetException()).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+                isValid = false;
+            }
+            Assert.assertEquals(isValid, expected, "Binding type: " + bindingType + ", FAPI profile: " + fapiProfile);
         }
     }
 
