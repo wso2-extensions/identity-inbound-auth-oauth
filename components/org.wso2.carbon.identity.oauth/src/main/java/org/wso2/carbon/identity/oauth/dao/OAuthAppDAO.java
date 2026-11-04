@@ -1283,9 +1283,14 @@ public class OAuthAppDAO {
         }
 
         if (oauthAppDO.isFapiConformanceEnabled()) {
+            // Keep the stored FAPI profile when the update doesn't provide one.
+            if (StringUtils.isBlank(oauthAppDO.getFapiProfile())) {
+                oauthAppDO.setFapiProfile(StringUtils.defaultIfBlank(
+                        getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE),
+                        FapiUtil.getDefaultFapiProfile().value()));
+            }
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    FAPI_PROFILE, StringUtils.defaultIfBlank(oauthAppDO.getFapiProfile(),
-                            FapiUtil.getDefaultFapiProfile().value()),
+                    FAPI_PROFILE, oauthAppDO.getFapiProfile(),
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
@@ -2008,9 +2013,12 @@ public class OAuthAppDAO {
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
             if (consumerAppDO.isFapiConformanceEnabled()) {
+                // Set the resolved FAPI profile on the application, so that the cached application has it too.
+                if (StringUtils.isBlank(consumerAppDO.getFapiProfile())) {
+                    consumerAppDO.setFapiProfile(FapiUtil.getDefaultFapiProfile().value());
+                }
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, FAPI_PROFILE,
-                        StringUtils.isBlank(consumerAppDO.getFapiProfile()) ?
-                                FapiUtil.getDefaultFapiProfile().value() : consumerAppDO.getFapiProfile());
+                        consumerAppDO.getFapiProfile());
             }
 
             if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
