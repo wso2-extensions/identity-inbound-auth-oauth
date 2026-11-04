@@ -1318,7 +1318,7 @@ public class OAuthAdminServiceImplTest {
                                             boolean expected) throws Exception {
 
         try (MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
-            fapiUtil.when(FapiUtil::getDefaultFapiProfile).thenReturn(defaultProfile);
+            fapiUtil.when(() -> FapiUtil.getDefaultFapiProfile(any())).thenReturn(defaultProfile);
             OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
             boolean isValid = true;
             try {

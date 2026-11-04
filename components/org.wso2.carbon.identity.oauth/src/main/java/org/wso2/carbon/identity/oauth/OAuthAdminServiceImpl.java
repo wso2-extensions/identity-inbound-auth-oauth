@@ -1139,8 +1139,9 @@ public class OAuthAdminServiceImpl {
          *  * MTLS as described in [RFC8705],
          *  * DPoP as described in [RFC9449];"
          */
-        if (FapiProfileEnum.FAPI2_SECURITY.value().equals(
-                StringUtils.defaultIfBlank(fapiProfile, FapiUtil.getDefaultFapiProfile().value()))) {
+        String resolvedFapiProfile = StringUtils.defaultIfBlank(fapiProfile,
+                FapiUtil.getDefaultFapiProfile(getAppTenantDomain()).value());
+        if (FapiProfileEnum.FAPI2_SECURITY.value().equals(resolvedFapiProfile)) {
             if (isMtls || isDpop) {
                 return;
             }

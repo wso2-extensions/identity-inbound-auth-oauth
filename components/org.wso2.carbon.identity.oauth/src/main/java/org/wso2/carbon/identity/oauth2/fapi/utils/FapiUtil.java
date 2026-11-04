@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtServerException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -233,14 +235,56 @@ public class FapiUtil {
     }
 
     /**
-     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration.
+     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration,
+     * for the tenant of the current request.
      *
-     * @return FAPI 2.0 Security Profile when FAPI 2.0 is enabled by the IS 7.1 server configuration,
-     * FAPI 1.0 Advanced otherwise.
+     * @return The default FAPI profile. See {@link #getDefaultFapiProfile(String)}.
      */
     public static FapiProfileEnum getDefaultFapiProfile() {
 
-        return isFapi2EnabledByServerConfig() ? FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED;
+        return getDefaultFapiProfile(IdentityTenantUtil.resolveTenantDomain());
+    }
+
+    /**
+     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration.
+     * FAPI 2.0 Security Profile is preferred when FAPI 2.0 is enabled by the IS 7.1 server configuration, and FAPI 1.0
+     * Advanced otherwise. If the tenant doesn't support the preferred profile, the other supported profile is used.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return The default FAPI profile.
+     */
+    public static FapiProfileEnum getDefaultFapiProfile(String tenantDomain) {
+
+        FapiProfileEnum preferredProfile = isFapi2EnabledByServerConfig() ?
+                FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED;
+        List<FapiProfileEnum> supportedProfiles = getSupportedProfiles(tenantDomain);
+        if (supportedProfiles.isEmpty() || supportedProfiles.contains(preferredProfile)) {
+            return preferredProfile;
+        }
+        FapiProfileEnum otherProfile = FapiProfileEnum.FAPI2_SECURITY.equals(preferredProfile) ?
+                FapiProfileEnum.FAPI1_ADVANCED : FapiProfileEnum.FAPI2_SECURITY;
+        return supportedProfiles.contains(otherProfile) ? otherProfile : preferredProfile;
+    }
+
+    private static List<FapiProfileEnum> getSupportedProfiles(String tenantDomain) {
+
+        FapiConfigMgtService fapiConfigMgtService = OAuth2ServiceComponentHolder.getInstance()
+                .getFapiConfigMgtService();
+        if (StringUtils.isBlank(tenantDomain) || fapiConfigMgtService == null) {
+            return Collections.emptyList();
+        }
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            if (fapiConfig == null || fapiConfig.getSupportedProfiles() == null) {
+                return Collections.emptyList();
+            }
+            return fapiConfig.getSupportedProfiles();
+        } catch (FapiConfigMgtException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while retrieving the FAPI configuration of the tenant: " + tenantDomain, e);
+            }
+            return Collections.emptyList();
+        }
     }
 
     /**
