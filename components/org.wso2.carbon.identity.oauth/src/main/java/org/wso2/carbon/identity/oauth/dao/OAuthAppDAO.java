@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
 import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -1287,7 +1288,7 @@ public class OAuthAppDAO {
             if (StringUtils.isBlank(oauthAppDO.getFapiProfile())) {
                 oauthAppDO.setFapiProfile(StringUtils.defaultIfBlank(
                         getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE),
-                        FapiUtil.getDefaultFapiProfile().value()));
+                        FapiUtil.getDefaultFapiProfile(spTenantDomain).value()));
             }
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                     FAPI_PROFILE, oauthAppDO.getFapiProfile(),
@@ -2015,7 +2016,8 @@ public class OAuthAppDAO {
             if (consumerAppDO.isFapiConformanceEnabled()) {
                 // Set the resolved FAPI profile on the application, so that the cached application has it too.
                 if (StringUtils.isBlank(consumerAppDO.getFapiProfile())) {
-                    consumerAppDO.setFapiProfile(FapiUtil.getDefaultFapiProfile().value());
+                    consumerAppDO.setFapiProfile(
+                            FapiUtil.getDefaultFapiProfile(IdentityTenantUtil.getTenantDomain(spTenantId)).value());
                 }
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, FAPI_PROFILE,
                         consumerAppDO.getFapiProfile());
@@ -2261,7 +2263,7 @@ public class OAuthAppDAO {
         String fapiProfile = getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE);
         if (Boolean.parseBoolean(isFAPI)) {
             oauthApp.setFapiProfile(StringUtils.isBlank(fapiProfile) ?
-                    FapiUtil.getDefaultFapiProfile().value() : fapiProfile);
+                    getDefaultFapiProfile(oauthApp).value() : fapiProfile);
         }
 
         String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);
@@ -2384,6 +2386,14 @@ public class OAuthAppDAO {
             }
             oauthApp.setIssuerOrg(issuerOrg);
         }
+    }
+
+    private FapiProfileEnum getDefaultFapiProfile(OAuthAppDO oauthApp) {
+
+        if (oauthApp.getUser() != null && StringUtils.isNotBlank(oauthApp.getUser().getTenantDomain())) {
+            return FapiUtil.getDefaultFapiProfile(oauthApp.getUser().getTenantDomain());
+        }
+        return FapiUtil.getDefaultFapiProfile();
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
