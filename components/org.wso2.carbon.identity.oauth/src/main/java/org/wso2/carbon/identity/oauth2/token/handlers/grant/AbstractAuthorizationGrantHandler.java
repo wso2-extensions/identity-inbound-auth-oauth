@@ -733,7 +733,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         token. If the token renewal per request configuration is enabled, renew the refresh token as well. */
         if (!isTokenRenewalPerRequestConfigured() &&
                 isRefreshTokenValid(existingTokenBean, tokReqMsgCtx.getValidityPeriod(),
-                        tokenReq.getClientId()) && !isExtendedToken) {
+                        tokenReq.getClientId()) && !isExtendedToken &&
+                isSameDelegatedActor(existingTokenBean, tokReqMsgCtx)) {
             if (newTokenBean.isNotPersisted() &&
                     OAuthServerConfiguration.getInstance().getValueForIsRefreshTokenAllowed(grantType)) {
                 if (log.isDebugEnabled()) {
@@ -765,6 +766,22 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             // no valid refresh token found in existing Token
             issueNewRefreshToken(tokReqMsgCtx, newTokenBean, oauthTokenIssuer);
         }
+    }
+
+    /**
+     * A refresh token carries the delegated agent of the grant that issued it, so it must not be reused by a grant
+     * that was made for a different agent (or for none).
+     */
+    private boolean isSameDelegatedActor(AccessTokenDO existingTokenBean, OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String existingActor = null;
+        if (existingTokenBean != null && existingTokenBean.getAccessTokenExtendedAttributes() != null &&
+                existingTokenBean.getAccessTokenExtendedAttributes().getParameters() != null) {
+            existingActor = existingTokenBean.getAccessTokenExtendedAttributes().getParameters()
+                    .get(OAuthConstants.DELEGATED_ACTOR);
+        }
+        return StringUtils.equals(StringUtils.trimToNull(existingActor),
+                StringUtils.trimToNull(tokReqMsgCtx.getRequestedActor()));
     }
 
     private void issueNewRefreshToken(OAuthTokenReqMessageContext tokReqMsgCtx,
