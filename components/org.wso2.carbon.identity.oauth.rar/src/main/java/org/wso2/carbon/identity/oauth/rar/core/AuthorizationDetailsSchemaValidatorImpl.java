@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.rar.core;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.Draft;
 import io.vertx.json.schema.JsonSchema;
@@ -39,10 +38,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +47,14 @@ import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConsta
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATE_SCHEMA_REFERENCES_CONFIG;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.ABSOLUTE_REF_ANNOTATION;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.DEREFERENCE_ANNOTATIONS;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.DYNAMIC_REF_KEYWORD;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.REF_KEYWORD;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.collectSubschemas;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.containsAnyKey;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.findDereferenceAnnotation;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.hasReferenceLoop;
 
 /**
  * The {@code AuthorizationDetailsSchemaValidator} is responsible for validating authorization details
@@ -76,25 +81,8 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
-    private static final List<String> DEREFERENCE_ANNOTATIONS =
-            Arrays.asList("__absolute_uri__", "__absolute_ref__", "__absolute_recursive_ref__");
-    private static final List<String> DYNAMIC_REF_KEYWORD = Collections.singletonList("$dynamicRef");
+    private static final List<String> DYNAMIC_REF_KEYWORDS = Collections.singletonList(DYNAMIC_REF_KEYWORD);
     private static final List<String> PROPERTY_NAME_KEYWORDS = Arrays.asList("dependentRequired", "dependencies");
-    private static final String ABSOLUTE_REF_ANNOTATION = "__absolute_ref__";
-    // Keywords whose subschemas are applied to the same input location as the schema that holds them.
-    private static final List<String> IN_PLACE_KEYWORDS = Arrays.asList("not", "if", "then", "else");
-    private static final List<String> IN_PLACE_ARRAY_KEYWORDS = Arrays.asList("allOf", "anyOf", "oneOf");
-    private static final List<String> IN_PLACE_MAP_KEYWORDS = Arrays.asList("dependentSchemas", "dependencies");
-    private static final String REF_KEYWORD = "$ref";
-    private static final String DYNAMIC_REF_KEYWORD_NAME = "$dynamicRef";
-    // Keywords whose values are subschemas: one subschema, an array of subschemas, or a map of subschemas.
-    private static final List<String> SUBSCHEMA_KEYWORDS = Arrays.asList("additionalItems", "unevaluatedItems",
-            "items", "contains", "additionalProperties", "unevaluatedProperties", "propertyNames", "not", "if",
-            "then", "else");
-    private static final List<String> SUBSCHEMA_ARRAY_KEYWORDS =
-            Arrays.asList("prefixItems", "items", "allOf", "anyOf", "oneOf");
-    private static final List<String> SUBSCHEMA_MAP_KEYWORDS = Arrays.asList("$defs", "definitions", "properties",
-            "patternProperties", "dependentSchemas", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -157,17 +145,17 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     /**
      * Rejects a schema whose references can never be resolved when an authorization detail is validated: one that
-     * uses "$dynamicRef", has a "$ref" that does not resolve, or has a "$ref" loop.
+     * uses "$dynamicRef", has a "$ref" that does not resolve, or has a "$ref" loop. Also rejects a schema with a
+     * "$ref" that uses one of the keys Vert.x adds when it dereferences the schema.
      */
     private void assertReferencesResolvable(final JsonObject jsonSchema)
             throws AuthorizationDetailsProcessingException {
 
-        final List<Map<?, ?>> subschemas = new ArrayList<>();
-        collectSubschemas(jsonSchema.getMap(), subschemas);
+        final List<Map<?, ?>> subschemas = collectSubschemas(jsonSchema.getMap());
 
         boolean hasReference = false;
         for (final Map<?, ?> subschema : subschemas) {
-            if (subschema.containsKey(DYNAMIC_REF_KEYWORD_NAME)) {
+            if (subschema.containsKey(DYNAMIC_REF_KEYWORD)) {
                 throw invalidSchema("\"$dynamicRef\" is not supported");
             }
             hasReference |= subschema.get(REF_KEYWORD) instanceof String;
@@ -175,9 +163,12 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
         if (!hasReference) {
             return;
         }
+        final String annotation = findDereferenceAnnotation(subschemas);
+        if (annotation != null) {
+            throw invalidSchema("\"" + annotation + "\" cannot be used in a schema that has a \"$ref\"");
+        }
 
         try {
-            this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
             final SchemaRepository lookup = this.buildLookup(jsonSchema);
             for (final Map<?, ?> subschema : subschemas) {
                 final Object ref = subschema.get(REF_KEYWORD);
@@ -188,6 +179,7 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             if (hasReferenceLoop(jsonSchema, lookup)) {
                 throw invalidSchema("it has a \"$ref\" loop that never moves deeper into the input");
             }
+            this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
         } catch (RuntimeException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Unable to resolve the references of the authorization details schema.", e);
@@ -207,32 +199,6 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
         return new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
                 reason));
-    }
-
-    private static void collectSubschemas(final Map<?, ?> schema, final List<Map<?, ?>> subschemas) {
-
-        subschemas.add(schema);
-        for (final Map.Entry<?, ?> entry : schema.entrySet()) {
-            final Object keyword = entry.getKey();
-            final Map<?, ?> map = asMap(entry.getValue());
-            if (map != null && SUBSCHEMA_KEYWORDS.contains(keyword)) {
-                collectSubschemas(map, subschemas);
-            } else if (map != null && SUBSCHEMA_MAP_KEYWORDS.contains(keyword)) {
-                for (final Object value : map.values()) {
-                    final Map<?, ?> subschema = asMap(value);
-                    if (subschema != null) {
-                        collectSubschemas(subschema, subschemas);
-                    }
-                }
-            } else if (SUBSCHEMA_ARRAY_KEYWORDS.contains(keyword)) {
-                for (final Object item : asList(entry.getValue())) {
-                    final Map<?, ?> subschema = asMap(item);
-                    if (subschema != null) {
-                        collectSubschemas(subschema, subschemas);
-                    }
-                }
-            }
-        }
     }
 
     private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput)
@@ -263,14 +229,12 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             return null;
         }
         try {
-            final Validator validator =
-                    this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
             // Vert.x follows a "$ref" loop that never moves into the input until the stack overflows.
             if (hasReferenceLoop(jsonSchema, this.buildLookup(jsonSchema))) {
                 log.debug("The authorization details schema has a $ref loop. Validating without dereferencing.");
                 return null;
             }
-            return validator;
+            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
         } catch (RuntimeException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Unable to dereference the authorization details schema. " +
@@ -301,114 +265,12 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
         return SchemaRepository.create(this.jsonSchemaOptions).dereference(JsonSchema.of(jsonSchema));
     }
 
-    /**
-     * Checks whether the schema has a "$ref" loop that never moves deeper into the input, e.g. {"$ref": "#"}.
-     * Follows "$ref" and the keywords that apply a subschema to the same input value (allOf, not, if, ...),
-     * resolving each "$ref" the same way as the validator does.
-     */
-    private static boolean hasReferenceLoop(final JsonObject jsonSchema, final SchemaRepository lookup) {
-
-        final List<Map<?, ?>> schemaObjects = new ArrayList<>();
-        collectObjects(jsonSchema.getMap(), schemaObjects);
-
-        // Depth-first search. FALSE: on the current path, TRUE: fully explored.
-        final Map<Map<?, ?>, Boolean> states = new IdentityHashMap<>();
-        for (final Map<?, ?> schemaObject : schemaObjects) {
-            if (hasLoopFrom(schemaObject, lookup, states)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean hasLoopFrom(final Map<?, ?> schemaObject, final SchemaRepository lookup,
-                                       final Map<Map<?, ?>, Boolean> states) {
-
-        final Boolean state = states.get(schemaObject);
-        if (state != null) {
-            return !state;
-        }
-        states.put(schemaObject, Boolean.FALSE);
-        for (final Map<?, ?> next : getInPlaceSubschemas(schemaObject, lookup)) {
-            if (hasLoopFrom(next, lookup, states)) {
-                return true;
-            }
-        }
-        states.put(schemaObject, Boolean.TRUE);
-        return false;
-    }
-
-    private static List<Map<?, ?>> getInPlaceSubschemas(final Map<?, ?> schemaObject, final SchemaRepository lookup) {
-
-        final List<Map<?, ?>> subschemas = new ArrayList<>();
-        final Object absoluteRef = schemaObject.get(ABSOLUTE_REF_ANNOTATION);
-        if (absoluteRef instanceof String) {
-            addObject(lookup.find((String) absoluteRef), subschemas);
-        }
-        for (final String keyword : IN_PLACE_KEYWORDS) {
-            addObject(schemaObject.get(keyword), subschemas);
-        }
-        for (final String keyword : IN_PLACE_ARRAY_KEYWORDS) {
-            for (final Object item : asList(schemaObject.get(keyword))) {
-                addObject(item, subschemas);
-            }
-        }
-        for (final String keyword : IN_PLACE_MAP_KEYWORDS) {
-            final Map<?, ?> map = asMap(schemaObject.get(keyword));
-            if (map != null) {
-                for (final Object value : map.values()) {
-                    addObject(value, subschemas);
-                }
-            }
-        }
-        return subschemas;
-    }
-
-    private static void collectObjects(final Object json, final List<Map<?, ?>> objects) {
-
-        final Map<?, ?> map = asMap(json);
-        if (map != null) {
-            objects.add(map);
-            for (final Object value : map.values()) {
-                collectObjects(value, objects);
-            }
-        } else {
-            for (final Object item : asList(json)) {
-                collectObjects(item, objects);
-            }
-        }
-    }
-
-    private static void addObject(final Object json, final List<Map<?, ?>> objects) {
-
-        final Map<?, ?> map = asMap(json);
-        if (map != null) {
-            objects.add(map);
-        }
-    }
-
-    private static Map<?, ?> asMap(final Object json) {
-
-        if (json instanceof JsonObject) {
-            return ((JsonObject) json).getMap();
-        }
-        return (json instanceof Map) ? (Map<?, ?>) json : null;
-    }
-
-    private static List<?> asList(final Object json) {
-
-        if (json instanceof JsonArray) {
-            return ((JsonArray) json).getList();
-        }
-        return (json instanceof List) ? (List<?>) json : Collections.emptyList();
-    }
-
     private static boolean canDereference(final JsonObject jsonSchema, final JsonObject jsonInput) {
 
         // Vert.x does not implement the dynamic scope of "$dynamicRef" and accepts payloads that such a schema
         // rejects. Remove this check once https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in
         // the vertx-json-schema in use.
-        if (containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORD)) {
+        if (containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORDS)) {
             return false;
         }
         // Dereferencing adds the annotation keys to the schema objects, including the "dependentRequired" and
@@ -416,24 +278,6 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
         // keys would then fail against such a schema.
         return !(containsAnyKey(jsonSchema, PROPERTY_NAME_KEYWORDS)
                 && containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS));
-    }
-
-    private static boolean containsAnyKey(final Object json, final List<String> keys) {
-
-        if (json instanceof JsonObject) {
-            for (final Map.Entry<String, Object> entry : (JsonObject) json) {
-                if (keys.contains(entry.getKey()) || containsAnyKey(entry.getValue(), keys)) {
-                    return true;
-                }
-            }
-        } else if (json instanceof JsonArray) {
-            for (final Object item : (JsonArray) json) {
-                if (containsAnyKey(item, keys)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**

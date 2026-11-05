@@ -258,7 +258,11 @@ public class AuthorizationDetailsSchemaValidatorTest {
                 {TEST_SCHEMA_WITH_REF_IN_DEPENDENT_REQUIRED},
                 {"{\"type\":\"object\",\"properties\":{\"s\":" +
                         "{\"$ref\":\"https://json-schema.org/draft/2020-12/schema\"}}}"},
-                {"{\"type\":\"object\",\"x-extension\":{\"$ref\":\"#/nowhere\"}}"}
+                {"{\"type\":\"object\",\"x-extension\":{\"$ref\":\"#/nowhere\"}}"},
+                {"{\"type\":\"object\",\"properties\":{\"__absolute_uri__\":{}},\"required\":[\"__absolute_ref__\"]}"},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"}," +
+                        "\"b\":{\"enum\":[\"__absolute_uri__\"]},\"c\":{\"const\":{\"__absolute_ref__\":1}}}," +
+                        "\"x-extension\":{\"__absolute_uri__\":1},\"$defs\":{\"s\":{\"type\":\"string\"}}}"}
         };
     }
 
@@ -275,6 +279,46 @@ public class AuthorizationDetailsSchemaValidatorTest {
     @Test(dataProvider = "schemasWithUnresolvableReferences")
     public void shouldReturnTrue_whenReferenceValidationIsDisabledAndReferencesCannotResolve(final String schema)
             throws AuthorizationDetailsProcessingException {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("false");
+            assertTrue(this.uut.isValidSchema(schema));
+        }
+    }
+
+    @DataProvider(name = "schemasUsingDereferenceAnnotations")
+    public Object[][] schemasUsingDereferenceAnnotations() {
+
+        final String defs = ",\"$defs\":{\"s\":{\"type\":\"string\"}}}";
+        return new Object[][]{
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"},\"__absolute_uri__\":{}}" +
+                        defs},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"}}," +
+                        "\"required\":[\"__absolute_ref__\"]" + defs},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"}}," +
+                        "\"dependentRequired\":{\"__absolute_recursive_ref__\":[\"a\"]}" + defs},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"}}," +
+                        "\"dependentRequired\":{\"a\":[\"__absolute_uri__\"]}" + defs},
+                {"{\"type\":\"object\",\"properties\":{\"a\":{\"$ref\":\"#/$defs/s\"," +
+                        "\"__absolute_ref__\":\"#/$defs/s\"}}" + defs}
+        };
+    }
+
+    @Test(dataProvider = "schemasUsingDereferenceAnnotations",
+            expectedExceptions = {AuthorizationDetailsProcessingException.class},
+            expectedExceptionsMessageRegExp = ".*\"__absolute_\\w+__\" cannot be used in a schema that has a .*")
+    public void shouldThrowAuthorizationDetailsProcessingException_whenRegisteredSchemaUsesDereferenceAnnotation(
+            final String schema) throws AuthorizationDetailsProcessingException {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("true");
+            this.uut.isValidSchema(schema);
+        }
+    }
+
+    @Test(dataProvider = "schemasUsingDereferenceAnnotations")
+    public void shouldReturnTrue_whenReferenceValidationIsDisabledAndSchemaUsesDereferenceAnnotation(
+            final String schema) throws AuthorizationDetailsProcessingException {
 
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
             identityUtil.when(() -> IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG)).thenReturn("false");
