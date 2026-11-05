@@ -657,6 +657,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
                     accessTokenExtendedAttributes);
         }
+        if (StringUtils.isNotBlank(tokReqMsgCtx.getRequestedActor())) {
+            // Persist the delegated agent so that the act claim can be restored when the token is refreshed.
+            accessTokenExtendedAttributes = addExtendedAttribute(OAuthConstants.DELEGATED_ACTOR,
+                    tokReqMsgCtx.getRequestedActor(), accessTokenExtendedAttributes);
+        }
         // Add any new extended attributes here using @addExtendedAttribute.
         return accessTokenExtendedAttributes;
     }
