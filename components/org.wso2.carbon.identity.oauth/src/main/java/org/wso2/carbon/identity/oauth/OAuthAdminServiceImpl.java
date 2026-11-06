@@ -1337,7 +1337,9 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
             oAuthAppDO.setExtendRenewedRefreshTokenExpiryTime(consumerAppDTO.getExtendRenewedRefreshTokenExpiryTime());
             if (isFAPIConformanceEnabled) {
-                validateFAPIBindingType(consumerAppDTO.getTokenBindingType(), consumerAppDTO.getFapiProfile());
+                // When the update doesn't provide a FAPI profile, the stored profile is kept. Hence, it is validated.
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType(),
+                        StringUtils.defaultIfBlank(consumerAppDTO.getFapiProfile(), oAuthAppDO.getFapiProfile()));
             } else {
                 validateBindingType(consumerAppDTO.getTokenBindingType());
             }
