@@ -950,6 +950,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                             .getParameters();
             if (customClaims != null && !customClaims.isEmpty()) {
                 customClaims.remove(OAuthConstants.IMPERSONATING_ACTOR);
+                customClaims.remove(OAuthConstants.DELEGATED_ACTOR);
                 customClaims.remove(OAuthConstants.IS_SHARED_USER);
                 customClaims = new HashMap<>(customClaims);
                 removeInternalExtendedAttributes(customClaims);
