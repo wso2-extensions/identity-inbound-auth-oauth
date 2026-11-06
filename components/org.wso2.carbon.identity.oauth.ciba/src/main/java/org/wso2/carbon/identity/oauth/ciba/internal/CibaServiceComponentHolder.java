@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.internal;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserValidator;
 import org.wso2.carbon.identity.oauth.ciba.handlers.DefaultCibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -45,6 +46,7 @@ public class CibaServiceComponentHolder {
     private MultiAttributeLoginService multiAttributeLoginService;
     private CibaUserResolver cibaUserResolver;
     private final List<CibaNotificationChannel> notificationChannels = new ArrayList<>();
+    private final List<CibaUserValidator> cibaUserValidators = new ArrayList<>();
 
     private CibaServiceComponentHolder() {
     }
@@ -153,5 +155,35 @@ public class CibaServiceComponentHolder {
     public void setCibaUserResolver(CibaUserResolver cibaUserResolver) {
 
         this.cibaUserResolver = cibaUserResolver;
+    }
+
+    /**
+     * Add a pluggable CIBA user validator.
+     *
+     * @param cibaUserValidator CibaUserValidator implementation.
+     */
+    public void addCibaUserValidator(CibaUserValidator cibaUserValidator) {
+
+        cibaUserValidators.add(cibaUserValidator);
+    }
+
+    /**
+     * Remove a pluggable CIBA user validator.
+     *
+     * @param cibaUserValidator CibaUserValidator implementation to remove.
+     */
+    public void removeCibaUserValidator(CibaUserValidator cibaUserValidator) {
+
+        cibaUserValidators.remove(cibaUserValidator);
+    }
+
+    /**
+     * Get all registered CIBA user validators.
+     *
+     * @return Unmodifiable list of registered CibaUserValidator instances.
+     */
+    public List<CibaUserValidator> getCibaUserValidators() {
+
+        return Collections.unmodifiableList(cibaUserValidators);
     }
 }
