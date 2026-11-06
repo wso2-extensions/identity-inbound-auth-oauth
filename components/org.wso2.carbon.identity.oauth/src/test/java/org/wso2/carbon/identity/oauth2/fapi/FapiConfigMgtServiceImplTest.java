@@ -26,13 +26,16 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.fapi.cache.FapiConfigCache;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
@@ -54,6 +57,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertFalse;
@@ -72,6 +76,7 @@ import static org.wso2.carbon.identity.oauth2.fapi.utils.ErrorMessage.ERROR_CODE
 /**
  * Unit tests for {@link FapiConfigMgtServiceImpl}.
  */
+@WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class FapiConfigMgtServiceImplTest {
 
@@ -279,6 +284,51 @@ public class FapiConfigMgtServiceImplTest {
             } catch (FapiConfigMgtException e) {
                 fail("Unexpected exception: " + e.getMessage());
             }
+        }
+    }
+
+    @Test
+    public void testSetFapiConfigClearsCachedApplications() throws Exception {
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AppInfoCache> mockedAppInfoCache = mockStatic(AppInfoCache.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(-1234);
+            mockedAppInfoCache.when(AppInfoCache::getInstance).thenReturn(appInfoCache);
+            when(configurationManager.replaceResource(eq(FAPI_RESOURCE_TYPE_NAME), any(ResourceAdd.class)))
+                    .thenReturn(new Resource());
+
+            FapiConfig fapiConfig = new FapiConfig();
+            fapiConfig.setEnabled(true);
+            fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI2_SECURITY));
+            fapiConfigMgtService.setFapiConfig(fapiConfig, TENANT_DOMAIN);
+
+            // Applications cached with the default FAPI profile of the tenant are cleared.
+            verify(appInfoCache).clear(TENANT_DOMAIN);
+        }
+    }
+
+    @Test
+    public void testGetFapiConfigOfAnotherTenant() throws Exception {
+
+        String otherTenantDomain = "wso2.com";
+        String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String[] tenantDomainOfRead = new String[1];
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(otherTenantDomain)).thenReturn(1);
+            when(configurationManager.getResource(FAPI_RESOURCE_TYPE_NAME, FAPI_RESOURCE_NAME, true))
+                    .thenAnswer(invocation -> {
+                        tenantDomainOfRead[0] = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .getTenantDomain();
+                        throw new ConfigurationManagementException(ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(),
+                                ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
+                    });
+
+            fapiConfigMgtService.getFapiConfig(otherTenantDomain);
+
+            // The FAPI configuration is read in the given tenant, and the carbon context is restored afterwards.
+            assertEquals(otherTenantDomain, tenantDomainOfRead[0]);
+            assertEquals(currentTenantDomain, PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         }
     }
 
