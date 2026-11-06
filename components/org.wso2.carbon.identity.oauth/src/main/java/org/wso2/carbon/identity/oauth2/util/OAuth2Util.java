@@ -5173,6 +5173,15 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
+            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
+            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
+            if (FapiUtil.isFapi2EnabledByServerConfig()) {
+                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
+                if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                    return residentIdpEntityId;
+                }
+            }
+
             final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
             if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
                 return oidcIssuerEpUrl;
@@ -5219,9 +5228,22 @@ public class OAuth2Util {
 
         if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
 
-            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                return oidcIssuerEpUrl;
+            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
+            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
+            if (FapiUtil.isFapi2EnabledByServerConfig()) {
+                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
+                if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                    return residentIdpEntityId;
+                }
+            }
+
+            /* The Console and My Account expect the token endpoint as the issuer and are not FAPI 2.0 clients.
+            Hence, the FAPI 2.0 issuer is not used for them. */
+            if (!PORTAL_APP_IDS.contains(clientId)) {
+                final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
+                if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
+                    return oidcIssuerEpUrl;
+                }
             }
         }
 
@@ -7015,6 +7037,31 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the given JWT issuer is an issuer of the resident IdP of the tenant. When FAPI 2.0 is enabled for
+     * the tenant, the issuer differs from the resident IdP entity ID. Both are accepted, so that JWTs issued before
+     * FAPI 2.0 was enabled for the tenant are still accepted. The FAPI 2.0 base URL issuer is accepted too, as the
+     * issuer is the resident IdP entity ID when the IS 7.1 FAPI version configuration is set.
+     *
+     * @param jwtIssuer           Issuer of the JWT.
+     * @param residentIdpEntityId Entity ID of the resident IdP.
+     * @param tenantDomain        Tenant domain.
+     * @return Whether the JWT issuer is an issuer of the resident IdP.
+     * @throws IdentityOAuth2Exception If an error occurs while building the issuer.
+     */
+    public static boolean isResidentIdpIssuer(String jwtIssuer, String residentIdpEntityId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.equals(jwtIssuer, residentIdpEntityId)) {
+            return true;
+        }
+        if (!isFapi2Enabled(tenantDomain)) {
+            return false;
+        }
+        return StringUtils.equals(jwtIssuer, getIdTokenIssuer(tenantDomain))
+                || StringUtils.equals(jwtIssuer, buildBaseIssuerUrl(tenantDomain));
+    }
+
+    /**
      * Get the resident Identity Provider for the given JWT issuer.
      *
      * @param tenantDomain Tenant domain.
@@ -7040,7 +7087,7 @@ public class OAuth2Util {
             issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
         }
-        return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
+        return isResidentIdpIssuer(jwtIssuer, issuer, tenantDomain) ? residentIdentityProvider : null;
     }
 
     public static boolean isExistingUser(String userName, String tenantDomain) throws UserStoreException {

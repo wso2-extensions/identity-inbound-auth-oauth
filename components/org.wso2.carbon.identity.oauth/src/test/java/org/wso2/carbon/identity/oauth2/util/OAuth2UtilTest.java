@@ -106,6 +106,9 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -205,6 +208,9 @@ public class OAuth2UtilTest {
     private Timestamp refreshTokenIssuedTime;
     private long validityPeriodInMillis;
     private long refreshTokenValidityPeriodInMillis;
+
+    private static final String FAPI2_TENANT_DOMAIN = "wso2.com";
+    private static final String FAPI2_ENTITY_ID = "https://localhost:9443/oauth2/oidcdiscovery";
 
     // Signature algorithms.
     private static final String NONE = "NONE";
@@ -1519,6 +1525,123 @@ public class OAuth2UtilTest {
             lenient().when(property.getValue()).thenReturn(oidcConfigUrl);
             assertEquals(getIdTokenIssuer(tenantDomain), expected);
         }
+    }
+
+    @DataProvider(name = "fapi2IdTokenIssuerData")
+    public Object[][] fapi2IdTokenIssuerData() {
+
+        return new Object[][]{
+                // FAPI version configured in IS 7.1, whether FAPI 2.0 is enabled for the tenant, expected issuer.
+                {"2", true, FAPI2_ENTITY_ID},
+                {"1", true, "https://localhost:9443/t/wso2.com"},
+                {"2", false, "https://localhost:9443/t/wso2.com/oauth2/token"},
+        };
+    }
+
+    @DataProvider(name = "fapi2PortalAppIdTokenIssuerData")
+    public Object[][] fapi2PortalAppIdTokenIssuerData() {
+
+        return new Object[][]{
+                // Client ID, FAPI version configured in IS 7.1, expected issuer.
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "2", FAPI2_ENTITY_ID},
+                {clientId, "1", "https://localhost:9443/t/wso2.com"},
+        };
+    }
+
+    @Test(dataProvider = "fapi2PortalAppIdTokenIssuerData")
+    public void testGetIdTokenIssuerForPortalAppsWithFapi2(String clientID, String fapiVersion, String expected)
+            throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, true);
+
+            assertEquals(OAuth2Util.getIdTokenIssuer(FAPI2_TENANT_DOMAIN, clientID, false), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @Test(dataProvider = "fapi2IdTokenIssuerData")
+    public void testGetIdTokenIssuerWithFapiVersionConfig(String fapiVersion, boolean isFapi2Enabled,
+                                                         String expected) throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, isFapi2Enabled);
+
+            assertEquals(getIdTokenIssuer(FAPI2_TENANT_DOMAIN), expected);
+            assertEquals(OAuth2Util.getIdTokenIssuer(FAPI2_TENANT_DOMAIN, clientId, false), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @DataProvider(name = "residentIdpIssuerData")
+    public Object[][] residentIdpIssuerData() {
+
+        return new Object[][]{
+                // JWT issuer, FAPI version configured in IS 7.1, whether FAPI 2.0 is enabled for the tenant,
+                // expected result.
+                {FAPI2_ENTITY_ID, "1", true, true},
+                {FAPI2_ENTITY_ID, "1", false, true},
+                {"https://localhost:9443/t/wso2.com", "1", true, true},
+                {"https://localhost:9443/t/wso2.com", "1", false, false},
+                {"https://localhost:9443/t/other.com", "1", true, false},
+                // With the IS 7.1 configuration, the issuer is the entity ID, and the base URL is still accepted.
+                {FAPI2_ENTITY_ID, "2", true, true},
+                {"https://localhost:9443/t/wso2.com", "2", true, true},
+                {"https://localhost:9443/t/wso2.com", "2", false, false},
+                {"https://localhost:9443/t/other.com", "2", true, false},
+        };
+    }
+
+    @Test(dataProvider = "residentIdpIssuerData")
+    public void testIsResidentIdpIssuer(String jwtIssuer, String fapiVersion, boolean isFapi2Enabled,
+                                        boolean expected) throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, isFapi2Enabled);
+
+            assertEquals(OAuth2Util.isResidentIdpIssuer(jwtIssuer, FAPI2_ENTITY_ID, FAPI2_TENANT_DOMAIN), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    private void mockFapi2Issuers(MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil,
+                                  String fapiVersion, boolean isFapi2Enabled) throws Exception {
+
+        identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(FAPI2_TENANT_DOMAIN);
+        lenient().when(oauthServerConfigurationMock.getFapiVersion()).thenReturn(fapiVersion);
+
+        FapiConfig fapiConfig = new FapiConfig();
+        fapiConfig.setEnabled(true);
+        fapiConfig.setSupportedProfiles(Collections.singletonList(isFapi2Enabled ?
+                FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED));
+        FapiConfigMgtService fapiConfigMgtService = mock(FapiConfigMgtService.class);
+        lenient().when(fapiConfigMgtService.getFapiConfig(FAPI2_TENANT_DOMAIN)).thenReturn(fapiConfig);
+        OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(fapiConfigMgtService);
+
+        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
+        lenient().when(mockIdentityProvider.getFederatedAuthenticatorConfigs())
+                .thenReturn(federatedAuthenticatorConfigs);
+        Property[] properties = new Property[0];
+        identityApplicationManagementUtil.when(
+                () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
+                        "openidconnect")).thenReturn(mockFederatedAuthenticatorConfig);
+        lenient().when(mockFederatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+        Property property = mock(Property.class);
+        identityApplicationManagementUtil.when(
+                () -> IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
+        lenient().when(property.getValue()).thenReturn(FAPI2_ENTITY_ID);
     }
 
     @DataProvider(name = "OAuthURLData")

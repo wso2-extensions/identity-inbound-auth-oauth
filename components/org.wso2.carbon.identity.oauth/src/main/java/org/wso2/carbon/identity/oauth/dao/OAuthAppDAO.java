@@ -51,6 +51,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
 import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -124,7 +126,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
-import static org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum.FAPI1_ADVANCED;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getConsoleCallbackFromServerConfig;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getMyAccountCallbackFromServerConfig;
@@ -1283,8 +1284,14 @@ public class OAuthAppDAO {
         }
 
         if (oauthAppDO.isFapiConformanceEnabled()) {
+            // Keep the stored FAPI profile when the update doesn't provide one.
+            if (StringUtils.isBlank(oauthAppDO.getFapiProfile())) {
+                oauthAppDO.setFapiProfile(StringUtils.defaultIfBlank(
+                        getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE),
+                        FapiUtil.getDefaultFapiProfile(spTenantDomain).value()));
+            }
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    FAPI_PROFILE, StringUtils.defaultIfBlank(oauthAppDO.getFapiProfile(), FAPI1_ADVANCED.value()),
+                    FAPI_PROFILE, oauthAppDO.getFapiProfile(),
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
@@ -2007,9 +2014,13 @@ public class OAuthAppDAO {
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
             if (consumerAppDO.isFapiConformanceEnabled()) {
+                // Set the resolved FAPI profile on the application, so that the cached application has it too.
+                if (StringUtils.isBlank(consumerAppDO.getFapiProfile())) {
+                    consumerAppDO.setFapiProfile(
+                            FapiUtil.getDefaultFapiProfile(IdentityTenantUtil.getTenantDomain(spTenantId)).value());
+                }
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, FAPI_PROFILE,
-                        StringUtils.isBlank(consumerAppDO.getFapiProfile()) ?
-                                FAPI1_ADVANCED.value() : consumerAppDO.getFapiProfile());
+                        consumerAppDO.getFapiProfile());
             }
 
             if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
@@ -2251,7 +2262,8 @@ public class OAuthAppDAO {
         // where a profile was explicitly configured via the management API.
         String fapiProfile = getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE);
         if (Boolean.parseBoolean(isFAPI)) {
-            oauthApp.setFapiProfile(StringUtils.isBlank(fapiProfile) ? FAPI1_ADVANCED.value() : fapiProfile);
+            oauthApp.setFapiProfile(StringUtils.isBlank(fapiProfile) ?
+                    getDefaultFapiProfile(oauthApp).value() : fapiProfile);
         }
 
         String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);
@@ -2374,6 +2386,14 @@ public class OAuthAppDAO {
             }
             oauthApp.setIssuerOrg(issuerOrg);
         }
+    }
+
+    private FapiProfileEnum getDefaultFapiProfile(OAuthAppDO oauthApp) {
+
+        if (oauthApp.getUser() != null && StringUtils.isNotBlank(oauthApp.getUser().getTenantDomain())) {
+            return FapiUtil.getDefaultFapiProfile(oauthApp.getUser().getTenantDomain());
+        }
+        return FapiUtil.getDefaultFapiProfile();
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

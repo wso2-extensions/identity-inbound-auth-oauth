@@ -20,9 +20,11 @@ package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.MockedStatic;
+import org.mockito.quality.Strictness;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -56,11 +58,14 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
@@ -127,6 +132,9 @@ public class JWTUtilsTest {
     private static final String CLAIMS_WITHOUT_REALM = "{\"sub\":\"user1\"}";
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
+    private static final String FAPI2_ENTITY_ID = "https://localhost:9443/oauth2/token";
+    private static final String FAPI2_ID_TOKEN_ISSUER = "https://localhost:9443/oauth2/oidcdiscovery";
+    private static final String FAPI2_BASE_URL_ISSUER = "https://localhost:9443";
     private static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
 
     private PrivilegedCarbonContext privilegedCarbonContext;
@@ -218,6 +226,77 @@ public class JWTUtilsTest {
             IdentityProvider result = JWTUtils.getResidentIDPIssuer(hostnameIssuer, "client-id",
                     SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
             assertEquals(result, residentIdP);
+        }
+    }
+
+    @DataProvider(name = "fapi2IssuerData")
+    public Object[][] fapi2IssuerData() {
+
+        return new Object[][]{
+                // JWT issuer, whether the resident IdP is expected to be returned.
+                {FAPI2_ENTITY_ID, true},
+                {FAPI2_ID_TOKEN_ISSUER, true},
+                {FAPI2_BASE_URL_ISSUER, true},
+                {"https://localhost:9443/t/other.com", false},
+        };
+    }
+
+    @Test(dataProvider = "fapi2IssuerData",
+            description = "getIDPForIssuer accepts the entity ID, the FAPI 2.0 issuer and the base URL issuer")
+    public void testGetIDPForIssuerWithFapi2Enabled(String jwtIssuer, boolean expected) throws Exception {
+
+        assertResidentIdPForFapi2Issuer(jwtIssuer, expected, false);
+    }
+
+    @Test(dataProvider = "fapi2IssuerData",
+            description = "getResidentIDPIssuer accepts the entity ID, the FAPI 2.0 issuer and the base URL issuer")
+    public void testGetResidentIDPIssuerWithFapi2Enabled(String jwtIssuer, boolean expected) throws Exception {
+
+        assertResidentIdPForFapi2Issuer(jwtIssuer, expected, true);
+    }
+
+    private void assertResidentIdPForFapi2Issuer(String jwtIssuer, boolean expected, boolean withClientId)
+            throws Exception {
+
+        IdentityProvider residentIdP = buildResidentIdP(FAPI2_ENTITY_ID);
+        try (MockedStatic<IdentityProviderManager> identityProviderManager = mockStatic(IdentityProviderManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> holder = mockStatic(OAuth2ServiceComponentHolder.class,
+                     withSettings().strictness(Strictness.LENIENT));
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class,
+                     withSettings().defaultAnswer(CALLS_REAL_METHODS).strictness(Strictness.LENIENT))) {
+            mockResidentIdP(identityProviderManager, residentIdP);
+            identityUtil.when(() -> IdentityUtil.getProperty(anyString())).thenReturn("false");
+            OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class,
+                    withSettings().strictness(Strictness.LENIENT));
+            holder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
+            when(holderInstance.isOrganizationManagementEnabled()).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled(SUPER_TENANT_DOMAIN_NAME)).thenReturn(true);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(FAPI2_ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.buildBaseIssuerUrl(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(FAPI2_BASE_URL_ISSUER);
+
+            IdentityProvider result = null;
+            IdentityOAuth2Exception exception = null;
+            try {
+                result = withClientId
+                        ? JWTUtils.getResidentIDPIssuer(jwtIssuer, "client-id", SUPER_TENANT_DOMAIN_NAME,
+                        "switched-org-id")
+                        : JWTUtils.getIDPForIssuer(jwtIssuer, SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
+            } catch (IdentityOAuth2Exception e) {
+                if (expected) {
+                    throw e;
+                }
+                exception = e;
+            }
+            if (expected) {
+                assertEquals(result, residentIdP, "JWT issuer: " + jwtIssuer);
+            } else {
+                assertNotNull(exception, "No IdP should be found for the JWT issuer: " + jwtIssuer);
+                assertEquals(exception.getMessage(),
+                        "No registered IDP found for the token with issuer name : " + jwtIssuer);
+            }
         }
     }
 

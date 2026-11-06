@@ -26,29 +26,38 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.fapi.cache.FapiConfigCache;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtServerException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertFalse;
@@ -67,6 +76,7 @@ import static org.wso2.carbon.identity.oauth2.fapi.utils.ErrorMessage.ERROR_CODE
 /**
  * Unit tests for {@link FapiConfigMgtServiceImpl}.
  */
+@WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class FapiConfigMgtServiceImplTest {
 
@@ -141,6 +151,101 @@ public class FapiConfigMgtServiceImplTest {
         }
     }
 
+    @DataProvider(name = "fapiVersionConfigData")
+    public Object[][] fapiVersionConfigData() {
+
+        return new Object[][]{
+                // FAPI version configured in IS 7.1, expected default supported profiles, expected default profile.
+                {"1", Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED), FapiProfileEnum.FAPI1_ADVANCED},
+                {"2", Arrays.asList(FapiProfileEnum.FAPI1_ADVANCED, FapiProfileEnum.FAPI2_SECURITY),
+                        FapiProfileEnum.FAPI2_SECURITY},
+        };
+    }
+
+    @Test(dataProvider = "fapiVersionConfigData")
+    public void testGetDefaultFapiConfigWithFapiVersionConfig(String fapiVersion,
+                                                              List<FapiProfileEnum> expectedProfiles,
+                                                              FapiProfileEnum expectedDefaultProfile)
+            throws Exception {
+
+        ConfigurationManagementException notFound = new ConfigurationManagementException(
+                ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
+        when(configurationManager.getResource(FAPI_RESOURCE_TYPE_NAME, FAPI_RESOURCE_NAME, true))
+                .thenThrow(notFound);
+        OAuthServerConfiguration oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+        when(oAuthServerConfiguration.getFapiVersion()).thenReturn(fapiVersion);
+
+        try (MockedStatic<OAuthServerConfiguration> mockedServerConfig = mockStatic(OAuthServerConfiguration.class)) {
+            mockedServerConfig.when(OAuthServerConfiguration::getInstance).thenReturn(oAuthServerConfiguration);
+
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(TENANT_DOMAIN);
+            assertTrue(fapiConfig.isEnabled());
+            assertEquals(expectedProfiles, fapiConfig.getSupportedProfiles());
+            assertEquals(expectedDefaultProfile, FapiUtil.getDefaultFapiProfile());
+        }
+    }
+
+    @DataProvider(name = "tenantDefaultFapiProfileData")
+    public Object[][] tenantDefaultFapiProfileData() {
+
+        List<FapiProfileEnum> fapi1 = Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED);
+        List<FapiProfileEnum> fapi2 = Collections.singletonList(FapiProfileEnum.FAPI2_SECURITY);
+        List<FapiProfileEnum> both = Arrays.asList(FapiProfileEnum.FAPI1_ADVANCED, FapiProfileEnum.FAPI2_SECURITY);
+        return new Object[][]{
+                // FAPI version configured in IS 7.1, stored supported profiles (null if nothing is stored),
+                // whether the tenant FAPI configuration is enabled, whether the configuration can't be read,
+                // expected default FAPI profile.
+                {"1", null, true, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"1", fapi1, true, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"1", both, true, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"1", fapi2, true, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"2", null, true, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"2", fapi1, true, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"2", both, true, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"2", fapi2, true, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"1", fapi2, false, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"2", fapi1, false, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"1", Collections.emptyList(), false, false, FapiProfileEnum.FAPI1_ADVANCED},
+                {"2", Collections.emptyList(), false, false, FapiProfileEnum.FAPI2_SECURITY},
+                {"1", null, true, true, FapiProfileEnum.FAPI1_ADVANCED},
+                {"2", null, true, true, FapiProfileEnum.FAPI2_SECURITY},
+        };
+    }
+
+    @Test(dataProvider = "tenantDefaultFapiProfileData")
+    public void testGetDefaultFapiProfileForTenant(String fapiVersion, List<FapiProfileEnum> storedProfiles,
+                                                   boolean enabled, boolean isConfigUnreadable,
+                                                   FapiProfileEnum expectedProfile) throws Exception {
+
+        OAuthServerConfiguration oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+        when(oAuthServerConfiguration.getFapiVersion()).thenReturn(fapiVersion);
+        FapiConfigMgtService tenantFapiConfigMgtService = mock(FapiConfigMgtService.class);
+
+        try (MockedStatic<OAuthServerConfiguration> mockedServerConfig = mockStatic(OAuthServerConfiguration.class)) {
+            mockedServerConfig.when(OAuthServerConfiguration::getInstance).thenReturn(oAuthServerConfiguration);
+            if (isConfigUnreadable) {
+                when(tenantFapiConfigMgtService.getFapiConfig(TENANT_DOMAIN)).thenThrow(
+                        FapiUtil.handleServerException(ERROR_CODE_FAPI_CONFIG_RETRIEVE, null, TENANT_DOMAIN));
+            } else {
+                FapiConfig fapiConfig;
+                if (storedProfiles == null) {
+                    // Nothing is stored, so the tenant gets the default FAPI configuration.
+                    fapiConfig = FapiUtil.getDefaultConfiguration();
+                } else {
+                    fapiConfig = new FapiConfig();
+                    fapiConfig.setEnabled(enabled);
+                    fapiConfig.setSupportedProfiles(storedProfiles);
+                }
+                when(tenantFapiConfigMgtService.getFapiConfig(TENANT_DOMAIN)).thenReturn(fapiConfig);
+            }
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(tenantFapiConfigMgtService);
+
+            assertEquals(expectedProfile, FapiUtil.getDefaultFapiProfile(TENANT_DOMAIN));
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
     @Test
     public void testGetFapiConfigServerException() throws ConfigurationManagementException {
 
@@ -179,6 +284,51 @@ public class FapiConfigMgtServiceImplTest {
             } catch (FapiConfigMgtException e) {
                 fail("Unexpected exception: " + e.getMessage());
             }
+        }
+    }
+
+    @Test
+    public void testSetFapiConfigClearsCachedApplications() throws Exception {
+
+        AppInfoCache appInfoCache = mock(AppInfoCache.class);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AppInfoCache> mockedAppInfoCache = mockStatic(AppInfoCache.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(-1234);
+            mockedAppInfoCache.when(AppInfoCache::getInstance).thenReturn(appInfoCache);
+            when(configurationManager.replaceResource(eq(FAPI_RESOURCE_TYPE_NAME), any(ResourceAdd.class)))
+                    .thenReturn(new Resource());
+
+            FapiConfig fapiConfig = new FapiConfig();
+            fapiConfig.setEnabled(true);
+            fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI2_SECURITY));
+            fapiConfigMgtService.setFapiConfig(fapiConfig, TENANT_DOMAIN);
+
+            // Applications cached with the default FAPI profile of the tenant are cleared.
+            verify(appInfoCache).clear(TENANT_DOMAIN);
+        }
+    }
+
+    @Test
+    public void testGetFapiConfigOfAnotherTenant() throws Exception {
+
+        String otherTenantDomain = "wso2.com";
+        String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String[] tenantDomainOfRead = new String[1];
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(otherTenantDomain)).thenReturn(1);
+            when(configurationManager.getResource(FAPI_RESOURCE_TYPE_NAME, FAPI_RESOURCE_NAME, true))
+                    .thenAnswer(invocation -> {
+                        tenantDomainOfRead[0] = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .getTenantDomain();
+                        throw new ConfigurationManagementException(ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(),
+                                ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
+                    });
+
+            fapiConfigMgtService.getFapiConfig(otherTenantDomain);
+
+            // The FAPI configuration is read in the given tenant, and the carbon context is restored afterwards.
+            assertEquals(otherTenantDomain, tenantDomainOfRead[0]);
+            assertEquals(currentTenantDomain, PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
         }
     }
 

@@ -83,6 +83,8 @@ import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -1289,6 +1291,130 @@ public class OAuthAdminServiceImplTest {
                 Assert.assertEquals(((IdentityOAuthClientException) ex.getTargetException()).getErrorCode(),
                         Error.INVALID_REQUEST.getErrorCode());
             }
+        }
+    }
+
+    @DataProvider(name = "fapiBindingTypeOnUpdateData")
+    public Object[][] fapiBindingTypeOnUpdateData() {
+
+        return new Object[][]{
+                // Stored FAPI profile of the application, whether DPoP is expected to be rejected.
+                {"FAPI2_SECURITY", false},
+                {"FAPI1_ADVANCED", true},
+        };
+    }
+
+    /**
+     * Verifies that an update without a FAPI profile validates the token binding type against the stored FAPI
+     * profile, which the update keeps, instead of the default FAPI profile.
+     */
+    @Test(dataProvider = "fapiBindingTypeOnUpdateData")
+    public void testUpdateFapiApplicationValidatesBindingAgainstStoredProfile(String storedFapiProfile,
+                                                                              boolean isDPoPRejected)
+            throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(false);
+            // The default FAPI profile differs from the stored profile of the FAPI 2.0 application.
+            fapiUtil.when(() -> FapiUtil.getDefaultFapiProfile(any())).thenReturn(FapiProfileEnum.FAPI1_ADVANCED);
+            oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(mockServiceProvider);
+
+            AuthenticatedUser loggedInUser = buildUser("admin@carbon.super");
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(loggedInUser.getTenantDomain());
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(
+                    IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain()));
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(loggedInUser.getUserName());
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+
+            String consumerKey = UUID.randomUUID().toString();
+            OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
+            app.setFapiConformanceEnabled(true);
+            app.setFapiProfile(storedFapiProfile);
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(consumerKey,
+                            IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain()))).thenReturn(app))) {
+                ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
+                OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+                lenient().when(appMgtService.getServiceProvider(consumerKey,
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(mockServiceProvider);
+                mockOAuthComponentServiceHolder(oAuthComponentServiceHolder);
+
+                OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
+                consumerAppDTO.setOauthConsumerKey(consumerKey);
+                consumerAppDTO.setOauthConsumerSecret(app.getOauthConsumerSecret());
+                consumerAppDTO.setOAuthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+                consumerAppDTO.setFapiConformanceEnabled(true);
+                consumerAppDTO.setTokenBindingType("DPoP");
+
+                String bindingError = null;
+                try {
+                    new OAuthAdminServiceImpl().updateConsumerApplication(consumerAppDTO);
+                } catch (IdentityOAuthClientException e) {
+                    bindingError = e.getMessage();
+                }
+                if (isDPoPRejected) {
+                    Assert.assertNotNull(bindingError, "DPoP should be rejected for the stored FAPI 1.0 profile.");
+                    Assert.assertTrue(bindingError.contains("'DPoP' binding type is found"), bindingError);
+                } else {
+                    Assert.assertNull(bindingError, "DPoP should be accepted for the stored FAPI 2.0 profile.");
+                }
+            }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @DataProvider(name = "fapiBindingTypeData")
+    public Object[][] fapiBindingTypeData() {
+
+        return new Object[][]{
+                // Binding type, FAPI profile of the application, default FAPI profile, expected to be valid.
+                {"certificate", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {null, "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"DPoP", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"None", "FAPI1_ADVANCED", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"certificate", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {"DPoP", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, true},
+                {null, "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"None", "FAPI2_SECURITY", FapiProfileEnum.FAPI1_ADVANCED, false},
+                // No FAPI profile in the request: the default FAPI profile is used.
+                {"DPoP", null, FapiProfileEnum.FAPI1_ADVANCED, false},
+                {"DPoP", null, FapiProfileEnum.FAPI2_SECURITY, true},
+        };
+    }
+
+    @Test(dataProvider = "fapiBindingTypeData")
+    public void testValidateFAPIBindingType(String bindingType, String fapiProfile, FapiProfileEnum defaultProfile,
+                                            boolean expected) throws Exception {
+
+        try (MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
+            fapiUtil.when(() -> FapiUtil.getDefaultFapiProfile(any())).thenReturn(defaultProfile);
+            OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+            boolean isValid = true;
+            try {
+                invokePrivateMethod(oAuthAdminService, "validateFAPIBindingType",
+                        new Class<?>[]{String.class, String.class}, bindingType, fapiProfile);
+            } catch (InvocationTargetException e) {
+                Assert.assertTrue(e.getTargetException() instanceof IdentityOAuthClientException);
+                Assert.assertEquals(((IdentityOAuthClientException) e.getTargetException()).getErrorCode(),
+                        Error.INVALID_REQUEST.getErrorCode());
+                isValid = false;
+            }
+            Assert.assertEquals(isValid, expected, "Binding type: " + bindingType + ", FAPI profile: " + fapiProfile);
         }
     }
 
