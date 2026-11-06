@@ -70,6 +70,19 @@ public interface TokenBinder extends TokenBinderInfo {
     void setTokenBindingValueForResponse(HttpServletResponse response, String bindingValue);
 
     /**
+     * Set token binding value for the response, scoped to the login tenant where the binder supports it.
+     *
+     * @param response          http servlet response.
+     * @param bindingValue      token binding value.
+     * @param loginTenantDomain login tenant domain of the authorization request.
+     */
+    default void setTokenBindingValueForResponse(HttpServletResponse response, String bindingValue,
+                                                 String loginTenantDomain) {
+
+        setTokenBindingValueForResponse(response, bindingValue);
+    }
+
+    /**
      * Clear token binding elements.
      *
      * @param request http servlet request.
