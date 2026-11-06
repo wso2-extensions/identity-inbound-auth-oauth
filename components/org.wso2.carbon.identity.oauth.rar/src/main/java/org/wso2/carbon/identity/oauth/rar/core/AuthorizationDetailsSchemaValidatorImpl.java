@@ -34,14 +34,27 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATE_SCHEMA_REFERENCES_CONFIG;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.ABSOLUTE_REF_ANNOTATION;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.DEREFERENCE_ANNOTATIONS;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.DYNAMIC_REF_KEYWORD;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.REF_KEYWORD;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.collectSubschemas;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.containsAnyKey;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.findDereferenceAnnotation;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsSchemaUtils.hasReferenceLoop;
 
 /**
  * The {@code AuthorizationDetailsSchemaValidator} is responsible for validating authorization details
@@ -68,6 +81,8 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
 
     private static final String ADDITIONAL_PROPERTIES = "additionalProperties";
     private static final String BASE_URI = "https://wso2.com/identity-server/schemas";
+    private static final List<String> DYNAMIC_REF_KEYWORDS = Collections.singletonList(DYNAMIC_REF_KEYWORD);
+    private static final List<String> PROPERTY_NAME_KEYWORDS = Arrays.asList("dependentRequired", "dependencies");
 
     private static volatile AuthorizationDetailsSchemaValidator instance;
     private final JsonSchemaOptions jsonSchemaOptions;
@@ -122,10 +137,79 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             throw new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
                     buildSchemaValidationErrorMessage(outputUnit, e)), e);
         }
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(VALIDATE_SCHEMA_REFERENCES_CONFIG))) {
+            this.assertReferencesResolvable(this.parseJsonObject(schema));
+        }
         return true;
     }
 
-    private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput) {
+    /**
+     * Rejects a schema whose references can never be resolved when an authorization detail is validated: one that
+     * uses "$dynamicRef", has a "$ref" that does not resolve, or has a "$ref" loop. Also rejects a schema with a
+     * "$ref" that uses one of the keys Vert.x adds when it dereferences the schema.
+     */
+    private void assertReferencesResolvable(final JsonObject jsonSchema)
+            throws AuthorizationDetailsProcessingException {
+
+        final List<Map<?, ?>> subschemas = collectSubschemas(jsonSchema.getMap());
+
+        boolean hasReference = false;
+        for (final Map<?, ?> subschema : subschemas) {
+            if (subschema.containsKey(DYNAMIC_REF_KEYWORD)) {
+                throw invalidSchema("\"$dynamicRef\" is not supported");
+            }
+            hasReference |= subschema.get(REF_KEYWORD) instanceof String;
+        }
+        if (!hasReference) {
+            return;
+        }
+        final String annotation = findDereferenceAnnotation(subschemas);
+        if (annotation != null) {
+            throw invalidSchema("\"" + annotation + "\" cannot be used in a schema that has a \"$ref\"");
+        }
+
+        try {
+            final SchemaRepository lookup = this.buildLookup(jsonSchema);
+            for (final Map<?, ?> subschema : subschemas) {
+                final Object ref = subschema.get(REF_KEYWORD);
+                if (ref instanceof String && !this.isResolvable(subschema.get(ABSOLUTE_REF_ANNOTATION), lookup)) {
+                    throw invalidSchema("\"$ref\": \"" + ref + "\" cannot be resolved");
+                }
+            }
+            if (hasReferenceLoop(jsonSchema, lookup)) {
+                throw invalidSchema("it has a \"$ref\" loop that never moves deeper into the input");
+            }
+            this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+        } catch (RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to resolve the references of the authorization details schema.", e);
+            }
+            throw invalidSchema("its references cannot be resolved");
+        }
+    }
+
+    private boolean isResolvable(final Object absoluteRef, final SchemaRepository lookup) {
+
+        // A reference resolves to the schema itself or to a meta-schema preloaded in the shared repository.
+        return absoluteRef instanceof String && (lookup.find((String) absoluteRef) != null
+                || this.schemaRepository.find((String) absoluteRef) != null);
+    }
+
+    private static AuthorizationDetailsProcessingException invalidSchema(final String reason) {
+
+        return new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
+                reason));
+    }
+
+    private OutputUnit buildOutputUnit(final JsonObject jsonSchema, final JsonObject jsonInput)
+            throws AuthorizationDetailsProcessingException {
+
+        if (jsonSchema != null) {
+            final Validator dereferencedValidator = this.buildDereferencedValidator(jsonSchema, jsonInput);
+            if (dereferencedValidator != null) {
+                return validateDereferenced(dereferencedValidator, jsonInput);
+            }
+        }
 
         // Validate the jsonSchema if present, otherwise validate the schema itself against json-schema DRAFT202012
         final Validator validator = (jsonSchema != null)
@@ -133,6 +217,70 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
                 : this.schemaRepository.validator(this.jsonSchemaOptions.getDraft().getIdentifier());
 
         return validator.validate(jsonInput);
+    }
+
+    /**
+     * Builds a validator that resolves the schema's internal references (e.g. "#/$defs/..."). Returns null when the
+     * schema must be validated without dereferencing, as before.
+     */
+    private Validator buildDereferencedValidator(final JsonObject jsonSchema, final JsonObject jsonInput) {
+
+        if (!canDereference(jsonSchema, jsonInput)) {
+            return null;
+        }
+        try {
+            // Dereferencing adds keys to the schema objects. Use a copy, so the caller's schema, which is reused for
+            // other authorization details of the same type, stays unchanged. encode() keeps the key order.
+            final JsonObject schemaCopy = new JsonObject(jsonSchema.encode());
+            // Vert.x follows a "$ref" loop that never moves into the input until the stack overflows.
+            if (hasReferenceLoop(schemaCopy, this.buildLookup(schemaCopy))) {
+                log.debug("The authorization details schema has a $ref loop. Validating without dereferencing.");
+                return null;
+            }
+            return this.schemaRepository.validator(JsonSchema.of(schemaCopy), this.jsonSchemaOptions, true);
+        } catch (RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to dereference the authorization details schema. " +
+                        "Validating without dereferencing.", e);
+            }
+            return null;
+        }
+    }
+
+    private static OutputUnit validateDereferenced(final Validator validator, final JsonObject jsonInput)
+            throws AuthorizationDetailsProcessingException {
+
+        try {
+            return validator.validate(jsonInput);
+        } catch (StackOverflowError e) {
+            // A recursive schema is applied once per nesting level of the input, so a deeply nested input can
+            // exhaust the stack. Reject such an input as invalid.
+            log.debug("The authorization details input is nested too deeply to validate against the schema.");
+            throw new AuthorizationDetailsProcessingException(VALIDATION_FAILED_ERR_MSG);
+        }
+    }
+
+    /**
+     * Builds a Vert.x lookup of the schema's subschemas, the same way the validator does when it dereferences.
+     */
+    private SchemaRepository buildLookup(final JsonObject jsonSchema) {
+
+        return SchemaRepository.create(this.jsonSchemaOptions).dereference(JsonSchema.of(jsonSchema));
+    }
+
+    private static boolean canDereference(final JsonObject jsonSchema, final JsonObject jsonInput) {
+
+        // Vert.x does not implement the dynamic scope of "$dynamicRef" and accepts payloads that such a schema
+        // rejects. Remove this check once https://github.com/eclipse-vertx/vertx-json-schema/issues/158 is fixed in
+        // the vertx-json-schema in use.
+        if (containsAnyKey(jsonSchema, DYNAMIC_REF_KEYWORDS)) {
+            return false;
+        }
+        // Dereferencing adds the annotation keys to the schema objects, including the "dependentRequired" and
+        // "dependencies" objects whose keys Vert.x reads as property names. An input using one of the annotation
+        // keys would then fail against such a schema.
+        return !(containsAnyKey(jsonSchema, PROPERTY_NAME_KEYWORDS)
+                && containsAnyKey(jsonInput, DEREFERENCE_ANNOTATIONS));
     }
 
     /**

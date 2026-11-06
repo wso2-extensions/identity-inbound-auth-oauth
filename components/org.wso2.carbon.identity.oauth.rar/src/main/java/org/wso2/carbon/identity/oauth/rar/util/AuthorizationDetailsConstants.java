@@ -35,6 +35,7 @@ public final class AuthorizationDetailsConstants {
     public static final String VALIDATION_FAILED_ERR_CODE = "invalid_authorization_details";
     public static final String EMPTY_JSON_OBJECT = "{}";
     public static final String EMPTY_JSON_ARRAY = "[]";
+    public static final String VALIDATE_SCHEMA_REFERENCES_CONFIG = "OAuth.ValidateAuthorizationDetailsSchemaReferences";
 
     private AuthorizationDetailsConstants() {
         // Private constructor to prevent instantiation
