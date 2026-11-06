@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.Mockito.mockStatic;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATE_SCHEMA_REFERENCES_CONFIG;
@@ -135,6 +136,23 @@ public class AuthorizationDetailsSchemaValidatorTest {
         assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED, testAuthorizationDetail));
         assertTrue(this.uut.isSchemaCompliant(new JsonObject(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED).getMap(),
                 testAuthorizationDetail));
+    }
+
+    @Test
+    public void shouldNotModifySchema_whenSchemaIsReusedForAuthorizationDetailsOfSameType()
+            throws AuthorizationDetailsProcessingException {
+
+        final Map<String, Object> schema = new JsonObject(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED).getMap();
+        AuthorizationDetail firstAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        firstAuthorizationDetail.setType(TEST_TYPE);
+        AuthorizationDetail secondAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
+        secondAuthorizationDetail.setType(TEST_TYPE);
+        secondAuthorizationDetail.setDetail("__absolute_uri__", "test_value");
+
+        assertTrue(this.uut.isSchemaCompliant(schema, firstAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(schema, secondAuthorizationDetail));
+        assertEquals(new JsonObject(schema).encode(),
+                new JsonObject(TEST_SCHEMA_WITH_DEPENDENT_REQUIRED).put("additionalProperties", false).encode());
     }
 
     @Test

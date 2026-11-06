@@ -229,12 +229,15 @@ public class AuthorizationDetailsSchemaValidatorImpl implements AuthorizationDet
             return null;
         }
         try {
+            // Dereferencing adds keys to the schema objects. Use a copy, so the caller's schema, which is reused for
+            // other authorization details of the same type, stays unchanged. encode() keeps the key order.
+            final JsonObject schemaCopy = new JsonObject(jsonSchema.encode());
             // Vert.x follows a "$ref" loop that never moves into the input until the stack overflows.
-            if (hasReferenceLoop(jsonSchema, this.buildLookup(jsonSchema))) {
+            if (hasReferenceLoop(schemaCopy, this.buildLookup(schemaCopy))) {
                 log.debug("The authorization details schema has a $ref loop. Validating without dereferencing.");
                 return null;
             }
-            return this.schemaRepository.validator(JsonSchema.of(jsonSchema), this.jsonSchemaOptions, true);
+            return this.schemaRepository.validator(JsonSchema.of(schemaCopy), this.jsonSchemaOptions, true);
         } catch (RuntimeException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Unable to dereference the authorization details schema. " +
