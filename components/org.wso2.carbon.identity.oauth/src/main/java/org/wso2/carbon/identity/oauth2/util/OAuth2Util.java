@@ -7037,14 +7037,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the resident Identity Provider for the given JWT issuer.
-     *
-     * @param tenantDomain Tenant domain.
-     * @param jwtIssuer    JWT issuer.
-     * @return Resident Identity Provider if exists, else null.
-     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
-     */
-    /**
      * Check whether the given JWT issuer is an issuer of the resident IdP of the tenant. When FAPI 2.0 is enabled for
      * the tenant, the issuer differs from the resident IdP entity ID. Both are accepted, so that JWTs issued before
      * FAPI 2.0 was enabled for the tenant are still accepted. The FAPI 2.0 base URL issuer is accepted too, as the
@@ -7069,6 +7061,14 @@ public class OAuth2Util {
                 || StringUtils.equals(jwtIssuer, buildBaseIssuerUrl(tenantDomain));
     }
 
+    /**
+     * Get the resident Identity Provider for the given JWT issuer.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param jwtIssuer    JWT issuer.
+     * @return Resident Identity Provider if exists, else null.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
     private static IdentityProvider getResidentIDPForIssuer(String tenantDomain, String jwtIssuer)
             throws IdentityOAuth2Exception {
 
