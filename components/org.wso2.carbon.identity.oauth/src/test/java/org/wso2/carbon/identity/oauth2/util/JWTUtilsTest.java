@@ -65,6 +65,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
@@ -276,16 +277,26 @@ public class JWTUtilsTest {
             oAuth2Util.when(() -> OAuth2Util.buildBaseIssuerUrl(SUPER_TENANT_DOMAIN_NAME))
                     .thenReturn(FAPI2_BASE_URL_ISSUER);
 
-            IdentityProvider result;
+            IdentityProvider result = null;
+            IdentityOAuth2Exception exception = null;
             try {
                 result = withClientId
                         ? JWTUtils.getResidentIDPIssuer(jwtIssuer, "client-id", SUPER_TENANT_DOMAIN_NAME,
                         "switched-org-id")
                         : JWTUtils.getIDPForIssuer(jwtIssuer, SUPER_TENANT_DOMAIN_NAME, "switched-org-id");
             } catch (IdentityOAuth2Exception e) {
-                result = null;
+                if (expected) {
+                    throw e;
+                }
+                exception = e;
             }
-            assertEquals(result, expected ? residentIdP : null, "JWT issuer: " + jwtIssuer);
+            if (expected) {
+                assertEquals(result, residentIdP, "JWT issuer: " + jwtIssuer);
+            } else {
+                assertNotNull(exception, "No IdP should be found for the JWT issuer: " + jwtIssuer);
+                assertEquals(exception.getMessage(),
+                        "No registered IDP found for the token with issuer name : " + jwtIssuer);
+            }
         }
     }
 
