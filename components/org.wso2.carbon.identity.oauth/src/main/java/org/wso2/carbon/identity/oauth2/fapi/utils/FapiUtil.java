@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtServerException;
@@ -298,6 +299,40 @@ public class FapiUtil {
     public static boolean isFapi2EnabledByServerConfig() {
 
         return OAuthConstants.FAPIVersions.FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion());
+    }
+
+    /**
+     * Returns the ID token issuer of the given client when FAPI 2.0 is enabled for the tenant. With the IS 7.1 FAPI
+     * version configuration, it is the resident IdP entity ID; otherwise, it is the base URL of the tenant, except for
+     * the Console and My Account, which keep the token endpoint issuer.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param clientId     Client ID, or {@code null} if the issuer doesn't depend on the client.
+     * @return The FAPI 2.0 ID token issuer, or {@code null} if the default issuer applies.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the issuer.
+     */
+    public static String getFapi2IdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+
+        if (!OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            return null;
+        }
+        if (isFapi2EnabledByServerConfig()) {
+            String residentIdpEntityId = OAuth2Util.getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                return residentIdpEntityId;
+            }
+            LOG.debug("Resident IdP entity ID is blank. Hence, it is not used as the FAPI 2.0 issuer.");
+        }
+        if (!OAuth2Constants.PORTAL_APP_IDS.contains(clientId)) {
+            String baseIssuerUrl = OAuth2Util.buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(baseIssuerUrl)) {
+                return baseIssuerUrl;
+            }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Using the default issuer for the client: " + clientId);
+        }
+        return null;
     }
 
     private static void addAttribute(List<Attribute> attributeList, String key, String value) {

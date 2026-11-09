@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.DefaultOIDCSessionStateManager;
@@ -583,12 +582,10 @@ public class OIDCSessionManagementUtil {
      */
     public static String getIdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
 
-        // When FAPI 2.0 is enabled for the tenant, ID tokens carry the FAPI 2.0 issuer, except for the Console and My
-        // Account, which keep the token endpoint issuer unless the IS 7.1 FAPI version configuration is set. Logout
-        // tokens use the same issuer, so that relying parties can validate them against it.
-        if (OAuth2Util.isFapi2Enabled(tenantDomain) && (FapiUtil.isFapi2EnabledByServerConfig()
-                || !OAuth2Constants.PORTAL_APP_IDS.contains(clientId))) {
-            return OAuth2Util.getIdTokenIssuer(tenantDomain);
+        // When FAPI 2.0 is enabled for the tenant, logout tokens carry the same issuer as the client's ID tokens.
+        String fapi2IdTokenIssuer = FapiUtil.getFapi2IdTokenIssuer(tenantDomain, clientId);
+        if (StringUtils.isNotBlank(fapi2IdTokenIssuer)) {
+            return fapi2IdTokenIssuer;
         }
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {

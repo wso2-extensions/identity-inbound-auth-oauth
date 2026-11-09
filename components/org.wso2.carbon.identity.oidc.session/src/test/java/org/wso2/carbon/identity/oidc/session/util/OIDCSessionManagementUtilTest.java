@@ -563,35 +563,25 @@ public class OIDCSessionManagementUtilTest {
     public Object[][] logoutTokenIssuerData() {
 
         return new Object[][]{
-                // Whether FAPI 2.0 is enabled for the tenant, whether the IS 7.1 FAPI version configuration is set,
-                // client ID, expected issuer.
-                {true, false, "r3-app", "https://localhost:9443/t/r3.com"},
-                {true, false, "MY_ACCOUNT", "https://localhost:9443/t/r3.com/oauth2/token"},
-                {true, true, "MY_ACCOUNT", "https://localhost:9443/t/r3.com/oauth2/oidcdiscovery"},
-                {false, false, "r3-app", "https://localhost:9443/t/r3.com/oauth2/token"},
+                // FAPI 2.0 ID token issuer of the client, expected issuer.
+                {"https://localhost:9443/t/r3.com", "https://localhost:9443/t/r3.com"},
+                {null, "https://localhost:9443/t/r3.com/oauth2/token"},
         };
     }
 
     @Test(dataProvider = "logoutTokenIssuerData",
             description = "The logout token issuer is the same as the ID token issuer of the client")
-    public void testGetIdTokenIssuerWithFapi2(boolean isFapi2Enabled, boolean isFapi2EnabledByServerConfig,
-                                              String clientId, String expectedIssuer) throws Exception {
+    public void testGetIdTokenIssuerWithFapi2(String fapi2IdTokenIssuer, String expectedIssuer) throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class);
+        try (MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
-            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled("r3.com")).thenReturn(isFapi2Enabled);
-            if (isFapi2Enabled) {
-                fapiUtil.when(FapiUtil::isFapi2EnabledByServerConfig).thenReturn(isFapi2EnabledByServerConfig);
-            }
-            boolean isFapi2Issuer = isFapi2Enabled && (isFapi2EnabledByServerConfig || !"MY_ACCOUNT".equals(clientId));
-            if (isFapi2Issuer) {
-                oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("r3.com")).thenReturn(expectedIssuer);
-            } else {
+            fapiUtil.when(() -> FapiUtil.getFapi2IdTokenIssuer("r3.com", "MY_ACCOUNT")).thenReturn(fapi2IdTokenIssuer);
+            if (fapi2IdTokenIssuer == null) {
                 identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
                 oAuth2Util.when(() -> OAuth2Util.getResidentIdpEntityId("r3.com")).thenReturn(expectedIssuer);
             }
-            Assert.assertEquals(OIDCSessionManagementUtil.getIdTokenIssuer("r3.com", clientId), expectedIssuer);
+            Assert.assertEquals(OIDCSessionManagementUtil.getIdTokenIssuer("r3.com", "MY_ACCOUNT"), expectedIssuer);
         }
     }
 }

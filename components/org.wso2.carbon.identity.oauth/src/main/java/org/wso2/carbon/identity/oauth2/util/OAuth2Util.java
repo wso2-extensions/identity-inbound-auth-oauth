@@ -5166,21 +5166,9 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-
-            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
-            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
-            if (FapiUtil.isFapi2EnabledByServerConfig()) {
-                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
-                if (StringUtils.isNotBlank(residentIdpEntityId)) {
-                    return residentIdpEntityId;
-                }
-            }
-
-            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                return oidcIssuerEpUrl;
-            }
+        String fapi2IdTokenIssuer = FapiUtil.getFapi2IdTokenIssuer(tenantDomain, null);
+        if (StringUtils.isNotBlank(fapi2IdTokenIssuer)) {
+            return fapi2IdTokenIssuer;
         }
 
         /*
@@ -5221,25 +5209,9 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-
-            /* IS 7.1 used the resident IdP entity ID as the FAPI 2.0 issuer. Keep it for deployments that still
-            carry the IS 7.1 FAPI version configuration, so that existing clients keep the same issuer. */
-            if (FapiUtil.isFapi2EnabledByServerConfig()) {
-                String residentIdpEntityId = getResidentIdpEntityId(tenantDomain);
-                if (StringUtils.isNotBlank(residentIdpEntityId)) {
-                    return residentIdpEntityId;
-                }
-            }
-
-            /* The Console and My Account expect the token endpoint as the issuer and are not FAPI 2.0 clients.
-            Hence, the FAPI 2.0 issuer is not used for them. */
-            if (!OAuth2Constants.PORTAL_APP_IDS.contains(clientId)) {
-                final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-                if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                    return oidcIssuerEpUrl;
-                }
-            }
+        String fapi2IdTokenIssuer = FapiUtil.getFapi2IdTokenIssuer(tenantDomain, clientId);
+        if (StringUtils.isNotBlank(fapi2IdTokenIssuer)) {
+            return fapi2IdTokenIssuer;
         }
 
         /*
