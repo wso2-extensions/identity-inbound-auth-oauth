@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthent
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -250,9 +251,10 @@ public class PasswordGrantHandlerTest {
                                 "17003:AdminInitiated",
                                 "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
                                         "carbon.super. Cannot login until the account is unlocked.")),
-                        "Authentication failed for username",
+                        "Authentication failed for " + LoggerUtils.getMaskedContent("username"),
                         false},
-                {"wso2.com", false, true, null, "Authentication failed for user", false}
+                {"wso2.com", false, true, null,
+                        "Authentication failed for " + LoggerUtils.getMaskedContent("user"), false}
         };
     }
 
