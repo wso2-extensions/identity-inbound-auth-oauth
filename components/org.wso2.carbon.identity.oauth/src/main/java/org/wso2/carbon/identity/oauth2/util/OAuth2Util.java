@@ -84,7 +84,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -439,10 +438,6 @@ public class OAuth2Util {
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
     private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
-
-    private static final List<String> PORTAL_APP_IDS = Arrays.asList(
-            ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
-            ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
@@ -5239,7 +5234,7 @@ public class OAuth2Util {
 
             /* The Console and My Account expect the token endpoint as the issuer and are not FAPI 2.0 clients.
             Hence, the FAPI 2.0 issuer is not used for them. */
-            if (!PORTAL_APP_IDS.contains(clientId)) {
+            if (!OAuth2Constants.PORTAL_APP_IDS.contains(clientId)) {
                 final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
                 if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
                     return oidcIssuerEpUrl;
@@ -5291,7 +5286,7 @@ public class OAuth2Util {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
-                                PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
+                                OAuth2Constants.PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
