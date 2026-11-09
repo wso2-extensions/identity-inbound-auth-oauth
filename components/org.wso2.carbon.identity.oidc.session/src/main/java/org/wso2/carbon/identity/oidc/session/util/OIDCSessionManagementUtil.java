@@ -568,6 +568,11 @@ public class OIDCSessionManagementUtil {
      */
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
+        // When FAPI 2.0 is enabled for the tenant, ID tokens carry the FAPI 2.0 issuer. Hence, the logout tokens use it
+        // too, so that relying parties can validate them against the same issuer.
+        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            return OAuth2Util.getIdTokenIssuer(tenantDomain);
+        }
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
                 // Set the correct tenant domain before creating the path.

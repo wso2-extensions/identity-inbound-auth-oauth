@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
@@ -557,4 +558,30 @@ public class OIDCSessionManagementUtilTest {
                 "The proxy context path is not applied to the tenanted opbs cookie path");
     }
 
+    @DataProvider(name = "logoutTokenIssuerData")
+    public Object[][] logoutTokenIssuerData() {
+
+        return new Object[][]{
+                // Whether FAPI 2.0 is enabled for the tenant, expected issuer.
+                {true, "https://localhost:9443/t/r3.com"},
+                {false, "https://localhost:9443/t/r3.com/oauth2/token"},
+        };
+    }
+
+    @Test(dataProvider = "logoutTokenIssuerData",
+            description = "The logout token issuer is the FAPI 2.0 issuer when FAPI 2.0 is enabled for the tenant")
+    public void testGetIdTokenIssuerWithFapi2(boolean isFapi2Enabled, String expectedIssuer) throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled("r3.com")).thenReturn(isFapi2Enabled);
+            if (isFapi2Enabled) {
+                oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("r3.com")).thenReturn(expectedIssuer);
+            } else {
+                identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+                oAuth2Util.when(() -> OAuth2Util.getResidentIdpEntityId("r3.com")).thenReturn(expectedIssuer);
+            }
+            Assert.assertEquals(OIDCSessionManagementUtil.getIdTokenIssuer("r3.com"), expectedIssuer);
+        }
+    }
 }
