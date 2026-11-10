@@ -2130,7 +2130,8 @@ public class AuthzUtil {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
                 if (!tokenBinder.getBindingType().equals(CLIENT_REQUEST)) {
                     tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
-                    tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
+                    tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue,
+                            oauth2Params.getLoginTenantDomain());
                     if (LoggerUtils.isDiagnosticLogsEnabled()) {
                         LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                                 OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "generate-token-binding-value")
