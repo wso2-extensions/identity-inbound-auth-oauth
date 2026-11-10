@@ -521,8 +521,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
 
         if (isNotEmpty(consumerKeys)) {
-            // The token and authorization code lookups below are expensive on large tenants and their results are
-            // used only for clearing the token/code caches. Skip them when those caches don't need clearing.
             boolean clearTokenAndCodeCaches = threadLocalForClaimConfigUpdates.get();
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
             Set<AuthzCodeDO> authzCodeDOSet = new HashSet<>();
