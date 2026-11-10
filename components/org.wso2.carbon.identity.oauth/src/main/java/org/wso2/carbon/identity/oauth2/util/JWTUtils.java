@@ -197,12 +197,8 @@ public class JWTUtils {
                     OIDC_IDP_ENTITY_ID).getValue();
         }
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-            resourceIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
-        }
-
         // Compare JWT issuer with the resource issuer.
-        if (!jwtIssuer.equals(resourceIssuer)) {
+        if (!OAuth2Util.isResidentIdpIssuer(jwtIssuer, resourceIssuer, tenantDomain)) {
             // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
             if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)) &&
                     jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
@@ -295,12 +291,8 @@ public class JWTUtils {
                     OIDC_IDP_ENTITY_ID).getValue();
         }
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-            resourceIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain);
-        }
-
         // Compare JWT issuer with the resource issuer.
-        if (!jwtIssuer.equals(resourceIssuer)) {
+        if (!OAuth2Util.isResidentIdpIssuer(jwtIssuer, resourceIssuer, tenantDomain)) {
             // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
             if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)) &&
                     jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {

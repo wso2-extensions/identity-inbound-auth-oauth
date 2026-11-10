@@ -18,10 +18,21 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * This class contains the constants required by the OAuth2 components.
  */
 public class OAuth2Constants {
+
+    // The Console and My Account applications.
+    public static final List<String> PORTAL_APP_IDS = Collections.unmodifiableList(Arrays.asList(
+            ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
+            ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID));
 
     /**
      * Constants for access token binders.

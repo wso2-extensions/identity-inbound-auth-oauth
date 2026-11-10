@@ -84,7 +84,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -439,10 +438,6 @@ public class OAuth2Util {
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
     private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
-
-    private static final List<String> PORTAL_APP_IDS = Arrays.asList(
-            ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
-            ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String DEFAULT_IDP_NAME = "default";
@@ -5171,12 +5166,9 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-
-            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                return oidcIssuerEpUrl;
-            }
+        String fapi2IdTokenIssuer = FapiUtil.getFapi2IdTokenIssuer(tenantDomain, null);
+        if (StringUtils.isNotBlank(fapi2IdTokenIssuer)) {
+            return fapi2IdTokenIssuer;
         }
 
         /*
@@ -5217,12 +5209,9 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (OAuth2Util.isFapi2Enabled(tenantDomain)) {
-
-            final String oidcIssuerEpUrl = buildBaseIssuerUrl(tenantDomain);
-            if (StringUtils.isNotBlank(oidcIssuerEpUrl)) {
-                return oidcIssuerEpUrl;
-            }
+        String fapi2IdTokenIssuer = FapiUtil.getFapi2IdTokenIssuer(tenantDomain, clientId);
+        if (StringUtils.isNotBlank(fapi2IdTokenIssuer)) {
+            return fapi2IdTokenIssuer;
         }
 
         /*
@@ -5269,7 +5258,7 @@ public class OAuth2Util {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
-                                PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
+                                OAuth2Constants.PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -7015,6 +7004,31 @@ public class OAuth2Util {
     }
 
     /**
+     * Check whether the given JWT issuer is an issuer of the resident IdP of the tenant. When FAPI 2.0 is enabled for
+     * the tenant, the issuer differs from the resident IdP entity ID. Both are accepted, so that JWTs issued before
+     * FAPI 2.0 was enabled for the tenant are still accepted. The FAPI 2.0 base URL issuer is accepted too, as the
+     * issuer is the resident IdP entity ID when the IS 7.1 FAPI version configuration is set.
+     *
+     * @param jwtIssuer           Issuer of the JWT.
+     * @param residentIdpEntityId Entity ID of the resident IdP.
+     * @param tenantDomain        Tenant domain.
+     * @return Whether the JWT issuer is an issuer of the resident IdP.
+     * @throws IdentityOAuth2Exception If an error occurs while building the issuer.
+     */
+    public static boolean isResidentIdpIssuer(String jwtIssuer, String residentIdpEntityId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.equals(jwtIssuer, residentIdpEntityId)) {
+            return true;
+        }
+        if (!isFapi2Enabled(tenantDomain)) {
+            return false;
+        }
+        return StringUtils.equals(jwtIssuer, getIdTokenIssuer(tenantDomain))
+                || StringUtils.equals(jwtIssuer, buildBaseIssuerUrl(tenantDomain));
+    }
+
+    /**
      * Get the resident Identity Provider for the given JWT issuer.
      *
      * @param tenantDomain Tenant domain.
@@ -7040,7 +7054,7 @@ public class OAuth2Util {
             issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
         }
-        return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
+        return isResidentIdpIssuer(jwtIssuer, issuer, tenantDomain) ? residentIdentityProvider : null;
     }
 
     public static boolean isExistingUser(String userName, String tenantDomain) throws UserStoreException {

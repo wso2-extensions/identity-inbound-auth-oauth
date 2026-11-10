@@ -30,13 +30,17 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtClientException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtServerException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -213,16 +217,122 @@ public class FapiUtil {
     /**
      * Returns the default FAPI configuration used when no tenant-specific configuration has been stored.
      * FAPI enforcement is enabled by default with FAPI 1.0 Advanced as the sole supported profile,
-     * preserving backwards compatibility for tenants that already have FAPI applications.
+     * preserving backwards compatibility for tenants that already have FAPI applications. When FAPI 2.0 is
+     * enabled by the IS 7.1 server configuration, FAPI 2.0 Security Profile is supported as well.
      *
-     * @return a FapiConfig with enabled=true and [FAPI1_ADVANCED] as supported profiles.
+     * @return a FapiConfig with enabled=true and the default supported profiles.
      */
     public static FapiConfig getDefaultConfiguration() {
 
         FapiConfig fapiConfig = new FapiConfig();
         fapiConfig.setEnabled(true);
-        fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+        if (isFapi2EnabledByServerConfig()) {
+            fapiConfig.setSupportedProfiles(
+                    Arrays.asList(FapiProfileEnum.FAPI1_ADVANCED, FapiProfileEnum.FAPI2_SECURITY));
+        } else {
+            fapiConfig.setSupportedProfiles(Collections.singletonList(FapiProfileEnum.FAPI1_ADVANCED));
+        }
         return fapiConfig;
+    }
+
+    /**
+     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration,
+     * for the tenant of the current request.
+     *
+     * @return The default FAPI profile. See {@link #getDefaultFapiProfile(String)}.
+     */
+    public static FapiProfileEnum getDefaultFapiProfile() {
+
+        return getDefaultFapiProfile(IdentityTenantUtil.resolveTenantDomain());
+    }
+
+    /**
+     * Returns the FAPI profile applied when no profile has been stored for an application or the DCR configuration.
+     * FAPI 2.0 Security Profile is preferred when FAPI 2.0 is enabled by the IS 7.1 server configuration, and FAPI 1.0
+     * Advanced otherwise. If the tenant doesn't support the preferred profile, the other supported profile is used.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return The default FAPI profile.
+     */
+    public static FapiProfileEnum getDefaultFapiProfile(String tenantDomain) {
+
+        FapiProfileEnum preferredProfile = isFapi2EnabledByServerConfig() ?
+                FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED;
+        List<FapiProfileEnum> supportedProfiles = getSupportedProfiles(tenantDomain);
+        if (supportedProfiles.isEmpty() || supportedProfiles.contains(preferredProfile)) {
+            return preferredProfile;
+        }
+        FapiProfileEnum otherProfile = FapiProfileEnum.FAPI2_SECURITY.equals(preferredProfile) ?
+                FapiProfileEnum.FAPI1_ADVANCED : FapiProfileEnum.FAPI2_SECURITY;
+        return supportedProfiles.contains(otherProfile) ? otherProfile : preferredProfile;
+    }
+
+    private static List<FapiProfileEnum> getSupportedProfiles(String tenantDomain) {
+
+        FapiConfigMgtService fapiConfigMgtService = OAuth2ServiceComponentHolder.getInstance()
+                .getFapiConfigMgtService();
+        if (StringUtils.isBlank(tenantDomain) || fapiConfigMgtService == null) {
+            return Collections.emptyList();
+        }
+        try {
+            FapiConfig fapiConfig = fapiConfigMgtService.getFapiConfig(tenantDomain);
+            if (fapiConfig == null || fapiConfig.getSupportedProfiles() == null) {
+                return Collections.emptyList();
+            }
+            return fapiConfig.getSupportedProfiles();
+        } catch (FapiConfigMgtException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while retrieving the FAPI configuration of the tenant: " + tenantDomain, e);
+            }
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Check whether FAPI 2.0 is enabled by the IS 7.1 server configuration ([oauth.oidc] fapi.version = "2").
+     * In IS 7.1, the configuration enabled FAPI 2.0 for every FAPI conformant application in the server. It is
+     * retained for deployments migrated from IS 7.1 and only changes the defaults. Stored configurations take
+     * priority.
+     *
+     * @return Whether FAPI 2.0 is enabled by the server configuration.
+     */
+    public static boolean isFapi2EnabledByServerConfig() {
+
+        return OAuthConstants.FAPIVersions.FAPI2.equals(OAuthServerConfiguration.getInstance().getFapiVersion());
+    }
+
+    /**
+     * Returns the ID token issuer of the given client when FAPI 2.0 is enabled for the tenant. With the IS 7.1 FAPI
+     * version configuration, it is the resident IdP entity ID; otherwise, it is the base URL of the tenant, except for
+     * the Console and My Account, which keep the token endpoint issuer.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param clientId     Client ID, or {@code null} if the issuer doesn't depend on the client.
+     * @return The FAPI 2.0 ID token issuer, or {@code null} if the default issuer applies.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the issuer.
+     */
+    public static String getFapi2IdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+
+        if (!OAuth2Util.isFapi2Enabled(tenantDomain)) {
+            return null;
+        }
+        if (isFapi2EnabledByServerConfig()) {
+            String residentIdpEntityId = OAuth2Util.getResidentIdpEntityId(tenantDomain);
+            if (StringUtils.isNotBlank(residentIdpEntityId)) {
+                return residentIdpEntityId;
+            }
+            LOG.debug("Resident IdP entity ID is blank. Hence, it is not used as the FAPI 2.0 issuer.");
+        }
+        if (!OAuth2Constants.PORTAL_APP_IDS.contains(clientId)) {
+            String baseIssuerUrl = OAuth2Util.buildBaseIssuerUrl(tenantDomain);
+            if (StringUtils.isNotBlank(baseIssuerUrl)) {
+                return baseIssuerUrl;
+            }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Using the default issuer for the client: " + clientId);
+        }
+        return null;
     }
 
     private static void addAttribute(List<Attribute> attributeList, String key, String value) {

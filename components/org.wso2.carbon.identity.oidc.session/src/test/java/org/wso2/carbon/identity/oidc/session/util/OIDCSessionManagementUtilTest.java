@@ -46,6 +46,8 @@ import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
 
@@ -557,4 +559,29 @@ public class OIDCSessionManagementUtilTest {
                 "The proxy context path is not applied to the tenanted opbs cookie path");
     }
 
+    @DataProvider(name = "logoutTokenIssuerData")
+    public Object[][] logoutTokenIssuerData() {
+
+        return new Object[][]{
+                // FAPI 2.0 ID token issuer of the client, expected issuer.
+                {"https://localhost:9443/t/r3.com", "https://localhost:9443/t/r3.com"},
+                {null, "https://localhost:9443/t/r3.com/oauth2/token"},
+        };
+    }
+
+    @Test(dataProvider = "logoutTokenIssuerData",
+            description = "The logout token issuer is the same as the ID token issuer of the client")
+    public void testGetIdTokenIssuerWithFapi2(String fapi2IdTokenIssuer, String expectedIssuer) throws Exception {
+
+        try (MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            fapiUtil.when(() -> FapiUtil.getFapi2IdTokenIssuer("r3.com", "MY_ACCOUNT")).thenReturn(fapi2IdTokenIssuer);
+            if (fapi2IdTokenIssuer == null) {
+                identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(false);
+                oAuth2Util.when(() -> OAuth2Util.getResidentIdpEntityId("r3.com")).thenReturn(expectedIssuer);
+            }
+            Assert.assertEquals(OIDCSessionManagementUtil.getIdTokenIssuer("r3.com", "MY_ACCOUNT"), expectedIssuer);
+        }
+    }
 }

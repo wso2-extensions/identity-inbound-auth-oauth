@@ -19,14 +19,17 @@
 package org.wso2.carbon.identity.oauth2.fapi.services;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth2.fapi.cache.FapiConfigCache;
 import org.wso2.carbon.identity.oauth2.fapi.exceptions.FapiConfigMgtException;
 import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
@@ -63,6 +66,7 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
             return cached;
         }
 
+        boolean isTenantFlowStarted = startTenantFlowIfRequired(tenantDomain);
         try {
             final Resource resource = this.getFapiConfigResource();
             FapiConfig fapiConfig = (resource == null)
@@ -72,6 +76,10 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
             return fapiConfig;
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_FAPI_CONFIG_RETRIEVE, e, tenantDomain);
+        } finally {
+            if (isTenantFlowStarted) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
@@ -87,13 +95,40 @@ public class FapiConfigMgtServiceImpl implements FapiConfigMgtService {
 
         validateTenantDomain(tenantDomain);
         validateFapiConfig(fapiConfig);
+        boolean isTenantFlowStarted = startTenantFlowIfRequired(tenantDomain);
         try {
             ResourceAdd resourceAdd = FapiUtil.parseConfig(fapiConfig);
             getConfigurationManager().replaceResource(FAPI_RESOURCE_TYPE_NAME, resourceAdd);
             FapiConfigCache.getInstance().clearCacheEntry(FAPI_CONFIG_CACHE_KEY, tenantDomain);
+            /* Applications without a stored FAPI profile are cached with the default FAPI profile, which depends on
+            the supported profiles of the tenant. Hence, the cached applications of the tenant are cleared. */
+            AppInfoCache.getInstance().clear(tenantDomain);
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ErrorMessage.ERROR_CODE_FAPI_CONFIG_UPDATE, e, tenantDomain);
+        } finally {
+            if (isTenantFlowStarted) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
+    }
+
+    /**
+     * Starts a tenant flow for the given tenant domain when it differs from the tenant domain of the current carbon
+     * context, so that the FAPI configuration of the given tenant is read and updated.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Whether a tenant flow was started.
+     */
+    private boolean startTenantFlowIfRequired(String tenantDomain) {
+
+        if (StringUtils.isBlank(tenantDomain) || StringUtils.equals(tenantDomain,
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())) {
+            return false;
+        }
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(IdentityTenantUtil.getTenantId(tenantDomain));
+        return true;
     }
 
     /**

@@ -182,7 +182,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
         String sub = sessionState.getAuthenticatedUser();
         String jti = UUID.randomUUID().toString();
-        String iss = getIssuer(tenantDomain);
+        String iss = getIssuer(tenantDomain, clientID);
         List<String> audience = getAudience(clientID);
         long logoutTokenValidityInMillis = getLogoutTokenExpiryInMillis();
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
@@ -308,12 +308,13 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
      * Returning issuer of the tenant domain.
      *
      * @param tenantDomain
+     * @param clientID
      * @return issuer
      * @throws IdentityOAuth2Exception
      */
-    private String getIssuer(String tenantDomain) throws IdentityOAuth2Exception {
+    private String getIssuer(String tenantDomain, String clientID) throws IdentityOAuth2Exception {
 
-        return OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
+        return OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain, clientID);
     }
 
     /**
