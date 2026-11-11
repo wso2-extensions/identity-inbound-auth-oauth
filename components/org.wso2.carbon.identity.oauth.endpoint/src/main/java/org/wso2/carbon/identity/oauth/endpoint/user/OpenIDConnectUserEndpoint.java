@@ -102,7 +102,7 @@ public class OpenIDConnectUserEndpoint {
             throw new OAuthSystemException("UserInfoEndpoint Failed", e);
         } catch (OAuthSystemException e) {
             log.error("UserInfoEndpoint Failed", e);
-            throw new OAuthSystemException("UserInfoEndpoint Failed", e);
+            throw new OAuthSystemException("UserInfoEndpoint Failed");
         }
 
         ResponseBuilder respBuilder = getResponseBuilderWithCacheControlHeaders();
