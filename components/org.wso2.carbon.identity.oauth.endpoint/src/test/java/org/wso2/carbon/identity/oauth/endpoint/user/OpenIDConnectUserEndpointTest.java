@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.user;
 
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -198,4 +199,57 @@ public class OpenIDConnectUserEndpointTest {
                     "Race-window IllegalArgumentException should translate to HTTP 401 invalid_token");
         }
     }
+    @DataProvider(name = "inactiveTokenMessages")
+    public Object[][] inactiveTokenMessages() {
+
+        return new Object[][]{
+                {OAuth2Util.ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE},
+                {OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE},
+        };
+    }
+
+    /**
+     * A token revoked mid-request makes a lookup inside response building throw the inactive-token
+     * IllegalArgumentException. getUserClaims must map it to a 401 instead of a 500.
+     */
+    @Test(dataProvider = "inactiveTokenMessages")
+    public void testGetUserClaimsTokenRevokedMidRequest(String inactiveMessage) throws Exception {
+
+        try (MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class)) {
+
+            when(requestValidator.validateRequest(any())).thenReturn("ca19a540f544777860e44e75f605d927");
+            when(mockUserInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
+            when(tokenValidator.validateToken(nullable(String.class), any())).thenReturn(tokenResponse);
+            when(mockUserInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
+            when(userInfoResponseBuilder.getResponseString(tokenResponse))
+                    .thenThrow(new IllegalArgumentException(inactiveMessage));
+            when(mockUserInfoEndpointConfig.getUserInfoResponseBuilder()).thenReturn(userInfoResponseBuilder);
+            userInfoEndpointConfig.when(UserInfoEndpointConfig::getInstance).thenReturn(mockUserInfoEndpointConfig);
+
+            Response response = openIDConnectUserEndpoint.getUserClaims(httpServletRequest);
+            assertEquals(response.getStatus(), HttpServletResponse.SC_UNAUTHORIZED);
+        }
+    }
+
+    @Test(expectedExceptions = OAuthSystemException.class)
+    public void testGetUserClaimsUnrelatedIllegalArgument() throws Exception {
+
+        try (MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class)) {
+
+            when(requestValidator.validateRequest(any())).thenReturn("ca19a540f544777860e44e75f605d927");
+            when(mockUserInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
+            when(tokenValidator.validateToken(nullable(String.class), any())).thenReturn(tokenResponse);
+            when(mockUserInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
+            // An unrelated IllegalArgumentException must surface as a controlled server error, not invalid_token.
+            when(userInfoResponseBuilder.getResponseString(tokenResponse))
+                    .thenThrow(new IllegalArgumentException("Unrelated error"));
+            when(mockUserInfoEndpointConfig.getUserInfoResponseBuilder()).thenReturn(userInfoResponseBuilder);
+            userInfoEndpointConfig.when(UserInfoEndpointConfig::getInstance).thenReturn(mockUserInfoEndpointConfig);
+
+            openIDConnectUserEndpoint.getUserClaims(httpServletRequest);
+        }
+    }
+
 }
