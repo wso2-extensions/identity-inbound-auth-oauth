@@ -101,6 +101,10 @@ public class OAuthApplicationMgtListenerSessionStoreClearingTest {
 
         org.mockito.ArgumentCaptor<List<String>> captor = org.mockito.ArgumentCaptor.forClass(List.class);
         verify(grantCache, times(1)).clearFromSessionStoreBatch(captor.capture());
+        // The session store must be cleared before the cache, so a cache miss cannot reload a stale entry.
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(grantCache);
+        inOrder.verify(grantCache).clearFromSessionStoreBatch(any());
+        inOrder.verify(grantCache, org.mockito.Mockito.atLeastOnce()).clearCacheEntry(any());
         List<String> ids = captor.getValue();
         org.testng.Assert.assertEquals(new HashSet<>(ids), new HashSet<>(Arrays.asList(expectedIds)));
         org.testng.Assert.assertEquals(ids.size(), expectedIds.length);
