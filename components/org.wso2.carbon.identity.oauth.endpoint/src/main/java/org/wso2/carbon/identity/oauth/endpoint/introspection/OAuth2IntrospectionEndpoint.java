@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.List;
@@ -216,6 +217,30 @@ public class OAuth2IntrospectionEndpoint {
                     }
                     log.error("Error occurred while processing additional token introspection data.", e);
 
+                    return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity("{\"error\": \"Error occurred while building the introspection " +
+                                    "response.\"}")
+                            .build();
+                } catch (IllegalArgumentException e) {
+                    // Token revoked mid-request -> non-active lookup returns active:false.
+                    if (OAuth2Util.ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE.equals(e.getMessage())
+                            || OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE.equals(e.getMessage())) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Token became inactive during introspection. Returning active:false.");
+                        }
+                        return Response.status(Response.Status.OK).entity("{\"active\":false}").build();
+                    }
+                    // Unrelated provider error; surface it like the IdentityOAuth2Exception branch above.
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                                OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
+                                .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                                .resultMessage(SYSTEM_ERROR)
+                                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                                .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                    }
+                    log.error("Error occurred while processing additional token introspection data.", e);
                     return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                             .entity("{\"error\": \"Error occurred while building the introspection " +
                                     "response.\"}")
