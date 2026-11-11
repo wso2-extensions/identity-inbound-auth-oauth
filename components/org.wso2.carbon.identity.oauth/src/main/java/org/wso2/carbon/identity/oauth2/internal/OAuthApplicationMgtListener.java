@@ -651,12 +651,20 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void clearCacheEntriesAgainstAuthzCode(Set<AuthzCodeDO> authzCodeDOSet) {
 
+        // Clear the session store before the cache, so a cache miss in between cannot reload a stale entry.
+        List<String> authzCodeIds = new ArrayList<>();
+        for (AuthzCodeDO authzCodeDO : authzCodeDOSet) {
+            if (StringUtils.isNotBlank(authzCodeDO.getAuthzCodeId())) {
+                authzCodeIds.add(authzCodeDO.getAuthzCodeId());
+            }
+        }
+        AuthorizationGrantCache.getInstance().clearFromSessionStoreBatch(authzCodeIds);
+
         for (AuthzCodeDO authzCodeDO : authzCodeDOSet) {
             // Remove authorization code from AuthorizationGrantCache
             AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
                     authzCodeDO.getAuthorizationCode());
-            AuthorizationGrantCache.getInstance()
-                    .clearCacheEntryByCodeId(grantCacheKey, authzCodeDO.getAuthzCodeId());
+            AuthorizationGrantCache.getInstance().clearCacheEntry(grantCacheKey);
             // Remove authorization code from OAuthCache
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authzCodeDO.getAuthorizationCode());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
@@ -668,12 +676,20 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void clearCacheEntriesAgainstToken(Set<AccessTokenDO> accessTokenDOSet) {
 
+        // Clear the session store before the cache, so a cache miss in between cannot reload a stale entry.
+        List<String> tokenIds = new ArrayList<>();
+        for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
+            if (StringUtils.isNotBlank(accessTokenDo.getTokenId())) {
+                tokenIds.add(accessTokenDo.getTokenId());
+            }
+        }
+        AuthorizationGrantCache.getInstance().clearFromSessionStoreBatch(tokenIds);
+
         for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
             // Remove access token from AuthorizationGrantCache
             AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
                     accessTokenDo.getAccessToken());
-            AuthorizationGrantCache.getInstance()
-                    .clearCacheEntryByTokenId(grantCacheKey, accessTokenDo.getTokenId());
+            AuthorizationGrantCache.getInstance().clearCacheEntry(grantCacheKey);
             // Remove access token from OAuthCache
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
