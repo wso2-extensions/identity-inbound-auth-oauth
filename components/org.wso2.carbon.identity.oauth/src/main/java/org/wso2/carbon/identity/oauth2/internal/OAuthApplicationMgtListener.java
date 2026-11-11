@@ -521,26 +521,30 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
 
         if (isNotEmpty(consumerKeys)) {
+            boolean clearTokenAndCodeCaches = threadLocalForClaimConfigUpdates.get();
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
             Set<AuthzCodeDO> authzCodeDOSet = new HashSet<>();
 
             AppInfoCache appInfoCache = AppInfoCache.getInstance();
             for (String oauthKey : consumerKeys) {
-                accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAOImpl(oauthKey)
-                        .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
-                authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                if (clearTokenAndCodeCaches) {
+                    accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAOImpl(oauthKey)
+                            .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
+                    authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO()
+                            .getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                }
                 // Remove client credential from AppInfoCache
                 appInfoCache.clearCacheEntry(oauthKey);
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
-            if (isNotEmpty(accessTokenDOSet) && threadLocalForClaimConfigUpdates.get()) {
+            if (isNotEmpty(accessTokenDOSet)) {
                 clearCacheEntriesAgainstToken(accessTokenDOSet);
             }
 
-            if (isNotEmpty(authzCodeDOSet) && threadLocalForClaimConfigUpdates.get()) {
+            if (isNotEmpty(authzCodeDOSet)) {
                 clearCacheEntriesAgainstAuthzCode(authzCodeDOSet);
             }
         }
