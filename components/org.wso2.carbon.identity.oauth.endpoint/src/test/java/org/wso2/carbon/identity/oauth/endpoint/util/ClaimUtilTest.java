@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -40,6 +41,8 @@ import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -481,7 +484,7 @@ public class ClaimUtilTest {
                     .thenReturn(mockedPermissionAndRoleConfig);
             lenient().when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
 
-            oidcClaimUtil.when(() -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(), anyString()))
+            oidcClaimUtil.when(() -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(), anyString(), any()))
                     .thenReturn(appAssociatedRoles);
 
             OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
@@ -612,6 +615,68 @@ public class ClaimUtilTest {
             // Assert.
             Assert.assertTrue(userClaims.containsKey(FrameworkConstants.ROLES_CLAIM));
             Assert.assertEquals(userClaims.get(FrameworkConstants.ROLES_CLAIM), "roleA,roleB");
+        }
+    }
+
+    @Test
+    public void testGetClaimsFromUserStoreInactiveTokenRaceReturnsInvalidToken() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(mockedAuthzContextToken);
+            when(mockedAuthzContextToken.getTokenString()).thenReturn("race-token");
+
+            OAuth2ServiceComponentHolder holderInstance = mock(OAuth2ServiceComponentHolder.class);
+            DefaultTokenProvider tokenProvider = mock(DefaultTokenProvider.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holderInstance);
+            when(holderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken("race-token", false)).thenThrow(
+                    new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found."));
+
+            try {
+                ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);
+                Assert.fail("Expected UserInfoEndpointException with invalid_token errorCode "
+                        + "for race-window IllegalArgumentException.");
+            } catch (UserInfoEndpointException e) {
+                Assert.assertEquals(e.getErrorCode(), OAuthError.ResourceResponse.INVALID_TOKEN,
+                        "errorCode should be invalid_token");
+                Assert.assertEquals(e.getErrorMessage(), "Access token validation failed",
+                        "errorMessage should be the canonical 'Access token validation failed' string");
+            }
+        }
+    }
+
+    private static LocalClaim multiValuedLocalClaim(boolean multiValued) {
+
+        LocalClaim localClaim = new LocalClaim("http://wso2.org/claims/testClaim");
+        localClaim.setClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY, String.valueOf(multiValued));
+        return localClaim;
+    }
+
+    @DataProvider(name = "isMultiValuedAttributeData")
+    public Object[][] isMultiValuedAttributeData() {
+
+        return new Object[][]{
+                // Groups is always rendered as an array, with or without metadata.
+                {"groups", null, "admin", true},
+                {"groups", multiValuedLocalClaim(false), "admin", true},
+                // When metadata is present, the local claim multiValued property decides.
+                {"http://wso2.org/oidc/claim/email", multiValuedLocalClaim(true), "a@b.com", true},
+                {"http://wso2.org/oidc/claim/email", multiValuedLocalClaim(false), "a@b.com,c@d.com", false},
+                // When metadata is absent, fall back to separator-based detection.
+                {"http://wso2.org/oidc/claim/email", null, "a@b.com,c@d.com", true},
+                {"http://wso2.org/oidc/claim/email", null, "a@b.com", false},
+        };
+    }
+
+    @Test(dataProvider = "isMultiValuedAttributeData")
+    public void testIsMultiValuedAttribute(String oidcClaimUri, LocalClaim localClaim, String claimValue,
+                                           boolean expected) {
+
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+            Assert.assertEquals(ClaimUtil.isMultiValuedAttribute(oidcClaimUri, localClaim, claimValue), expected);
         }
     }
 }

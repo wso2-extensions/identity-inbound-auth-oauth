@@ -1,7 +1,7 @@
 /*
-*  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+*  Copyright (c) 2005-2026, WSO2 LLC. (http://www.wso2.com).
 *
-*  WSO2 Inc. licenses this file to you under the Apache License,
+*  WSO2 LLC. licenses this file to you under the Apache License,
 *  Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License.
 *  You may obtain a copy of the License at
@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -36,6 +37,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -62,7 +64,10 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     @XmlTransient
     private int id;
     private String oauthConsumerKey;
+    // Latest client secret.
     private String oauthConsumerSecret;
+    // Absolute expiry time (epoch millis) of the latest client secret.
+    private Long oauthConsumerSecretExpiryTime;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -92,6 +97,10 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String idTokenEncryptionMethod;
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
+    // The non-latest client secrets.
+    @XmlElementWrapper(name = "additionalOauthConsumerSecrets")
+    @XmlElement(name = "additionalOauthConsumerSecret")
+    private List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets;
     @XmlTransient
     @JsonIgnore
     private AuthenticatedUser appOwner;
@@ -112,9 +121,23 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
+    private String fapiProfile;
+    private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private boolean gracefulRefreshTokenRotationEnabled;
+    private int gracefulRefreshTokenRotationValidityPeriod;
+    private int gracefulRefreshTokenReuseLimit;
     private String[] accessTokenClaims;
+    private String issuerOrg;
+    // CIBA related properties.
+    private String cibaNotificationChannels;
+    private long cibaAuthReqExpiryTime;
+    private boolean cibaSkipUserValidation;
+    private boolean cibaAllowFederatedUsers;
+
+    private Boolean restrictScopeIssuanceForFederatedTokens;
+    private IssuerDetails issuerDetails;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -157,6 +180,22 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
     public void setOauthConsumerSecret(String oauthConsumerSecret) {
         this.oauthConsumerSecret = oauthConsumerSecret;
+    }
+
+    public Long getOauthConsumerSecretExpiryTime() {
+        return oauthConsumerSecretExpiryTime;
+    }
+
+    public void setOauthConsumerSecretExpiryTime(Long oauthConsumerSecretExpiryTime) {
+        this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
+    }
+
+    public List<OAuthConsumerSecretExpiryDO> getAdditionalOauthConsumerSecrets() {
+        return additionalOauthConsumerSecrets;
+    }
+
+    public void setAdditionalOauthConsumerSecrets(List<OAuthConsumerSecretExpiryDO> additionalOauthConsumerSecrets) {
+        this.additionalOauthConsumerSecrets = additionalOauthConsumerSecrets;
     }
 
     public String getApplicationName() {
@@ -536,6 +575,36 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         fapiConformanceEnabled = fapiConformant;
     }
 
+    /**
+     * Returns the FAPI security profile applied to this application.
+     * Meaningful only when {@link #isFapiConformanceEnabled()} is true.
+     *
+     * @return the FAPI profile string (e.g. "FAPI1_ADVANCED"), or null if not set.
+     */
+    public String getFapiProfile() {
+
+        return this.fapiProfile;
+    }
+
+    /**
+     * Sets the FAPI security profile for this application.
+     *
+     * @param fapiProfile the FAPI profile string (e.g. "FAPI1_ADVANCED").
+     */
+    public void setFapiProfile(String fapiProfile) {
+
+        this.fapiProfile = fapiProfile;
+    }
+
+    public Boolean isJwtScopeAsArrayEnabled() {
+
+        return jwtScopeAsArrayEnabled;
+    }
+
+    public void setJwtScopeAsArrayEnabled(Boolean jwtScopeAsArrayEnabled) {
+
+        this.jwtScopeAsArrayEnabled = jwtScopeAsArrayEnabled;
+    }
 
     public boolean isSubjectTokenEnabled() {
 
@@ -557,6 +626,36 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
     }
 
+    public boolean isGracefulRefreshTokenRotationEnabled() {
+
+        return gracefulRefreshTokenRotationEnabled;
+    }
+
+    public void setGracefulRefreshTokenRotationEnabled(boolean gracefulRefreshTokenRotationEnabled) {
+
+        this.gracefulRefreshTokenRotationEnabled = gracefulRefreshTokenRotationEnabled;
+    }
+
+    public int getGracefulRefreshTokenRotationValidityPeriod() {
+
+        return gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public void setGracefulRefreshTokenRotationValidityPeriod(int gracefulRefreshTokenRotationValidityPeriod) {
+
+        this.gracefulRefreshTokenRotationValidityPeriod = gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public int getGracefulRefreshTokenReuseLimit() {
+
+        return gracefulRefreshTokenReuseLimit;
+    }
+
+    public void setGracefulRefreshTokenReuseLimit(int gracefulRefreshTokenReuseLimit) {
+
+        this.gracefulRefreshTokenReuseLimit = gracefulRefreshTokenReuseLimit;
+    }
+
     public String[] getAccessTokenClaims() {
 
         return accessTokenClaims;
@@ -565,6 +664,74 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public String getIssuerOrg() {
+
+        return issuerOrg;
+    }
+
+    public void setIssuerOrg(String issuerOrg) {
+
+        this.issuerOrg = issuerOrg;
+    }
+
+    public String getCibaNotificationChannels() {
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    public long getCibaAuthReqExpiryTime() {
+
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    public boolean isCibaSkipUserValidation() {
+
+        return cibaSkipUserValidation;
+    }
+
+    public void setCibaSkipUserValidation(boolean cibaSkipUserValidation) {
+
+        this.cibaSkipUserValidation = cibaSkipUserValidation;
+    }
+
+    public boolean isCibaAllowFederatedUsers() {
+
+        return cibaAllowFederatedUsers;
+    }
+
+    public void setCibaAllowFederatedUsers(boolean cibaAllowFederatedUsers) {
+
+        this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
+    }
+
+    public Boolean isRestrictScopeIssuanceForFederatedTokens() {
+
+        return restrictScopeIssuanceForFederatedTokens;
+    }
+
+    public void setRestrictScopeIssuanceForFederatedTokens(Boolean restrictScopeIssuanceForFederatedTokens) {
+
+        this.restrictScopeIssuanceForFederatedTokens = restrictScopeIssuanceForFederatedTokens;
+    }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
     }
 
     /**
@@ -627,4 +794,5 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         return OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
                 clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
     }
+
 }

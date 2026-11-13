@@ -25,8 +25,11 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.OAuthAppInfo;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -98,4 +101,23 @@ public interface TokenManagementDAO {
             IdentityOAuth2Exception;
 
     Set<String> getAllTimeAuthorizedClientIds(AuthenticatedUser authzUser) throws IdentityOAuth2Exception;
+
+    /**
+     * Get all client IDs ever authorized by the user, each paired with the tenant domain of the owning app.
+     * The JOIN with IDN_OAUTH_CONSUMER_APPS provides the correct app tenant ID from the DB, avoiding
+     * thread-local resolution which is unavailable in system-triggered flows.
+     *
+     * @param authzUser authorized user.
+     * @return list of {@link OAuthAppInfo} entries, one per (clientId, appTenantDomain) combination.
+     * @throws IdentityOAuth2Exception if failed to retrieve the client IDs.
+     */
+    default List<OAuthAppInfo> getAllTimeAuthorizedClientIdsWithAppTenantDomain(AuthenticatedUser authzUser)
+            throws IdentityOAuth2Exception {
+
+        List<OAuthAppInfo> result = new ArrayList<>();
+        for (String clientId : getAllTimeAuthorizedClientIds(authzUser)) {
+            result.add(new OAuthAppInfo(clientId, authzUser.getTenantDomain()));
+        }
+        return result;
+    }
 }

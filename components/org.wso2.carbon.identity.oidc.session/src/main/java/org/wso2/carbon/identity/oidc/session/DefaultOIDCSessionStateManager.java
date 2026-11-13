@@ -26,6 +26,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -120,18 +121,21 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
                     cookie.setPath("/");
                 } else {
-                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                    cookie.setPath(FrameworkUtils.prependProxyContextPath(
+                            FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/"));
                 }
             } else if (isOrganizationQualifiedRequest()) {
                 // Handling the cookie path for request coming with the path `/o/<org-id>`.
                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/");
+                cookie.setPath(FrameworkUtils.prependProxyContextPath(
+                        FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/"));
             } else {
                 if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
                     cookie.setPath("/");
                 } else {
-                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                    cookie.setPath(FrameworkUtils.prependProxyContextPath(
+                            FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/"));
                 }
 
             }

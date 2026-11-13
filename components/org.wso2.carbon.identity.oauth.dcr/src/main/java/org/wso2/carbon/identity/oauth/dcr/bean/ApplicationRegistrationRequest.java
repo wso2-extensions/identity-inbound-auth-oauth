@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -38,10 +38,12 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String consumerSecret = null;
     private String spTemplateName = null;
     private String backchannelLogoutUri = null;
+    private String frontchannelLogoutUri = null;
     private boolean isManagementApp;
     private String extApplicationDisplayName = null;
     private String extApplicationOwner = null;
     private Long extApplicationTokenLifetime = null;
+    private Long clientSecretExpiresAt = null;
     private Long extUserTokenLifetime = null;
     private Long extRefreshTokenLifetime = null;
     private Long extIdTokenLifetime = null;
@@ -169,6 +171,16 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.backchannelLogoutUri = backchannelLogoutUri;
     }
 
+    public String getFrontchannelLogoutUri() {
+
+        return frontchannelLogoutUri;
+    }
+
+    public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+
+        this.frontchannelLogoutUri = frontchannelLogoutUri;
+    }
+
     /**
      * Get SP template name.
      *
@@ -262,6 +274,24 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
 
         this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+    }
+
+    /**
+     * Get the epoch timestamp (in seconds) at which the client secret expires.
+     * @return epoch timestamp in seconds at which the client secret expires.
+     */
+    public Long getClientSecretExpiresAt() {
+
+        return clientSecretExpiresAt;
+    }
+
+    /**
+     * Set the epoch timestamp (in seconds) at which the client secret expires.
+     * @param clientSecretExpiresAt epoch timestamp in seconds at which the client secret expires.
+     */
+    public void setClientSecretExpiresAt(Long clientSecretExpiresAt) {
+
+        this.clientSecretExpiresAt = clientSecretExpiresAt;
     }
 
     /**

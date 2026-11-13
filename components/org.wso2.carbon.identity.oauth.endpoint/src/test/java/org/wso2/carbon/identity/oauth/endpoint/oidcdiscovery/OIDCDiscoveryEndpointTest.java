@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
-import org.junit.Assert;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -26,6 +25,7 @@ import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -46,8 +46,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -154,21 +152,17 @@ public class OIDCDiscoveryEndpointTest {
 
         Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
 
         threadLocalPropertiesField.setAccessible(true);
-        threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+
+        Object fieldBase = unsafe.staticFieldBase(threadLocalPropertiesField);
+        long fieldOffset = unsafe.staticFieldOffset(threadLocalPropertiesField);
+        unsafe.putObject(fieldBase, fieldOffset, threadLocalProperties);
 
         try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
                      mockStatic(OIDCProviderServiceFactory.class);
@@ -184,7 +178,7 @@ public class OIDCDiscoveryEndpointTest {
             lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
                     .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
-            Assert.assertEquals(expectedResponse, response.getStatus());
+            Assert.assertEquals(response.getStatus(), expectedResponse);
             threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
         }
 

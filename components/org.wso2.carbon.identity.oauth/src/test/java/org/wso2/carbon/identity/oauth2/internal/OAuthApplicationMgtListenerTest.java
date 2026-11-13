@@ -27,8 +27,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -44,11 +46,13 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.TestOAuthDAOBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -123,6 +127,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOauthServicerConfig);
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockOauthServicerConfig.getPersistenceProcessor()).thenReturn(processor);
+        lenient().when(mockOauthServicerConfig.getClientSecretPersistenceProcessor()).thenReturn(processor);
 
         authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
         authorizationGrantCache.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthorizationGrantCache);
@@ -166,15 +171,47 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                                            String propName) throws Exception {
 
         ServiceProvider serviceProvider = createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
+        LocalAndOutboundAuthenticationConfig updatedLocalConfig = new LocalAndOutboundAuthenticationConfig();
+        updatedLocalConfig.setUseExternalConsentPage(true);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(updatedLocalConfig);
 
         ServiceProvider persistedServiceProvider = new ServiceProvider();
+        LocalAndOutboundAuthenticationConfig persistedLocalConfig = new LocalAndOutboundAuthenticationConfig();
+        persistedLocalConfig.setUseExternalConsentPage(true);
+        persistedServiceProvider.setLocalAndOutBoundAuthenticationConfig(persistedLocalConfig);
         serviceProvider.setApplicationID(1);
         serviceProvider.setSaasApp(true);
         when(mockAppMgtService.getServiceProvider(serviceProvider.getApplicationID()))
                 .thenReturn(persistedServiceProvider);
 
-        boolean result = oAuthApplicationMgtListener.doPreUpdateApplication(serviceProvider, tenantDomain, userName);
-        assertTrue(result, "Pre-update application failed.");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExternalConsentPageEnforced(anyString())).thenReturn(false);
+            boolean result = oAuthApplicationMgtListener.doPreUpdateApplication(serviceProvider, tenantDomain,
+                    userName);
+            assertTrue(result, "Pre-update application failed.");
+        }
+    }
+
+    @Test(expectedExceptions = IdentityApplicationManagementValidationException.class)
+    public void testDoPreUpdateApplicationWhenOrgEnforcedAndAppDisablesExternalConsentPage() throws Exception {
+
+        ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
+        LocalAndOutboundAuthenticationConfig updatedLocalConfig = new LocalAndOutboundAuthenticationConfig();
+        updatedLocalConfig.setUseExternalConsentPage(false);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(updatedLocalConfig);
+
+        ServiceProvider persistedServiceProvider = new ServiceProvider();
+        LocalAndOutboundAuthenticationConfig persistedLocalConfig = new LocalAndOutboundAuthenticationConfig();
+        persistedLocalConfig.setUseExternalConsentPage(true);
+        persistedServiceProvider.setLocalAndOutBoundAuthenticationConfig(persistedLocalConfig);
+        serviceProvider.setApplicationID(1);
+        when(mockAppMgtService.getServiceProvider(serviceProvider.getApplicationID()))
+                .thenReturn(persistedServiceProvider);
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            oAuth2Util.when(() -> OAuth2Util.isExternalConsentPageEnforced(anyString())).thenReturn(true);
+            oAuthApplicationMgtListener.doPreUpdateApplication(serviceProvider, tenantDomain, userName);
+        }
     }
 
     @Test(dataProvider = "GetSPConfigData")

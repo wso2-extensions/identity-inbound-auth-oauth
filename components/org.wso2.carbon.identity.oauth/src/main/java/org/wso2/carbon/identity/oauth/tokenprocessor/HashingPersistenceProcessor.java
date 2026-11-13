@@ -101,6 +101,21 @@ public class HashingPersistenceProcessor implements TokenPersistenceProcessor {
         return processedRefreshToken;
     }
 
+    @Override
+    public boolean isProcessed(String secret) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(secret)) {
+            return false;
+        }
+
+        try {
+            JSONObject obj = new JSONObject(secret);
+            return obj.has(ALGORITHM) && obj.has(HASH);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Method to generate hash value
      *

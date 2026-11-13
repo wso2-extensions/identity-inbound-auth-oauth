@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -158,7 +159,8 @@ public class OAuthClientAuthnServiceTest {
                                        String clientId, boolean disableSampleAuthenticator, boolean hasAuthAppDO,
                                        String errorMsg) throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
             if (disableSampleAuthenticator) {
                 sampleClientAuthenticator.enabled = false;
             }
@@ -166,7 +168,7 @@ public class OAuthClientAuthnServiceTest {
                     (isBasicAuthenticated);
             HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
             setHeaders(httpServletRequest, headers);
-            oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(false);
+            fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(false);
             ServiceProvider serviceProvider = new ServiceProvider();
             oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(serviceProvider);
             if (hasAuthAppDO) {
@@ -198,7 +200,8 @@ public class OAuthClientAuthnServiceTest {
     @Test
     public void testAuthenticateForFapiApplicationsWithInvalidAuthenticatorsRegistered() throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
             HashMap<String, List> bodyParams = new HashMap<>();
             bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
             HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
@@ -207,7 +210,7 @@ public class OAuthClientAuthnServiceTest {
             oAuthAppDO.setFapiConformanceEnabled(true);
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                     .thenReturn(oAuthAppDO);
-            oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(true);
+            fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(true);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                     (httpServletRequest, bodyParams);
@@ -231,7 +234,8 @@ public class OAuthClientAuthnServiceTest {
     @Test(dataProvider = "testDataForAuthMethodConfiguredInApp")
     public void testAuthenticateWhenAuthMethodConfiguredInApp(boolean isFapiApp) throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
             HashMap<String, List> bodyParams = new HashMap<>();
             bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
             HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
@@ -240,7 +244,7 @@ public class OAuthClientAuthnServiceTest {
             oAuthAppDO.setFapiConformanceEnabled(isFapiApp);
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                     .thenReturn(oAuthAppDO);
-            oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(true);
+            fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(true);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             OAuthClientAuthenticator oAuthClientAuthenticator = mock(OAuthClientAuthenticator.class);
             when(oAuthClientAuthenticator.getName()).thenReturn("PrivateKeyJWTClientAuthenticator");

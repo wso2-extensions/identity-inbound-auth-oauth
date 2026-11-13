@@ -400,11 +400,11 @@ public class AbstractAuthorizationGrantHandlerTest {
     public Object[][] buildAttributeValues() {
 
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO1 = new OAuth2AccessTokenReqDTO();
-        oAuth2AccessTokenReqDTO1.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
+        oAuth2AccessTokenReqDTO1.setGrantType(GrantType.SAML20_BEARER.toString());
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext1 = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO1);
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO2 = new OAuth2AccessTokenReqDTO();
-        oAuth2AccessTokenReqDTO2.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString());
+        oAuth2AccessTokenReqDTO2.setGrantType(GrantType.IWA_NTLM.toString());
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext2 = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO2);
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO3 = new OAuth2AccessTokenReqDTO();
@@ -474,7 +474,7 @@ public class AbstractAuthorizationGrantHandlerTest {
     public Object[][] buildTokenRequestMsgContextForAuthorizedClient() {
 
         OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-        oAuth2AccessTokenReqDTO.setGrantType(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
+        oAuth2AccessTokenReqDTO.setGrantType(GrantType.SAML20_BEARER.toString());
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext1 = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO);
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext2 = new OAuthTokenReqMessageContext(
@@ -484,8 +484,8 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthAppDO oAuthAppDO1 = new OAuthAppDO();
         OAuthAppDO oAuthAppDO2 = new OAuthAppDO();
         OAuthAppDO oAuthAppDO3 = new OAuthAppDO();
-        oAuthAppDO2.setGrantTypes(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString());
-        oAuthAppDO3.setGrantTypes(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString());
+        oAuthAppDO2.setGrantTypes(GrantType.SAML20_BEARER.toString());
+        oAuthAppDO3.setGrantTypes(GrantType.IWA_NTLM.toString());
         oAuthTokenReqMessageContext1.addProperty("OAuthAppDO", oAuthAppDO1);
         oAuthTokenReqMessageContext2.addProperty("OAuthAppDO", oAuthAppDO2);
         oAuthTokenReqMessageContext3.addProperty("OAuthAppDO", oAuthAppDO3);
@@ -551,7 +551,7 @@ public class AbstractAuthorizationGrantHandlerTest {
             OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
             AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
             factoryMock.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
-            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
             when(mockAccessTokenDAO.getLatestAccessToken(
                     eq(clientId),
                     eq(authenticatedUser),

@@ -61,7 +61,9 @@ import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -399,7 +401,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<OIDCRequestObjectUtil> oidcRequestObjectUtil = mockStatic(OIDCRequestObjectUtil.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
                  MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
-                 MockedStatic<ParAuthServiceFactory> parAuthServiceFactory = mockStatic(ParAuthServiceFactory.class)) {
+                 MockedStatic<ParAuthServiceFactory> parAuthServiceFactory = mockStatic(ParAuthServiceFactory.class);
+                 MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
 
                 oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
                 parAuthServiceFactory.when(ParAuthServiceFactory::getParAuthService).thenReturn(parAuthService);
@@ -448,7 +451,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                             .thenReturn(new RequestObject());
                 }
 
-                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                fapiUtil.when(() -> FapiUtil.isFapi1AdvancedProfileCompliant(anyString())).thenReturn(isFAPITest);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
 
                 Response response;
                 response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);
@@ -528,7 +532,14 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         lenient().when(mockOAuthServerConfiguration.getSupportedResponseTypeValidators())
                 .thenReturn(responseTypeValidators);
 
+        Map<String, ResponseTypeHandler> supportedResponseTypes = new HashMap<>();
+        supportedResponseTypes.put(OAuthConstants.CODE, mock(ResponseTypeHandler.class));
+        supportedResponseTypes.put(OAuthConstants.CODE_IDTOKEN, mock(ResponseTypeHandler.class));
+        lenient().when(mockOAuthServerConfiguration.getSupportedResponseTypes()).thenReturn(supportedResponseTypes);
+
         lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getClientSecretPersistenceProcessor())
+                .thenReturn(tokenPersistenceProcessor);
         lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
         lenient().when(mockOAuthServerConfiguration.getOAuthAuthzRequestClassName())
@@ -537,5 +548,6 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 new HashMap<String, RequestObjectBuilder>() {{
                     put("request_param_value_builder", new RequestParamRequestObjectBuilder());
                 }});
+
     }
 }

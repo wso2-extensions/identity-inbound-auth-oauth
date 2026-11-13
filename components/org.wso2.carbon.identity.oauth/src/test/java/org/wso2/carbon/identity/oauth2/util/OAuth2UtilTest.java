@@ -49,6 +49,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -64,6 +65,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -86,12 +88,15 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretExpiryDO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
+import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -100,6 +105,11 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnExc
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiConfig;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
@@ -112,6 +122,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -124,7 +135,6 @@ import org.wso2.carbon.utils.NetworkUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -186,6 +196,7 @@ public class OAuth2UtilTest {
     private String scopeString = "scope1 scope2 scope3";
     private final String clientId = "dummyClientId";
     private final String clientSecret = "dummyClientSecret";
+    private final String tenantDomain = "tenant.com";
     private final String base64EncodedClientIdSecret = "ZHVtbXlDbGllbnRJZDpkdW1teUNsaWVudFNlY3JldA==";
     private final String base64EncodedClientIdInvalid = "ZHVtbXlDbGllbnRJZA==";
     private String authorizationCode = "testAuthorizationCode";
@@ -197,6 +208,9 @@ public class OAuth2UtilTest {
     private Timestamp refreshTokenIssuedTime;
     private long validityPeriodInMillis;
     private long refreshTokenValidityPeriodInMillis;
+
+    private static final String FAPI2_TENANT_DOMAIN = "wso2.com";
+    private static final String FAPI2_ENTITY_ID = "https://localhost:9443/oauth2/oidcdiscovery";
 
     // Signature algorithms.
     private static final String NONE = "NONE";
@@ -571,7 +585,7 @@ public class OAuth2UtilTest {
 
                 when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(true);
 
-                when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(hashingProcessor);
+                when(oauthServerConfigurationMock.getClientSecretPersistenceProcessor()).thenReturn(hashingProcessor);
                 assertEquals(OAuth2Util.authenticateClient(clientId, clientSecret), expectedResult);
             }
         }
@@ -612,6 +626,143 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "multipleClientSecretsAuthentication")
+    public Object[][] multipleClientSecretsAuthentication() {
+
+        // providedSecret, storedSecretExpiryTime (epoch millis), expectedResult.
+        return new Object[][]{
+                {clientSecret, null, true},
+                {clientSecret, 4102444800000L, true},
+                {clientSecret, 1000L, false},
+                {"wrong-client-secret", null, false}
+        };
+    }
+
+    @Test(description = "Client authentication matches the presented secret against the stored secret and "
+            + "honours each secret's expiry: a valid non-expired secret authenticates, an expired one is rejected, "
+            + "and a wrong secret is rejected",
+            dataProvider = "multipleClientSecretsAuthentication")
+    public void testAuthenticateClientWithMultipleClientSecrets(String providedSecret, Long storedSecretExpiryTime,
+                                                                boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(eq(clientId), anyInt())).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) ->
+                            when(mock.getAppInformation(eq(clientId), anyInt())).thenReturn(appDO))) {
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(clientTenantDomain))
+                        .thenReturn(clientTenantId);
+                when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+                when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+                when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
+                when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret, clientTenantDomain),
+                        expectedResult);
+            }
+        }
+    }
+
+    @Test(description = "Org-hierarchy client authentication matches the presented secret against the stored secret "
+            + "hashes and honours each secret's expiry: a valid non-expired secret authenticates, an expired one is "
+            + "rejected, and a wrong secret is rejected",
+            dataProvider = "multipleClientSecretsAuthentication")
+    public void testAuthenticateClientFromOrgHierarchyWithMultipleClientSecrets(String providedSecret,
+            Long storedSecretExpiryTime, boolean expectedResult) throws Exception {
+
+        String accessingOrgId = "org-id";
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+            AuthenticatedUser appOwner = new AuthenticatedUser();
+            appOwner.setTenantDomain(clientTenantDomain);
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setUser(appOwner);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            // The application is resolved through the organization hierarchy for the accessing organization.
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId))
+                    .thenReturn(appDO);
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+            when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+            when(tenantManagerMock.getTenantId(clientTenantDomain)).thenReturn(clientTenantId);
+            when(tenantManagerMock.isTenantActive(clientTenantId)).thenReturn(true);
+
+            assertEquals(OAuth2Util.authenticateClientFromOrgHierarchy(clientId, providedSecret, accessingOrgId),
+                    expectedResult);
+        }
+    }
+
+    @Test(description = "The deprecated client authentication without an app tenant matches the presented secret "
+            + "against the stored secret and honours each secret's expiry, consistently with the tenant "
+            + "aware authentication", dataProvider = "multipleClientSecretsAuthentication")
+    public void testDeprecatedAuthenticateClientWithMultipleClientSecrets(String providedSecret,
+            Long storedSecretExpiryTime, boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setOauthConsumerSecret(clientSecret);
+            appDO.setOauthConsumerSecretExpiryTime(storedSecretExpiryTime);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO))) {
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret), expectedResult);
+            }
+        }
+    }
+
+    @DataProvider(name = "additionalSecretAuthentication")
+    public Object[][] additionalSecretAuthentication() {
+
+        // providedSecret, additionalSecretExpiryTime (epoch millis), expectedResult.
+        return new Object[][]{
+                {"additional-secret", null, true},
+                {"additional-secret", 4102444800000L, true},
+                {"additional-secret", 1000L, false},
+                {"wrong-client-secret", null, false}
+        };
+    }
+
+    @Test(description = "Client authentication matches the presented secret against the additional (non-latest) "
+            + "secrets and honours the matched additional secret's expiry",
+            dataProvider = "additionalSecretAuthentication")
+    public void testAuthenticateClientMatchesAdditionalSecret(String providedSecret, Long additionalSecretExpiryTime,
+            boolean expectedResult) throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            // The latest secret differs from the presented one, so a match can only come from the additional list.
+            appDO.setOauthConsumerSecret("latest-secret");
+            appDO.setAdditionalOauthConsumerSecrets(Collections.singletonList(
+                    new OAuthConsumerSecretExpiryDO("additional-secret", additionalSecretExpiryTime)));
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                    (mock, context) -> when(mock.getAppInformation(clientId, -1234)).thenReturn(appDO))) {
+                assertEquals(OAuth2Util.authenticateClient(clientId, providedSecret), expectedResult);
+            }
+        }
+    }
+
     @Test
     public void testIsHashDisabled() {
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
@@ -624,6 +775,37 @@ public class OAuth2UtilTest {
 
         when(OAuthServerConfiguration.getInstance().isClientSecretHashEnabled()).thenReturn(true);
         assertTrue(OAuth2Util.isHashEnabled());
+    }
+
+    @DataProvider(name = "clientSecretHashingFlagCombinations")
+    public Object[][] clientSecretHashingFlagCombinations() {
+        // {oldConfig (EnableClientSecretHash), newConfig (EnableClientSecretHashOnly), expectedHashingEnabled}
+        return new Object[][]{
+                {true,  false, true},   // old config alone enables hashing
+                {false, true,  true},   // new config alone enables hashing
+                {true,  true,  true},   // both on — still enabled
+                {false, false, false},  // both off — no hashing
+        };
+    }
+
+    @Test(dataProvider = "clientSecretHashingFlagCombinations")
+    public void testIsClientSecretHashingEnabled(boolean oldConfig, boolean newConfig,
+                                                 boolean expectedHashingEnabled) {
+
+        // lenient() required because || short-circuits when oldConfig is true,
+        // leaving the newConfig stub unused under strict stubbing.
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(oldConfig);
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashOnlyEnabled()).thenReturn(newConfig);
+        assertEquals(OAuth2Util.isClientSecretHashingEnabled(), expectedHashingEnabled);
+    }
+
+    @Test(dataProvider = "clientSecretHashingFlagCombinations")
+    public void testIsClientSecretHashingDisabled(boolean oldConfig, boolean newConfig,
+                                                  boolean expectedHashingEnabled) {
+
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashEnabled()).thenReturn(oldConfig);
+        lenient().when(oauthServerConfigurationMock.isClientSecretHashOnlyEnabled()).thenReturn(newConfig);
+        assertEquals(OAuth2Util.isClientSecretHashingDisabled(), !expectedHashingEnabled);
     }
 
     @DataProvider(name = "AuthenticateUsername")
@@ -1343,6 +1525,123 @@ public class OAuth2UtilTest {
             lenient().when(property.getValue()).thenReturn(oidcConfigUrl);
             assertEquals(getIdTokenIssuer(tenantDomain), expected);
         }
+    }
+
+    @DataProvider(name = "fapi2IdTokenIssuerData")
+    public Object[][] fapi2IdTokenIssuerData() {
+
+        return new Object[][]{
+                // FAPI version configured in IS 7.1, whether FAPI 2.0 is enabled for the tenant, expected issuer.
+                {"2", true, FAPI2_ENTITY_ID},
+                {"1", true, "https://localhost:9443/t/wso2.com"},
+                {"2", false, "https://localhost:9443/t/wso2.com/oauth2/token"},
+        };
+    }
+
+    @DataProvider(name = "fapi2PortalAppIdTokenIssuerData")
+    public Object[][] fapi2PortalAppIdTokenIssuerData() {
+
+        return new Object[][]{
+                // Client ID, FAPI version configured in IS 7.1, expected issuer.
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID, "1",
+                        "https://localhost:9443/t/wso2.com/oauth2/token"},
+                {ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, "2", FAPI2_ENTITY_ID},
+                {clientId, "1", "https://localhost:9443/t/wso2.com"},
+        };
+    }
+
+    @Test(dataProvider = "fapi2PortalAppIdTokenIssuerData")
+    public void testGetIdTokenIssuerForPortalAppsWithFapi2(String clientID, String fapiVersion, String expected)
+            throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, true);
+
+            assertEquals(OAuth2Util.getIdTokenIssuer(FAPI2_TENANT_DOMAIN, clientID, false), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @Test(dataProvider = "fapi2IdTokenIssuerData")
+    public void testGetIdTokenIssuerWithFapiVersionConfig(String fapiVersion, boolean isFapi2Enabled,
+                                                         String expected) throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, isFapi2Enabled);
+
+            assertEquals(getIdTokenIssuer(FAPI2_TENANT_DOMAIN), expected);
+            assertEquals(OAuth2Util.getIdTokenIssuer(FAPI2_TENANT_DOMAIN, clientId, false), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    @DataProvider(name = "residentIdpIssuerData")
+    public Object[][] residentIdpIssuerData() {
+
+        return new Object[][]{
+                // JWT issuer, FAPI version configured in IS 7.1, whether FAPI 2.0 is enabled for the tenant,
+                // expected result.
+                {FAPI2_ENTITY_ID, "1", true, true},
+                {FAPI2_ENTITY_ID, "1", false, true},
+                {"https://localhost:9443/t/wso2.com", "1", true, true},
+                {"https://localhost:9443/t/wso2.com", "1", false, false},
+                {"https://localhost:9443/t/other.com", "1", true, false},
+                // With the IS 7.1 configuration, the issuer is the entity ID, and the base URL is still accepted.
+                {FAPI2_ENTITY_ID, "2", true, true},
+                {"https://localhost:9443/t/wso2.com", "2", true, true},
+                {"https://localhost:9443/t/wso2.com", "2", false, false},
+                {"https://localhost:9443/t/other.com", "2", true, false},
+        };
+    }
+
+    @Test(dataProvider = "residentIdpIssuerData")
+    public void testIsResidentIdpIssuer(String jwtIssuer, String fapiVersion, boolean isFapi2Enabled,
+                                        boolean expected) throws Exception {
+
+        try (MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class)) {
+            mockFapi2Issuers(identityApplicationManagementUtil, fapiVersion, isFapi2Enabled);
+
+            assertEquals(OAuth2Util.isResidentIdpIssuer(jwtIssuer, FAPI2_ENTITY_ID, FAPI2_TENANT_DOMAIN), expected);
+        } finally {
+            OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(null);
+        }
+    }
+
+    private void mockFapi2Issuers(MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil,
+                                  String fapiVersion, boolean isFapi2Enabled) throws Exception {
+
+        identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(FAPI2_TENANT_DOMAIN);
+        lenient().when(oauthServerConfigurationMock.getFapiVersion()).thenReturn(fapiVersion);
+
+        FapiConfig fapiConfig = new FapiConfig();
+        fapiConfig.setEnabled(true);
+        fapiConfig.setSupportedProfiles(Collections.singletonList(isFapi2Enabled ?
+                FapiProfileEnum.FAPI2_SECURITY : FapiProfileEnum.FAPI1_ADVANCED));
+        FapiConfigMgtService fapiConfigMgtService = mock(FapiConfigMgtService.class);
+        lenient().when(fapiConfigMgtService.getFapiConfig(FAPI2_TENANT_DOMAIN)).thenReturn(fapiConfig);
+        OAuth2ServiceComponentHolder.getInstance().setFapiConfigMgtService(fapiConfigMgtService);
+
+        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
+        lenient().when(mockIdentityProvider.getFederatedAuthenticatorConfigs())
+                .thenReturn(federatedAuthenticatorConfigs);
+        Property[] properties = new Property[0];
+        identityApplicationManagementUtil.when(
+                () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
+                        "openidconnect")).thenReturn(mockFederatedAuthenticatorConfig);
+        lenient().when(mockFederatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+        Property property = mock(Property.class);
+        identityApplicationManagementUtil.when(
+                () -> IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
+        lenient().when(property.getValue()).thenReturn(FAPI2_ENTITY_ID);
     }
 
     @DataProvider(name = "OAuthURLData")
@@ -2156,6 +2455,76 @@ public class OAuth2UtilTest {
                         "of the user should be in {username}@{tenant-domain} format.");
     }
 
+    @DataProvider(name = "createAuthenticatedUserWithSharedUserData")
+    public Object[][] createAuthenticatedUserWithSharedUserData() {
+
+        // The tenant-domain override only fires for federated users, so the org-SSO scenarios use the
+        // FEDERATED-prefixed user store domain. The NONE accessingOrganization scenarios use PRIMARY since
+        // org details are not added for them.
+        return new Object[][]{
+                // {username, userStoreDomain, tenantDomain, idpName, accessingOrganization, isSharedUser,
+                //  expectTenantDomainOverride}
+                {"testuser1", "FEDERATED", "user.tenant", "LOCAL", "accessing-org-id", true, false},
+                {"testuser1", "FEDERATED", "user.tenant", "LOCAL", "accessing-org-id", false, true},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, false, false},
+                {"testuser1", "PRIMARY", "user.tenant", "LOCAL",
+                        OAuthConstants.AuthorizedOrganization.NONE, true, false},
+        };
+    }
+
+    @Test(dataProvider = "createAuthenticatedUserWithSharedUserData")
+    public void testCreateAuthenticatedUserWithSharedUserFlag(String username, String userStoreDomain,
+                                                              String tenantDomain, String idpName,
+                                                              String accessingOrganization, boolean isSharedUser,
+                                                              boolean expectTenantDomainOverride) throws Exception {
+
+        String appTenantDomain = "app.tenant";
+        int appTenantId = 5678;
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(appTenantId)).thenReturn(appTenantDomain);
+        // Federated user creation reads this flag; default false keeps the user marked as federated.
+        lenient().when(oauthServerConfigurationMock.isMapFederatedUsersToLocal()).thenReturn(false);
+
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            lenient().when(organizationManagerMock.resolveOrganizationId(tenantDomain))
+                    .thenReturn("user-resident-org-id");
+        }
+
+        // The federated branch of createAuthenticatedUser calls UserSessionStore which would otherwise reach
+        // the DB layer; mock it so the test can focus on the shared-user / tenant-override logic.
+        UserSessionStore userSessionStoreMock = mock(UserSessionStore.class);
+        try (MockedStatic<UserSessionStore> userSessionStoreStatic = mockStatic(UserSessionStore.class)) {
+            userSessionStoreStatic.when(UserSessionStore::getInstance).thenReturn(userSessionStoreMock);
+            lenient().when(userSessionStoreMock.getIdPId(anyString(), anyInt())).thenReturn(1);
+            lenient().when(userSessionStoreMock.getFederatedUserId(anyString(), anyInt(), anyInt()))
+                    .thenReturn("federated-user-id");
+
+            AuthenticatedUser authenticatedUser = OAuth2Util.createAuthenticatedUser(username, userStoreDomain,
+                    tenantDomain, idpName, accessingOrganization, appTenantId, isSharedUser);
+
+            Assert.assertEquals(authenticatedUser.getUserName(), username);
+            Assert.assertEquals(authenticatedUser.isSharedUser(), isSharedUser);
+
+            if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+                Assert.assertEquals(authenticatedUser.getAccessingOrganization(), accessingOrganization);
+                Assert.assertEquals(authenticatedUser.getUserResidentOrganization(), "user-resident-org-id");
+                if (expectTenantDomainOverride) {
+                    Assert.assertEquals(authenticatedUser.getTenantDomain(), appTenantDomain,
+                            "For non-shared federated users, tenant domain should be overridden to app tenant " +
+                                    "domain.");
+                } else {
+                    Assert.assertEquals(authenticatedUser.getTenantDomain(), tenantDomain,
+                            "For shared users, tenant domain should remain as the user's original tenant domain.");
+                }
+            } else {
+                Assert.assertNull(authenticatedUser.getAccessingOrganization(),
+                        "Accessing organization should not be set when it is NONE.");
+            }
+        }
+    }
+
     @DataProvider(name = "oidcAudienceDataProvider")
     public Object[][] getOIDCAudience() {
 
@@ -2766,7 +3135,7 @@ public class OAuth2UtilTest {
 
             identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn("carbon.super");
             identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
-            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+            Assert.assertEquals(FapiUtil.isFapiConformantApp(clientId), isFapiConformant);
         }
     }
 
@@ -2999,6 +3368,71 @@ public class OAuth2UtilTest {
         }
     }
 
+    @Test
+    public void testGetLocalClaimMap() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+
+            LocalClaim emailLocalClaim = new LocalClaim("http://wso2.org/claims/emailaddress");
+            LocalClaim groupsLocalClaim = new LocalClaim("http://wso2.org/claims/groups");
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Arrays.asList(emailLocalClaim, groupsLocalClaim));
+
+            Map<String, LocalClaim> localClaimMap = OAuth2Util.getLocalClaimMap(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertEquals(localClaimMap.size(), 2);
+            Assert.assertSame(localClaimMap.get("http://wso2.org/claims/emailaddress"), emailLocalClaim);
+            Assert.assertSame(localClaimMap.get("http://wso2.org/claims/groups"), groupsLocalClaim);
+
+            // On a claim metadata failure an empty map is returned instead of propagating the exception.
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(new ClaimMetadataException("error"));
+            Assert.assertTrue(OAuth2Util.getLocalClaimMap(SUPER_TENANT_DOMAIN_NAME).isEmpty());
+        }
+    }
+
+    @Test
+    public void testGetOidcClaimToLocalClaimMap() throws Exception {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+            OAuth2ServiceComponentHolder holder = mock(OAuth2ServiceComponentHolder.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(holder);
+            when(holder.getClaimMetadataManagementService()).thenReturn(claimService);
+
+            LocalClaim emailLocalClaim = new LocalClaim("http://wso2.org/claims/emailaddress");
+            when(claimService.getLocalClaims(SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Collections.singletonList(emailLocalClaim));
+
+            ExternalClaim mappedOidcClaim = new ExternalClaim(OIDC_DIALECT,
+                    "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
+            // This OIDC claim maps to a local claim that is not present in the local claim map (e.g. a
+            // dangling mapping); it must be skipped rather than cause a null value in the built map.
+            ExternalClaim danglingOidcClaim = new ExternalClaim(OIDC_DIALECT,
+                    "http://wso2.org/oidc/claim/unknown", "http://wso2.org/claims/deleted");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(Arrays.asList(mappedOidcClaim, danglingOidcClaim));
+
+            Map<String, LocalClaim> oidcToLocalClaimMap =
+                    OAuth2Util.getOidcClaimToLocalClaimMap(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertEquals(oidcToLocalClaimMap.size(), 1);
+            Assert.assertSame(oidcToLocalClaimMap.get("http://wso2.org/oidc/claim/email"), emailLocalClaim);
+            Assert.assertFalse(oidcToLocalClaimMap.containsKey("http://wso2.org/oidc/claim/unknown"));
+
+            // On a claim metadata failure an empty map is returned instead of propagating the exception.
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(new ClaimMetadataException("error"));
+            Assert.assertTrue(OAuth2Util.getOidcClaimToLocalClaimMap(SUPER_TENANT_DOMAIN_NAME).isEmpty());
+        }
+    }
+
     @DataProvider(name = "initiateOIDCScopesDataProvider")
     public Object[][] initiateOIDCScopesDataProvider() {
 
@@ -3088,11 +3522,14 @@ public class OAuth2UtilTest {
         Field field = clazz.getDeclaredField(fieldName);
         field.setAccessible(true);
 
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
 
-        field.set(null, value);
+        Object fieldBase = unsafe.staticFieldBase(field);
+        long fieldOffset = unsafe.staticFieldOffset(field);
+        unsafe.putObject(fieldBase, fieldOffset, value);
     }
 
     @DataProvider(name = "appResidentOrganizationIdProvider")
@@ -3685,11 +4122,885 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "fragmentAppPropertiesOnlyTestCases")
+    public Object[][] fragmentAppPropertiesOnlyTestCases() {
+
+        return new Object[][] {
+                {"null properties", null, false},
+                {"empty properties", new ServiceProviderProperty[0], false},
+                {"IS_FRAGMENT_APP is true", new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "true")},
+                        true},
+                {"IS_FRAGMENT_APP is false",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "false")}, false},
+                {"IS_FRAGMENT_APP value is invalid",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "invalid")}, false},
+                {"IS_FRAGMENT_APP property absent",
+                        new ServiceProviderProperty[]{createProperty("otherProperty", "true")}, false},
+                {"IS_FRAGMENT_APP is true among multiple properties",
+                        new ServiceProviderProperty[]{
+                                createProperty("otherProp", "value"),
+                                createProperty(IS_FRAGMENT_APP, "true"),
+                                createProperty("anotherProp", "value2")
+                        }, true},
+                {"IS_FRAGMENT_APP value is null",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, null)}, false},
+                {"IS_FRAGMENT_APP value is TRUE (case insensitive)",
+                        new ServiceProviderProperty[]{createProperty(IS_FRAGMENT_APP, "TRUE")}, true},
+        };
+    }
+
+    @Test(dataProvider = "fragmentAppPropertiesOnlyTestCases")
+    public void testIsFragmentAppWithPropertiesArray(String description,
+                                                     ServiceProviderProperty[] properties,
+                                                     boolean expectedResult) {
+
+        assertEquals(OAuth2Util.isFragmentApp(properties), expectedResult, "Failed for case: " + description);
+    }
+
     private ServiceProviderProperty createProperty(String name, String value) {
 
         ServiceProviderProperty property = new ServiceProviderProperty();
         property.setName(name);
         property.setValue(value);
         return property;
+    }
+
+    @Test(dataProvider = "isJwtScopeAsArrayEnabledDataProvider")
+    public void testIsJwtScopeAsArrayEnabled(Boolean appLevelConfig, Boolean tenantConfig,
+                                              boolean expectedResult, String description) throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setJwtScopeAsArrayEnabled(appLevelConfig);
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            if (appLevelConfig == null) {
+                // Mock tenant-level configuration from resident IDP
+                IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+                lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                        .thenReturn(mockResidentIdp);
+                
+                FederatedAuthenticatorConfig mockOidcConfig = mock(FederatedAuthenticatorConfig.class);
+                FederatedAuthenticatorConfig[] configs = new FederatedAuthenticatorConfig[]{mockOidcConfig};
+                when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(configs);
+                
+                mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                        any(FederatedAuthenticatorConfig[].class), 
+                        eq("openidconnect")))
+                        .thenReturn(mockOidcConfig);
+                
+                if (tenantConfig != null) {
+                    Property enableJwtScopeProperty = new Property();
+                    enableJwtScopeProperty.setName(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY);
+                    enableJwtScopeProperty.setValue(tenantConfig.toString());
+                    Property[] properties = new Property[]{enableJwtScopeProperty};
+                    when(mockOidcConfig.getProperties()).thenReturn(properties);
+                    
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(enableJwtScopeProperty);
+                } else {
+                    when(mockOidcConfig.getProperties()).thenReturn(new Property[]{});
+                    mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getProperty(
+                            any(Property[].class), 
+                            eq(OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY)))
+                            .thenReturn(null);
+                }
+            }
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, expectedResult, description);
+        }
+    }
+
+    @DataProvider(name = "isJwtScopeAsArrayEnabledDataProvider")
+    public Object[][] isJwtScopeAsArrayEnabledDataProvider() {
+
+        return new Object[][]{
+                // {appLevel, tenantLevel, expected, description}
+                {true, null, true, "App-level enabled should return true (priority 1)"},
+                {false, null, false, "App-level disabled should return false (priority 1)"},
+                {null, true, true, "Null app-level, tenant enabled should return true (priority 2)"},
+                {null, false, false, "Null app-level, tenant disabled should return false (priority 2)"},
+                {null, null, false, "All null should return default false"},
+                {true, false, true, "App-level should override tenant-level (priority 1 wins)"},
+                {false, true, false, "App-level false should override tenant-level true (priority 1 wins)"},
+        };
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_withNullOAuthAppDO() throws Exception {
+
+        // Return null resident IDP
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(null);
+
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(null, tenantDomain);
+        assertEquals(result, false, "Null OAuthAppDO with null resident IDP should return default false");
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenResidentIdpHasNoOidcConfig() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        try (MockedStatic<IdentityApplicationManagementUtil> mockedAppUtil = 
+                mockStatic(IdentityApplicationManagementUtil.class)) {
+
+            IdentityProvider mockResidentIdp = mock(IdentityProvider.class);
+            lenient().when(mockIdentityProviderManager.getResidentIdP(tenantDomain))
+                    .thenReturn(mockResidentIdp);
+            when(mockResidentIdp.getFederatedAuthenticatorConfigs()).thenReturn(new FederatedAuthenticatorConfig[]{});
+            
+            // OIDC config not found
+            mockedAppUtil.when(() -> IdentityApplicationManagementUtil.getFederatedAuthenticator(
+                    any(FederatedAuthenticatorConfig[].class), 
+                    eq("openidconnect")))
+                    .thenReturn(null);
+
+            boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+            assertEquals(result, false, "OAuthAppDO with no OIDC config should return default false");
+        }
+    }
+
+    @Test
+    public void testIsJwtScopeAsArrayEnabled_whenIdentityProviderManagementExceptionThrown() throws Exception {
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+
+        lenient().when(mockIdentityProviderManager.getResidentIdP(anyString()))
+                .thenThrow(new IdentityProviderManagementException(
+                        "Error reading resident IDP configuration"));
+
+        // Should return false on exception (fallback behavior)
+        boolean result = OAuth2Util.isJwtScopeAsArrayEnabled(oAuthAppDO, tenantDomain);
+        assertEquals(result, false, "Exception during tenant config retrieval should return default false");
+    }
+
+    @DataProvider(name = "accessTokenPersistenceEnabledProvider")
+    public Object[][] accessTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "accessTokenPersistenceEnabledProvider")
+    public void testIsAccessTokenPersistenceEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isAccessTokenPersistenceEnabled(), expected);
+    }
+
+    @DataProvider(name = "keepRevokedAccessTokenEnabledProvider")
+    public Object[][] keepRevokedAccessTokenEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "keepRevokedAccessTokenEnabledProvider")
+    public void testIsKeepRevokedAccessTokenEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isKeepRevokedTokenEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isKeepRevokedAccessTokenEnabled(), expected);
+    }
+
+    @DataProvider(name = "refreshTokenPersistenceEnabledProvider")
+    public Object[][] refreshTokenPersistenceEnabledProvider() {
+
+        return new Object[][]{
+                {true},   // Config enabled -> true
+                {false},  // Config disabled -> false
+        };
+    }
+
+    @Test(dataProvider = "refreshTokenPersistenceEnabledProvider")
+    public void testIsRefreshTokenPersistenceEnabled(boolean expected) {
+
+        when(oauthServerConfigurationMock.isRefreshTokenPersistenceEnabled()).thenReturn(expected);
+        assertEquals(OAuth2Util.isRefreshTokenPersistenceEnabled(), expected);
+    }
+
+    // ======================== isNonPersistentTokenEnabled ========================
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenAccessTokenPersistenceEnabled() {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(true);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("test_consumer_key"));
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenConsumerKeyIsBlank() {
+
+        when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(""));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled(null));
+        assertFalse(OAuth2Util.isNonPersistentTokenEnabled("   "));
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsJWT() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("JWT");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertTrue(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenTokenTypeIsNotJWT() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setOauthConsumerKey(clientId);
+            appDO.setTokenType("Default");
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+        }
+    }
+
+    @Test
+    public void testIsNonPersistentTokenEnabled_WhenExceptionOccurs() throws Exception {
+
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+
+            when(oauthServerConfigurationMock.isAccessTokenPersistenceEnabled()).thenReturn(false);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+
+            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
+                    OAuthAppDAO.class,
+                    (mock, context) -> {
+                        when(mock.getAppInformation(anyString(), anyInt()))
+                                .thenThrow(new InvalidOAuthClientException("Client not found"));
+                    })) {
+
+                assertFalse(OAuth2Util.isNonPersistentTokenEnabled(clientId));
+            }
+        }
+    }
+
+    @Test
+    public void testGetTokenProvider() {
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+
+            TokenProvider result = OAuth2Util.getTokenProvider();
+
+            Assert.assertNotNull(result);
+            Assert.assertEquals(result, mockTokenProvider);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithAccessTokenDOInContextToken() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+        expectedAccessTokenDO.setTokenId("test-token-id");
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string", expectedAccessTokenDO);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertTrue(result.isPresent());
+        assertEquals(result.get(), expectedAccessTokenDO);
+        assertEquals(result.get().getTokenId(), "test-token-id");
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithAccessTokenDOInContextTokenSkipsTokenProvider()
+            throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string", expectedAccessTokenDO);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, false);
+
+        assertTrue(result.isPresent());
+        assertEquals(result.get(), expectedAccessTokenDO);
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithTokenStringFallsBackToTokenProvider() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(true)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+            assertTrue(result.isPresent());
+            assertEquals(result.get(), expectedAccessTokenDO);
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOWithCheckIndirectRevocationFalse() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(false)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, false);
+
+            assertTrue(result.isPresent());
+            assertEquals(result.get(), expectedAccessTokenDO);
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, false);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenAuthContextTokenIsNull() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenTokenStringIsNull() throws UserInfoEndpointException {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", null);
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test(expectedExceptions = UserInfoEndpointException.class)
+    public void testGetAccessTokenDOThrowsExceptionOnTokenProviderError() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(anyString(), anyBoolean(), anyBoolean()))
+                    .thenThrow(new IdentityOAuth2Exception("Token validation failed"));
+
+            OAuth2Util.getAccessTokenDO(tokenResponse, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOSingleArgDelegatesToTwoArgWithTrue() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        AccessTokenDO expectedAccessTokenDO = new AccessTokenDO();
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(eq("test-token-string"), eq(false), eq(true)))
+                    .thenReturn(expectedAccessTokenDO);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse);
+
+            assertTrue(result.isPresent());
+            verify(mockTokenProvider).getVerifiedAccessToken("test-token-string", false, true);
+        }
+    }
+
+    @Test
+    public void testGetAccessTokenDOReturnsEmptyWhenTokenProviderReturnsNull() throws Exception {
+
+        OAuth2TokenValidationResponseDTO tokenResponse = new OAuth2TokenValidationResponseDTO();
+        OAuth2TokenValidationResponseDTO.AuthorizationContextToken contextToken =
+                tokenResponse.new AuthorizationContextToken("Bearer", "test-token-string");
+        tokenResponse.setAuthorizationContextToken(contextToken);
+
+        try (MockedStatic<OAuth2ServiceComponentHolder> mockedHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockHolder = mock(OAuth2ServiceComponentHolder.class);
+            TokenProvider mockTokenProvider = mock(TokenProvider.class);
+
+            mockedHolder.when(OAuth2ServiceComponentHolder::getInstance).thenReturn(mockHolder);
+            when(mockHolder.getTokenProvider()).thenReturn(mockTokenProvider);
+            when(mockTokenProvider.getVerifiedAccessToken(anyString(), anyBoolean(), anyBoolean()))
+                    .thenReturn(null);
+
+            Optional<AccessTokenDO> result = OAuth2Util.getAccessTokenDO(tokenResponse, true);
+
+            assertFalse(result.isPresent());
+        }
+    }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithConfiguredDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn("SECONDARY");
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, "SECONDARY");
+        verify(mockRealmConfiguration, times(2)).getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME);
+    }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithNullDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn(null);
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+    }
+
+    @Test
+    public void testResolvePrimaryUserStoreDomainNameWithLowercaseDomain() throws Exception {
+
+        RealmService mockRealmService = mock(RealmService.class);
+        org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+        when(mockRealmConfiguration.getUserStoreProperty(
+                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                .thenReturn("secondary");
+
+        String result = OAuth2Util.resolvePrimaryUserStoreDomainName();
+
+        assertEquals(result, "SECONDARY");
+    }
+
+    @Test
+    public void testHandleGroupClaimWhenDisabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(false);
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWhenPropertyDisabled() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("false");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithoutGroupsClaim() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("roles", "role1,role2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("roles"), "role1,role2");
+            assertNull(mappedAttrs.get("groups"));
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithNullUser() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(null, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithPrimaryUserStore() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("PRIMARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "group1,group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithSecondaryUserStore() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "SECONDARY/group1,SECONDARY/group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithExistingDomainPrefix() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "SECONDARY/group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            assertEquals(mappedAttrs.get("groups"), "SECONDARY/group1,SECONDARY/group2");
+        }
+    }
+
+    @Test
+    public void testHandleGroupClaimWithCaseInsensitiveDomainPrefix() {
+
+        try (MockedStatic<IdentityUtil> identityUtilMocked = mockStatic(IdentityUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtilsMocked = mockStatic(FrameworkUtils.class)) {
+
+            identityUtilMocked.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled)
+                    .thenReturn(true);
+            identityUtilMocked.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn("true");
+
+            // Mock the resolvePrimaryUserStoreDomainName method dependencies.
+            RealmService mockRealmService = mock(RealmService.class);
+            org.wso2.carbon.user.core.config.RealmConfiguration mockRealmConfiguration =
+                    mock(org.wso2.carbon.user.core.config.RealmConfiguration.class);
+
+            when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(mockRealmService);
+            when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockRealmConfiguration);
+            when(mockRealmConfiguration.getUserStoreProperty(
+                    UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME))
+                    .thenReturn("PRIMARY");
+
+            frameworkUtilsMocked.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("SECONDARY");
+            Map<String, Object> mappedAttrs = new HashMap<>();
+            mappedAttrs.put("groups", "secondary/group1,group2");
+
+            OAuth2Util.handleGroupClaim(user, mappedAttrs);
+
+            // Case insensitive comparison means secondary/group1 should be kept as-is.
+            assertEquals(mappedAttrs.get("groups"), "secondary/group1,SECONDARY/group2");
+        }
+    }
+
+    @Test
+    public void testGetIdpTenantIdForLocalIDP() throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain("user-tenant.com");
+        int appTenantId = 1;
+
+        int result = OAuth2Util.getIdpTenantId("LOCAL", appTenantId, user);
+
+        assertEquals(result, appTenantId);
+    }
+
+    @Test
+    public void testGetIdpTenantIdForFederatedIDP() throws Exception {
+
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain("federated-tenant.com");
+        int appTenantId = 1;
+        int federatedTenantId = 2;
+
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId("federated-tenant.com")).thenReturn(federatedTenantId);
+
+        int result = OAuth2Util.getIdpTenantId("SomeFederatedIDP", appTenantId, user);
+
+        assertEquals(result, federatedTenantId);
+    }
+
+    @Test
+    public void testGetTenantDomainByOrgId() throws Exception {
+
+        String orgId = "test-org-id";
+        String expectedTenantDomain = "org-tenant.com";
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(organizationManagerMock.resolveTenantDomain(orgId)).thenReturn(expectedTenantDomain);
+
+        String result = OAuth2Util.getTenantDomainByOrgId(orgId);
+
+        assertEquals(result, expectedTenantDomain);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetTenantDomainByOrgIdWithOrganizationManagementException() throws Exception {
+
+        String orgId = "invalid-org-id";
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(organizationManagerMock.resolveTenantDomain(orgId))
+                .thenThrow(new OrganizationManagementException("Org not found"));
+
+        OAuth2Util.getTenantDomainByOrgId(orgId);
+    }
+
+    /**
+     * Tests isFederatedRoleBasedAuthzEnabled(String clientId) when there IS an accessing org ID,
+     * so the app info is retrieved via getAppInformationFromOrgHierarchy.
+     */
+    @Test
+    public void testIsFederatedRoleBasedAuthzEnabledWithAccessingOrgId() throws Exception {
+
+        final String accessingOrgId = "7b4a9d9d-6137-415c-8166-978c286cdd91";
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+
+            identityUtil.when(() -> IdentityUtil.getPropertyAsList(OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG))
+                    .thenReturn(Arrays.asList("testApp"));
+
+            PrivilegedCarbonContext mockPCC = mock(PrivilegedCarbonContext.class);
+            when(mockPCC.getAccessingOrganizationId()).thenReturn(accessingOrgId);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPCC);
+
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setApplicationName("testApp1");
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setTenantDomain("test-tenant.com");
+            appDO.setUser(user);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId))
+                    .thenReturn(appDO);
+
+            boolean result = OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
+            assertFalse(result);
+        }
+    }
+
+    /**
+     * Tests that isFederatedRoleBasedAuthzEnabled(String clientId) throws IdentityOAuth2Exception
+     * when an InvalidOAuthClientException is thrown while retrieving app information.
+     */
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testIsFederatedRoleBasedAuthzEnabledThrowsOnInvalidOAuthClient() throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
+
+            identityUtil.when(() -> IdentityUtil.getPropertyAsList(OAuth2Util.FIDP_ROLE_BASED_AUTHZ_APP_CONFIG))
+                    .thenReturn(Arrays.asList("testApp"));
+
+            PrivilegedCarbonContext mockPCC = mock(PrivilegedCarbonContext.class);
+            when(mockPCC.getAccessingOrganizationId()).thenReturn(null);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPCC);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId))
+                    .thenThrow(new InvalidOAuthClientException("Client not found"));
+
+            OAuth2Util.isFederatedRoleBasedAuthzEnabled(clientId);
+        }
     }
 }

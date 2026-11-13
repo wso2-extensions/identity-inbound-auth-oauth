@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oidc.dcr.processor;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityRequest;
@@ -83,6 +84,7 @@ public class OIDCDCRProcessor extends DCRProcessor {
     }
 
     @Override
+    @SuppressFBWarnings("CRLF_INJECTION_LOGS")
     public boolean canHandle(IdentityRequest identityRequest) {
 
         boolean canHandle = false;

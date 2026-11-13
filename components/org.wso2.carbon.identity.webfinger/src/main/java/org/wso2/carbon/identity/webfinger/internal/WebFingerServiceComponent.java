@@ -20,20 +20,15 @@ package org.wso2.carbon.identity.webfinger.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.eclipse.equinox.http.helper.ContextPathServletAdaptor;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.http.HttpService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
-import org.wso2.carbon.identity.webfinger.servlet.WebFingerServlet;
 import org.wso2.carbon.user.core.service.RealmService;
-
-import javax.servlet.Servlet;
 
 /**
  * Service component for Web Finger.
@@ -53,18 +48,6 @@ public class WebFingerServiceComponent {
             WebFingerServiceComponentHolder.setWebFingerProcessor(webFingerProcessor);
             if (log.isDebugEnabled()) {
                 log.debug("OpenID WebFinger bundle is activated.");
-            }
-
-            // Register OpenID Connect WebFinger servlet
-            HttpService httpService = WebFingerServiceComponentHolder.getHttpService();
-            Servlet webFingerServlet = new ContextPathServletAdaptor(new WebFingerServlet(),
-                    "/.well-known/webfinger");
-            try {
-                httpService.registerServlet("/.well-known/webfinger", webFingerServlet, null, null);
-            } catch (Exception e) {
-                String errMsg = "Error when registering Web Finger Servlet via the HttpService.";
-                log.error(errMsg, e);
-                throw new RuntimeException(errMsg, e);
             }
         } catch (Throwable e) {
             log.error("Error while activating the WebFingerServiceComponent", e);
@@ -90,26 +73,5 @@ public class WebFingerServiceComponent {
             log.info("Unsetting the Realm Service");
         }
         WebFingerServiceComponentHolder.setRealmService(null);
-    }
-
-    @Reference(
-            name = "osgi.http.service",
-            service = HttpService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetHttpService"
-    )
-    protected void setHttpService(HttpService httpService) {
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is set in the OpenID Connect WebFinger bundle");
-        }
-        WebFingerServiceComponentHolder.setHttpService(httpService);
-    }
-
-    protected void unsetHttpService(HttpService httpService) {
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is unset in the OpenID Connect WebFinger bundle");
-        }
-        WebFingerServiceComponentHolder.setHttpService(null);
     }
 }

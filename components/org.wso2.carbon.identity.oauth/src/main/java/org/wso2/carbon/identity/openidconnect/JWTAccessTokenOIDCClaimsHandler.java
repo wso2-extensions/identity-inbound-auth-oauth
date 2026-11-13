@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -15,7 +15,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -37,6 +36,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -77,10 +77,9 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 
 /**
@@ -98,7 +97,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             throws IdentityOAuth2Exception {
 
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     @Override
@@ -110,7 +109,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
           to manage user attributes for the access token.
          */
         Map<String, Object> claims = getUserClaimsInOIDCDialect(request);
-        return setClaimsToJwtClaimSet(builder, claims);
+        return setClaimsToJwtClaimSet(builder, claims, getServiceProviderTenantDomain(request));
     }
 
     /**
@@ -135,6 +134,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                 .isReturnOnlyAppAssociatedRolesInJWTToken();
         boolean isOrganizationSSOUserOrgSwitch = isOrganizationSsoUserSwitchingOrganization(
                 requestMsgCtx.getAuthorizedUser());
+        boolean isOrganizationSSOUser = isOrganizationSSOUser(requestMsgCtx.getAuthorizedUser());
         boolean isOrganizationGrantType =  isOrganizationSwitchGrantType(requestMsgCtx);
 
         if (allowedClaims.isEmpty()) {
@@ -142,14 +142,18 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             return new HashMap<>();
         }
 
+        boolean hasAllRequiredClaimsInCache = hasAllRequiredClaimsInCache(allowedClaims,
+                userAttributes);
+
         if (!returnOnlyAppAssociatedRoles &&
-                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser ||
-                isOrganizationSSOUserOrgSwitch)) {
+                (userAttributes.isEmpty() || isOrganizationGrantType) && (isLocalUser
+                || isOrganizationSSOUserOrgSwitch || isOrganizationSSOUser)) {
             // This if block is added to keep the backward compatibility. Don't add anything into this if condition.
             setOrganizationSwitchAttributes(requestMsgCtx);
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(spTenantDomain, clientId,
                     requestMsgCtx.getAuthorizedUser(), allowedClaims);
-        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSOUserOrgSwitch)) {
+        } else if (returnOnlyAppAssociatedRoles && (isLocalUser || isOrganizationSSOUserOrgSwitch
+                || (isOrganizationSSOUser && !hasAllRequiredClaimsInCache))) {
             // This is to handle the case where the user is a local user, or an organization SSO user where this b2b
             // user could be a federated user, but still exist in our userstore.
             setOrganizationSwitchAttributes(requestMsgCtx);
@@ -170,10 +174,28 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
         if (isPreserverClaimUrisInAssertion(requestMsgCtx) || (hasNonOIDCClaimsProperty != null
                 && (Boolean) hasNonOIDCClaimsProperty)) {
+            if (OAuthServerConfiguration.getInstance().isRestrictAssertionClaimsToConfiguredAttributes()) {
+                return filterRequestedClaims(userClaimsInOIDCDialect, allowedClaims);
+            }
             return userClaimsInOIDCDialect;
         } else {
             return filterClaims(userClaimsInOIDCDialect, requestMsgCtx);
         }
+    }
+
+    /**
+     * Restrict the federated user's assertion claims to the application's configured access token attributes.
+     *
+     * @param userClaimsInOIDCDialect User claims in OIDC dialect.
+     * @param allowedClaims           Configured access token attributes.
+     * @return Claims restricted to the configured access token attributes.
+     */
+    private Map<String, Object> filterRequestedClaims(Map<String, Object> userClaimsInOIDCDialect,
+                                                      List<String> allowedClaims) {
+
+        return userClaimsInOIDCDialect.entrySet().stream()
+                .filter(entry -> allowedClaims.contains(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private void setOrganizationSwitchAttributes(OAuthTokenReqMessageContext requestMsgCtx)
@@ -860,19 +882,24 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     /**
      * This method sets claims to JWTClaimSet.
      *
-     * @param jwtClaimsSetBuilder JWTClaimSet builder.
+     * @param jwtClaimsSetBuilder     JWTClaimSet builder.
      * @param userClaimsInOIDCDialect User claims in OIDC dialect.
+     * @param spTenantDomain          Service provider tenant domain.
      * @return JWTClaimSet with claims.
      */
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
-            userClaimsInOIDCDialect) {
+            userClaimsInOIDCDialect, String spTenantDomain) {
 
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        Map<String, LocalClaim> oidcToLocalClaimMap =
+                OAuthServerConfiguration.getInstance().isHonorMultivaluedClaimMetadata()
+                        ? OAuth2Util.getOidcClaimToLocalClaimMap(spTenantDomain) : new HashMap<>();
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
-            if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
+            if (OIDCClaimUtil.isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator,
+                    oidcToLocalClaimMap.get(claimKey))) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
                 for (String attributeValue : attributeValues) {
@@ -890,28 +917,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             }
         }
         return jwtClaimsSetBuilder.build();
-    }
-
-    /**
-     * Check weather claim value if multi valued or not.
-     *
-     * @param claimKey Claim key.
-     * @param claimValue Claim value.
-     * @param multiAttributeSeparator Multi attribute separator.
-     * @return True if claim value is multi valued, false otherwise.
-     */
-    private boolean isMultiValuedAttribute(String claimKey, String claimValue, String multiAttributeSeparator) {
-
-        // Address claim contains multi attribute separator but its not a multi valued attribute.
-        if (claimKey.equals(ADDRESS)) {
-            return false;
-        }
-        // To format the groups claim to always return as an array, we should consider single group as
-        // multi value attribute.
-        if (claimKey.equals(GROUPS)) {
-            return true;
-        }
-        return StringUtils.contains(claimValue, multiAttributeSeparator);
     }
 
     /**
@@ -1022,6 +1027,44 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
            organization. */
         return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
                 (accessingOrganization);
+    }
+
+    /**
+     * Determines whether the authenticated user is an organization SSO user.
+     * An organization SSO user is defined as a federated user with a defined resident organization
+     * where the organization IDP uses SSO authentication.
+     *
+     * @param authenticatedUser the authenticated user to evaluate
+     * @return {@code true} if the user meets all organization SSO criteria, {@code false} otherwise
+     */
+    private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
+
+        return authenticatedUser.isFederatedUser()
+                && authenticatedUser.getUserResidentOrganization() != null
+                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName());
+    }
+
+    /**
+     * Check whether all allowed claims are covered by the user attributes retrieved from the authorization grant cache.
+     * This is used to determine if a userstore lookup can be skipped because all required claims are already cached.
+     *
+     * @param allowedClaims        List of allowed claim URIs configured for the JWT access token.
+     * @param cachedUserAttributes User attributes retrieved from the authorization grant cache,
+     *                             keyed by {@link ClaimMapping}.
+     * @return true if every allowed claim has a corresponding entry in the cached user attributes, false otherwise.
+     */
+    private boolean hasAllRequiredClaimsInCache(List<String> allowedClaims,
+                                                Map<ClaimMapping, String> cachedUserAttributes) {
+
+        if (MapUtils.isEmpty(cachedUserAttributes)) {
+            return false;
+        }
+        // Collect all remote claim URIs present in the cached attributes.
+        java.util.Set<String> cachedClaimUris = cachedUserAttributes.keySet().stream()
+                .map(claimMapping -> claimMapping.getRemoteClaim().getClaimUri())
+                .collect(Collectors.toSet());
+
+        return cachedClaimUris.containsAll(allowedClaims);
     }
 
     /**

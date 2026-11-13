@@ -341,6 +341,20 @@ public class DiscoveryConstants {
      * If omitted, the default value is false.
      */
     public static final String BACKCHANNEL_LOGOUT_SESSION_SUPPORTED = "backchannel_logout_session_supported";
+
+    /**
+     * frontchannel_logout_session_supported
+     * OPTIONAL. Boolean value specifying whether the OP can pass a sid and issuer claims in the logout response to
+     * identify the RP session with the OP.
+     */
+    public static final String FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED = "frontchannel_logout_session_supported";
+    
+    /**
+     * frontchannel_logout_supported
+     * OPTIONAL. Boolean value specifying whether the OP supports front-channel logout, with true indicating support.
+     */
+    public static final String FRONTCHANNEL_LOGOUT_SUPPORTED = "frontchannel_logout_supported";
+
     /**
      * code_challenge_methods_supported
      * OPTIONAL. JSON array containing a list of Proof Key for Code Exchange (PKCE) [RFC7636] code challenge methods
@@ -384,4 +398,30 @@ public class DiscoveryConstants {
      * @see <a href='https://datatracker.ietf.org/doc/html/rfc9396.txt#name-metadata'>rfc9396</a>
      */
     public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
+
+    /**
+     * backchannel_authentication_endpoint
+     * REQUIRED. URL of the OP's Backchannel Authentication Endpoint as defined in the OpenID Connect
+     * Client Initiated Backchannel Authentication Flow - Core 1.0 specification.
+     */
+    public static final String BACKCHANNEL_AUTHENTICATION_ENDPOINT = "backchannel_authentication_endpoint";
+
+    /**
+     * authorization_response_iss_parameter_supported
+     * OPTIONAL. Boolean value specifying whether the OP supports the "iss" parameter in the
+     * Authorization Response. This allows RPs to securely determine the issuer of the response.
+     * If omitted, the default value is false.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc9207#as_metadata">rfc9207</a>
+     */
+    public static final String AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED =
+            "authorization_response_iss_parameter_supported";
+
+    /**
+     * client_id_metadata_document_supported
+     * OPTIONAL. Boolean value specifying whether the authorization server supports clients that use an HTTPS URL
+     * pointing to a Client ID Metadata Document as their client_id.
+     * @see <a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/">
+     * draft-ietf-oauth-client-id-metadata-document</a>
+     */
+    public static final String CLIENT_ID_METADATA_DOCUMENT_SUPPORTED = "client_id_metadata_document_supported";
 }

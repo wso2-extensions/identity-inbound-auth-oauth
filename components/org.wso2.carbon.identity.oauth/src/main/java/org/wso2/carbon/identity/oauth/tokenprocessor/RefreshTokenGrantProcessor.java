@@ -76,4 +76,17 @@ public interface RefreshTokenGrantProcessor {
      */
     boolean isLatestRefreshToken(OAuth2AccessTokenReqDTO tokenReq, RefreshTokenValidationDataDO validationBean,
                                  String userStoreDomain) throws IdentityOAuth2Exception;
+
+    /**
+     * After new refresh token and access token generated, this method will be called to add user attributes to the
+     * grant cache.
+     *
+     * @param accessTokenBean Access token data object.
+     * @param msgCtx Token request message context.
+     * @throws IdentityOAuth2Exception If an error occurred while adding user attributes to the grant cache.
+     */
+    default void addUserAttributesToCache(AccessTokenDO accessTokenBean, OAuthTokenReqMessageContext msgCtx)
+            throws IdentityOAuth2Exception {
+
+    }
 }

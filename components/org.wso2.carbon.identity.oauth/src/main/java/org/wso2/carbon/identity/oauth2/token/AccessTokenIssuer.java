@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,7 +26,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
@@ -50,6 +49,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -115,23 +115,30 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.EXISTING_ACT_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUB;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomainWithOrgHierarchy;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USERNAME_CLAIM_URI;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USER_ID_CLAIM_URI;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -225,6 +232,11 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     getAuthzGrantCacheEntryFromDeviceCode(tokenReqDTO);
             persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+            if (authorizationGrantCacheEntry != null
+                    && authorizationGrantCacheEntry.getSessionContextIdentifier() != null) {
+                tokReqMsgCtx.addProperty(SESSION_IDENTIFIER,
+                        authorizationGrantCacheEntry.getSessionContextIdentifier());
+            }
         }
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -331,7 +343,7 @@ public class AccessTokenIssuer {
         // Indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP.
         // This is done to avoid having to send the tenantDomain as a query param to the token endpoint
         String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
+        validateRequestTenantDomainWithOrgHierarchy(tenantDomainOfApp, tokenReqDTO);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
 
@@ -340,7 +352,7 @@ public class AccessTokenIssuer {
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
 
         if (!isOfTypeApplicationUser) {
-            tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
+            tokReqMsgCtx.setAuthorizedUser(new AuthenticatedUser(oAuthAppDO.getAppOwner()));
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
             String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .getApplicationResidentOrganizationId();
@@ -408,7 +420,7 @@ public class AccessTokenIssuer {
         }
 
         if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
-            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO, tokenRespDTO);
         }
 
         return tokenRespDTO;
@@ -455,7 +467,10 @@ public class AccessTokenIssuer {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
         } catch (IdentityOAuth2Exception e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating grant", e);
+                Exception sanitizedError = new Exception(LoggerUtils.getSanitizedErrorMessage(
+                        e.getMessage(), OAuth2Util.getUserIdentifierFromRequest(tokenReqDTO)));
+                sanitizedError.setStackTrace(e.getStackTrace());
+                log.debug("Error occurred while validating grant", sanitizedError);
             }
             if (e.getErrorCode() != null) {
                 errorCode = e.getErrorCode();
@@ -474,6 +489,18 @@ public class AccessTokenIssuer {
             if (authenticatedUser.getTenantDomain() != null) {
                 skipTenantDomainOverWriting = OAuth2Util.isFederatedRoleBasedAuthzEnabled(tokReqMsgCtx);
             }
+            /*
+            In new B2B login scenario, having federated user with a different tenant domain than the application
+            domain is expected. In such cases, the tenant domain of the authenticated user should not be overridden
+            with the tenant domain of the application.
+             */
+            if (!skipTenantDomainOverWriting && authenticatedUser.getUserResidentOrganization() != null) {
+                String userResidentOrgTenantDomain =
+                        OAuth2Util.getTenantDomainByOrgId(authenticatedUser.getUserResidentOrganization());
+                if (StringUtils.equals(authenticatedUser.getTenantDomain(), userResidentOrgTenantDomain)) {
+                    skipTenantDomainOverWriting = true;
+                }
+            }
             // If federated role-based authorization is engaged skip overwriting the user tenant domain.
             if (!skipTenantDomainOverWriting) {
                 authenticatedUser.setTenantDomain(tenantDomainOfApp);
@@ -483,6 +510,18 @@ public class AccessTokenIssuer {
         if (!isValidGrant) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid Grant provided by the client Id: " + tokenReqDTO.getClientId());
+            }
+            // The internal error message is not logged since it is not guaranteed to be free of user identifiers.
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.ERROR_CODE, errorCode)
+                        .resultMessage("Authorization grant validation failed for the provided grant type.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             tokenRespDTO = handleError(errorCode, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -494,6 +533,16 @@ public class AccessTokenIssuer {
         if (!isAuthorized) {
             if (log.isDebugEnabled()) {
                 log.debug("Invalid authorization for client Id : " + tokenReqDTO.getClientId());
+            }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                        .resultMessage("The application is not authorized to use the provided grant type.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT,
                     "Unauthorized Client!", tokenReqDTO);
@@ -624,6 +673,13 @@ public class AccessTokenIssuer {
                     diagnosticLogBuilder.inputParam(IMPERSONATOR, impersonatorId);
                 }
                 diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
+            } else if (tokReqMsgCtx.isDelegationRequest()) {
+                String actorSubject = resolveDelegationActorSubject(tokReqMsgCtx);
+                if (actorSubject != null) {
+                    diagnosticLogBuilder.inputParam(ACTOR, LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(actorSubject) : actorSubject);
+                }
+                diagnosticLogBuilder.resultMessage("Delegated Access token issued for the application.");
             } else {
                 diagnosticLogBuilder.resultMessage("Access token issued for the application.");
             }
@@ -691,6 +747,15 @@ public class AccessTokenIssuer {
             }
         }
 
+        // Add custom token response parameters set by the pre issue access token action.
+        Map<String, Object> additionalTokenResponseParams = tokReqMsgCtx.getAdditionalTokenResponseParams();
+        if (additionalTokenResponseParams != null) {
+            additionalTokenResponseParams.forEach(tokenRespDTO::addParameterObject);
+        }
+        if (tokReqMsgCtx.getSuppressedTokenResponseParams() != null) {
+            tokenRespDTO.setSuppressedResponseParams(tokReqMsgCtx.getSuppressedTokenResponseParams());
+        }
+
         if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
             Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
             if (deviceCodeOptional.isPresent()) {
@@ -708,7 +773,8 @@ public class AccessTokenIssuer {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
 
-        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx);
+        persistCustomizedAccessTokenAttributesForRefreshToken(authorizationGrantCacheEntry, tokenRespDTO, tokReqMsgCtx,
+                                                                grantType);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
@@ -722,6 +788,31 @@ public class AccessTokenIssuer {
         }
 
         return tokenRespDTO;
+    }
+
+    /**
+     * Resolve the actor subject of a delegation request. Falls back to the subject of the existing act claim
+     * when no new actor was added to the delegation chain.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return the actor subject, or {@code null} if it could not be resolved.
+     */
+    private String resolveDelegationActorSubject(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        Object actorSubject = tokReqMsgCtx.getProperty(ACTOR_SUBJECT);
+        if (actorSubject != null) {
+            return actorSubject.toString();
+        }
+
+        // No new actor was added: the current top of the delegation chain is the existing act claim's subject.
+        Object existingActClaim = tokReqMsgCtx.getProperty(EXISTING_ACT_CLAIM);
+        if (existingActClaim instanceof Map) {
+            Object subject = ((Map<?, ?>) existingActClaim).get(SUB);
+            if (subject != null) {
+                return subject.toString();
+            }
+        }
+        return null;
     }
 
     private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomain,
@@ -813,6 +904,8 @@ public class AccessTokenIssuer {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
             }
+            authorizationGrantCacheEntry.setSessionContextIdentifier(
+                    cacheEntry.getSessionContextIdentifier());
             persistImpersonationInfoToAuthzGrantCacheEntry(cacheEntry, authorizationGrantCacheEntry);
             return Optional.of(authorizationGrantCacheEntry);
         }
@@ -1033,17 +1126,29 @@ public class AccessTokenIssuer {
         return isValidScope;
     }
 
-    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext) {
+    private String[] getRequestedScopes(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
 
         String[] requestedScopes = tokenReqMessageContext.getScope();
         if (ArrayUtils.isNotEmpty(requestedScopes)) {
             return requestedScopes;
         }
 
-        boolean isDefaultScopeForBackChannelGrantEnabled =
-                OAuthServerConfiguration.getInstance().isDefaultScopeForBackChannelGrantEnabled();
-        List<String> defaultScopes = OAuthServerConfiguration.getInstance().getDefaultRequestedScopes();
-        if (!isDefaultScopeForBackChannelGrantEnabled || CollectionUtils.isEmpty(defaultScopes)) {
+        OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
+        List<String> defaultScopes;
+        if (oAuthServerConfiguration.isDefaultScopeForBackChannelGrantEnabled()) {
+            if (oAuthServerConfiguration.isUseAppAuthorizedScopesAsDefault()) {
+                defaultScopes = AuthzUtil.getAppAuthorizedScopes(
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+            } else {
+                defaultScopes = oAuthServerConfiguration.getDefaultRequestedScopes();
+            }
+        } else {
+            return requestedScopes;
+        }
+
+        if (CollectionUtils.isEmpty(defaultScopes)) {
             return requestedScopes;
         }
 
@@ -1189,6 +1294,16 @@ public class AccessTokenIssuer {
     private String getSubjectClaimFromUserStore(String subjectClaimUri, AuthenticatedUser authenticatedUser)
             throws org.wso2.carbon.user.core.UserStoreException, IdentityException {
 
+        /*
+        The user id and username claims are stored as the user's unique id and username when the user is created,
+        hence they can be resolved without a user store call.
+        */
+        String subjectClaim = USER_ID_CLAIM_URI.equals(subjectClaimUri) ? authenticatedUser.getUserId()
+                : USERNAME_CLAIM_URI.equals(subjectClaimUri) ? authenticatedUser.getUserName() : null;
+        if (StringUtils.isNotBlank(subjectClaim)) {
+            return subjectClaim;
+        }
+
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
@@ -1325,6 +1440,11 @@ public class AccessTokenIssuer {
                                     OAuthTokenReqMessageContext tokReqMsgCtx, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
+        if (REFRESH_TOKEN.equals(grantType)) {
+            // Token binding values are already set to the OAuthTokenReqMessageContext.
+            return;
+        }
+
         if (StringUtils.isBlank(oAuthAppDO.getTokenBindingType())) {
             tokReqMsgCtx.setTokenBinding(null);
             return;
@@ -1335,11 +1455,6 @@ public class AccessTokenIssuer {
         if (!tokenBinderOptional.isPresent()) {
             throw new IdentityOAuth2Exception(
                     "Token binder for the binding type: " + oAuthAppDO.getTokenBindingType() + " is not registered.");
-        }
-
-        if (REFRESH_TOKEN.equals(grantType)) {
-            // Token binding values are already set to the OAuthTokenReqMessageContext.
-            return;
         }
 
         tokReqMsgCtx.setTokenBinding(null);
@@ -1495,7 +1610,8 @@ public class AccessTokenIssuer {
     private void persistCustomizedAccessTokenAttributesForRefreshToken(Optional<AuthorizationGrantCacheEntry>
                                                                                optionalAuthorizationGrantCacheEntry,
                                                                        OAuth2AccessTokenRespDTO tokenRespDTO,
-                                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                                       OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                                       String grantType) {
 
         if (!(tokReqMsgCtx.isPreIssueIDTokenActionsExecuted() ||
                 tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted())) {
@@ -1512,20 +1628,14 @@ public class AccessTokenIssuer {
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                 optionalAuthorizationGrantCacheEntry.orElseGet(AuthorizationGrantCacheEntry::new);
         authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-
+        if (GrantType.PASSWORD.toString().equals(grantType)) {
+            authorizationGrantCacheEntry.setUserAttributes(tokReqMsgCtx.getAuthorizedUser().getUserAttributes());
+        }
         if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
             authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
                     tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
             authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
             authorizationGrantCacheEntry.setCustomClaims(tokReqMsgCtx.getAdditionalAccessTokenClaims());
-
-            if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
-            } else {
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
-            }
             log.debug("Customized audience list and access token attributes from pre issue access token actions " +
                     "are persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
         }
@@ -1539,6 +1649,14 @@ public class AccessTokenIssuer {
                 log.debug("Customized audience list and ID token attributes from pre issue ID token actions are" +
                         "persisted in the AuthorizationGrantCache against the token id: " + tokenRespDTO.getTokenId());
             }
+        }
+
+        if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis()));
+        } else {
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
         }
         AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
@@ -1617,22 +1735,14 @@ public class AccessTokenIssuer {
             IdentityOAuth2Exception {
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+        String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
-        /*
-         If the applicationResidentOrgId is not null, resolve the tenant domain from the organization id to get the
-         application information by passing the consumer key and the tenant domain.
-        */
-        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(applicationResidentOrgId);
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
-                        + applicationResidentOrgId, e);
-            }
+        OAuthAppDO authAppDO;
+        if (StringUtils.isNotEmpty(accessingOrgId)) {
+            authAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(consumerKey, accessingOrgId);
+        } else {
+            authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         }
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

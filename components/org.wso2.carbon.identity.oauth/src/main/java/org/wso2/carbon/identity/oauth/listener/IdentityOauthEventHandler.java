@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
@@ -229,8 +230,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     EventProperty.TENANT_DOMAIN);
             if (!removedScopes.isEmpty()) {
                 try {
-                    OAuth2ServiceComponentHolder.getInstance()
-                            .getRevocationProcessor().revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                    for (OAuth2RevocationProcessor revocationProcessor :
+                            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                        revocationProcessor.revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                    }
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking access token " +
                             "for application resource id: " + appId;
@@ -255,8 +258,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 List<String> removedScopes = authorizedAPI.getScopes().stream()
                         .map(Scope::getName).collect(Collectors.toList());
                 if (!removedScopes.isEmpty()) {
-                    OAuth2ServiceComponentHolder.getInstance()
-                            .getRevocationProcessor().revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                    for (OAuth2RevocationProcessor revocationProcessor :
+                            OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                        revocationProcessor.revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                    }
                 }
             } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
                 String errorMsg = "Error occurred while revoking access token " +
@@ -391,9 +396,11 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             }
-            OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+
+            for (OAuth2RevocationProcessor revocationProcessor :
+                    OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                revocationProcessor.revokeTokens(userName, userStoreManager);
+            }
             // Handling the token revocation of invited users from parent organization.
             revokeTokensOfAssociatedUsers(userName, userStoreManager);
         }
@@ -422,9 +429,11 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             }
-            OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+
+            for (OAuth2RevocationProcessor revocationProcessor :
+                    OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                revocationProcessor.revokeTokens(userName, userStoreManager);
+            }
             // Handling the token revocation of invited users from parent organization.
             revokeTokensOfAssociatedUsers(userName, userStoreManager);
         }
@@ -463,9 +472,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                                 IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
                 String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
                         .getUserNameFromUserID(userAssociation.getUserId());
-                OAuth2ServiceComponentHolder.getInstance()
-                        .getRevocationProcessor()
-                        .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+                for (OAuth2RevocationProcessor revocationProcessor :
+                        OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                    revocationProcessor.revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+                }
             }
         } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
             throw new IdentityEventException("Error occurred while revoking access tokens of associated users.", e);
@@ -510,9 +520,10 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                         }
                         UserStoreManager userStoreManagerOfUser = getUserStoreManagerOfUser(
                                 userStoreManager, userName);
-                        OAuth2ServiceComponentHolder.getInstance()
-                                .getRevocationProcessor()
-                                .revokeTokens(userName, userStoreManagerOfUser, roleId);
+                        for (OAuth2RevocationProcessor revocationProcessor :
+                                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+                            revocationProcessor.revokeTokens(userName, userStoreManagerOfUser, roleId);
+                        }
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManagerOfUser);
                     } catch (UserSessionException e) {
                         String errorMsg = "Error occurred while revoking access token for user Id: " + userId;

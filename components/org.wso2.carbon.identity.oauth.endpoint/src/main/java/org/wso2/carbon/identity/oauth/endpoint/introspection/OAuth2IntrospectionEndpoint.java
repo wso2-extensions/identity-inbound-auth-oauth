@@ -121,6 +121,7 @@ public class OAuth2IntrospectionEndpoint {
         oAuth2Token.setIdentifier(token);
         introspectionRequest.setAccessToken(oAuth2Token);
         introspectionRequest.setRequiredClaimURIs(claimsUris);
+        introspectionRequest.setIntrospectionRequest(true);
 
         OAuth2TokenValidationService tokenService = (OAuth2TokenValidationService) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OAuth2TokenValidationService.class);

@@ -21,7 +21,15 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.client.utils.URIBuilder;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -35,6 +43,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 
+import java.net.URISyntaxException;
+
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_SUCCESS_ENDPOINT_PATH;
+
 /**
  * Handles authorize requests with CibaAuthCode as response type.
  */
@@ -47,27 +59,64 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
 
         OAuth2AuthorizeRespDTO respDTO = new OAuth2AuthorizeRespDTO();
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
+        String authRequestId = authorizationReqDTO.getNonce();
+        boolean isAuthRequestProcessedSuccessfully = false;
+        String authCodeKey = null;
         try {
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
+            authCodeKey = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authRequestId);
 
-            // Assigning the authentication status that to be persisted.
-            Enum authenticationStatus = AuthReqStatus.AUTHENTICATED;
-
-            String authCodeKey =
-                    CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authorizationReqDTO.getNonce());
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
+            log.info("Validating the authenticated user for auth_req_id: " + authRequestId + " with user: " +
+                    cibaAuthenticatedUser.getUserId());
+            if (!oAuthAppDO.isCibaSkipUserValidation()) {
+                // Get the resolved user and check if the resolved user is the same as the authenticated user.
+                String authenticatedUserId = cibaAuthenticatedUser.getUserId();
+                boolean isValidUser = validateResolvedUser(authCodeKey, authenticatedUserId);
+                if (!isValidUser) {
+                    log.warn("CIBA user validation failed for auth_req_id: " + authRequestId
+                            + ". The authenticated user does not match the user specified in the login_hint.");
+                    try {
+                        String retryPageUrl = ServiceURLBuilder.create()
+                                .addPath(FrameworkConstants.DefaultUrlContexts.AUTHENTICATION_ENDPOINT_RETRY)
+                                .build().getAbsolutePublicURL();
+                        URIBuilder uriBuilder = new URIBuilder(retryPageUrl);
+                        uriBuilder.addParameter(CibaConstants.STATUS_PARAM,
+                                CibaConstants.CIBA_AUTH_FAILED_ERROR_CODE);
+                        uriBuilder.addParameter(CibaConstants.STATUS_MSG_PARAM,
+                                CibaConstants.CIBA_USER_MISMATCH_ERROR_DESCRIPTION);
+                        String tenantDomain = authorizationReqDTO.getTenantDomain();
+                        if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()
+                                && isNotSuperTenant(tenantDomain)) {
+                            uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+                        }
+                        respDTO.setCallbackURI(uriBuilder.build().toString());
+                    } catch (URISyntaxException | URLBuilderException e) {
+                        throw new IdentityOAuth2Exception("Error building CIBA retry page URL.", e);
+                    }
+                    return respDTO;
+                }
+            }
 
             // Update successful authentication.
             CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                     .persistAuthenticationSuccess(authCodeKey, cibaAuthenticatedUser);
-
-            // Building custom CallBack URL.
-            String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
-            respDTO.setCallbackURI(callbackURL);
+            String redirectionURI = getCibaFlowCompletionPageURI(oAuthAppDO.getApplicationName(),
+                    oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+            respDTO.setCallbackURI(redirectionURI);
+            isAuthRequestProcessedSuccessfully = true;
             return respDTO;
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting authenticated user and authentication " +
                     "status for the request made by client: " + authorizationReqDTO.getConsumerKey(), e);
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Unable to find the authenticated user id for auth_code_key: " +
+                    authRequestId, e);
+        } finally {
+            if  (!isAuthRequestProcessedSuccessfully && StringUtils.isNotBlank(authCodeKey)) {
+                CibaDAOFactory.getInstance().getCibaAuthMgtDAO().updateStatus(authCodeKey, AuthReqStatus.FAILED);
+            }
         }
     }
 
@@ -88,7 +137,7 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
         } catch (CibaCoreException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred in updating the authentication_status for the auth_req_id : " + authReqID +
-                        "with responseType as (ciba). ");
+                        "with responseType as (ciba).");
             }
         }
         return null;
@@ -148,5 +197,43 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             return false;
         }
         return true;
+    }
+
+    /**
+     * This method is used to generate the ciba flow authentication completed page URI.
+     *
+     * @param appName       Service provider name.
+     * @param tenantDomain  Tenant domain.
+     * @return Redirection URI
+     */
+    private static String getCibaFlowCompletionPageURI(String appName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            String pageURI = ServiceURLBuilder.create().addPath(CIBA_SUCCESS_ENDPOINT_PATH).build()
+                    .getAbsolutePublicURL();
+            URIBuilder uriBuilder = new URIBuilder(pageURI);
+            uriBuilder.addParameter(org.wso2.carbon.identity.oauth2.device.constants.Constants.APP_NAME, appName);
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
+                // Append tenant domain to path when the tenant-qualified url mode is disabled.
+                uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+            }
+            return uriBuilder.build().toString();
+        } catch (URISyntaxException | URLBuilderException e) {
+            throw new IdentityOAuth2Exception("Error occurred when getting the ciba flow authentication completed" +
+                    " page URI.", e);
+        }
+    }
+
+    private static boolean isNotSuperTenant(String tenantDomain) {
+
+        return (StringUtils.isNotBlank(tenantDomain) &&
+                !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain));
+    }
+
+    private boolean validateResolvedUser(String authCodeKey, String authenticatedUserId) throws CibaCoreException {
+
+        String resolvedUserId = CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getResolvedUserId(authCodeKey);
+        return StringUtils.equals(resolvedUserId, authenticatedUserId);
     }
 }

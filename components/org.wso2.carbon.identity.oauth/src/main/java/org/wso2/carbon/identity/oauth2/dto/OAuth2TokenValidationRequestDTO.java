@@ -27,6 +27,8 @@ public class OAuth2TokenValidationRequestDTO {
 
     private TokenValidationContextParam[] context;
 
+    private boolean isIntrospectionRequest;
+
     /**
      * User's claims to be encoded in the AuthorizationContextToken returned in the OAuth2TokenValidationResponse
      */
@@ -54,6 +56,16 @@ public class OAuth2TokenValidationRequestDTO {
 
     public void setRequiredClaimURIs(String[] requiredClaimURIs) {
         this.requiredClaimURIs = requiredClaimURIs;
+    }
+
+    public boolean isIntrospectionRequest() {
+
+        return this.isIntrospectionRequest;
+    }
+
+    public void setIntrospectionRequest(boolean isIntrospectionRequest) {
+
+        this.isIntrospectionRequest = isIntrospectionRequest;
     }
 
     /**

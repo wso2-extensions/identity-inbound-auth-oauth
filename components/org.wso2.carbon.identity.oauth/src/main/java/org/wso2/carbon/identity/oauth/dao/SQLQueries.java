@@ -52,6 +52,35 @@ public class SQLQueries {
                 "USER_ACCESS_TOKEN_EXPIRE_TIME, APP_ACCESS_TOKEN_EXPIRE_TIME, REFRESH_TOKEN_EXPIRE_TIME, " +
                 "ID_TOKEN_EXPIRE_TIME) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
+        public static final String ADD_OAUTH_CONSUMER_SECRET = "INSERT INTO IDN_OAUTH_CONSUMER_SECRETS " +
+                "(SECRET_ID, CONSUMER_KEY_ID, SECRET_VALUE, CREATED_TIME, EXPIRY_TIME) " +
+                "VALUES (?,?,?,?,?)";
+
+        public static final String DELETE_OAUTH_CONSUMER_SECRET =
+                "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS WHERE SECRET_ID = ? AND CONSUMER_KEY_ID = ?";
+
+        public static final String DELETE_ALL_OAUTH_CONSUMER_SECRETS =
+                "DELETE FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID = ?";
+
+        /* The ordering is contractual: the first row is the latest secret of the application. */
+        public static final String GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT = "SELECT SECRET_ID, SECRET_VALUE, " +
+                "CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=? " +
+                "ORDER BY COALESCE(CREATED_TIME, 0) DESC, SECRET_ID DESC";
+
+        public static final String GET_LATEST_OAUTH_CONSUMER_SECRET_ID_OF_CLIENT =
+                "SELECT SECRET_ID, CREATED_TIME FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=? " +
+                "ORDER BY COALESCE(CREATED_TIME, 0) DESC, SECRET_ID DESC";
+
+        public static final String GET_OAUTH_CONSUMER_SECRETS_COUNT_OF_CLIENT =
+                "SELECT COUNT(*) FROM IDN_OAUTH_CONSUMER_SECRETS WHERE CONSUMER_KEY_ID=?";
+
+        public static final String GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_ID = "SELECT SECRET_ID, " +
+                "SECRET_VALUE, CREATED_TIME, EXPIRY_TIME FROM IDN_OAUTH_CONSUMER_SECRETS " +
+                "WHERE SECRET_ID=? AND CONSUMER_KEY_ID=?";
+
+        public static final String GET_CONSUMER_SECRET_BY_APP_ID =
+                "SELECT CONSUMER_SECRET FROM IDN_OAUTH_CONSUMER_APPS WHERE ID=?";
+
         public static final String UPDATE_OAUTH_CONSUMER = "UPDATE IDN_OAUTH_CONSUMER_APPS " +
                 "SET CONSUMER_SECRET=? WHERE CONSUMER_KEY=? AND USERNAME=? AND TENANT_ID=? AND USER_DOMAIN=?";
 
@@ -187,6 +216,9 @@ public class SQLQueries {
 
         public static final String UPDATE_OAUTH_SECRET_KEY = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? " +
                 "WHERE CONSUMER_KEY=? AND TENANT_ID=?";
+
+        public static final String UPDATE_CONSUMER_SECRET_IN_APPS_STORE =
+                "UPDATE IDN_OAUTH_CONSUMER_APPS SET CONSUMER_SECRET=? WHERE ID=?";
 
         public static final String UPDATE_OAUTH_SECRET_KEY_AND_STATE = "UPDATE IDN_OAUTH_CONSUMER_APPS SET " +
                 "CONSUMER_SECRET=?, APP_STATE=? WHERE CONSUMER_KEY=? AND TENANT_ID=?";

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.nustaq.serialization.annotations.Version;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
@@ -32,6 +33,14 @@ import java.util.Map;
 
 /**
  * Contains authenticated user attributes and nonce value.
+ *
+ * <p><b>Serialization Compatibility Rules (FST):</b></p>
+ * <ul>
+ *   <li>New fields MUST be annotated with {@code @Version(n)} where n is incremented for each release.</li>
+ *   <li>New fields MUST be declared AFTER all existing fields.</li>
+ *   <li>NEVER remove, reorder, or change the type of existing fields.</li>
+ *   <li>Code must handle null/default values for versioned fields when deserializing old data.</li>
+ * </ul>
  */
 public class AuthorizationGrantCacheEntry extends CacheEntry {
 
@@ -98,6 +107,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isPreIssueIDTokenActionsExecuted;
 
     private IDTokenDTO preIssueIDTokenActionDTO;
+
+    @Version(1)
+    private String sessionDataKeyConsent;
+
+    /*
+     * This property will contain the accessing organization ID of the logged in user when shared users login to
+     * sub-organizations.
+     */
+    @Version(2)
+    private String accessingOrganization;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -439,5 +458,45 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setPreIssueIDTokenActionsExecuted(boolean preIssueIDTokenActionsExecuted) {
 
         isPreIssueIDTokenActionsExecuted = preIssueIDTokenActionsExecuted;
+    }
+
+    /**
+     * Set accessing organization.
+     *
+     * @param accessingOrganization accessing organization.
+     */
+    public void setAccessingOrganization(String accessingOrganization) {
+
+        this.accessingOrganization = accessingOrganization;
+    }
+
+    /**
+     * Get accessing organization.
+     *
+     * @return accessing organization.
+     */
+    public String getAccessingOrganization() {
+
+        return accessingOrganization;
+    }
+
+    /**
+     * Get sessionDataKeyConsent value.
+     *
+     * @return sessionDataKeyConsent value.
+     */
+    public String getSessionDataKeyConsent() {
+
+        return sessionDataKeyConsent;
+    }
+
+    /**
+     * Set sessionDataKeyConsent value.
+     *
+     * @param sessionDataKeyConsent sessionDataKeyConsent.
+     */
+    public void setSessionDataKeyConsent(String sessionDataKeyConsent) {
+
+        this.sessionDataKeyConsent = sessionDataKeyConsent;
     }
 }

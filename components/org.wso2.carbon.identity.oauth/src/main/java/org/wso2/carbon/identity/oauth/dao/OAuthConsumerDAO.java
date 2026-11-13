@@ -48,13 +48,13 @@ public class OAuthConsumerDAO {
     public static final Log LOG = LogFactory.getLog(OAuthConsumerDAO.class);
     public static final String OUT_OF_BAND = "oob";
     private TokenPersistenceProcessor persistenceProcessor;
-    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isClientSecretHashingDisabled();
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     public OAuthConsumerDAO() {
 
         try {
-            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextProcessor", e);
             persistenceProcessor = new PlainTextPersistenceProcessor();

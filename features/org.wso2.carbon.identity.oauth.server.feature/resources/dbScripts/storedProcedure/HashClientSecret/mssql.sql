@@ -1,0 +1,91 @@
+/* =======================================================================
+   Hash plain-text CONSUMER_SECRET in IDN_OAUTH_CONSUMER_APPS (MSSQL)
+   Target format (matches client-secret-only hash processor):
+     {"hash":"<sha256-hex-lowercase>","algorithm":"SHA-256"}
+
+   USAGE:
+     1. Run this file once to (re)create the procedure.
+     2. Execute it with your schema:
+           EXEC dbo.HashConsumerSecrets @Schema = N'dbo', @BatchSize = 500;
+     3. Optionally drop it after the migration:
+           DROP PROCEDURE dbo.HashConsumerSecrets;
+======================================================================= */
+
+CREATE   PROCEDURE dbo.HashConsumerSecrets
+    @Schema        SYSNAME = N'dbo',
+    @BatchSize     INT     = 500
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    IF @BatchSize IS NULL OR @BatchSize <= 0 OR @BatchSize > 10000
+        THROW 51000, '@BatchSize must be between 1 and 10000.', 1;
+
+    DECLARE @AppsTbl NVARCHAR(300) = QUOTENAME(@Schema) + N'.' + QUOTENAME(N'IDN_OAUTH_CONSUMER_APPS');
+    DECLARE @Sql     NVARCHAR(MAX);
+
+    IF OBJECT_ID(@AppsTbl, N'U') IS NULL
+        THROW 51001, 'IDN_OAUTH_CONSUMER_APPS does not exist in the supplied schema.', 1;
+
+    ---------------------------------------------------------------------
+    -- 1. Batched UPDATE. Per-batch transaction.
+    ---------------------------------------------------------------------
+    DECLARE @Rows INT = 1;
+    DECLARE @TotalHashed BIGINT = 0;
+
+    WHILE @Rows > 0
+    BEGIN
+        BEGIN TRY
+            BEGIN TRAN;
+
+            SET @Sql = N'
+                ;WITH candidates AS (
+                    SELECT TOP (@bs) ID, CONSUMER_SECRET
+                    FROM   ' + @AppsTbl + N' WITH (ROWLOCK, READPAST)
+                    WHERE  CONSUMER_SECRET IS NOT NULL
+                      AND  CONSUMER_SECRET NOT LIKE ''{"hash":%''
+                      AND  CONSUMER_SECRET NOT LIKE ''{"algorithm":%''
+                    ORDER BY ID
+                )
+                UPDATE candidates
+                SET    CONSUMER_SECRET =
+                         ''{"hash":"''
+                       + LOWER(CONVERT(VARCHAR(128),
+                               HASHBYTES(''SHA2_256'',
+                                         CONVERT(VARBINARY(MAX), CONSUMER_SECRET)), 2))
+                       + ''","algorithm":"SHA-256"}'';
+                SET @r = @@ROWCOUNT;';
+            EXEC sp_executesql @Sql,
+                 N'@bs INT, @r INT OUTPUT',
+                 @bs = @BatchSize, @r = @Rows OUTPUT;
+
+            SET @TotalHashed += @Rows;
+            COMMIT TRAN;
+        END TRY
+        BEGIN CATCH
+            IF XACT_STATE() <> 0 ROLLBACK TRAN;
+            THROW;
+        END CATCH;
+    END;
+
+    PRINT CONCAT('Rows hashed: ', @TotalHashed);
+
+    ---------------------------------------------------------------------
+    -- 2. Verification: every non-null secret must be JSON-wrapped with
+    --    a 64-char lowercase hex digest inside.
+    ---------------------------------------------------------------------
+    DECLARE @BadRows INT;
+    SET @Sql = N'
+        SELECT @bad = COUNT(*)
+        FROM   ' + @AppsTbl + N'
+        WHERE  CONSUMER_SECRET IS NOT NULL
+          AND  CONSUMER_SECRET NOT LIKE ''{"hash":"________________________________________________________________","algorithm":"SHA-256"}''
+          AND  CONSUMER_SECRET NOT LIKE ''{"algorithm":"SHA-256","hash":"________________________________________________________________"}'';';
+    EXEC sp_executesql @Sql, N'@bad INT OUTPUT', @bad = @BadRows OUTPUT;
+
+    IF @BadRows > 0
+        THROW 51002, 'Verification failed: some CONSUMER_SECRET values are not in the expected hashed JSON format.', 1;
+
+    PRINT 'Verification passed.';
+END;

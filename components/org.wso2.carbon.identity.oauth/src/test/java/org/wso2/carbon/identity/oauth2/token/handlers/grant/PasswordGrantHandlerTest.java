@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthent
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -43,6 +44,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -56,7 +58,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -116,13 +117,14 @@ public class PasswordGrantHandlerTest {
                 PasswordGrantHandler.class.getDeclaredField("log");
         logField.setAccessible(true);
 
-        // Remove the 'final' modifier using reflection
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+        // Use Unsafe to modify static final fields in Java 12+
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
 
-        // Set the static field to the mock object
-        logField.set(null, mockLog);
+        Object fieldBase = unsafe.staticFieldBase(logField);
+        long fieldOffset = unsafe.staticFieldOffset(logField);
+        unsafe.putObject(fieldBase, fieldOffset, mockLog);
 
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
@@ -169,6 +171,7 @@ public class PasswordGrantHandlerTest {
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
             when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("wso2.com");
             when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("randomPassword");
+            setRequestParameter();
 
             when(mockLog.isDebugEnabled()).thenReturn(true);
 
@@ -248,9 +251,10 @@ public class PasswordGrantHandlerTest {
                                 "17003:AdminInitiated",
                                 "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
                                         "carbon.super. Cannot login until the account is unlocked.")),
-                        "Authentication failed for username",
+                        "Authentication failed for " + LoggerUtils.getMaskedContent("username"),
                         false},
-                {"wso2.com", false, true, null, "Authentication failed for user", false}
+                {"wso2.com", false, true, null,
+                        "Authentication failed for " + LoggerUtils.getMaskedContent("user"), false}
         };
     }
 
@@ -275,6 +279,7 @@ public class PasswordGrantHandlerTest {
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
             when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("carbon.super");
             when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("password");
+            setRequestParameter();
 
             identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString()))
                     .thenReturn(PRIMARY_DEFAULT_DOMAIN_NAME);
@@ -363,4 +368,13 @@ public class PasswordGrantHandlerTest {
         }
     }
 
+    private void setRequestParameter() {
+
+        RequestParameter[] requestParameters = new RequestParameter[3];
+        requestParameters[0] = new RequestParameter("username", "username");
+        requestParameters[1] = new RequestParameter("password", "password");
+        requestParameters[2] = new RequestParameter("grant_type", "password");
+
+        when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(requestParameters);
+    }
 }

@@ -18,10 +18,21 @@
 
 package org.wso2.carbon.identity.oauth2;
 
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * This class contains the constants required by the OAuth2 components.
  */
 public class OAuth2Constants {
+
+    // The Console and My Account applications.
+    public static final List<String> PORTAL_APP_IDS = Collections.unmodifiableList(Arrays.asList(
+            ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
+            ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID));
 
     /**
      * Constants for access token binders.
@@ -32,6 +43,7 @@ public class OAuth2Constants {
         public static final String COOKIE_BASED_TOKEN_BINDER = "cookie";
         public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
         public static final String CLIENT_REQUEST = "client-request";
+        public static final String DPOP_TOKEN_BINDING_TYPE = "DPoP";
 
     }
 
@@ -48,6 +60,8 @@ public class OAuth2Constants {
     public static final String ENTITY_ID = "entity_id";
     public static final String IS_CONSENTED = "is_consented";
     public static final String IS_FEDERATED = "is_federated";
+    public static final String ACCESSING_ORGANIZATION = "accessing_organization";
+    public static final String PREV_ACCESS_TOKEN = "previousAccessToken";
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
     public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
@@ -60,9 +74,17 @@ public class OAuth2Constants {
     public static final String AGENT_IDENTITY_ENABLE = "AgentIdentity.Enabled";
     public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
     public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
+    public static final String AGENT_NAME_CLAIM_URI = "http://wso2.org/claims/agent/Name";
+    public static final String ACCOUNT_LOCKED_CLAIM_URI = "http://wso2.org/claims/identity/accountLocked";
     public static final String STORE_OPERATION = "STORE";
+    public static final String SKIP_REFRESH_TOKEN_PERSISTENT = "npr:skipRefreshTokenPersistent";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
+    public static final String REFRESH_TOKEN_SCOPE_CLAIM_KEY = "rt_scope";
+    public static final String TOKEN_ID = "token_id";
+    public static final String JWK_THUMBPRINT = "jkt";
+    public static final String TOKEN_BINDING_REF = "binding_ref";
+    public static final String TOKEN_BINDING_TYPE = "binding_type";
 
     /**
      * Constants for global role based scope issuer.

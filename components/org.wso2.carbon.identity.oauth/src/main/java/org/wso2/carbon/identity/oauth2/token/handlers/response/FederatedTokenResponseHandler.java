@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.HashMap;
@@ -35,12 +36,14 @@ import java.util.Map;
 
 /**
  * This class is used to get the federated tokens for the token response.
- * This expects the authorization code is available in the token request message context
- * so that the federated tokens can be retrieved from the auth grant cache.
+ * This supports both authorization code grant (where federated tokens are cached by authorization code)
+ * and CIBA grant (where federated tokens are cached by auth_req_id).
  */
 public class FederatedTokenResponseHandler implements AccessTokenResponseHandler {
 
     private static final Log LOG = LogFactory.getLog(FederatedTokenResponseHandler.class);
+    private static final String CIBA_GRANT_TYPE = "urn:openid:params:grant-type:ciba";
+    private static final String AUTH_REQ_ID = "auth_req_id";
 
     /**
      * This method returns the federated tokens in the auth grant cache.
@@ -51,13 +54,7 @@ public class FederatedTokenResponseHandler implements AccessTokenResponseHandler
     @Override
     public Map<String, Object> getAdditionalTokenResponseAttributes(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        if (StringUtils.isBlank(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode())) {
-            return null;
-        }
-        AuthorizationGrantCacheEntry cacheEntry =
-                AuthorizationGrantCache.getInstance().getValueFromCacheByCode(new AuthorizationGrantCacheKey(
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode()));
-
+        AuthorizationGrantCacheEntry cacheEntry = getCacheEntry(tokReqMsgCtx);
         if (cacheEntry == null) {
             return null;
         }
@@ -66,7 +63,7 @@ public class FederatedTokenResponseHandler implements AccessTokenResponseHandler
         if (CollectionUtils.isEmpty(federatedTokens)) {
             return null;
         }
-        // Removing the federated token from the session cache entry since it is no longer required.
+        // Removing the federated token from the cache entry since it is no longer required.
         cacheEntry.setFederatedTokens(null);
         // Add federated tokens to the token response if available.
         Map<String, Object> additionalAttributes = new HashMap<>();
@@ -78,5 +75,53 @@ public class FederatedTokenResponseHandler implements AccessTokenResponseHandler
         }
 
         return additionalAttributes;
+    }
+
+    /**
+     * Retrieves the AuthorizationGrantCacheEntry based on the grant type.
+     * For authorization code grant, the cache entry is looked up by authorization code.
+     * For CIBA grant, the cache entry is looked up by auth_req_id.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return AuthorizationGrantCacheEntry or null if not found.
+     */
+    private AuthorizationGrantCacheEntry getCacheEntry(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String authorizationCode = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode();
+        if (StringUtils.isNotBlank(authorizationCode)) {
+            return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(
+                    new AuthorizationGrantCacheKey(authorizationCode));
+        }
+
+        // For CIBA grant, look up the cache entry by auth_req_id.
+        if (CIBA_GRANT_TYPE.equals(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+            String authReqId = getAuthReqId(tokReqMsgCtx);
+            if (StringUtils.isNotBlank(authReqId)) {
+                return AuthorizationGrantCache.getInstance().getValueFromCache(
+                        new AuthorizationGrantCacheKey(authReqId));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extracts the auth_req_id from the CIBA token request parameters.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return The auth_req_id value, or null if not found.
+     */
+    private String getAuthReqId(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        RequestParameter[] parameters = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRequestParameters();
+        if (parameters == null) {
+            return null;
+        }
+        for (RequestParameter parameter : parameters) {
+            if (AUTH_REQ_ID.equals(parameter.getKey()) && parameter.getValue() != null
+                    && parameter.getValue().length > 0) {
+                return parameter.getValue()[0];
+            }
+        }
+        return null;
     }
 }

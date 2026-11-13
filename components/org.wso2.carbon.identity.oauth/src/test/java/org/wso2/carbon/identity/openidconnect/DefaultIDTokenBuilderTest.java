@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,13 +11,16 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEDecrypter;
+import com.nimbusds.jose.crypto.ECDHDecrypter;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -34,6 +37,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.internal.impl.AuthenticationMethodNameTranslatorImpl;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -50,6 +54,7 @@ import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -74,12 +79,14 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
@@ -93,6 +100,8 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -112,7 +121,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
@@ -128,7 +139,9 @@ public class DefaultIDTokenBuilderTest {
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
     private static final String AUTHORIZATION_CODE_VALUE = "55fe926f-3b43-3681-aecc-dc3ed7938325";
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
+    private static final String EC_CLIENT_ID  = TestConstants.EC_CLIENT_ID;
     private static final String ACCESS_TOKEN = TestConstants.ACCESS_TOKEN;
+    private static final String ISK_CLAIM_VALUE = TestConstants.ISK_CLAIM_VALUE;
     private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
     private DefaultIDTokenBuilder defaultIDTokenBuilder;
     private OAuthTokenReqMessageContext messageContext;
@@ -245,6 +258,12 @@ public class DefaultIDTokenBuilderTest {
                 "dZa4puEYDVEJ4pu6uJuh/oXgvwcIcL6xURDav1gqTDuMrLnJrKui+FsabnWeC+XB\n" +
                 "1mRWtpZPay9xB5kVWAEVdMtGePP0/wz2zxQU9uCmjwvIsIfx307CpBI54sjomXPU\n" +
                 "DldsCG6l8QRJ3NvijWa/0olA/7BpaOtbNS6S5dBSfPScpUvVQiBYFFvMXbmd\n");
+
+        // SP for EC algorithm test. Load EC cert from EC keystore
+        ServiceProvider ecServiceProvider = new ServiceProvider();
+        ecServiceProvider.setSpProperties(serviceProviders);
+        ecServiceProvider.setCertificateContent(TestUtils.getEcCertificateContentBase64());
+
         ApplicationManagementService applicationMgtService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationMgtService);
         Map<String, ServiceProvider> fileBasedSPs = CommonTestUtils.getFileBasedSPs();
@@ -254,12 +273,18 @@ public class DefaultIDTokenBuilderTest {
                      .getApplicationExcludingFileBasedSPs(TEST_APPLICATION_NAME, SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(fileBasedSPs.get(TEST_APPLICATION_NAME));
         when(applicationMgtService
-                .getServiceProviderNameByClientId(anyString(), anyString(),
-                        anyString()))
+                .getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(TEST_APPLICATION_NAME);
         when(applicationMgtService
                 .getServiceProviderByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(serviceProvider);
+                .thenAnswer(invocation -> {
+                    String clientId = (String) invocation.getArguments()[0];
+                    if (EC_CLIENT_ID.equals(clientId)) {
+                        return ecServiceProvider;
+                    } else {
+                        return serviceProvider;
+                    }
+                });
         AuthenticationMethodNameTranslator authenticationMethodNameTranslator =
                 new AuthenticationMethodNameTranslatorImpl();
         OAuth2ServiceComponentHolder.setAuthenticationMethodNameTranslator(authenticationMethodNameTranslator);
@@ -330,6 +355,82 @@ public class DefaultIDTokenBuilderTest {
         Assert.assertTrue(expirationTime > (new Date()).getTime());
         Long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
+        Assert.assertNull(IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.IS_SYSTEM_APPLICATION),
+                "Thread local should be cleaned up after ID token building.");
+    }
+
+    @Test
+    public void testCheckExecutePreIssueIdTokensActionsSkippedWhenIdTokenSuppressed() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(CLIENT_ID);
+        tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.AUTHORIZATION_CODE);
+        tokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+        tokenReqMessageContext.setSuppressedTokenResponseParams(Collections.singleton(OAuthConstants.ID_TOKEN));
+
+        Method method = DefaultIDTokenBuilder.class.getDeclaredMethod(
+                "checkExecutePreIssueIdTokensActions", OAuthTokenReqMessageContext.class);
+        method.setAccessible(true);
+        boolean result = (boolean) method.invoke(defaultIDTokenBuilder, tokenReqMessageContext);
+
+        Assert.assertFalse(result, "Pre issue ID token action execution should be skipped when the ID token is " +
+                "suppressed by the pre issue access token action.");
+    }
+
+    @Test
+    public void testBuildIDTokenFiltersSharedUserAttribute() throws Exception {
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+        String clientId = "dabfba9390aa423f8b04332794d83614";
+        OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+        tokenRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
+        AuthenticatedUser user = getDefaultAuthenticatedUserFederatedUser();
+        OAuthTokenReqMessageContext messageContext = getTokenReqMessageContextForUser(user, clientId);
+
+        // Populate extended attributes with both IS_SHARED_USER (must be filtered) and a regular custom claim.
+        Map<String, String> extendedParams = new HashMap<>();
+        extendedParams.put(OAuthConstants.IS_SHARED_USER, "true");
+        extendedParams.put("custom_claim_key", "custom_claim_value");
+        AccessTokenExtendedAttributes extendedAttributes = new AccessTokenExtendedAttributes(extendedParams);
+        messageContext.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(extendedAttributes);
+
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(clientId, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+
+        Assert.assertNull(claims.getClaim(OAuthConstants.IS_SHARED_USER),
+                "IS_SHARED_USER must not appear in the issued ID token.");
+        Assert.assertEquals(claims.getClaim("custom_claim_key"), "custom_claim_value",
+                "Other extended attribute claims should still be propagated to the ID token.");
+    }
+
+    @Test
+    public void testBuildIDTokenForDeviceCodeGrantWithSessionIdentifier() throws Exception {
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+        OAuth2AccessTokenRespDTO deviceTokenRespDTO = new OAuth2AccessTokenRespDTO();
+        deviceTokenRespDTO.setAccessToken(ACCESS_TOKEN);
+
+        AuthenticatedUser deviceUser = getDefaultAuthenticatedUserFederatedUser();
+        OAuthTokenReqMessageContext deviceMessageContext = getTokenReqMessageContextForUser(deviceUser, CLIENT_ID);
+        deviceMessageContext.getOauth2AccessTokenReqDTO().setGrantType(DEVICE_FLOW_GRANT_TYPE);
+        deviceMessageContext.addProperty(SESSION_IDENTIFIER, ISK_CLAIM_VALUE);
+
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(deviceMessageContext, deviceTokenRespDTO);
+        JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
+        Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+        Assert.assertEquals(claims.getClaim("isk"), ISK_CLAIM_VALUE,
+                "isk claim should be present in ID token for device code grant when SESSION_IDENTIFIER is set.");
     }
 
     @Test
@@ -362,7 +463,7 @@ public class DefaultIDTokenBuilderTest {
     public Object[][] testBuildEncryptedIDTokenForSupportedAlgorithm() {
 
         return new Object[][] {
-                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}
+                {"RSA-OAEP-256"}, {"RSA-OAEP"}, {"RSA1_5"}, {"RSA-OAEP-384"}, {"RSA-OAEP-512"}
         };
     }
 
@@ -374,10 +475,48 @@ public class DefaultIDTokenBuilderTest {
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
-        EncryptedJWT encryptedJWT = decryptToken(idToken);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(), "user1");
+        Assert.assertEquals(claims.getClaim("acr"),  "acr");
+        Assert.assertEquals(claims.getClaim("isk"), "idp");
+        Assert.assertEquals(claims.getClaim("nonce"), "nonce");
+        Assert.assertNotNull(claims.getClaim("nbf"));
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        Assert.assertTrue(expirationTime > (new Date()).getTime());
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        Assert.assertTrue(issueTime <= (new Date()).getTime());
+    }
+
+    @DataProvider(name = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public Object[][] testBuildEncryptedIDTokenForSupportedECAlgorithm() {
+
+        return new Object[][] {
+                {"ECDH-ES+A128KW"}, {"ECDH-ES+A192KW"}, {"ECDH-ES+A256KW"}
+        };
+    }
+
+    @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public void testBuildEncryptedIDTokenForSupportedECAlgorithm(String algorithm) throws Exception {
+
+        mockRealmService();
+        // Message context for the EC client
+        OAuthTokenReqMessageContext ecMessageContext =
+                getTokenReqMessageContextForUser(getDefaultAuthenticatedLocalUser(), EC_CLIENT_ID);
+        ecMessageContext.addProperty(AUTHORIZATION_CODE, AUTHORIZATION_CODE_VALUE);
+        OAuth2AccessTokenRespDTO ecTokenRespDTO = new OAuth2AccessTokenRespDTO();
+        ecTokenRespDTO.setAccessToken(ACCESS_TOKEN);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, EC_CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(EC_CLIENT_ID, entry);
+
+        String idToken = defaultIDTokenBuilder.buildIDToken(ecMessageContext, ecTokenRespDTO);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
+        Assert.assertEquals(claims.getAudience().get(0), EC_CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("acr"),  "acr");
@@ -403,10 +542,36 @@ public class DefaultIDTokenBuilderTest {
 
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
-        EncryptedJWT encryptedJWT = decryptToken(idToken);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
         JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
         Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getAudience().get(0), CLIENT_ID);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getSubject(),  "user1");
+        Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
+        long expirationTime = ((Date) claims.getClaim("exp")).getTime();
+        Assert.assertTrue(expirationTime > (new Date()).getTime());
+        long issueTime = ((Date) claims.getClaim("iat")).getTime();
+        Assert.assertTrue(issueTime <= (new Date()).getTime());
+    }
+
+    @Test(dataProvider = "testBuildEncryptedIDTokenForSupportedECAlgorithm")
+    public void testBuildECEncryptedIDTokenForAuthorization(String algorithm) throws Exception {
+
+        OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = getOAuthAuthzReqMessageContextForUser
+                (getDefaultAuthenticatedLocalUser(), EC_CLIENT_ID);
+        OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
+        oAuth2AuthorizeRespDTO.setAccessToken(ACCESS_TOKEN);
+
+        OAuthAppDO entry = getOAuthAppDO(algorithm, EC_CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(EC_CLIENT_ID, entry);
+
+        mockRealmService();
+        String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
+        EncryptedJWT encryptedJWT = decryptToken(idToken, algorithm);
+        JWTClaimsSet claims = encryptedJWT.getPayload().toSignedJWT().getJWTClaimsSet();
+        Assert.assertNotNull(claims.getJWTID());
+        Assert.assertEquals(claims.getAudience().get(0), EC_CLIENT_ID);
         Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertEquals(claims.getSubject(),  "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
@@ -420,7 +585,7 @@ public class DefaultIDTokenBuilderTest {
     public Object[][] testBuildEncryptedIDTokenForUnSupportedAlgorithm() {
 
         return new Object[][] {
-                {"A128KW"}, {"A192KW"}, {"A256KW"}, {"ECDH-ES"}, {"A256GCMKW"}
+                {"A128KW"}, {"A192KW"}, {"A256KW"}, {"A256GCMKW"}
         };
     }
 
@@ -499,18 +664,44 @@ public class DefaultIDTokenBuilderTest {
         return entry;
     }
 
-    private EncryptedJWT decryptToken (String  token) throws Exception {
+    private EncryptedJWT decryptToken(String  token, String algorithm) throws Exception {
 
-        InputStream file = Files.newInputStream(Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"));
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-        keystore.load(file, "wso2carbon".toCharArray());
-        String alias = "wso2carbon";
+        PrivateKey privateKey;
+        try (InputStream file = Files.newInputStream(
+                Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"))) {
+            keystore.load(file, "wso2carbon".toCharArray());
+        }
+        if (JWEAlgorithm.ECDH_ES_A256KW.getName().equals(algorithm)
+                || JWEAlgorithm.ECDH_ES_A192KW.getName().equals(algorithm)
+                || JWEAlgorithm.ECDH_ES_A128KW.getName().equals(algorithm)) {
+            privateKey = (ECPrivateKey) keystore.getKey("wso2carbon_ec", "wso2carbon".toCharArray());
+        } else {
+            privateKey = (RSAPrivateKey) keystore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        }
         // Get the private key. Password for the key store is 'wso2carbon'.
-        RSAPrivateKey privateKey = (RSAPrivateKey) keystore.getKey(alias, "wso2carbon".toCharArray());
+        JWEDecrypter decrypter = validateDecryptorMode(algorithm, privateKey);
         EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
-        RSADecrypter decrypter = new RSADecrypter(privateKey);
         encryptedJWT.decrypt(decrypter);
         return encryptedJWT;
+    }
+
+    private JWEDecrypter validateDecryptorMode(String encryptionAlgorithm, PrivateKey privateKey)
+            throws Exception {
+
+        // Use built-in Nimbus Decryptor for built-in supported algorithms
+        if (JWEAlgorithm.RSA_OAEP.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA1_5.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA_OAEP_256.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA_OAEP_384.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.RSA_OAEP_512.getName().equals(encryptionAlgorithm)) {
+            return new RSADecrypter(privateKey);
+        } else if (JWEAlgorithm.ECDH_ES_A256KW.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A192KW.getName().equals(encryptionAlgorithm) ||
+                JWEAlgorithm.ECDH_ES_A128KW.getName().equals(encryptionAlgorithm)) {
+            return new ECDHDecrypter((ECPrivateKey) privateKey);
+        }
+        return new RSADecrypter(privateKey);
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {
@@ -575,6 +766,7 @@ public class DefaultIDTokenBuilderTest {
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(realmService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mock(ActionExecutorService.class));
         TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
     }
 

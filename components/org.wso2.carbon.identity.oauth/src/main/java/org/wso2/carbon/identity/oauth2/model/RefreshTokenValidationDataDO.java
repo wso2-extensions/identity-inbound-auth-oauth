@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.model;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
 import java.util.Properties;
@@ -47,6 +48,8 @@ public class RefreshTokenValidationDataDO {
 
     private String tokenBindingReference;
 
+    private TokenBinding tokenBinding;
+
     private Timestamp accessTokenIssuedTime;
 
     private long accessTokenValidityInMillis;
@@ -54,6 +57,8 @@ public class RefreshTokenValidationDataDO {
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     private boolean isConsented;
+    private boolean isWithNotPersistedAT;
+    private String authorizedOrganizationId;
 
     private Properties properties = new Properties();
 
@@ -131,6 +136,16 @@ public class RefreshTokenValidationDataDO {
         this.tokenBindingReference = tokenBindingReference;
     }
 
+    public TokenBinding getTokenBinding() {
+
+        return tokenBinding;
+    }
+
+    public void setTokenBinding(TokenBinding tokenBinding) {
+
+        this.tokenBinding = tokenBinding;
+    }
+
     public Timestamp getAccessTokenIssuedTime() {
         return accessTokenIssuedTime;
     }
@@ -191,5 +206,25 @@ public class RefreshTokenValidationDataDO {
     public Object getProperty(Object propName) {
 
         return properties.get(propName);
+    }
+
+    public boolean isWithNotPersistedAT() {
+
+        return isWithNotPersistedAT;
+    }
+
+    public void setWithNotPersistedAT(boolean withNotPersistedAT) {
+
+        isWithNotPersistedAT = withNotPersistedAT;
+    }
+
+    public String getAuthorizedOrganizationId() {
+
+        return authorizedOrganizationId;
+    }
+
+    public void setAuthorizedOrganizationId(String authorizedOrganizationId) {
+
+        this.authorizedOrganizationId = authorizedOrganizationId;
     }
 }

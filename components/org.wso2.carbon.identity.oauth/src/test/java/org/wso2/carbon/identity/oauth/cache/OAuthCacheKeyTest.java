@@ -21,8 +21,8 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static org.junit.Assert.assertNotEquals;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 
 public class OAuthCacheKeyTest {
     String cacheKeyString = "cacheKey1";

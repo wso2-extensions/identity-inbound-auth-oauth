@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.MockedStatic;
@@ -44,8 +46,10 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -59,6 +63,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -232,7 +237,8 @@ public class RequestObjectValidatorImplTest {
             RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
             when((mockServerConfiguration.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
 
                 OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
                 oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
@@ -263,7 +269,7 @@ public class RequestObjectValidatorImplTest {
                 // Mock OAuth2Util returning public cert of the service provider
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
-                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
                 oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
                 mockIdentityProviderManager(identityProviderManager);
@@ -279,8 +285,17 @@ public class RequestObjectValidatorImplTest {
                                         "IdPEntityId")).thenReturn(property);
                 OAuthAppDO appDO = spy(new OAuthAppDO());
                 appDO.setRequestObjectSignatureAlgorithm("RS256");
+                if (isEncrypted && !isSigned) {
+                    appDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP.toString());
+                    appDO.setRequestObjectEncryptionMethod(EncryptionMethod.A128GCM.toString());
+                } else if (isSigned && isEncrypted) {
+                    appDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP_256.toString());
+                    appDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.toString());
+                }
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(appDO);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.RS256);
 
                 RequestObject requestObject =
                         requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
@@ -326,6 +341,71 @@ public class RequestObjectValidatorImplTest {
         IdentityProviderManager mockIdentityProviderManager = mock(IdentityProviderManager.class);
         identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(mockIdentityProviderManager);
         when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(idp);
+    }
+
+    @DataProvider(name = "audienceDataProvider")
+    public Object[][] getAudienceData() {
+
+        String tokenEpUrl = "https://localhost:9443/oauth2/token";
+        String issuer = "https://localhost:9443";
+        return new Object[][]{
+                {Arrays.asList(tokenEpUrl), issuer, true, true},
+                {Arrays.asList(tokenEpUrl), issuer, false, true},
+                {Arrays.asList(issuer), issuer, true, true},
+                {Arrays.asList(issuer), issuer, false, false},
+                {Arrays.asList("https://localhost:9443/oauth2/par", issuer), issuer, true, true},
+                {Arrays.asList(issuer), tokenEpUrl, true, false},
+                {Arrays.asList(issuer), null, true, false},
+                {Arrays.asList("https://invalid.audience"), issuer, true, false},
+        };
+    }
+
+    @Test(dataProvider = "audienceDataProvider")
+    public void testIsValidAudience(List<String> audience, String issuer, boolean isFapi2Enabled, boolean expected)
+            throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled(SUPER_TENANT_DOMAIN_NAME)).thenReturn(isFapi2Enabled);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(SUPER_TENANT_DOMAIN_NAME, false)).thenReturn(issuer);
+
+            RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
+            doReturn("https://localhost:9443/oauth2/token").when(requestObjectValidator)
+                    .getTokenEpURL(SUPER_TENANT_DOMAIN_NAME);
+
+            RequestObject requestObject = mock(RequestObject.class);
+            when(requestObject.getClaimsSet()).thenReturn(new JWTClaimsSet.Builder().audience(audience).build());
+            OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+            oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertEquals(requestObjectValidator.isValidAudience(requestObject, oAuth2Parameters), expected);
+        }
+    }
+
+    @Test
+    public void testIsValidAudienceWithTokenEpDoesNotResolveIssuer() throws Exception {
+
+        String tokenEpUrl = "https://localhost:9443/oauth2/token";
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            oAuth2Util.when(() -> OAuth2Util.isFapi2Enabled(SUPER_TENANT_DOMAIN_NAME)).thenReturn(true);
+            // A failing issuer lookup must not fail a request object whose audience is the token endpoint.
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(SUPER_TENANT_DOMAIN_NAME, false))
+                    .thenThrow(new IdentityOAuth2Exception("Error while resolving the issuer."));
+
+            RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
+            doReturn(tokenEpUrl).when(requestObjectValidator).getTokenEpURL(SUPER_TENANT_DOMAIN_NAME);
+
+            RequestObject requestObject = mock(RequestObject.class);
+            when(requestObject.getClaimsSet()).thenReturn(
+                    new JWTClaimsSet.Builder().audience(Arrays.asList(tokenEpUrl)).build());
+            OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+            oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+
+            Assert.assertTrue(requestObjectValidator.isValidAudience(requestObject, oAuth2Parameters));
+        }
     }
 
     @DataProvider(name = "nbfExpDataProvider")

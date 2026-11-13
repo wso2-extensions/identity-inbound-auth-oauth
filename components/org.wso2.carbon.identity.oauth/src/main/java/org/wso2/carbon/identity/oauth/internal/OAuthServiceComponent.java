@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.UserSession
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
@@ -51,6 +52,7 @@ import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth.listener.IdentityOauthEventHandler;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
+import org.wso2.carbon.identity.oauth.listener.UserApplicationCreationListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -74,7 +76,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 public class OAuthServiceComponent {
 
     private static final Log log = LogFactory.getLog(OAuthServiceComponent.class);
-    private ServiceRegistration serviceRegistration = null;
+    private ServiceRegistration serviceRegistration , userAppCreationListenerRegistration = null;
 
     protected void activate(ComponentContext context) {
 
@@ -90,6 +92,14 @@ public class OAuthServiceComponent {
             serviceRegistration = context.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                     listener, null);
             log.debug("Identity Oath Event Listener is enabled");
+
+            UserApplicationCreationListener  userApplicationCreationListener = new UserApplicationCreationListener();
+            userAppCreationListenerRegistration = context.getBundleContext().registerService(UserOperationEventListener.
+                            class.getName(),
+                    userApplicationCreationListener, null);
+            if (log.isDebugEnabled()) {
+                log.debug("User Application Creation Listener registered successfully");
+            }
 
             context.getBundleContext().registerService(AbstractEventHandler.class.getName(),
                     new IdentityOauthEventHandler(), null);
@@ -157,6 +167,10 @@ public class OAuthServiceComponent {
         }
         if (log.isDebugEnabled()) {
             log.debug("Identity OAuth bundle is deactivated");
+        }
+
+        if (userAppCreationListenerRegistration != null) {
+            userAppCreationListenerRegistration.unregister();
         }
     }
 
@@ -600,5 +614,24 @@ public class OAuthServiceComponent {
 
         log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
+    }
+
+    @Reference(
+            name = "compatibility.settings.service.component",
+            service = CompatibilitySettingsService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCompatibilitySettingsService"
+    )
+    protected void setCompatibilitySettingsService(CompatibilitySettingsService compatibilitySettingsService) {
+
+        log.debug("Setting the CompatibilitySettingsService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(compatibilitySettingsService);
+    }
+
+    protected void unsetCompatibilitySettingsService(CompatibilitySettingsService compatibilitySettingsService) {
+
+        log.debug("Unsetting the CompatibilitySettingsService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(null);
     }
 }

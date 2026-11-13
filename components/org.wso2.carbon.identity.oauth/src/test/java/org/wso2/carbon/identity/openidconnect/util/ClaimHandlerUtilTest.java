@@ -134,6 +134,8 @@ public class ClaimHandlerUtilTest {
 
         // Mock the service provider and app version.
         lenient().when(mockOAuthAppDO.getOauthConsumerKey()).thenReturn("testConsumerKey");
+        oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantDomainOfOauthApp(mockOAuthAppDO))
+                .thenReturn(SUPER_TENANT_DOMAIN_NAME);
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationVersion(appVersion);
         oAuth2UtilMockedStatic.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))

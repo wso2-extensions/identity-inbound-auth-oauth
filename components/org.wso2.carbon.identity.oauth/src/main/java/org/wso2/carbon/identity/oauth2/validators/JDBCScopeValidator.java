@@ -148,7 +148,7 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             cacheEntry.setTenantId(resourceTenantId);
             //Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
             //which scopes haven't been defined).
-            OAuthCache.getInstance().addToCache(cacheKey, cacheEntry);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, cacheEntry);
 
         }
 

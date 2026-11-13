@@ -18,9 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -30,8 +33,10 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.F
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -69,18 +74,17 @@ import org.wso2.carbon.identity.user.profile.mgt.association.federation.Federate
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -90,6 +94,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_ID;
@@ -119,9 +129,12 @@ public class RefreshGrantHandlerTest {
     private OAuthCache mockOAuthCache;
     private AuthorizationGrantCache mockAuthorizationGrantCache;
     private OAuthAppDO oAuthAppDO;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
     public void init() {
+
+        loggerUtils = null;
         refreshTokenGrantProcessor = mock(DefaultRefreshTokenGrantProcessor.class);
         oAuthTokenReqMessageContext = mock(OAuthTokenReqMessageContext.class);
         refreshTokenValidationDataDO = mock(RefreshTokenValidationDataDO.class);
@@ -141,6 +154,26 @@ public class RefreshGrantHandlerTest {
         mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
 
         oAuthAppDO = mock(OAuthAppDO.class);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        if (loggerUtils != null) {
+            loggerUtils.close();
+            loggerUtils = null;
+        }
+    }
+
+    /**
+     * Opens the LoggerUtils static mock with diagnostic logging reported as enabled, for a single test. It is opened
+     * per test rather than in the common setup so that the tests which do not assert diagnostic logs keep running
+     * against the real LoggerUtils.
+     */
+    private void mockDiagnosticLogging() {
+
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
     }
 
     @DataProvider(name = "validateGrantWhenUserIsLockedInUserStoreEnd")
@@ -263,11 +296,11 @@ public class RefreshGrantHandlerTest {
             }
         } catch (IdentityOAuth2Exception e) {
             if (federatedAssociationManagerException != null) {
-                assertEquals(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(), e.getErrorCode());
+                assertEquals(e.getErrorCode(), ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode());
             } else if (accountLockServiceException != null) {
-                assertEquals(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(), e.getErrorCode());
+                assertEquals(e.getErrorCode(), ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode());
             } else if (isUserLocked) {
-                assertEquals(UserCoreConstants.ErrorCode.USER_IS_LOCKED, e.getErrorCode());
+                assertEquals(e.getErrorCode(), UserCoreConstants.ErrorCode.USER_IS_LOCKED);
             } else {
                 fail("Unexpected exception is thrown.");
             }
@@ -349,6 +382,8 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(isSessionBoundTokensAllowedAfterSessionExpiry);
             oAuth2UtilMockedStatic.when(OAuth2Util::isLegacySessionBoundTokenBehaviourEnabled)
                     .thenReturn(isLegacySessionBoundTokenBehaviourEnabled);
+            oAuth2UtilMockedStatic.when(OAuth2Util::isAccessTokenPersistenceEnabled)
+                    .thenReturn(true);
 
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
@@ -383,6 +418,317 @@ public class RefreshGrantHandlerTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testValidateGrantRestoresTokenBindingForNonPersistentAccessToken() throws Exception {
+
+        TokenBinding tokenBinding = new TokenBinding("cookie", "binding-ref", null);
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getTokenBinding()).thenReturn(tokenBinding);
+        when(refreshTokenValidationDataDO.isWithNotPersistedAT()).thenReturn(true);
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
+        when(authorizationDetailsService.getAccessTokenAuthorizationDetails(anyString(), anyInt()))
+                .thenReturn(new AuthorizationDetails());
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId(anyString()))
+                    .thenReturn(oAuthAppDO);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            assertTrue(refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext));
+            verify(oAuthTokenReqMessageContext).setTokenBinding(tokenBinding);
+        }
+    }
+
+    @Test
+    public void testValidateGrantLogsUnusableRefreshTokenState() throws Exception {
+
+        mockDiagnosticLogging();
+
+        Timestamp issuedTime = new Timestamp(System.currentTimeMillis());
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
+        when(refreshTokenValidationDataDO.getTokenId()).thenReturn("token-id-1");
+        when(refreshTokenValidationDataDO.getIssuedTime()).thenReturn(issuedTime);
+        when(refreshTokenValidationDataDO.getValidityPeriodInMillis()).thenReturn(3600000L);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            identityUtilMockedStatic.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenReturn(false);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            try {
+                refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                fail("Expected IdentityOAuth2Exception for a refresh token in REVOKED state");
+            } catch (IdentityOAuth2Exception e) {
+                assertEquals(e.getMessage(), "Invalid refresh token state");
+            }
+
+            DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
+            assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
+            assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_STATE),
+                    OAuthConstants.TokenStates.TOKEN_STATE_REVOKED,
+                    "The state of the refresh token should be logged.");
+            assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.TOKEN_ID), "token-id-1");
+            assertEquals(diagnosticLog.getInput()
+                            .get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_ISSUED_TIME),
+                    issuedTime.toString(), "The issued time of the refresh token should be logged.");
+            assertEquals(diagnosticLog.getInput()
+                            .get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_VALIDITY_PERIOD), 3600000L);
+            assertNull(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_HASH),
+                    "The refresh token hash must not be logged unless token logging is permitted.");
+        }
+    }
+
+    @Test
+    public void testValidateGrantSkipsDiagnosticLogWhenDiagnosticLogsDisabled() throws Exception {
+
+        // No diagnostic log should be published when diagnostic logging is switched off for the tenant.
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            try {
+                refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                fail("Expected IdentityOAuth2Exception for a refresh token in REVOKED state");
+            } catch (IdentityOAuth2Exception e) {
+                assertEquals(e.getMessage(), "Invalid refresh token state");
+            }
+
+            loggerUtils.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(
+                    any(DiagnosticLog.DiagnosticLogBuilder.class)), never());
+        }
+    }
+
+    @Test
+    public void testValidateGrantLogsRefreshTokenNotLatestAndTokenHashWhenLoggable() throws Exception {
+
+        mockDiagnosticLogging();
+
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(new MockAuthenticatedUser("test_user"));
+        when(refreshTokenValidationDataDO.getRefreshTokenState())
+                .thenReturn(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(false);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            // Token logging is permitted, so the hash of the refresh token is expected in the log.
+            identityUtilMockedStatic.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenReturn(true);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            /* The grant is rejected for a refresh token which is not the latest. The diagnostic log is written
+             before the cached token entries are cleared, so only the rejection itself is asserted here. */
+            try {
+                refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                fail("Expected IdentityOAuth2Exception when the refresh token is not the latest");
+            } catch (IdentityOAuth2Exception e) {
+                assertNotNull(e.getMessage());
+            }
+
+            DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
+            assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
+            assertTrue(diagnosticLog.getResultMessage().contains("not the currently valid refresh token"),
+                    "The log should state that the refresh token is not the currently valid one.");
+            /* Rotation is only one of the reasons this branch is reached, so it must not be stated as the cause. */
+            assertTrue(diagnosticLog.getResultMessage().contains("no longer active"),
+                    "The log should also offer the non rotation reason for the failure.");
+            assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.REFRESH_TOKEN_HASH),
+                    DigestUtils.sha256Hex("test_refresh_token"),
+                    "The hash of the refresh token should be logged when token logging is permitted.");
+        }
+    }
+
+    /**
+     * Test that a missing previous access token in the request context is reported as missing validation data
+     * rather than as an expired refresh token, since the two have different causes.
+     */
+    @Test
+    public void testIssueLogsMissingValidationDataSeparatelyFromExpiry() throws Exception {
+
+        mockDiagnosticLogging();
+
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(oAuthTokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN)).thenReturn(null);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("test_client_id");
+        when(oAuth2AccessTokenReqDTO.getRefreshToken()).thenReturn("test_refresh_token");
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            identityUtilMockedStatic.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenReturn(false);
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            OAuth2AccessTokenRespDTO respDTO = refreshGrantHandler.issue(oAuthTokenReqMessageContext);
+
+            assertTrue(respDTO.isError(), "An expired refresh token should produce an error response");
+            assertEquals(respDTO.getErrorMsg(), "Refresh token is expired.");
+
+            DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
+            assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
+            assertTrue(diagnosticLog.getResultMessage().contains("validation data of the refresh token is not "
+                            + "available"),
+                    "The log should state that the validation data of the refresh token is unavailable.");
+            assertFalse(diagnosticLog.getResultMessage().contains("expired"),
+                    "Missing validation data should not be reported as an expired refresh token.");
+        }
+    }
+
+    /**
+     * Test that an inactive access token behind a refresh token is reported, since this path returns the same
+     * "Refresh token is expired." error as the expiry check but is reached from the token creation instead.
+     */
+    @Test
+    public void testIssueLogsInactiveAccessTokenBehindTheRefreshToken() throws Exception {
+
+        mockDiagnosticLogging();
+
+        String clientId = "app1";
+        String tenantDomain = "carbon.super";
+        MockAuthenticatedUser user = new MockAuthenticatedUser("user");
+        user.setTenantDomain(tenantDomain);
+
+        when(mockOAuthApp.getTokenType()).thenReturn("JWT");
+        when(mockOAuthApp.getOauthConsumerKey()).thenReturn(clientId);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolderMockedStatic =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<AppInfoCache> appInfoCacheMockedStatic = mockStatic(AppInfoCache.class);
+             MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class)) {
+
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            appInfoCacheMockedStatic.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            when(mockAppInfoCache.getValueFromCache(anyString(), anyString())).thenReturn(mockOAuthApp);
+            oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolder);
+            oAuthComponentServiceHolderMockedStatic.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            identityUtilMockedStatic.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenReturn(false);
+
+            when(mockOAuthComponentServiceHolder.getActionExecutorService()).thenReturn(mockActionExecutorService);
+            when(mockActionExecutorService.isExecutionEnabled(any())).thenReturn(false);
+            when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+
+            when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+            when(oAuthTokenReqMessageContext.getProperty(PREV_ACCESS_TOKEN)).thenReturn(mockValidationBean);
+            when(oAuthTokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO)).thenReturn(mockOAuthApp);
+            when(oAuthTokenReqMessageContext.getAuthorizedUser()).thenReturn(user);
+            when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
+            when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(tenantDomain);
+
+            // The refresh token itself is within its validity period, so the expiry check above is not the one hit.
+            when(mockValidationBean.getIssuedTime()).thenReturn(Timestamp.from(Instant.now()));
+            when(mockValidationBean.getValidityPeriodInMillis()).thenReturn(3600000L);
+            when(mockValidationBean.getAccessTokenValidityInMillis()).thenReturn(10000L);
+            when(mockValidationBean.getTokenId()).thenReturn("token-id-1");
+            when(mockValidationBean.getAuthorizedUser()).thenReturn(user);
+            when(refreshTokenGrantProcessor.createAccessTokenBean(any(), any(), any(), anyString()))
+                    .thenThrow(new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE));
+
+            RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+            refreshGrantHandler.init();
+            OAuth2AccessTokenRespDTO respDTO = refreshGrantHandler.issue(oAuthTokenReqMessageContext);
+
+            assertTrue(respDTO.isError(), "An inactive access token should produce an error response");
+            assertEquals(respDTO.getErrorMsg(), "Refresh token is expired.");
+
+            DiagnosticLog diagnosticLog = captureLastDiagnosticLog();
+            assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name());
+            assertEquals(diagnosticLog.getActionId(),
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REFRESH_TOKEN);
+            assertTrue(diagnosticLog.getResultMessage().contains("no longer active"),
+                    "The log should state that the access token behind the refresh token is no longer active.");
+            assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.TOKEN_ID), "token-id-1");
+        }
+    }
+
+    /**
+     * Returns the diagnostic log built by the most recent triggerDiagnosticLogEvent invocation.
+     */
+    private DiagnosticLog captureLastDiagnosticLog() {
+
+        ArgumentCaptor<DiagnosticLog.DiagnosticLogBuilder> captor =
+                ArgumentCaptor.forClass(DiagnosticLog.DiagnosticLogBuilder.class);
+        loggerUtils.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(captor.capture()), atLeastOnce());
+        return captor.getValue().build();
     }
 
     @Test
@@ -440,7 +786,7 @@ public class RefreshGrantHandlerTest {
                     .thenReturn(oAuthServerConfiguration);
             oAuthTokenPersistenceFactoryMockedStatic.when(OAuthTokenPersistenceFactory::getInstance)
                     .thenReturn(oAuthTokenPersistenceFactory);
-            when(oAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(oAuthTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
             PrivilegedCarbonContext carbonContext = mock(PrivilegedCarbonContext.class);
             privilegedCarbonContextMockedStatic.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
                     .thenReturn(carbonContext);
@@ -463,6 +809,7 @@ public class RefreshGrantHandlerTest {
             when(oAuthTokenReqMessageContext.getAuthorizedUser()).thenReturn(user1);
             when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(clientId);
+            when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(tenantDomain);
             when(mockValidationBean.getAccessTokenValidityInMillis()).thenReturn(10000L);
             Timestamp currentTime = Timestamp.from(Instant.now());
             when(mockValidationBean.getIssuedTime()).thenReturn(currentTime);
@@ -491,7 +838,7 @@ public class RefreshGrantHandlerTest {
 
             doNothing().when(authorizationDetailsService)
                     .replaceAccessTokenAuthorizationDetails(anyString(), any(), any());
-            assertEquals("token", oAuth2AccessTokenRespDTO.getAccessToken());
+            assertEquals(oAuth2AccessTokenRespDTO.getAccessToken(), "token");
 
         }
     }

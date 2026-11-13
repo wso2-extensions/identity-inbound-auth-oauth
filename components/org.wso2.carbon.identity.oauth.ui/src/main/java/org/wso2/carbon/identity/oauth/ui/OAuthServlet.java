@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ui;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.osgi.service.component.annotations.Component;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -34,14 +35,26 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
 
+import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.wso2.carbon.identity.oauth.ui.internal.OAuthUIServiceComponent.OAUTH_URL;
+
 /**
  * Servlet class for OAuth.
  */
+@Component(
+        service = Servlet.class,
+        immediate = true,
+        property = {
+                "osgi.http.whiteboard.servlet.pattern=" + OAUTH_URL,
+                "osgi.http.whiteboard.servlet.name=OAuthServlet",
+                "osgi.http.whiteboard.servlet.asyncSupported=true"
+        }
+)
 public class OAuthServlet extends HttpServlet {
 
     /**

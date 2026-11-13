@@ -27,6 +27,7 @@ public class RegistrationRequestDTO  {
   private String url = null;
   private String clientId = null;
   private String clientSecret = null;
+  private Long clientSecretExpiresAt = null;
   private List<String> contacts = new ArrayList<>();
   private List<String> postLogoutRedirectUris = new ArrayList<>();
   private List<String> requestUris = new ArrayList<>();
@@ -34,6 +35,7 @@ public class RegistrationRequestDTO  {
   private String spTemplateName = null;
   private String backchannelLogoutUri = null;
   private boolean backchannelLogoutSessionRequired;
+  private String frontchannelLogoutUri = null;
   private boolean isManagementApp;
   private String extApplicationDisplayName = null;
   private String extApplicationOwner = null;
@@ -131,6 +133,19 @@ public class RegistrationRequestDTO  {
     this.clientSecret = clientSecret;
   }
 
+  /**
+   * The expiration time of the client secret, expressed in Unix epoch seconds.
+   **/
+  @ApiModelProperty(value = "The expiration time of the client secret, expressed in Unix epoch seconds.")
+  @JsonProperty("ext_param_client_secret_expires_at")
+  public Long getClientSecretExpiresAt() {
+    return clientSecretExpiresAt;
+  }
+  
+  public void setClientSecretExpiresAt(Long clientSecretExpiresAt) {
+    this.clientSecretExpiresAt = clientSecretExpiresAt;
+  }
+
   @ApiModelProperty
   @JsonProperty("contacts")
   public List<String> getContacts() {
@@ -199,6 +214,16 @@ public class RegistrationRequestDTO  {
 
   public void setBackchannelLogoutSessionRequired(boolean backchannelLogoutSessionRequired) {
     this.backchannelLogoutSessionRequired = backchannelLogoutSessionRequired;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("frontchannel_logout_uri")
+  public String getFrontchannelLogoutUri() {
+      return frontchannelLogoutUri;
+  }
+
+  public void setFrontchannelLogoutUri(String frontchannelLogoutUri) {
+      this.frontchannelLogoutUri = frontchannelLogoutUri;
   }
 
   @ApiModelProperty
@@ -488,6 +513,7 @@ public class RegistrationRequestDTO  {
     sb.append("  url: ").append(url).append("\n");
     sb.append("  ext_param_client_id: ").append(clientId).append("\n");
     sb.append("  ext_param_client_secret: ").append(clientSecret).append("\n");
+    sb.append("  ext_param_client_secret_expires_at: ").append(clientSecretExpiresAt).append("\n");
     sb.append("  contacts: ").append(contacts).append("\n");
     sb.append("  post_logout_redirect_uris: ").append(postLogoutRedirectUris).append("\n");
     sb.append("  request_uris: ").append(requestUris).append("\n");
@@ -495,6 +521,7 @@ public class RegistrationRequestDTO  {
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
     sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
+    sb.append("  frontchannel_logout_uri: ").append(frontchannelLogoutUri).append("\n");
     sb.append("  is_management_app: ").append(isManagementApp).append("\n");
     sb.append("  ext_application_display_name: ").append(extApplicationDisplayName).append("\n");
     sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");

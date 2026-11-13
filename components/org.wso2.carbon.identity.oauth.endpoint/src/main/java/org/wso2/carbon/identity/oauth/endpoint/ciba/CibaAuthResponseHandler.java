@@ -64,6 +64,10 @@ public class CibaAuthResponseHandler {
         cibaAuthResponse.put(CibaConstants.EXPIRES_IN, expiresIn);
         cibaAuthResponse.put(CibaConstants.INTERVAL, CibaConstants.INTERVAL_DEFAULT_VALUE_IN_SEC);
 
+        if (cibaAuthCodeResponse.getAuthUrl() != null) {
+            cibaAuthResponse.put(CibaConstants.AUTH_URL, cibaAuthCodeResponse.getAuthUrl());
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Creating CIBA Authentication response to the request made by client with clientID : " +
                     cibaAuthCodeResponse.getClientId() + ".");
@@ -129,6 +133,7 @@ public class CibaAuthResponseHandler {
      */
     private Response handleServerError(CibaAuthFailureException cibaAuthFailureException) {
 
+        log.error(cibaAuthFailureException.getMessage(), cibaAuthFailureException);
         // Creating error response for the request.
         JSONObject cibaErrorResponse = new JSONObject();
         cibaErrorResponse.put(ERROR, cibaAuthFailureException.getErrorCode());

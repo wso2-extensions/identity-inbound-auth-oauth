@@ -90,6 +90,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.agent.exceptions.AgentConfigMgtException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -108,6 +109,7 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -145,6 +147,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_ACTOR_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory.getOAuthAdminService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory.getOAuthServerConfiguration;
@@ -715,6 +718,16 @@ public class EndpointUtil {
                 }
                 consentPageUrl += "&tenantDomain=" + getSPTenantDomainFromClientId(clientId);
 
+                // Surface the requesting agent's display name on the consent screen for OBO requests.
+                if (IdentityUtil.isAgentIdentityEnabled() && StringUtils.isNotBlank(params.getRequestedActor())) {
+                    String agentDisplayName = resolveAgentDisplayName(params.getRequestedActor(),
+                            params.getTenantDomain());
+                    if (StringUtils.isNotBlank(agentDisplayName)) {
+                        consentPageUrl += "&" + REQUESTED_ACTOR_NAME + "="
+                                + URLEncoder.encode(agentDisplayName, UTF_8);
+                    }
+                }
+
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
@@ -753,6 +766,7 @@ public class EndpointUtil {
                     }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
                     persistImpersonationInfoToSessionDataCache(entry, oAuthMessage);
+                    persistLegacyFederatedClaimHandlingToSessionDataCache(entry, oAuthMessage);
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
                     if (log.isDebugEnabled()) {
@@ -771,6 +785,20 @@ public class EndpointUtil {
         return consentPageUrl;
     }
 
+    private static String resolveAgentDisplayName(String requestedActor, String tenantDomain)
+            throws OAuthSystemException {
+
+        try {
+            if (OAuth2Util.isAgentExternallyManaged(tenantDomain)) {
+                return null;
+            }
+            return OAuth2Util.resolveAgentName(tenantDomain, requestedActor);
+        } catch (UserStoreException | AgentConfigMgtException e) {
+            throw new OAuthSystemException("Error while resolving agent display name for requested_actor: "
+                    + requestedActor, e);
+        }
+    }
+
     protected static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,
                                                                    OAuthMessage oAuthMessage) {
 
@@ -783,6 +811,34 @@ public class EndpointUtil {
         if (impersonatingActor != null) {
             entry.getAuthzReqMsgCtx().addProperty(IMPERSONATING_ACTOR, impersonatingActor);
             entry.getAuthzReqMsgCtx().setImpersonationRequest(true);
+        }
+    }
+
+    /**
+     * Carry the federated claim handling flag across the consent round trip. The entry cached here is read back
+     * when the user submits consent, where the same claims are resolved again to record the receipt.
+     *
+     * @param entry        Session data cache entry cached under the consent key.
+     * @param oAuthMessage OAuth message of the current request.
+     */
+    protected static void persistLegacyFederatedClaimHandlingToSessionDataCache(SessionDataCacheEntry entry,
+                                                                               OAuthMessage oAuthMessage) {
+
+        if (oAuthMessage == null || entry == null || entry.getAuthzReqMsgCtx() == null) {
+            if (entry != null && entry.getAuthzReqMsgCtx() == null && oAuthMessage != null
+                    && Boolean.TRUE.equals(
+                            oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))
+                    && log.isDebugEnabled()) {
+                log.debug("There is no authorization request context on the session data cache entry, so the "
+                        + "federated claim handling flag cannot be carried across the consent round trip. The "
+                        + "consent record will be written without the claims that resolved to no value.");
+            }
+            return;
+        }
+        if (Boolean.TRUE.equals(
+                oAuthMessage.getProperty(FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING))) {
+            entry.getAuthzReqMsgCtx().addProperty(
+                    FrameworkConstants.LEGACY_FEDERATED_CLAIM_HANDLING, true);
         }
     }
 
@@ -1545,6 +1601,30 @@ public class EndpointUtil {
     }
 
     /**
+     * This method retrieves the service provider tenant domain using the client ID and login tenant domain.
+     *
+     * @param clientId     Client id of the application.
+     * @param tenantDomain Login tenant domain.
+     * @return tenantDomain domain of the service provider.
+     */
+    public static String getSPTenantDomainFromClientId(String clientId, String tenantDomain)
+            throws OAuthSystemException {
+
+        try {
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+            OAuthAppDO oAuthAppDO;
+            if (StringUtils.isNotBlank(accessingOrgId)) {
+                oAuthAppDO = OAuth2Util.getAppInformationFromOrgHierarchy(clientId, accessingOrgId);
+            } else {
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            }
+            return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthSystemException("Error while getting oauth app for client Id: " + clientId, e);
+        }
+    }
+
+    /**
      * This method verifies the service provider tenant domain using the client ID.
      *
      * @param clientId Client id of the application.
@@ -1868,6 +1948,18 @@ public class EndpointUtil {
         if (serviceProvider == null) {
             return isEnabled;
         }
+
+        // Check org-level enforcement first. If enforced, external consent page is used regardless of app-level config.
+        if (OAuth2Util.isExternalConsentPageEnforced(serviceProvider.getTenantDomain())) {
+            if (log.isDebugEnabled()) {
+                log.debug("External consent page enforced at org level for tenant: " +
+                        serviceProvider.getTenantDomain() + ". Application-level config will be ignored for " +
+                        "application: " + serviceProvider.getApplicationName() + " with id: " +
+                        serviceProvider.getApplicationID());
+            }
+            return true;
+        }
+
         LocalAndOutboundAuthenticationConfig config = serviceProvider.getLocalAndOutBoundAuthenticationConfig();
 
         if (config != null) {
@@ -1951,7 +2043,7 @@ public class EndpointUtil {
     }
 
     /**
-     * Validate the response mode against the response type as per FAPI spec.
+     * Validate the response mode against the response type as per FAPI 1.0 Advanced spec.
      * shall require;
      * 1. the response_type value code id_token, or
      * 2. the response_type value code in conjunction with the response_mode value jwt;

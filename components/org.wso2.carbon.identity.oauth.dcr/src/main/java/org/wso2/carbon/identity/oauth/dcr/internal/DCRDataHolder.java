@@ -19,10 +19,12 @@
 package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
+import org.wso2.carbon.identity.oauth2.fapi.services.FapiConfigMgtService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
@@ -45,6 +47,8 @@ public class DCRDataHolder {
     private AdditionalAttributeFilter additionalAttributeFilter = null;
     private ConfigurationManager configurationManager;
     private OrganizationManager organizationManager;
+    private FapiConfigMgtService fapiConfigMgtService;
+    private CompatibilitySettingsManager compatibilitySettingsManager;
 
     private DCRDataHolder() {
 
@@ -123,6 +127,26 @@ public class DCRDataHolder {
     public void setOrganizationManager(OrganizationManager organizationManager) {
 
         this.organizationManager = organizationManager;
+    }
+
+    public FapiConfigMgtService getFapiConfigMgtService() {
+
+        return fapiConfigMgtService;
+    }
+
+    public void setFapiConfigMgtService(FapiConfigMgtService fapiConfigMgtService) {
+
+        this.fapiConfigMgtService = fapiConfigMgtService;
+    }
+
+    public CompatibilitySettingsManager getCompatibilitySettingsManager() {
+
+        return compatibilitySettingsManager;
+    }
+
+    public void setCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        this.compatibilitySettingsManager = compatibilitySettingsManager;
     }
 
     public AdditionalAttributeFilter getAdditionalAttributeFilter() {

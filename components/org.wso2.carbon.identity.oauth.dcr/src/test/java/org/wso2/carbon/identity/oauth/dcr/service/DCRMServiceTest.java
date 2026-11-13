@@ -40,7 +40,12 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -109,6 +114,7 @@ public class DCRMServiceTest {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private final String dummyFrontchannelLogoutUri = "http://frontchannel.com/logout";
     private static final String ORG_ROLE_AUDIENCE = "organization";
 
     @Mock
@@ -166,8 +172,20 @@ public class DCRMServiceTest {
     @AfterMethod
     public void tearDown() {
 
-        oAuthServerConfiguration.close();
-        oAuth2Util.close();
+        try {
+            if (oAuthServerConfiguration != null) {
+                oAuthServerConfiguration.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            if (oAuth2Util != null) {
+                oAuth2Util.close();
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
     }
 
     @BeforeClass
@@ -709,6 +727,7 @@ public class DCRMServiceTest {
                 "  clientName: " + oAuthConsumerApp.getApplicationName() + "\n" +
                 "  clientId: " + oAuthConsumerApp.getOauthConsumerKey() + "\n" +
                 "  clientSecret: " + oAuthConsumerApp.getOauthConsumerSecret() + "\n" +
+                "  clientSecretExpiresAt: 0\n" +
                 "  redirectUris: " +  Arrays.asList(oAuthConsumerApp.getCallbackUrl()) + "\n" +
                 "  grantTypes: " + Arrays.asList(oAuthConsumerApp.getGrantTypes().split(" ")) + "\n" +
                 "}\n";
@@ -1227,15 +1246,19 @@ public class DCRMServiceTest {
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
 
-        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
-        assertEquals(application.getClientName(), dummyClientName);
-        String regexp = application.getRedirectUris().get(0)
-                .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
-        for (String validCallback : validCallbackList) {
-            assertTrue(validCallback.matches(regexp));
-        }
-        for (String invalidCallback : invalidCallbackList) {
-            assertFalse(invalidCallback.matches(regexp));
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("false");
+            Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+            assertEquals(application.getClientName(), dummyClientName);
+            String regexp = application.getRedirectUris().get(0)
+                    .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            for (String validCallback : validCallbackList) {
+                assertTrue(validCallback.matches(regexp));
+            }
+            for (String invalidCallback : invalidCallbackList) {
+                assertFalse(invalidCallback.matches(regexp));
+            }
         }
     }
 
@@ -1277,6 +1300,216 @@ public class DCRMServiceTest {
         }
     }
 
+    // ── buildRedirectUrisResponse helpers ───────────────────────────────
+
+    private String encodeCallback(List<String> redirectUris) {
+
+        if (redirectUris.size() == 1) {
+            return redirectUris.get(0);
+        }
+        StringBuilder sb = new StringBuilder(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(");
+        for (int i = 0; i < redirectUris.size(); i++) {
+            if (i > 0) {
+                sb.append("|");
+            }
+            sb.append(redirectUris.get(i).replace("?", "\\?"));
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> invokeBuildRedirectUrisResponse(String callbackUrl) throws Exception {
+
+        return invokeBuildRedirectUrisResponse(callbackUrl, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> invokeBuildRedirectUrisResponse(String callbackUrl, String tenantDomain) throws Exception {
+
+        Method method = dcrmService.getClass().getDeclaredMethod("buildRedirectUrisResponse",
+                String.class, String.class);
+        method.setAccessible(true);
+        try {
+            return (List<String>) method.invoke(dcrmService, callbackUrl, tenantDomain);
+        } catch (InvocationTargetException e) {
+            throw (Exception) e.getTargetException();
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDecodesMultiUriWhenKnobEnabled() throws Exception {
+
+        List<String> uris = Arrays.asList("https://example.com/cb", "https://example.org/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Should decode multi-URI regexp callback when knob enabled");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponsePreservesRegexpWhenKnobDisabled() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("false");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, List.of(encoded), "Should preserve raw regexp when knob disabled");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDefaultsToEnabledWhenPropertyAbsent() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn(null);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Absent property should default to enabled (decode)");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseDecodesThreeUris() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb", "https://c.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Should decode all three URIs");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseRestoresQueryParamUriExactly() throws Exception {
+
+        List<String> uris = Arrays.asList("https://a.com/cb?foo=bar", "https://b.com/cb");
+        String encoded = encodeCallback(uris);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(encoded);
+            assertEquals(result, uris, "Query-param URI should be restored with literal '?'");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseSingleUriUnaffectedByKnob() throws Exception {
+
+        String single = "https://example.com/cb";
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(single);
+            assertEquals(result, List.of(single), "Single plain URI should always be wrapped as-is");
+        }
+    }
+
+    @DataProvider(name = "nonEncodedCallbackProvider")
+    public Object[][] nonEncodedCallbackProvider() {
+
+        return new Object[][]{
+                {null},
+                {""},
+                {"https://example.com/cb"},
+                {"regexp=https://example.com/cb"},
+                {OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(https://a.com/cb"},
+                {OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "https://a.com/cb)"},
+        };
+    }
+
+    @Test(dataProvider = "nonEncodedCallbackProvider")
+    public void buildRedirectUrisResponseDefensivePassThrough(String callbackUrl) throws Exception {
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> result = invokeBuildRedirectUrisResponse(callbackUrl);
+            assertEquals(result, Arrays.asList(callbackUrl),
+                    "Non-encoded callback should be wrapped as-is regardless of knob");
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingDecodes() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        CompatibilitySetting mockSetting = mock(CompatibilitySetting.class);
+        CompatibilitySettingGroup mockGroup = mock(CompatibilitySettingGroup.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenReturn(mockSetting);
+        when(mockSetting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP))
+                .thenReturn(mockGroup);
+        when(mockGroup.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY))
+                .thenReturn("true");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try {
+            List<String> uris = Arrays.asList("https://example.com/cb", "https://example.org/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, uris, "CompatibilitySetting=true should decode multi-URI callback");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingPreservesRaw() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        CompatibilitySetting mockSetting = mock(CompatibilitySetting.class);
+        CompatibilitySettingGroup mockGroup = mock(CompatibilitySettingGroup.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenReturn(mockSetting);
+        when(mockSetting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP))
+                .thenReturn(mockGroup);
+        when(mockGroup.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY))
+                .thenReturn("false");
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try {
+            List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, List.of(encoded), "CompatibilitySetting=false should preserve raw regexp");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
+        }
+    }
+
+    @Test
+    public void buildRedirectUrisResponseCompatibilitySettingFallsBackOnException() throws Exception {
+
+        CompatibilitySettingsManager mockManager = mock(CompatibilitySettingsManager.class);
+        when(mockManager.getCompatibilitySettingsByGroupAndSetting(eq("example.com"),
+                eq(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP),
+                eq(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY)))
+                .thenThrow(new CompatibilitySettingException("unsupported setting group"));
+        DCRDataHolder.getInstance().setCompatibilitySettingsManager(mockManager);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE))
+                    .thenReturn("true");
+            List<String> uris = Arrays.asList("https://a.com/cb", "https://b.com/cb");
+            String encoded = encodeCallback(uris);
+            List<String> result = invokeBuildRedirectUrisResponse(encoded, "example.com");
+            assertEquals(result, uris, "Should fall back to IdentityUtil on CompatibilitySettingException");
+        } finally {
+            DCRDataHolder.getInstance().setCompatibilitySettingsManager(null);
+        }
+    }
+
     private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
 
         Class<?>[] paramTypes = new Class[params.length];
@@ -1303,5 +1536,243 @@ public class DCRMServiceTest {
         Field declaredField = object.getClass().getDeclaredField(fieldName);
         declaredField.setAccessible(true);
         declaredField.set(object, value);
+    }
+
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void testRegisterApplicationWithFrontchannelLogoutUri(List<String> redirectUri, String roleAudience)
+            throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setFrontchannelLogoutUri(dummyFrontchannelLogoutUri);
+
+        String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+
+        OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
+        oAuthConsumerApp.setApplicationName(dummyClientName);
+        oAuthConsumerApp.setGrantTypes(grantType);
+        oAuthConsumerApp.setOauthConsumerKey(dummyConsumerKey);
+        oAuthConsumerApp.setOauthConsumerSecret(dummyConsumerSecret);
+        oAuthConsumerApp.setCallbackUrl(redirectUri.get(0));
+        oAuthConsumerApp.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+        oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
+
+        lenient().when(mockOAuthAdminService.getOAuthApplicationDataByAppName(dummyClientName))
+                .thenReturn(oAuthConsumerApp);
+        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
+                .thenReturn(oAuthConsumerApp);
+        lenient().when(mockApplicationManagementService.getServiceProviderNameByClientId(
+                oAuthConsumerApp.getOauthConsumerKey(), DCRMConstants.OAUTH2, dummyTenantDomain))
+                .thenReturn(IdentityApplicationConstants.DEFAULT_SP_CONFIG);
+
+        Application application = dcrmService.registerApplication(applicationRegistrationRequest);
+
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getGrantTypes(), dummyGrantTypes);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test
+    public void testRegisterApplicationWithInvalidFrontchannelLogoutUri() throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        // Invalid frontchannel logout URI with fragment
+        applicationRegistrationRequest.setFrontchannelLogoutUri("http://frontchannel.com/logout#fragment");
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI");
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
+    }
+
+    @Test(dataProvider = "RoleAudience")
+    public void testGetApplicationWithFrontchannelLogoutUri(String roleAudience) throws Exception {
+
+        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        dto.setApplicationName(dummyClientName);
+        dto.setOauthConsumerSecret(dummyConsumerSecret);
+        dto.setOauthConsumerKey(dummyConsumerKey);
+        dto.setCallbackUrl(dummyCallbackUrl);
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
+        dto.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setJwksUri("dummyJwksUri");
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
+                .thenReturn(serviceProvider);
+
+        Application application = dcrmService.getApplication(dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void testUpdateApplicationWithFrontchannelLogoutUri(List<String> redirectUri, String roleAudience)
+            throws Exception {
+
+        updateApplication();
+        applicationUpdateRequest.setRedirectUris(redirectUri);
+        applicationUpdateRequest.setFrontchannelLogoutUri(dummyFrontchannelLogoutUri);
+        applicationUpdateRequest.setExtAllowedAudience(roleAudience);
+
+        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+        dto.setApplicationName(dummyClientName);
+        dto.setOauthConsumerSecret(dummyConsumerSecret);
+        dto.setOauthConsumerKey(dummyConsumerKey);
+        dto.setCallbackUrl(redirectUri.get(0));
+        dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
+        dto.setFrontchannelLogoutUrl(dummyFrontchannelLogoutUri);
+
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
+                .thenReturn(new OAuthConsumerAppDTO[]{dto});
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getFrontchannelLogoutUri(), dummyFrontchannelLogoutUri);
+        assertNotNull(application.getFrontchannelLogoutUri());
+    }
+
+    @Test
+    public void testUpdateApplicationWithInvalidFrontchannelLogoutUri() throws Exception {
+
+        updateApplication();
+        // Invalid frontchannel logout URI with fragment
+        applicationUpdateRequest.setFrontchannelLogoutUri("http://frontchannel.com/logout#fragment");
+
+        try {
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+            when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+            dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI");
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
+    }
+
+    @Test
+    public void testUpdateApplicationClearFrontchannelLogoutUri() throws Exception {
+
+        OAuthConsumerAppDTO dto = updateApplication();
+        // Set redirect URIs
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        applicationUpdateRequest.setRedirectUris(redirectUri);
+        // Set empty string to clear the frontchannel logout URI
+        applicationUpdateRequest.setFrontchannelLogoutUri("");
+
+        dto.setFrontchannelLogoutUrl("");
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
+        lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
+                .thenReturn(new OAuthConsumerAppDTO[]{dto});
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName(dummyClientName);
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(DCRConstants.APP_ROLE_AUDIENCE);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(serviceProvider);
+
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+        Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        // Verify frontchannel logout URI is cleared
+        assertTrue(StringUtils.isEmpty(application.getFrontchannelLogoutUri()));
+    }
+
+    @DataProvider(name = "invalidFrontchannelLogoutUris")
+    public Object[][] getInvalidFrontchannelLogoutUris() {
+        return new Object[][]{
+                {"http://frontchannel.com/logout#fragment"}, // Contains fragment
+                {"not-a-valid-uri"},                          // Not a valid URI
+                {"relative/path"},                            // Relative URI
+                {"http:\\\\invalid.com"}                      // Invalid format
+        };
+    }
+
+    @Test(dataProvider = "invalidFrontchannelLogoutUris")
+    public void testRegisterApplicationWithVariousInvalidFrontchannelLogoutUris(String invalidUri) throws Exception {
+
+        mockApplicationManagementService = mock(ApplicationManagementService.class);
+        setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
+
+        List<String> redirectUri = new ArrayList<>();
+        redirectUri.add("http://redirect.com");
+        dummyGrantTypes.add("implicit");
+        applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
+        applicationRegistrationRequest.setRedirectUris(redirectUri);
+        applicationRegistrationRequest.setFrontchannelLogoutUri(invalidUri);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
+        dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
+        when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
+                .thenReturn(null, serviceProvider);
+
+        try {
+            dcrmService.registerApplication(applicationRegistrationRequest);
+            fail("Expected DCRMClientException was not thrown for invalid frontchannel logout URI: " + invalidUri);
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getErrorCode(),
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI.toString());
+        }
     }
 }

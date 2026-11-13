@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -68,10 +69,12 @@ public class DCRMUtils {
         appRegistrationRequest.setConsumerSecret(registrationRequestDTO.getClientSecret());
         appRegistrationRequest.setSpTemplateName(registrationRequestDTO.getSpTemplateName());
         appRegistrationRequest.setBackchannelLogoutUri(registrationRequestDTO.getBackchannelLogoutUri());
+        appRegistrationRequest.setFrontchannelLogoutUri(registrationRequestDTO.getFrontchannelLogoutUri());
         appRegistrationRequest.setIsManagementApp(registrationRequestDTO.isManagementApp());
         appRegistrationRequest.setExtApplicationDisplayName(registrationRequestDTO.getExtApplicationDisplayName());
         appRegistrationRequest.setExtApplicationOwner(registrationRequestDTO.getExtApplicationOwner());
         appRegistrationRequest.setExtApplicationTokenLifetime(registrationRequestDTO.getExtApplicationTokenLifetime());
+        appRegistrationRequest.setClientSecretExpiresAt(registrationRequestDTO.getClientSecretExpiresAt());
         appRegistrationRequest.setExtUserTokenLifetime(registrationRequestDTO.getExtUserTokenLifetime());
         appRegistrationRequest.setExtRefreshTokenLifetime(registrationRequestDTO.getExtRefreshTokenLifetime());
         appRegistrationRequest.setExtIdTokenLifetime(registrationRequestDTO.getExtIdTokenLifetime());
@@ -116,6 +119,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setGrantTypes(updateRequestDTO.getGrantTypes());
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
+        applicationUpdateRequest.setFrontchannelLogoutUri(updateRequestDTO.getFrontchannelLogoutUri());
         applicationUpdateRequest.setExtApplicationDisplayName(updateRequestDTO.getExtApplicationDisplayName());
         applicationUpdateRequest.setExtApplicationVersion(updateRequestDTO.getExtApplicationVersion());
         applicationUpdateRequest.setExtApplicationOwner(updateRequestDTO.getExtApplicationOwner());
@@ -226,10 +230,7 @@ public class DCRMUtils {
         applicationDTO.setClientSecret(application.getClientSecret());
         applicationDTO.setRedirectUris(application.getRedirectUris());
         applicationDTO.setGrantTypes(application.getGrantTypes());
-        /* Currently, we are not setting an expiration time for the client secret, hence according to the DCR
-        specification we have to set the expiration time to 0.
-        https://openid.net/specs/openid-connect-registration-1_0.html */
-        applicationDTO.setClientSecretExpiresAt(0L);
+        applicationDTO.setClientSecretExpiresAt(application.getClientSecretExpiresAt());
         applicationDTO.setExtApplicationDisplayName(application.getExtApplicationDisplayName());
         applicationDTO.setExtApplicationVersion(application.getExtApplicationVersion());
         applicationDTO.setExtApplicationOwner(application.getExtApplicationOwner());
@@ -259,6 +260,9 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
+        if (StringUtils.isNotBlank(application.getFrontchannelLogoutUri())) {
+            applicationDTO.setFrontchannelLogoutUri(application.getFrontchannelLogoutUri());
+        }
         applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
         applicationDTO.setExtAllowedAudience(application.getExtAllowedAudience());
         return applicationDTO;

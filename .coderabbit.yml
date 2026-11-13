@@ -1,0 +1,17 @@
+language: en-US
+tone_instructions: ""
+early_access: false
+enable_free_tier: true
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  auto_assign_reviewers: false
+  poem: false
+  auto_review:
+    ignore_usernames: ["wso2-jenkins-bot"]
+    base_branches:
+      - "next"
+      - "master"

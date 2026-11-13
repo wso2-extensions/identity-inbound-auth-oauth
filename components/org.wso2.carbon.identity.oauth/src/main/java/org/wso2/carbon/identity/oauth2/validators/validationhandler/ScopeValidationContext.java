@@ -30,6 +30,7 @@ public class ScopeValidationContext {
 
     private AuthenticatedUser authenticatedUser;
     private String appId;
+    private String appTenantDomain;
     private String grantType;
     private String userType;
 
@@ -155,5 +156,15 @@ public class ScopeValidationContext {
     public String getUserType() {
 
         return userType;
+    }
+
+    public String getAppTenantDomain() {
+
+        return appTenantDomain;
+    }
+
+    public void setAppTenantDomain(String appTenantDomain) {
+
+        this.appTenantDomain = appTenantDomain;
     }
 }

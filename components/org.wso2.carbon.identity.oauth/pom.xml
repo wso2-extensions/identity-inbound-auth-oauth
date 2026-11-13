@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.416-SNAPSHOT</version>
+        <version>7.5.105-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -42,6 +42,11 @@
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-coyote</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>de.ruedigermoeller</groupId>
+            <artifactId>fst</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -105,7 +110,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
-            <artifactId>opensaml</artifactId>
+            <artifactId>opensaml-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -143,7 +148,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.apache.oltu.oauth2</groupId>
-            <artifactId>oltu</artifactId>
+            <artifactId>oltu-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -188,7 +193,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.github.dblock.waffle</groupId>
-            <artifactId>waffle-jna</artifactId>
+            <artifactId>waffle-jna-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.com.nimbusds</groupId>
@@ -222,6 +227,10 @@
                     <groupId>org.slf4j</groupId>
                     <artifactId>log4j-over-slf4j</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -254,6 +263,10 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.organization.management</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.management.organization.agent.sharing</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management</groupId>
             <artifactId>org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service</artifactId>
         </dependency>
         <dependency>
@@ -262,8 +275,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>org.eclipse.equinox.http.service.api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.javax.xml.bind</groupId>
@@ -336,6 +355,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.central.log.mgt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.compatibility.settings.core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.sun.xml.parsers</groupId>
@@ -435,6 +458,7 @@
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.central.log.mgt.*; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.compatibility.settings.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
@@ -452,6 +476,7 @@
                             org.wso2.carbon.identity.organization.management.role.management.service.models; version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.models;version="${carbon.identity.organization.management.version.range}",
+                            org.wso2.carbon.identity.organization.management.organization.agent.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service;
                             version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception;
@@ -626,4 +651,3 @@
     </build>
 
 </project>
-

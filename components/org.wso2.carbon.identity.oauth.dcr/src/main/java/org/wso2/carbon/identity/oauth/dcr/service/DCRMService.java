@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,10 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
@@ -61,6 +65,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -93,6 +98,8 @@ public class DCRMService {
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
     private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
+    private static final String CALLBACK_PREFIX = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+    private static final int CALLBACK_PREFIX_LEN = CALLBACK_PREFIX.length();
 
 
     /**
@@ -337,6 +344,10 @@ public class DCRMService {
             if (StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
                 String backChannelLogoutUri = validateBackchannelLogoutURI(updateRequest.getBackchannelLogoutUri());
                 appDTO.setBackChannelLogoutUrl(backChannelLogoutUri);
+            }
+            if (StringUtils.isNotEmpty(updateRequest.getFrontchannelLogoutUri())) {
+                String frontChannelLogoutUri = validateFrontchannelLogoutURI(updateRequest.getFrontchannelLogoutUri());
+                appDTO.setFrontchannelLogoutUrl(frontChannelLogoutUri);
             }
             if (updateRequest.getExtApplicationTokenLifetime() != null) {
                 appDTO.setApplicationAccessTokenExpiryTime(updateRequest.getExtApplicationTokenLifetime());
@@ -655,10 +666,11 @@ public class DCRMService {
         application.setClientName(createdApp.getApplicationName());
         application.setClientId(createdApp.getOauthConsumerKey());
         application.setClientSecret(createdApp.getOauthConsumerSecret());
+        // Per RFC 7591, client_secret_expires_at is 0 when the secret does not expire.
+        application.setClientSecretExpiresAt(createdApp.getOauthConsumerSecretExpiryTime() == null ? 0L
+                : createdApp.getOauthConsumerSecretExpiryTime());
 
-        List<String> redirectUrisList = new ArrayList<>();
-        redirectUrisList.add(createdApp.getCallbackUrl());
-        application.setRedirectUris(redirectUrisList);
+        application.setRedirectUris(buildRedirectUrisResponse(createdApp.getCallbackUrl(), tenantDomain));
 
         List<String> grantTypesList = new ArrayList<>();
         if (StringUtils.isNotEmpty(createdApp.getGrantTypes())) {
@@ -692,6 +704,7 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
+        application.setFrontchannelLogoutUri(createdApp.getFrontchannelLogoutUrl());
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
         }
@@ -744,6 +757,8 @@ public class DCRMService {
         }
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
+        oAuthConsumerApp.setFrontchannelLogoutUrl(
+                validateFrontchannelLogoutURI(registrationRequest.getFrontchannelLogoutUri()));
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey())) {
             String clientIdRegex = OAuthServerConfiguration.getInstance().getClientIdValidationRegex();
@@ -758,6 +773,21 @@ public class DCRMService {
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerSecret())) {
             oAuthConsumerApp.setOauthConsumerSecret(registrationRequest.getConsumerSecret());
+        }
+        // Per RFC 7591, a client_secret_expires_at of zero denotes a never-expiring secret.
+        if (registrationRequest.getClientSecretExpiresAt() != null) {
+            // Reject negatives and values that overflow when converted to milliseconds below.
+            if (registrationRequest.getClientSecretExpiresAt() < 0
+                    || registrationRequest.getClientSecretExpiresAt() > Long.MAX_VALUE / 1000L) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_SECRET_EXPIRY_INVALID, null);
+            }
+            if (registrationRequest.getClientSecretExpiresAt() != 0 && OAuth2Util.isExpiryTimeInPast(
+                    registrationRequest.getClientSecretExpiresAt() * 1000L)) {
+                throw DCRMUtils.generateClientException(
+                        DCRMConstants.ErrorMessages.BAD_REQUEST_CLIENT_SECRET_EXPIRY_IN_PAST, null);
+            }
+            oAuthConsumerApp.setOauthConsumerSecretExpiryTime(registrationRequest.getClientSecretExpiresAt());
         }
         if (registrationRequest.getExtApplicationTokenLifetime() != null) {
             oAuthConsumerApp.setApplicationAccessTokenExpiryTime(registrationRequest.getExtApplicationTokenLifetime());
@@ -831,6 +861,10 @@ public class DCRMService {
             DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
             boolean enableFAPIDCR = dcrConfiguration.getEnableFapiEnforcement();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
+            oAuthConsumerApp.setFapiProfile(dcrConfiguration.getFapiProfile() != null
+                    ? dcrConfiguration.getFapiProfile().value()
+                    : FapiUtil.getDefaultFapiProfile().value()
+            );
         }
 
         if (log.isDebugEnabled()) {
@@ -1086,6 +1120,16 @@ public class DCRMService {
         }
     }
 
+    private String validateFrontchannelLogoutURI(String frontchannelLogoutUri) throws DCRMException {
+
+        if (DCRMUtils.isFrontchannelLogoutUriValid(frontchannelLogoutUri)) {
+            return frontchannelLogoutUri;
+        } else {
+            throw DCRMUtils.generateClientException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI, frontchannelLogoutUri);
+        }
+    }
+
     private boolean isRedirectURIMandatory(List<String> grantTypes) {
 
         return grantTypes.contains(DCRConstants.GrantTypes.AUTHORIZATION_CODE) ||
@@ -1196,6 +1240,7 @@ public class DCRMService {
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {
+                IdentityUtil.validateX5CLength(softwareStatement);
                 SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
                 if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
@@ -1220,6 +1265,7 @@ public class DCRMService {
     private Map<String, Object> getSSAClaims(String softwareStatement) throws DCRMClientException {
 
         try {
+            IdentityUtil.validateX5CLength(softwareStatement);
             SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
             IdentityUtil.validateJWTDepth(softwareStatement);
             return signedJWT.getJWTClaimsSet().getClaims();
@@ -1272,5 +1318,62 @@ public class DCRMService {
             }
         }
         return tenantDomain;
+    }
+
+    private List<String> buildRedirectUrisResponse(String callbackUrl, String tenantDomain) {
+
+        if (isDecodeRedirectUrisEnabled(tenantDomain) && isEncodedMultiUriCallback(callbackUrl)) {
+            return decodeRedirectUris(callbackUrl);
+        }
+        List<String> redirectUrisList = new ArrayList<>();
+        redirectUrisList.add(callbackUrl);
+        return redirectUrisList;
+    }
+
+    private boolean isDecodeRedirectUrisEnabled(String tenantDomain) {
+
+        CompatibilitySettingsManager manager =
+                DCRDataHolder.getInstance().getCompatibilitySettingsManager();
+        if (manager != null && StringUtils.isNotBlank(tenantDomain)) {
+            try {
+                CompatibilitySetting setting = manager.getCompatibilitySettingsByGroupAndSetting(
+                        tenantDomain,
+                        DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP,
+                        DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY);
+                CompatibilitySettingGroup group =
+                        setting.getCompatibilitySetting(DCRMConstants.DCR_COMPATIBILITY_SETTING_GROUP);
+                if (group != null) {
+                    return Boolean.parseBoolean(
+                            group.getSettingValue(DCRMConstants.DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY));
+                }
+            } catch (CompatibilitySettingException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Could not evaluate compatibility setting for tenant: " + tenantDomain +
+                            ". Falling back to server-level config.", e);
+                }
+            }
+        }
+        String propValue = IdentityUtil.getProperty(DCRMConstants.DECODE_DCR_REDIRECT_URIS_IN_RESPONSE);
+        return propValue == null || Boolean.parseBoolean(propValue);
+    }
+
+    private boolean isEncodedMultiUriCallback(String callbackUrl) {
+
+        if (StringUtils.isBlank(callbackUrl)) {
+            return false;
+        }
+        String prefix = OAuthConstants.CALLBACK_URL_REGEXP_PREFIX + "(";
+        return callbackUrl.startsWith(prefix) && callbackUrl.endsWith(")");
+    }
+
+    private List<String> decodeRedirectUris(String callbackUrl) {
+
+        String inner = callbackUrl.substring(CALLBACK_PREFIX_LEN, callbackUrl.length() - 1);
+        String[] parts = inner.split("\\|");
+        List<String> uris = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            uris.add(part.replace("\\?", "?"));
+        }
+        return uris;
     }
 }

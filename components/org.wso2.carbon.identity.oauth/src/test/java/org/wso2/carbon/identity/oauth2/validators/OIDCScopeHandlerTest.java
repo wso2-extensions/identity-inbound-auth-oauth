@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.MockedStatic;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -29,6 +28,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -132,9 +131,6 @@ public class OIDCScopeHandlerTest {
     private void setFinalField(Object object, String fieldName, Object value) throws Exception {
         Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
         field.set(object, value);
     }
 

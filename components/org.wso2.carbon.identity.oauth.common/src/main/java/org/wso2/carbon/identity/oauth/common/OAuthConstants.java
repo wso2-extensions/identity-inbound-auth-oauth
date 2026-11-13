@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -82,6 +82,7 @@ public final class OAuthConstants {
     public static final String SESSION_DATA_KEY = "sessionDataKey";
     public static final String SESSION_DATA_KEY_CONSENT = "sessionDataKeyConsent";
     public static final String OAUTH_CACHE_MANAGER = "OAuthCacheManager";
+    public static final String REQUESTED_ACTOR_NAME = "requestedActorName";
 
     // For storing SAML2 assertion in OAuthTokenReqMgtCtx
     public static final String OAUTH_SAML2_ASSERTION = "SAML2Assertion";
@@ -133,6 +134,10 @@ public final class OAuthConstants {
     public static final String ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION = "OAuth.OpenIDConnect" +
             ".EnableHybridFlowAppLevelValidation";
     public static final String RESTRICT_FRAGMENT_COMPONENTS = "OAuth.Callback.RestrictFragmentComponents";
+
+    // Token Exchange delegation property key
+    public static final String ACTOR_SUBJECT = "ACTOR_SUBJECT";
+    public static final String EXISTING_ACT_CLAIM = "EXISTING_ACT_CLAIM";
 
     /**
      * Enum for OIDC supported subject types.
@@ -195,10 +200,12 @@ public final class OAuthConstants {
     public static final String ID_TOKEN_SUBJECT_TOKEN = "id_token subject_token";
     public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
+    public static final String IS_SHARED_USER = "IS_SHARED_USER";
     public static final String IDTOKEN_TOKEN = "id_token token";
     public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";
     public static final String MAY_ACT = "may_act";
+    public static final String ACT = "act";
     public static final String SUB = "sub";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
@@ -300,6 +307,8 @@ public final class OAuthConstants {
 
     public static final String REQUESTED_ACTOR = "requested_actor";
 
+    public static final String DEFAULT_SECRET_ID = "25399749-8916-4625-b39d-c53ccf51666b";
+
     private OAuthConstants() {
 
     }
@@ -321,6 +330,7 @@ public final class OAuthConstants {
         public static final String DEVICE_CODE_URN = "urn:ietf:params:oauth:grant-type:device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
         public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+        public static final String CIBA = "urn:openid:params:grant-type:ciba";
 
         private GrantTypes() {
 
@@ -336,6 +346,19 @@ public final class OAuthConstants {
         public static final String VERSION_2 = "OAuth-2.0";
 
         private OAuthVersions() {
+
+        }
+    }
+
+    /**
+     * Define FAPI versions of the IS 7.1 FAPI version configuration.
+     */
+    public static class FAPIVersions {
+
+        public static final String FAPI1_ADVANCED = "1";
+        public static final String FAPI2 = "2";
+
+        private FAPIVersions() {
 
         }
     }
@@ -443,6 +466,7 @@ public final class OAuthConstants {
         public static final String OIDC_DEFAULT_LOGOUT_RESPONSE_URL = "/authenticationendpoint/oauth2_logout.do";
         public static final String OIDC_LOGOUT_CONSENT_EP_URL = "/authenticationendpoint/oauth2_logout_consent.do";
         public static final String DEVICE_AUTHZ_EP_URL = "oauth2/device_authorize";
+        public static final String CIBA_EP_URL = "oauth2/ciba";
 
         private OAuth20Endpoints() {
 
@@ -472,6 +496,7 @@ public final class OAuthConstants {
         public static final String TOKEN_STATE_REVOKED = "REVOKED";
         public static final String TOKEN_STATE_EXPIRED = "EXPIRED";
         public static final String TOKEN_STATE_INACTIVE = "INACTIVE";
+        public static final String TOKEN_STATE_GRACEFULLY_ROTATED = "GRACEFULLY_ROTATED";
 
         private TokenStates() {
 
@@ -656,9 +681,13 @@ public final class OAuthConstants {
         public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
         public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
         public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+        // Stores the FAPI security profile applied to the application (e.g. "FAPI1_ADVANCED").
+        public static final String FAPI_PROFILE = "fapiProfile";
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
+        public static final String ENABLE_JWT_SCOPE_AS_ARRAY = "enableJwtScopeAsArray";
+        public static final String EXISTING_TOKEN_USED = "existingTokenUsed";
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.
@@ -667,7 +696,44 @@ public final class OAuthConstants {
         public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
         public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
         public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
+
+        // CIBA Configuration Properties.
+        public static final String CIBA_AUTH_REQ_EXPIRY_TIME = "cibaAuthReqExpiryTime";
+        public static final String CIBA_NOTIFICATION_CHANNELS = "cibaNotificationChannels";
+        public static final String CIBA_SKIP_USER_VALIDATION = "cibaSkipUserValidation";
+        public static final String CIBA_ALLOW_FEDERATED_USERS = "cibaAllowFederatedUsers";
+
+        public static final String TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP = "tokenExchange";
+        public static final String DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY =
+                "defaultRestrictScopeIssuanceForFederatedTokens";
+        public static final String RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE =
+                "tokenExchangeRestrictScopeIssuanceForFederatedTokens";
+
+        public static final String ISSUER_ORGANIZATION = "issuerOrg";
         private OIDCConfigProperties() {
+
+        }
+    }
+
+    /**
+     * Graceful refresh token rotation constants.
+     */
+    public static class GracefulRefreshTokenRotation {
+
+        public static final String IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED = "isGracefulRefreshTokenRotationEnabled";
+        public static final String GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD =
+                "gracefulRefreshTokenRotationValidityPeriod";
+        public static final int DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE = 30;
+        public static final int GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE = 60;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT = "gracefulRefreshTokenReuseLimit";
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE = 5;
+        public static final int GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE = 1;
+        public static final String GRACEFUL_REFRESH_TOKEN_REUSE_COUNT = "gracefulRefreshTokenReuseCount";
+        public static final String GRACEFUL_REFRESH_TOKEN_GRACE_VALIDITY_IN_MILLIS =
+                "gracefulRefreshTokenGraceValidityInMillis";
+        public static final String GRACEFUL_REFRESH_TOKEN_SUCCESSOR_TOKEN_ID = "successorTokenId";
+
+        private GracefulRefreshTokenRotation() {
 
         }
     }
@@ -731,6 +797,8 @@ public final class OAuthConstants {
         public static final String UPDATE_OAUTH_APPLICATION = "update-oauth-application";
         public static final String DELETE_OAUTH_APPLICATION = "delete-oauth-application";
         public static final String REGENERATE_CLIENT_SECRET = "regenerate-client-secret";
+        public static final String CREATE_CLIENT_SECRET = "create-client-secret";
+        public static final String DELETE_CLIENT_SECRET = "delete-client-secret";
         public static final String UPDATE_APP_STATE = "update-app-state";
 
         /**
@@ -803,7 +871,14 @@ public final class OAuthConstants {
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
             public static final String IMPERSONATOR = "impersonator";
+            public static final String ACTOR = "actor";
             public static final String REQUESTED_AUTHORIZATION_DETAILS = "requested authorization details";
+            public static final String TOKEN_ID = "token id";
+            public static final String REFRESH_TOKEN_STATE = "refresh token state";
+            public static final String REFRESH_TOKEN_ISSUED_TIME = "refresh token issued time";
+            public static final String REFRESH_TOKEN_VALIDITY_PERIOD = "refresh token validity period (ms)";
+            public static final String REFRESH_TOKEN_HASH = "refresh token hash";
+            public static final String ERROR_CODE = "error code";
         }
 
         /**
@@ -834,6 +909,67 @@ public final class OAuthConstants {
         public static final String FRAGMENT_JWT = "fragment.jwt";
         public static final String FORM_POST_JWT = "form_post.jwt";
         public static final String DIRECT = "direct"; // Used for API based authentication.
+    }
+
+    /**
+     * Event constants.
+     * This is temporarily added until java 21 related issues are resolved.
+     * Afterwards, the constants defined in IdentityEventConstants should be used.
+     * Tracking issue : https://github.com/wso2-enterprise/asgardeo-product/issues/34575
+     */
+    @Deprecated
+    public static class EventProperty {
+
+        public static final String TOKEN_ID = "TOKEN_ID";
+        public static final String USER_TYPE = "USER_TYPE";
+        public static final String CLIENT_ID = "CLIENT_ID";
+        public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
+        public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
+        public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
+        public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
+        public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
+        public static final String ROOT_TENANT_DOMAIN = "ROOT_TENANT_DOMAIN";
+        public static final String AUTHORIZED_SCOPES = "AUTHORIZED_SCOPES";
+        public static final String UNAUTHORIZED_SCOPES = "UNAUTHORIZED_SCOPES";
+        public static final String ACCESS_TOKEN_VALIDITY_MILLIS = "ACCESS_TOKEN_VALIDITY_MILLIS";
+        public static final String REFRESH_TOKEN_VALIDITY_MILLIS = "REFRESH_TOKEN_VALIDITY_MILLIS";
+        public static final String REMOTE_IP = "REMOTE_IP";
+        public static final String ACTOR = "ACTOR";
+    }
+
+    /**
+     * Define constants for non-persistence access token related operations.
+     */
+    public static class NonPersistenceConstants {
+
+        // JWT Claim constants
+        public static final String ENTITY_ID = "entity_id";
+        public static final String ENTITY_TYPE = "entityType";
+        public static final String ENTITY_ID_TYPE_CLIENT_ID = "CLIENT_ID";
+        public static final String ENTITY_ID_TYPE_USER_ID = "USER_ID";
+        public static final String ENTITY_ID_TYPE_USER_NAME = "USER_NAME";
+        public static final String APP_DOMAIN = "app_td";
+        public static final String USER_TENANT_DOMAIN = "user_td";
+        public static final String REFRESH_TOKEN_PREFIX = "npr_";
+
+        // Event related constants
+        public static final String TENANT_ID = "tenantId";
+        public static final String USERNAME = "username";
+        public static final String REVOCATION_TIME = "revocationTime";
+        public static final String TENANT_DOMAIN = "tenantDomain";
+        public static final String CLIENT_ID = "client_id";
+        public static final String SCOPE = "scope";
+        public static final String GRANT_TYPE = "grantType";
+        public static final String AUTHORIZATION_PARTY = "azp";
+    }
+
+    /**
+     * Enum for client secret statuses, judged against the secret's expiry time.
+     */
+    public enum ClientSecretStatus {
+
+        ACTIVE,
+        EXPIRED
     }
 
 }

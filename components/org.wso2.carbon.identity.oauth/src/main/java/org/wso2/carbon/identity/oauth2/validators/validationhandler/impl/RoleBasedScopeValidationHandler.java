@@ -93,7 +93,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                         .getAccessingOrganization());
             }
             List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
-                    tenantDomain);
+                    scopeValidationContext.getAppTenantDomain(), tenantDomain);
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -132,22 +132,50 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
         return authenticatedUser.isFederatedUser()
                 && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())
-                && authenticatedUser.getImpersonatedUser() == null;
+                && authenticatedUser.getImpersonatedUser() == null
+                && !isSharedUser(authenticatedUser);
+    }
+
+    private boolean isSharedUser(AuthenticatedUser authenticatedUser) {
+
+        return StringUtils.isNotBlank(authenticatedUser.getAccessingOrganization()) &&
+                StringUtils.isNotBlank(authenticatedUser.getUserResidentOrganization()) &&
+                !authenticatedUser.getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization());
     }
 
     /**
      * Get the filtered role ids.
      *
-     * @param roleIds Role id list.
-     * @param appId App id.
-     * @param tenantDomain tenant domain.
+     * @param roleIds         Role id list.
+     * @param appId           App id.
+     * @param appTenantDomain Application tenant domain.
+     * @param tenantDomain    User organization tenant domain.
      * @return Filtered role ids.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
      */
-    private List<String> getFilteredRoleIds(List<String> roleIds, String appId, String tenantDomain)
+    private List<String> getFilteredRoleIds(List<String> roleIds, String appId, String appTenantDomain,
+                                            String tenantDomain)
             throws ScopeValidationHandlerException, IdentityOAuth2Exception, IdentityRoleManagementException {
 
         List<String> rolesAssociatedWithApp;
+        if (!StringUtils.equals(appTenantDomain, tenantDomain)) {
+            try {
+                String appOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(appTenantDomain);
+                String userOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                String sharedAppId = OAuthComponentServiceHolder.getInstance().getApplicationManagementService()
+                        .getSharedAppId(appId, appOrgId, userOrgId);
+                if (StringUtils.isNotBlank(sharedAppId)) {
+                    appId = sharedAppId;
+                }
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving the organization ID of the tenant domain.", e);
+            } catch (IdentityApplicationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while retrieving the shared app ID for app: " + appId, e);
+            }
+        }
+
         String allowedAudience = getApplicationAllowedAudience(appId, tenantDomain);
 
         if (RoleConstants.APPLICATION.equalsIgnoreCase(allowedAudience)) {

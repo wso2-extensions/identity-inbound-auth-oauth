@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
@@ -43,6 +45,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -60,6 +63,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -137,9 +141,11 @@ public class OIDCRequestObjectUtilTest {
 
             try (MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
                          mockStatic(CentralLogMgtServiceComponentHolder.class);
-                 MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class);
+                 MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class,
+                         CALLS_REAL_METHODS);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<FapiUtil> fapiUtil = mockStatic(FapiUtil.class)) {
 
                 OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
                 oAuth2Parameters.setTenantDomain("carbon.super");
@@ -166,11 +172,18 @@ public class OIDCRequestObjectUtilTest {
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
-                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                fapiUtil.when(() -> FapiUtil.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
                 oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
+                if (isEncrypted && !isSigned) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A128GCM.toString());
+                } else if (isSigned && isEncrypted) {
+                    oAuthAppDO.setRequestObjectEncryptionAlgorithm(JWEAlgorithm.RSA_OAEP_256.toString());
+                    oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.toString());
+                }
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(oAuthAppDO);

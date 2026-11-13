@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -45,6 +46,8 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.cert.Certificate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -166,7 +169,29 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String tokenEPUrl = oAuth2Parameters.isMtlsRequest() ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
                 getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
+        // When FAPI 2.0 is enabled for the organization, the OP issuer identifier differs from the token endpoint
+        // URL. Hence, the issuer identifier is also accepted as the audience of the request object. The issuer is
+        // resolved only when the audience does not match the token endpoint URL.
+        if (!audience.contains(tokenEPUrl) && OAuth2Util.isFapi2Enabled(oAuth2Parameters.getTenantDomain())) {
+            List<String> acceptedAudiences = new ArrayList<>();
+            acceptedAudiences.add(tokenEPUrl);
+            String issuer = getIssuer(oAuth2Parameters);
+            if (StringUtils.isNotEmpty(issuer)) {
+                acceptedAudiences.add(issuer);
+            }
+            return validateAudiences(acceptedAudiences, audience);
+        }
         return validateAudience(tokenEPUrl, audience);
+    }
+
+    private String getIssuer(OAuth2Parameters oAuth2Parameters) throws RequestObjectException {
+
+        try {
+            return OAuth2Util.getIdTokenIssuer(oAuth2Parameters.getTenantDomain(), oAuth2Parameters.isMtlsRequest());
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Server Error while validating " +
+                    "audience of Request Object.", e);
+        }
     }
 
     private boolean checkExpirationTime(RequestObject requestObject) throws RequestObjectException {
@@ -382,8 +407,20 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      */
     protected boolean validateAudience(String currentAudience, List<String> audience) {
 
+        return validateAudiences(Collections.singletonList(currentAudience), audience);
+    }
+
+    /**
+     * Check whether any of the audience values of the request object matches an accepted audience of the server.
+     *
+     * @param acceptedAudiences Accepted audience values of the server.
+     * @param audience          Audience values of the request object.
+     * @return True if any of the audience values is accepted.
+     */
+    private boolean validateAudiences(List<String> acceptedAudiences, List<String> audience) {
+
         for (String aud : audience) {
-            if (StringUtils.equals(currentAudience, aud)) {
+            if (acceptedAudiences.contains(aud)) {
                 return true;
             }
         }
@@ -392,12 +429,12 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
                     .inputParam("audience", audience)
-                    .configParam("token endpoint URL", currentAudience)
-                    .resultMessage("None of the audiences in request object matched the token endpoint.")
+                    .configParam("accepted audiences", acceptedAudiences)
+                    .resultMessage("None of the audiences in request object matched the accepted audiences.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED));
         }
-        return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
+        return logAndReturnFalse("None of the audience values matched the accepted audiences: " + acceptedAudiences);
     }
 
     /**
@@ -490,7 +527,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     private boolean isFapiConformant(String clientId) throws RequestObjectException {
 
         try {
-            return OAuth2Util.isFapiConformantApp(clientId);
+            return FapiUtil.isFapiConformantApp(clientId);
         } catch (InvalidOAuthClientException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
                     "clientId: " + clientId, e);

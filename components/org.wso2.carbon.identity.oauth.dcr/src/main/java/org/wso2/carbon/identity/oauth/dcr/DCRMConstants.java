@@ -39,11 +39,20 @@ public class DCRMConstants {
         FAILED_TO_GET_APPLICATION("Error occurred while retrieving application with application name: %s"),
         FAILED_TO_GET_APPLICATION_BY_ID("Error occurred while retrieving application with client key: %s"),
         FAILED_TO_UPDATE_APPLICATION("Error occurred while updating application with client key: %s"),
+        FAILED_TO_CREATE_CLIENT_SECRET("Error occurred while creating secret of client: %s"),
+        FAILED_TO_DELETE_CLIENT_SECRET("Error occurred while deleting secret"),
+        FAILED_TO_GET_CLIENT_SECRETS("Error occurred while retrieving secrets of client: %s"),
+        FAILED_TO_GET_CLIENT_SECRET("Error occurred while retrieving specified secret: %s of client"),
         BAD_REQUEST_INVALID_REDIRECT_URI("Invalid redirect URI: %s"),
         BAD_REQUEST_INVALID_BACKCHANNEL_LOGOUT_URI("Invalid back-channel logout URI: %s"),
+        BAD_REQUEST_INVALID_FRONTCHANNEL_LOGOUT_URI("Invalid front-channel logout URI: %s"),
         BAD_REQUEST_INVALID_SP_NAME("Client Name is not adhering to the regex: %s"),
         BAD_REQUEST_INVALID_SP_TEMPLATE_NAME("Invalid service provider template name: %s"),
         BAD_REQUEST_INVALID_INPUT("%s"),
+        BAD_REQUEST_CLIENT_SECRET_EXPIRY_INVALID("The provided expiry time for the client secret is invalid."),
+        BAD_REQUEST_CLIENT_SECRET_EXPIRY_IN_PAST("The provided expiry time for the client secret is in the past."),
+        BAD_REQUEST_CLIENT_SECRET_EXPIRY_NOT_SUPPORTED("Client secret expiry is not supported as the multiple " +
+                "client secret support is disabled."),
         BAD_REQUEST_INVALID_SP_INPUT("Invalid data sent for the service provider : %s"),
         BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
         BAD_REQUEST_APPLICATION_CREATION("Application creation failure due to bad request: %s"),
@@ -102,6 +111,11 @@ public class DCRMConstants {
         public static final String UNAPPROVED_SOFTWARE_STATEMENT = "unapproved_software_statement";
     }
 
+    public static final String DECODE_DCR_REDIRECT_URIS_IN_RESPONSE = "OAuth.DCRM.DecodeRedirectUrisInResponse";
+
+    public static final String DCR_COMPATIBILITY_SETTING_GROUP = "dcr";
+    public static final String DCR_DECODE_REDIRECT_URIS_COMPATIBILITY_KEY = "decodeRedirectUrisInResponse";
+
     public static final String OAUTH2 = "oauth2";
     public static final String DCR_CONFIG_RESOURCE_TYPE_NAME = "DCR_CONFIGURATION";
     public static final String DCR_CONFIG_RESOURCE_NAME = "TENANT_DCR_CONFIGURATION";
@@ -109,6 +123,7 @@ public class DCRMConstants {
     public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
     public static final String SSA_JWKS = "ssaJwks";
     public static final String MANDATE_SSA = "mandateSSA";
+    public static final String FAPI_PROFILE = "fapiProfile";
 
     /**
      * Enum for DCR Configuration related error messages.
@@ -134,7 +149,14 @@ public class DCRMConstants {
          */
         ERROR_CODE_SSA_NOT_MANDATED("65022",
                                              "SSA not mandated.",
-                                             "Authentication is disabled but mandateSSA is not set to True.");
+                                             "Authentication is disabled but mandateSSA is not set to True."),
+
+        /**
+         * Unsupported FAPI profile error.
+         */
+        ERROR_CODE_UNSUPPORTED_FAPI_PROFILE("65023",
+                "Unsupported FAPI profile.",
+                "The FAPI profile '%s' is not supported by this organization. Supported profiles: %s.");
 
         /**
          * The error code.

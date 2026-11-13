@@ -23,12 +23,14 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
@@ -58,6 +60,8 @@ import java.util.Map;
 public class IdentityOathEventListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(IdentityOathEventListener.class);
+    private static final String LAST_LOGIN_TIME_CLAIM_UPDATE = "LastLoginTimeClaimUpdate";
+    private static final String REVOKE_CACHE_AT_LOGIN_PROPERTY = "OAuth.RevokeCacheAtLogin";
 
     /**
      * Bundle execution order id.
@@ -84,9 +88,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
 
         removeClaimCacheEntry(username, userStoreManager);
-        return OAuth2ServiceComponentHolder.getInstance()
-                .getRevocationProcessor()
-                .revokeTokens(username, userStoreManager) &&
+        return revokeTokensOfUser(username, userStoreManager) &&
                 OAuthUtil.revokeAuthzCodes(username, userStoreManager);
 
     }
@@ -98,7 +100,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        removeAuthzGrantCacheIfRequired(userName, userStoreManager);
         return true;
     }
 
@@ -109,7 +111,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        removeAuthzGrantCacheIfRequired(userName, userStoreManager);
         return true;
     }
 
@@ -151,9 +153,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
-                .getRevocationProcessor()
-                .revokeTokens(userName, userStoreManager);
+        boolean isSuccessOnRevokeTokens = revokeTokensOfUser(userName, userStoreManager);
 
         boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
@@ -170,9 +170,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
 
-        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
-                .getRevocationProcessor()
-                .revokeTokens(userName, userStoreManager);
+        boolean isSuccessOnRevokeTokens = revokeTokensOfUser(userName, userStoreManager);
 
         boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
@@ -200,9 +198,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         if (ArrayUtils.isNotEmpty(deletedRoles)) {
-            OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+            revokeTokensOfUser(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
     }
@@ -216,9 +212,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         if (ArrayUtils.isNotEmpty(deletedInternalRoles)) {
-            OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+            revokeTokensOfUser(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
     }
@@ -271,9 +265,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (CollectionUtils.isNotEmpty(roles)) {
             for (User user : userList) {
                 OAuthUtil.removeUserClaimsFromCache(user.getUsername(), userStoreManager);
-                OAuth2ServiceComponentHolder.getInstance()
-                        .getRevocationProcessor()
-                        .revokeTokens(user.getUsername(), userStoreManager);
+                revokeTokensOfUser(user.getUsername(), userStoreManager);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -303,9 +295,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             OAuthUtil.removeUserClaimsFromCache(username, userStoreManager);
         }
         for (String deletedUser : deletedUsers) {
-            OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(deletedUser, userStoreManager);
+            revokeTokensOfUser(deletedUser, userStoreManager);
         }
         return true;
     }
@@ -317,9 +307,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
-            return OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+            return revokeTokensOfUser(userName, userStoreManager);
         }
         return true;
     }
@@ -331,11 +319,57 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
-            return OAuth2ServiceComponentHolder.getInstance()
-                    .getRevocationProcessor()
-                    .revokeTokens(userName, userStoreManager);
+            return revokeTokensOfUser(userName, userStoreManager);
         }
         return true;
+    }
+
+    /**
+     * Remove the authz grant cache for the user if the claim update is not triggered by a last login time update,
+     * or if the revoke cache upon login configuration is enabled.
+     * Related to https://github.com/wso2/product-is/issues/25324
+     *
+     * @param userName         username of the user.
+     * @param userStoreManager user store manager.
+     * @throws UserStoreException if an error occurs while removing the cache.
+     */
+    private void removeAuthzGrantCacheIfRequired(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        if (isLastLoginTimeClaimUpdate() && !revokeCacheAtLoginEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping authz grant cache removal since the claim update is triggered by " +
+                        "last login time update for user: " +
+                        (LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(userName) : userName) +
+                        " and tenant: " + userStoreManager.getTenantId());
+            }
+        } else {
+            OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManager);
+        }
+    }
+
+    /**
+     * Check if the current claim update is a last login time claim update by checking the thread local flag.
+     *
+     * @return true if the current claim update is triggered by last login time update.
+     */
+    private boolean isLastLoginTimeClaimUpdate() {
+
+        Map<String, Object> properties = IdentityUtil.threadLocalProperties.get();
+        if (properties == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(properties.get(LAST_LOGIN_TIME_CLAIM_UPDATE));
+    }
+
+    /**
+     * Check if the revoke grant cache upon login configuration is enabled.
+     *
+     * @return true if the revoke grant cache upon login is enabled.
+     */
+    private boolean revokeCacheAtLoginEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(REVOKE_CACHE_AT_LOGIN_PROPERTY));
     }
 
     /**
@@ -393,9 +427,8 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                                 IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
                 String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
                         .getUserNameFromUserID(userAssociation.getUserId());
-                boolean isSuccessOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
-                        .getRevocationProcessor()
-                        .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+                boolean isSuccessOnSingleRevoke = revokeTokensOfUser(usernameOfUserAssociation,
+                        userStoreManagerOfUserAssociation);
                 if (!isSuccessOnSingleRevoke) {
                     isSuccessOnRevoking = false;
                 }
@@ -406,5 +439,23 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
 
         return isSuccessOnRevoking;
+    }
+
+    /**
+     * Revoke tokens of the user by invoking the registered revocation processors.
+     *
+     * @param userName          Username of the user.
+     * @param userStoreManager  User store manager.
+     * @return true if tokens are revoked successfully, false otherwise.
+     * @throws UserStoreException
+     */
+    private boolean revokeTokensOfUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
+
+        boolean isRevoked = true;
+        for (OAuth2RevocationProcessor revocationProcessor :
+                OAuth2ServiceComponentHolder.getInstance().getRevocationProcessors()) {
+            isRevoked &= revocationProcessor.revokeTokens(userName, userStoreManager);
+        }
+        return isRevoked;
     }
 }

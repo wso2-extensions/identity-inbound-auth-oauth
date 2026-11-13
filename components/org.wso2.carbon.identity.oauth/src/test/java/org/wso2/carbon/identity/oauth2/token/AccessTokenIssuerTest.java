@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -24,18 +24,44 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth2.TestConstants.DEVICE_CODE;
+import static org.wso2.carbon.identity.oauth2.TestConstants.SESSION_ID;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USERNAME_CLAIM_URI;
+import static org.wso2.carbon.user.core.constants.UserCoreClaimConstants.USER_ID_CLAIM_URI;
+
+import org.apache.commons.logging.Log;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 public class AccessTokenIssuerTest {
 
@@ -115,6 +141,190 @@ public class AccessTokenIssuerTest {
                 // The passed-in entry should not have been modified (tokenId should still be null).
                 Assert.assertNull(entry.getTokenId());
             }
+        }
+    }
+
+    @Test
+    public void testValidateGrantExceptionLogsSanitizedError() throws Exception {
+
+        // Enable debug at JUL level so that commons-logging Jdk14Logger reports debug enabled.
+        java.util.logging.Logger.getLogger(AccessTokenIssuer.class.getName())
+            .setLevel(java.util.logging.Level.FINE);
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class)))
+            .thenThrow(new IdentityOAuth2Exception("sensitive message"));
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2Util> oauth2UtilMock = Mockito.mockStatic(OAuth2Util.class)) {
+
+            loggerUtilsMock.when(() -> LoggerUtils.getSanitizedErrorMessage("sensitive message", "user"))
+                .thenReturn("sanitized message");
+            oauth2UtilMock.when(() -> OAuth2Util.getUserIdentifierFromRequest(req)).thenReturn("user");
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            Object result = method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            Assert.assertNotNull(result);
+            Assert.assertTrue(result instanceof OAuth2AccessTokenRespDTO);
+            OAuth2AccessTokenRespDTO resp = (OAuth2AccessTokenRespDTO) result;
+            Assert.assertTrue(resp.isError());
+            Assert.assertEquals(resp.getErrorMsg(), "sensitive message");
+        }
+    }
+
+    @Test
+    public void testInvalidGrantIsRecordedAsADiagnosticLog() throws Exception {
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        req.setClientId("test_client_id");
+        req.setGrantType("refresh_token");
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class)))
+            .thenThrow(new IdentityOAuth2Exception("Persisted access token data not found"));
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2Util> oauth2UtilMock = Mockito.mockStatic(OAuth2Util.class)) {
+
+            loggerUtilsMock.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            loggerUtilsMock.when(() -> LoggerUtils.getSanitizedErrorMessage(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+            oauth2UtilMock.when(() -> OAuth2Util.getUserIdentifierFromRequest(req)).thenReturn("user");
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            ArgumentCaptor<DiagnosticLog.DiagnosticLogBuilder> captor =
+                ArgumentCaptor.forClass(DiagnosticLog.DiagnosticLogBuilder.class);
+            loggerUtilsMock.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(captor.capture()));
+            DiagnosticLog diagnosticLog = captor.getValue().build();
+
+            Assert.assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name(),
+                "A grant validation failure should be recorded as a FAILED entry.");
+            Assert.assertEquals(diagnosticLog.getActionId(),
+                OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            Assert.assertEquals(
+                diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE), "refresh_token");
+            Assert.assertTrue(
+                diagnosticLog.getResultMessage().contains("Authorization grant validation failed"),
+                "The log should state that the authorization grant validation failed.");
+            /* The internal error message can carry user identifiers which cannot be masked for grant types that do
+             not send the username parameter, hence it must not reach an application level diagnostic log. */
+            Assert.assertFalse(
+                diagnosticLog.getResultMessage().contains("Persisted access token data not found"),
+                "The internal error message should not be included in the application level log.");
+            Assert.assertNotNull(
+                diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.ERROR_CODE),
+                "The error code should be recorded so that the failure reason is still traceable.");
+        }
+    }
+
+    @Test
+    public void testUnauthorizedAccessDelegationIsRecordedAsADiagnosticLog() throws Exception {
+
+        AuthorizationGrantHandler handler = Mockito.mock(AuthorizationGrantHandler.class);
+        OAuth2AccessTokenReqDTO req = new OAuth2AccessTokenReqDTO();
+        req.setClientId("test_client_id");
+        req.setGrantType("refresh_token");
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(req);
+
+        when(handler.isOfTypeApplicationUser(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        when(handler.validateGrant(any(OAuthTokenReqMessageContext.class))).thenReturn(true);
+        // The grant itself is valid, but the application is not authorized to use it.
+        when(handler.authorizeAccessDelegation(any(OAuthTokenReqMessageContext.class))).thenReturn(false);
+
+        try (MockedStatic<LoggerUtils> loggerUtilsMock = Mockito.mockStatic(LoggerUtils.class)) {
+
+            loggerUtilsMock.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("validateGrantAndIssueToken",
+                OAuth2AccessTokenReqDTO.class, OAuthTokenReqMessageContext.class,
+                OAuth2AccessTokenRespDTO.class, AuthorizationGrantHandler.class,
+                String.class, OAuthAppDO.class);
+            method.setAccessible(true);
+            method.invoke(issuer, req, ctx, null, handler, "tenant", null);
+
+            ArgumentCaptor<DiagnosticLog.DiagnosticLogBuilder> captor =
+                ArgumentCaptor.forClass(DiagnosticLog.DiagnosticLogBuilder.class);
+            loggerUtilsMock.verify(() -> LoggerUtils.triggerDiagnosticLogEvent(captor.capture()));
+            DiagnosticLog diagnosticLog = captor.getValue().build();
+
+            Assert.assertEquals(diagnosticLog.getResultStatus(), DiagnosticLog.ResultStatus.FAILED.name(),
+                "An unauthorized access delegation should be recorded as a FAILED entry.");
+            Assert.assertEquals(diagnosticLog.getActionId(),
+                OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            Assert.assertEquals(
+                diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE), "refresh_token");
+            Assert.assertTrue(
+                diagnosticLog.getResultMessage().contains("not authorized to use the provided grant type"),
+                "The log should state that the application is not authorized to use the grant type.");
+        }
+    }
+
+    @Test
+    public void testHandleTokenBindingForRefreshTokenGrant() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        OAuthTokenReqMessageContext tokReqMsgCtx = Mockito.mock(OAuthTokenReqMessageContext.class);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setTokenBindingType("");
+
+        AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+        Method method = AccessTokenIssuer.class.getDeclaredMethod(
+                "handleTokenBinding",
+                OAuth2AccessTokenReqDTO.class, String.class,
+                OAuthTokenReqMessageContext.class, OAuthAppDO.class);
+        method.setAccessible(true);
+
+        method.invoke(issuer, tokenReqDTO, REFRESH_TOKEN, tokReqMsgCtx, oAuthAppDO);
+        Mockito.verify(tokReqMsgCtx, never()).setTokenBinding(any());
+    }
+
+    @Test
+    public void testGetAuthzGrantCacheEntryFromDeviceCodeCopiesSessionContextIdentifier() throws Exception {
+
+        DeviceAuthorizationGrantCacheEntry deviceCacheEntry = new DeviceAuthorizationGrantCacheEntry(new HashMap<>());
+        deviceCacheEntry.setSessionContextIdentifier(SESSION_ID);
+
+        try (MockedStatic<DeviceAuthorizationGrantCache> mockedDeviceCache =
+                     Mockito.mockStatic(DeviceAuthorizationGrantCache.class)) {
+
+            DeviceAuthorizationGrantCache mockCache = Mockito.mock(DeviceAuthorizationGrantCache.class);
+            mockedDeviceCache.when(DeviceAuthorizationGrantCache::getInstance).thenReturn(mockCache);
+            when(mockCache.getValueFromCache(any(DeviceAuthorizationGrantCacheKey.class))).thenReturn(deviceCacheEntry);
+
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+
+            Method method = AccessTokenIssuer.class.getDeclaredMethod(
+                    "getAuthzGrantCacheEntryFromDeviceCode", String.class);
+            method.setAccessible(true);
+
+            @SuppressWarnings("unchecked")
+            Optional<AuthorizationGrantCacheEntry> result =
+                    (Optional<AuthorizationGrantCacheEntry>) method.invoke(issuer, DEVICE_CODE);
+
+            Assert.assertTrue(result.isPresent(),
+                    "AuthorizationGrantCacheEntry should be present when device code cache has an entry");
+            Assert.assertEquals(result.get().getSessionContextIdentifier(), SESSION_ID,
+                    "sessionContextIdentifier should be copied from DeviceAuthorizationGrantCacheEntry");
         }
     }
 
@@ -789,4 +999,40 @@ public class AccessTokenIssuerTest {
 //
 //        when(oAuthServerConfiguration.getSupportedGrantTypes()).thenReturn(authzGrantHandlers);
 //    }
+
+    private static final String TEST_USER_ID = "7b8a1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d";
+    private static final String TEST_USERNAME = "john";
+
+    @DataProvider(name = "localSubjectClaimData")
+    public Object[][] localSubjectClaimData() {
+
+        // Each row: {subject claim uri, expected subject}.
+        return new Object[][]{
+                {USER_ID_CLAIM_URI, TEST_USER_ID},
+                {USERNAME_CLAIM_URI, TEST_USERNAME}
+        };
+    }
+
+    @Test(dataProvider = "localSubjectClaimData")
+    public void testSubjectClaimIsResolvedWithoutUserStoreCall(String subjectClaimUri, String expectedSubject)
+            throws Exception {
+
+        AuthenticatedUser authenticatedUser = Mockito.mock(AuthenticatedUser.class);
+        when(authenticatedUser.getUserId()).thenReturn(TEST_USER_ID);
+        when(authenticatedUser.getUserName()).thenReturn(TEST_USERNAME);
+
+        try (MockedStatic<IdentityTenantUtil> mockedTenantUtil = Mockito.mockStatic(IdentityTenantUtil.class)) {
+            AccessTokenIssuer issuer = Mockito.mock(AccessTokenIssuer.class, Mockito.CALLS_REAL_METHODS);
+
+            Method method = AccessTokenIssuer.class.getDeclaredMethod("getSubjectClaimFromUserStore",
+                    String.class, AuthenticatedUser.class);
+            method.setAccessible(true);
+            Object subject = method.invoke(issuer, subjectClaimUri, authenticatedUser);
+
+            Assert.assertEquals(subject, expectedSubject,
+                    "Subject claim should be resolved from the authenticated user.");
+            // The user store should not be reached at all for these claims.
+            mockedTenantUtil.verify(() -> IdentityTenantUtil.getRealm(anyString(), anyString()), never());
+        }
+    }
 }

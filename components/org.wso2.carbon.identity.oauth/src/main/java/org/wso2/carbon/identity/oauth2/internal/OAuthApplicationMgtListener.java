@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import com.google.gson.Gson;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -103,18 +105,43 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     public boolean doPreUpdateApplication(ServiceProvider serviceProvider, String tenantDomain, String userName)
             throws IdentityApplicationManagementException {
 
+        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                .getServiceProvider(serviceProvider.getApplicationID());
+        validateExternalConsentPageConfigurationForApplicationUpdate(serviceProvider, existingSP, tenantDomain);
+
         handleOAuthAppAssociationRemoval(serviceProvider);
         storeSaaSPropertyValue(serviceProvider);
         removeClientSecret(serviceProvider);
 
-        ServiceProvider existingSP = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                .getServiceProvider(serviceProvider.getApplicationID());
         String newClaimConfigString = new Gson().toJson(serviceProvider.getClaimConfig());
         String existingClaimConfigString = new Gson().toJson(existingSP.getClaimConfig());
         if (StringUtils.equals(newClaimConfigString, existingClaimConfigString)) {
             threadLocalForClaimConfigUpdates.set(false);
         }
         return true;
+    }
+
+    private void validateExternalConsentPageConfigurationForApplicationUpdate(ServiceProvider updatedSP,
+                                                                              ServiceProvider existingSP,
+                                                                              String tenantDomain)
+            throws IdentityApplicationManagementValidationException {
+
+        if (!OAuth2Util.isExternalConsentPageEnforced(tenantDomain)) {
+            return;
+        }
+
+        LocalAndOutboundAuthenticationConfig existingAuthConfig =
+                existingSP == null ? null : existingSP.getLocalAndOutBoundAuthenticationConfig();
+        LocalAndOutboundAuthenticationConfig updatedAuthConfig = updatedSP.getLocalAndOutBoundAuthenticationConfig();
+        boolean isExistingConfigEnabled = existingAuthConfig != null && existingAuthConfig.isUseExternalConsentPage();
+        boolean isUpdatedConfigDisabling = updatedAuthConfig != null && !updatedAuthConfig.isUseExternalConsentPage();
+
+        if (isExistingConfigEnabled && isUpdatedConfigDisabling) {
+            throw new IdentityApplicationManagementValidationException(new String[]{
+                    "Cannot disable application-level useExternalConsentPage while organization-level external " +
+                            "consent page enforcement is enabled."
+            });
+        }
     }
 
     public boolean doPostGetServiceProvider(ServiceProvider serviceProvider, String serviceProviderName,
@@ -256,6 +283,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         String oauthConsumerKey = oAuthConsumerAppDTO.getOauthConsumerKey();
                         boolean isExistingClient = dao.isDuplicateConsumer(oauthConsumerKey);
 
+                        /* Additional (non-latest) secrets cannot be restored without a latest secret, so reject an
+                           import file that carries additional secrets but no latest secret. */
+                        if (!isExistingClient
+                                && StringUtils.isBlank(oAuthConsumerAppDTO.getOauthConsumerSecret())
+                                && CollectionUtils.isNotEmpty(oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                            throw new IdentityOAuthClientException("The additional client secrets are present in the "
+                                    + "import file but the latest client secret is missing.");
+                        }
+
                         // Set the client secret before doing registering/updating the oauth app.
                         if (oAuthConsumerAppDTO.getOauthConsumerSecret() == null) {
                             if (isExistingClient) {
@@ -270,9 +306,19 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         OAuthAdminServiceImpl oAuthAdminService =
                                 OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
                         if (isExistingClient) {
+                            // Update-import: preserve the existing secrets; the imported secret list is ignored.
                             oAuthAdminService.updateConsumerApplication(oAuthConsumerAppDTO);
                         } else {
-                            oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            if (oAuthAppDO.getOauthConsumerSecretExpiryTime() != null
+                                    || CollectionUtils.isNotEmpty(
+                                            oAuthAppDO.getAdditionalOauthConsumerSecrets())) {
+                                /* Restore the exported secrets: preserve the latest secret's expiry, re-create the
+                                   non-latest secrets, and allow an already-expired secret. */
+                                oAuthAdminService.registerImportedOAuthApplicationData(oAuthConsumerAppDTO,
+                                        oAuthAppDO.getAdditionalOauthConsumerSecrets());
+                            } else {
+                                oAuthAdminService.registerOAuthApplicationData(oAuthConsumerAppDTO);
+                            }
                         }
                         return;
                     }
@@ -330,11 +376,15 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
                         OAuthAppDAO dao = new OAuthAppDAO();
                         OAuthAppDO authApplication = dao.getAppInformation(authConfig.getInboundAuthKey());
-                        String tokenProcessorName = OAuthServerConfiguration.getInstance().getPersistenceProcessor()
+                        String tokenProcessorName =
+                                OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor()
                                 .getClass().getName();
                         if (!"org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor"
                                 .equals(tokenProcessorName) || !exportSecrets) {
+                            // Do not export the client secrets.
                             authApplication.setOauthConsumerSecret(null);
+                            authApplication.setOauthConsumerSecretExpiryTime(null);
+                            authApplication.setAdditionalOauthConsumerSecrets(null);
                         }
 
                         Property[] properties = authConfig.getProperties();
@@ -471,25 +521,30 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
 
         if (isNotEmpty(consumerKeys)) {
+            boolean clearTokenAndCodeCaches = threadLocalForClaimConfigUpdates.get();
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
             Set<AuthzCodeDO> authzCodeDOSet = new HashSet<>();
 
             AppInfoCache appInfoCache = AppInfoCache.getInstance();
             for (String oauthKey : consumerKeys) {
-                accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
-                authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
-                        .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                if (clearTokenAndCodeCaches) {
+                    accessTokenDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAOImpl(oauthKey)
+                            .getActiveTokenSetWithTokenIdByConsumerKeyForOpenidScope(oauthKey));
+                    authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO()
+                            .getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
+                }
                 // Remove client credential from AppInfoCache
                 appInfoCache.clearCacheEntry(oauthKey);
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
-            if (isNotEmpty(accessTokenDOSet) && threadLocalForClaimConfigUpdates.get()) {
+            if (isNotEmpty(accessTokenDOSet)) {
                 clearCacheEntriesAgainstToken(accessTokenDOSet);
             }
 
-            if (isNotEmpty(authzCodeDOSet) && threadLocalForClaimConfigUpdates.get()) {
+            if (isNotEmpty(authzCodeDOSet)) {
                 clearCacheEntriesAgainstAuthzCode(authzCodeDOSet);
             }
         }
@@ -527,7 +582,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             }
 
             Set<String> accessTokens = OAuthTokenPersistenceFactory.getInstance()
-                    .getAccessTokenDAO().getActiveTokensByConsumerKey(consumerKey);
+                    .getAccessTokenDAOImpl(consumerKey).getActiveTokensByConsumerKey(consumerKey);
             for (String accessToken : accessTokens) {
                 // Remove access token from AuthorizationGrantCache
                 AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
@@ -596,12 +651,20 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void clearCacheEntriesAgainstAuthzCode(Set<AuthzCodeDO> authzCodeDOSet) {
 
+        // Clear the session store before the cache, so a cache miss in between cannot reload a stale entry.
+        List<String> authzCodeIds = new ArrayList<>();
+        for (AuthzCodeDO authzCodeDO : authzCodeDOSet) {
+            if (StringUtils.isNotBlank(authzCodeDO.getAuthzCodeId())) {
+                authzCodeIds.add(authzCodeDO.getAuthzCodeId());
+            }
+        }
+        AuthorizationGrantCache.getInstance().clearFromSessionStoreBatch(authzCodeIds);
+
         for (AuthzCodeDO authzCodeDO : authzCodeDOSet) {
             // Remove authorization code from AuthorizationGrantCache
             AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
                     authzCodeDO.getAuthorizationCode());
-            AuthorizationGrantCache.getInstance()
-                    .clearCacheEntryByCodeId(grantCacheKey, authzCodeDO.getAuthzCodeId());
+            AuthorizationGrantCache.getInstance().clearCacheEntry(grantCacheKey);
             // Remove authorization code from OAuthCache
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authzCodeDO.getAuthorizationCode());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
@@ -613,12 +676,20 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
 
     private void clearCacheEntriesAgainstToken(Set<AccessTokenDO> accessTokenDOSet) {
 
+        // Clear the session store before the cache, so a cache miss in between cannot reload a stale entry.
+        List<String> tokenIds = new ArrayList<>();
+        for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
+            if (StringUtils.isNotBlank(accessTokenDo.getTokenId())) {
+                tokenIds.add(accessTokenDo.getTokenId());
+            }
+        }
+        AuthorizationGrantCache.getInstance().clearFromSessionStoreBatch(tokenIds);
+
         for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
             // Remove access token from AuthorizationGrantCache
             AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
                     accessTokenDo.getAccessToken());
-            AuthorizationGrantCache.getInstance()
-                    .clearCacheEntryByTokenId(grantCacheKey, accessTokenDo.getTokenId());
+            AuthorizationGrantCache.getInstance().clearCacheEntry(grantCacheKey);
             // Remove access token from OAuthCache
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
             CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
@@ -758,7 +829,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 Set<AccessTokenDO> activeDetailedTokens;
                 try {
                     activeDetailedTokens = OAuthTokenPersistenceFactory
-                            .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(oauthKey);
+                            .getInstance().getAccessTokenDAOImpl(oauthKey)
+                            .getActiveAcessTokenDataByConsumerKey(oauthKey, tenantDomain);
                     String[] accessTokens = new String[activeDetailedTokens.size()];
                     for (AccessTokenDO detailToken : activeDetailedTokens) {
                         String token = detailToken.getAccessToken();

@@ -24,7 +24,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -180,7 +179,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         PreparedStatement prepStmt = null;
         Map<Integer, List<String>> claimValues = new HashMap<>();
         try {
-            String sqlStmt = isH2DB() ? SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS_H2 :
+            String sqlStmt = isH2DB(connection) ? SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS_H2 :
                     SQLQueries.STORE_IDN_OIDC_REQ_OBJECT_CLAIMS;
             connection.setAutoCommit(false);
             String dbProductName = connection.getMetaData().getDatabaseProductName();
@@ -228,7 +227,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 }
             }
             IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (DataAccessException | SQLException e) {
+        } catch (SQLException e) {
             try {
                 connection.rollback();
             } catch (SQLException e1) {
@@ -304,13 +303,14 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
     @Override
     public List<RequestedClaim> getRequestedClaimsbySessionDataKey(String sessionDataKey, boolean isUserInfo) throws
             IdentityOAuth2Exception {
+
         Connection connection = null;
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
         List<RequestedClaim> essentialClaims = new ArrayList<>();
         try {
             connection = IdentityDatabaseUtil.getDBConnection(false);
-            String sql = isH2DB() ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY_H2 :
+            String sql = isH2DB(connection) ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY_H2 :
                     SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_SESSION_DATA_KEY;
 
             prepStmt = connection.prepareStatement(sql);
@@ -325,7 +325,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
-        } catch (DataAccessException | SQLException e) {
+        } catch (SQLException e) {
             String errorMsg = "Error occurred while retrieving request object by session data key: " + sessionDataKey +
                     ", isUserInfo: " + isUserInfo;
             throw new IdentityOAuth2Exception(errorMsg, e);
@@ -345,6 +345,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      */
     @Override
     public List<RequestedClaim> getRequestedClaims(String token, boolean isUserInfo) throws IdentityOAuth2Exception {
+
         Connection connection = null;
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
@@ -353,7 +354,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 getTokenIdByAccessToken(token);
         try {
             connection = IdentityDatabaseUtil.getDBConnection(false);
-            String sql = isH2DB() ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN_H2 :
+            String sql = isH2DB(connection) ? SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN_H2 :
                     SQLQueries.RETRIEVE_REQUESTED_CLAIMS_BY_TOKEN;
 
             prepStmt = connection.prepareStatement(sql);
@@ -368,7 +369,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
-        } catch (DataAccessException | SQLException e) {
+        } catch (SQLException e) {
             String errorMsg = "Error occurred while retrieving request object.";
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
@@ -423,6 +424,34 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
 
         } catch (IdentityOAuthAdminException e) {
             String errorMsg = "Can not delete existing entry for the same token id" + tokenId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+    }
+
+    @Override
+    public void updateRequestObjectReferenceToTokenByCodeId(String codeId, String tokenId)
+            throws IdentityOAuth2Exception {
+
+        Connection connection = null;
+        PreparedStatement ps = null;
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection(true);
+            deleteRequestObjectReferenceforCode(connection, tokenId);
+            String sql = SQLQueries.UPDATE_REQUEST_OBJECT_TOKEN_BY_CODE;
+            ps = connection.prepareStatement(sql);
+            ps.setString(1, tokenId);
+            ps.setString(2, null);
+            ps.setString(3, codeId);
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            String errorMsg = "Can not update token id for code id: " + codeId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } catch (IdentityOAuthAdminException e) {
+            String errorMsg = "Can not delete existing entry for the same token id: " + tokenId;
             throw new IdentityOAuth2Exception(errorMsg, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, ps);

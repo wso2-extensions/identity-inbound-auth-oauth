@@ -153,7 +153,7 @@ public class DynamicLogoutPageBuilderUtil {
                             frontchannelLogoutURL)) {
                         String sid = sessionState.getSidClaim();
                         String tenantDomain = OIDCSessionManagementUtil.resolveTenantDomain(request);
-                        String issuer = OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain);
+                        String issuer = OIDCSessionManagementUtil.getIdTokenIssuer(tenantDomain, clientID);
                         Map<String, String> additionalQueryParams = new HashMap<>();
                         additionalQueryParams.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, sid);
                         additionalQueryParams.put(OAuth2Util.ISS, issuer);

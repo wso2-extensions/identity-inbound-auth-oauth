@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -85,6 +86,7 @@ public class OAuthComponentServiceHolder {
     private ConfigurationManager configurationManager;
 
     private ActionExecutorService actionExecutorService;
+    private CompatibilitySettingsService compatibilitySettingsService;
 
     private OAuthComponentServiceHolder() {
 
@@ -553,5 +555,25 @@ public class OAuthComponentServiceHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
+    }
+
+    /**
+     * Get the CompatibilitySettingsService instance.
+     *
+     * @return CompatibilitySettingsService The CompatibilitySettingsService instance.
+     */
+    public CompatibilitySettingsService getCompatibilitySettingsService() {
+
+        return compatibilitySettingsService;
+    }
+
+    /**
+     * Set the CompatibilitySettingsService instance.
+     *
+     * @param compatibilitySettingsService CompatibilitySettingsService The CompatibilitySettingsService instance.
+     */
+    public void setCompatibilitySettingsService(CompatibilitySettingsService compatibilitySettingsService) {
+
+        this.compatibilitySettingsService = compatibilitySettingsService;
     }
 }

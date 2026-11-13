@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -68,6 +70,8 @@ public class OAuth2AuthzEndpoint {
 
     public static final String COMMA_SEPARATOR = ",";
     public static final String SPACE_SEPARATOR = " ";
+
+    private static final Log LOG = LogFactory.getLog(OAuth2AuthzEndpoint.class);
 
     @GET
     @Path("/")
@@ -152,6 +156,13 @@ public class OAuth2AuthzEndpoint {
             return AuthzUtil.handleOAuthSystemException(oAuthMessage, e);
         } finally {
             AuthzUtil.handleCachePersistence(oAuthMessage);
+
+            // Clean up thread local to prevent thread local pollution across requests.
+            IdentityUtil.threadLocalProperties.get().remove(IdentityCoreConstants.IS_SYSTEM_APPLICATION);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Removed " + IdentityCoreConstants.IS_SYSTEM_APPLICATION +
+                        " thread local property to prevent pollution.");
+            }
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
                 FrameworkUtils.endTenantFlow();
             }

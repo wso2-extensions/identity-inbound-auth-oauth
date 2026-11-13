@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -36,6 +35,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
@@ -85,13 +85,21 @@ public class RequestObjectValidatorUtil {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getTenantDomain());
             String algorithm = oAuthAppDO.getRequestObjectSignatureAlgorithm();
-            if (StringUtils.isNotEmpty(algorithm)) {
+            if (StringUtils.isNotBlank(algorithm)) {
+                String mappedAlgorithm = StringUtils.EMPTY;
+                try {
+                    mappedAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm).getName();
+                } catch (IdentityOAuth2Exception e) {
+                    // Ignore the exception.
+                }
                 if (SHA256_WITH_RSA.equals(algorithm)) {
-                    algorithm = JWSAlgorithm.RS256.getName();
+                    algorithm = mappedAlgorithm;
                 }
 
                 String jwtAlgorithm = jwt.getHeader().getAlgorithm().getName();
-                if (!algorithm.equals(jwtAlgorithm)) {
+                boolean isAlgorithmMatches = StringUtils.equals(algorithm, jwtAlgorithm) ||
+                        StringUtils.equals(mappedAlgorithm, jwtAlgorithm);
+                if (!isAlgorithmMatches) {
                     throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
                             "Request Object signature verification failed due to an invalid signature algorithm.");
                 }
@@ -363,7 +371,7 @@ public class RequestObjectValidatorUtil {
     private static boolean isFapiConformant(String clientId) throws RequestObjectException {
 
         try {
-            return OAuth2Util.isFapiConformantApp(clientId);
+            return FapiUtil.isFapiConformantApp(clientId);
         } catch (InvalidOAuthClientException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
                     "clientId: " + clientId, e);

@@ -44,6 +44,25 @@ public interface TokenProvider {
      */
     AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 
+    /**
+     * Retrieves and verifies an access token based on the provided access token data object,
+     * with an option to include expired tokens in the verification process.
+     *
+     * @param accessToken               The access token data object to retrieve and verify.
+     * @param includeExpired            A boolean flag indicating whether to include expired tokens in the verification.
+     *                                  Set to true to include expired tokens, false to exclude them.
+     * @param checkIndirectRevocation   A boolean flag indicating whether to check for indirect revocation.
+     * @return The AccessTokenDO if the token is valid (ACTIVE or, optionally, EXPIRED), or null if the token
+     * is not found either in ACTIVE or EXPIRED states when includeExpired is true. The method should throw
+     * IllegalArgumentException if the access token is in an inactive or invalid state (e.g., 'REVOKED' or 'INVALID')
+     * when includeExpired is false.
+     * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
+     */
+    default AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired,
+                                                 boolean checkIndirectRevocation) throws IdentityOAuth2Exception {
+
+        return getVerifiedAccessToken(accessToken, includeExpired);
+    }
 
     /**
      * Retrieves and verifies a refresh token. This should also validate the consumer key in the token if available

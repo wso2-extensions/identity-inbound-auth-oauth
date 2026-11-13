@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.idp.mgt.model.SharedIdPResolveType;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -181,7 +182,7 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
             cacheEntry.setTenantId(resourceTenantId);
             // Store resourceScope in cache even if it is null (to avoid database calls when accessing resources for
             // which scopes haven't been defined).
-            OAuthCache.getInstance().addToCache(cacheKey, cacheEntry);
+            OAuthCache.getInstance().addToCacheOnRead(cacheKey, cacheEntry);
         }
         // Return TRUE if - There does not exist a scope definition for the resource.
         if (resourceScope == null) {
@@ -601,7 +602,8 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
                             IdentityApplicationConstants.IDP_ISSUER_NAME + " with value: " + jwtIssuer +
                             ". Attempting to retrieve IDP using IDP Name as issuer.");
                 }
-                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain);
+                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain, false,
+                        SharedIdPResolveType.FULL_RESOLVED);
             }
             if (identityProvider != null) {
                 if (StringUtils.equalsIgnoreCase(identityProvider.getIdentityProviderName(), "default")) {

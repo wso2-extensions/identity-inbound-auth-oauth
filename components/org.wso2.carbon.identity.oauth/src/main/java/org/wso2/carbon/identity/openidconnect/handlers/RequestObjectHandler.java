@@ -130,14 +130,19 @@ public class RequestObjectHandler extends AbstractEventHandler {
         String codeId = (String) eventProperties.get(OIDCConstants.Event.CODE_ID);
 
         if (StringUtils.isNotEmpty(tokenId) && OAuthConstants.AuthorizationCodeState.INACTIVE.equals(codeState)) {
-            //update the token id  of request object reference identified by code id
-            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().updateRequestObjectReferenceCodeToToken
-                    (codeId, tokenId);
-        } else if (isCodeRemoved(codeState)) {
-            //remove the request object reference upon removal of the code
-            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO().deleteRequestObjectReferenceByCode(codeId);
-
+            /*
+             * This code block will be executed when the token is issued for authorization code.
+             * Therefore, we need to replace the request object reference identified by code id with token id
+             * and code id will be removed from the entry.
+             */
+            OAuthTokenPersistenceFactory.getInstance().getRequestObjectDAO()
+                    .updateRequestObjectReferenceToTokenByCodeId(codeId, tokenId);
         }
+
+        /*
+         * If the authorization code has been issued but the token has not yet been issued,
+         * no action is required. These entries will be removed by the token cleanup script.
+         */
     }
 
     private void postRevokeTokenById(Map<String, Object> eventProperties, String tokenState) throws

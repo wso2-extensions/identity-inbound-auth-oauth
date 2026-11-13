@@ -29,7 +29,6 @@ import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.apache.oltu.oauth2.as.issuer.ValueGenerator;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.wso2.carbon.base.ServerConfigurationException;
@@ -38,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
+import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -157,12 +157,16 @@ public class OAuthServerConfiguration {
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
     private long jarmResponseJwtValidityPeriodInSeconds = 3600;
+    private boolean jarmAndFormPostErrorResponseEnabled = false;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
     private boolean enablePasswordFlowEnhancements = false;
     private String tokenPersistenceProcessorClassName =
             "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
+    // Optional dedicated processor for client secret only. When unset, client-secret
+    // callers fall back to the shared token persistence processor for backward compatibility.
+    private String clientSecretPersistenceProcessorClassName = null;
     private String oauthTokenGeneratorClassName;
     private OAuthIssuer oauthTokenGenerator;
     private String oauthIdentityTokenGeneratorClassName;
@@ -170,12 +174,19 @@ public class OAuthServerConfiguration {
     private String persistAccessTokenAlias;
     private String retainOldAccessTokens;
     private String tokenCleanupFeatureEnable;
+    private int gracefulRefreshTokenRotationValidityPeriodMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_SEALING_VALUE;
+    private int gracefulRefreshTokenReuseLimitMax =
+            OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MAX_VALUE;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
     private boolean globalRbacScopeIssuerEnabled = false;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
+    private boolean isAccessTokenPersistenceEnabled = true;
+    private boolean isRefreshTokenPersistenceEnabled = true;
+    private boolean isKeepRevokedTokenEnabled = true;
     private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
     private boolean isValidateAuthenticatedUserForRefreshGrantEnabled = false;
     private boolean assertionsUserNameEnabled = false;
@@ -189,6 +200,7 @@ public class OAuthServerConfiguration {
     private boolean useLegacyPermissionAccessForUserBasedAuth = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
+    private TokenPersistenceProcessor clientSecretPersistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
     private Map<String, String> supportedGrantTypeClassNames = new HashMap<>();
     private Map<String, Boolean> refreshTokenAllowedGrantTypes = new HashMap<>();
@@ -215,6 +227,7 @@ public class OAuthServerConfiguration {
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
     private boolean isFapiSecurity = false;
+    private String fapiVersion = OAuthConstants.FAPIVersions.FAPI1_ADVANCED;
     private Map<String, Properties> supportedClientAuthHandlerData = new HashMap<>();
     private String saml2TokenCallbackHandlerName = null;
     private String saml2BearerTokenUserType;
@@ -234,6 +247,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
+    private boolean honorMultivaluedClaimMetadata = false;
     private boolean userInfoRemoveInternalPrefixFromRoles = false;
     private boolean isReturnOnlyAppAssociatedRolesInUserInfo = false;
     private boolean isReturnOnlyAppAssociatedRolesInJWTToken = false;
@@ -245,6 +259,7 @@ public class OAuthServerConfiguration {
     private boolean addTenantDomainToIdTokenEnabled = false;
     private boolean addUserstoreDomainToIdTokenEnabled = false;
     private boolean requestObjectEnabled = true;
+    private boolean useEntityIDAsIssuer = false;
 
     //default token types
     public static final String DEFAULT_TOKEN_TYPE = "Default";
@@ -290,6 +305,9 @@ public class OAuthServerConfiguration {
 
     // Property added to preserve the backward compatibility to send the original claim uris comes in the assertion.
     private boolean convertOriginalClaimsFromAssertionsToOIDCDialect = false;
+    // When enabled, claims taken from the assertion for a federated user are restricted to the application's
+    // configured access token attributes. Default false to preserve backward compatibility.
+    private boolean restrictAssertionClaimsToConfiguredAttributes = false;
     // This property will decide whether to send only mapped roles received from the federated IdP
     private boolean returnOnlyMappedLocalRoles = false;
 
@@ -324,7 +342,11 @@ public class OAuthServerConfiguration {
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
     private boolean isClientSecretHashEnabled = false;
+    private boolean isClientSecretHashOnlyEnabled = false;
 
+    // Max number of client secrets per oauth application. Defaults to 2 when not configured or misconfigured.
+    private static final int DEFAULT_CLIENT_SECRET_COUNT = 2;
+    private int clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
 
     // Property added to determine the expiration of logout token in oidc back-channel logout.
     private String openIDConnectBCLogoutTokenExpiryInSeconds = "120";
@@ -342,6 +364,7 @@ public class OAuthServerConfiguration {
     private List<String> defaultRequestedScopes = new ArrayList<>();
     // Property to define whether the default scope for back-channel grant is enabled or not.
     private boolean isDefaultScopeForBackChannelGrantEnabled = false;
+    private boolean useAppAuthorizedScopesAsDefault = false;
 
     // Property to define the filtered claims.
     private List<String> filteredIntrospectionClaims = new ArrayList<>();
@@ -459,11 +482,20 @@ public class OAuthServerConfiguration {
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
 
+        // read graceful refresh token rotation config
+        parseGracefulRefreshTokenRotationConfig(oauthElem);
+
+        // read token persistence config
+        parseTokenPersistenceConfiguration(oauthElem);
+
         // Read the authenticated user validation config for refresh grant.
         parseRefreshTokenGrantValidationConfiguration(oauthElem);
 
         // read token persistence processor config
         parseTokenPersistenceProcessorConfig(oauthElem);
+
+        // read client-secret dedicated persistence processor config (optional)
+        parseClientSecretPersistenceProcessorConfig(oauthElem);
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
@@ -537,6 +569,9 @@ public class OAuthServerConfiguration {
         // read hash mode config
         parseEnableHashMode(oauthElem);
 
+        // read multiple client secrets config
+        parseMaxClientSecretCount(oauthElem);
+
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
 
@@ -557,6 +592,9 @@ public class OAuthServerConfiguration {
 
         // Read default requested scopes for back-channel grant from config.
         parseDefaultScopeForBackChannelConfig(oauthElem);
+
+        // Read config for using the application's authorized scopes as the default requested scopes.
+        parseUseAppAuthorizedScopesAsDefaultConfig(oauthElem);
 
         // Read config for filtered claims for introspection response.
         parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
@@ -749,6 +787,17 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseUseAppAuthorizedScopesAsDefaultConfig(OMElement oauthElem) {
+
+        OMElement useAppAuthorizedScopesAsDefaultElem = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.
+                        USE_APP_AUTHORIZED_SCOPES_AS_DEFAULT));
+        if (useAppAuthorizedScopesAsDefaultElem != null) {
+            useAppAuthorizedScopesAsDefault = Boolean.parseBoolean(
+                    useAppAuthorizedScopesAsDefaultElem.getText().trim());
+        }
+    }
+
     private void parseShowDisplayNameInConsentPage(OMElement oauthElem) {
         OMElement showApplicationNameInConsentPageElement = oauthElem
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
@@ -830,6 +879,17 @@ public class OAuthServerConfiguration {
     public boolean isDefaultScopeForBackChannelGrantEnabled() {
 
         return isDefaultScopeForBackChannelGrantEnabled;
+    }
+
+    /**
+     * Returns whether the application's authorized scopes should be used as the default requested
+     * scopes when a request carries no scope.
+     *
+     * @return boolean value of the UseAppAuthorizedScopesAsDefault configuration.
+     */
+    public boolean isUseAppAuthorizedScopesAsDefault() {
+
+        return useAppAuthorizedScopesAsDefault;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -1128,6 +1188,16 @@ public class OAuthServerConfiguration {
         return Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable);
     }
 
+    public int getGracefulRefreshTokenRotationValidityPeriodMax() {
+
+        return gracefulRefreshTokenRotationValidityPeriodMax;
+    }
+
+    public int getGracefulRefreshTokenReuseLimitMax() {
+
+        return gracefulRefreshTokenReuseLimitMax;
+    }
+
     public String getOIDCConsentPageUrl() {
         return oidcConsentPageUrl;
     }
@@ -1172,6 +1242,11 @@ public class OAuthServerConfiguration {
         return jarmResponseJwtValidityPeriodInSeconds;
     }
 
+    public boolean isJARMAndFormPostErrorResponseEnabled() {
+
+        return jarmAndFormPostErrorResponseEnabled;
+    }
+
     public long getApplicationAccessTokenValidityPeriodInSeconds() {
         return applicationAccessTokenValidityPeriodInSeconds;
     }
@@ -1198,6 +1273,33 @@ public class OAuthServerConfiguration {
 
     public boolean isRefreshTokenRenewalEnabled() {
         return isRefreshTokenRenewalEnabled;
+    }
+
+    /**
+     * Check if access token persistence is enabled.
+     *
+     * @return True if access token persistence is enabled.
+     */
+    public boolean isAccessTokenPersistenceEnabled() {
+        return isAccessTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if refresh token persistence is enabled.
+     *
+     * @return True if refresh token persistence is enabled.
+     */
+    public boolean isRefreshTokenPersistenceEnabled() {
+        return isRefreshTokenPersistenceEnabled;
+    }
+
+    /**
+     * Check if keeping revoked access tokens in the list is enabled.
+     *
+     * @return True if keeping revoked access tokens is enabled.
+     */
+    public boolean isKeepRevokedTokenEnabled() {
+        return isKeepRevokedTokenEnabled;
     }
 
     public boolean isExtendRenewedTokenExpiryTimeEnabled() {
@@ -1290,7 +1392,7 @@ public class OAuthServerConfiguration {
                     supportedGrantTypeValidatorsTemp.put(GrantType.REFRESH_TOKEN.toString(),
                             RefreshTokenGrantValidator.class);
                     supportedGrantTypeValidatorsTemp.put(
-                            org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER
+                            GrantType.SAML20_BEARER
                                     .toString(), SAML2GrantValidator.class);
 
                     if (supportedGrantTypeValidatorNames != null) {
@@ -1457,6 +1559,20 @@ public class OAuthServerConfiguration {
 
     public boolean isClientSecretHashEnabled() {
         return isClientSecretHashEnabled;
+    }
+
+    /**
+     * Retrieves the maximum number of client secrets allowed for an OAuth application.
+     *
+     * @return the maximum number of client secrets allowed for an OAuth application.
+     */
+    public int getMaxClientSecretCount() {
+
+        return clientSecretCount;
+    }
+
+    public boolean isClientSecretHashOnlyEnabled() {
+        return isClientSecretHashOnlyEnabled;
     }
 
     private void parseRequestObjectConfig(OMElement requestObjectBuildersElem) {
@@ -1717,6 +1833,10 @@ public class OAuthServerConfiguration {
         return userInfoJWTSignatureAlgorithm;
     }
 
+    public boolean getIsUseEntityIDAsIssuerEnabled() {
+        return useEntityIDAsIssuer;
+    }
+
     /**
      * Returns whether multi value support is enabled for userinfo response.
      *
@@ -1725,6 +1845,18 @@ public class OAuthServerConfiguration {
     public boolean getUserInfoMultiValueSupportEnabled() {
 
         return userInfoMultiValueSupportEnabled;
+    }
+
+    /**
+     * Whether a claim is emitted as a JSON array in JWT/ID tokens and the UserInfo response based on
+     * its local claim {@code multiValued} metadata property, instead of the legacy separator-based
+     * detection. Opt-in; default false = legacy behaviour.
+     *
+     * @return True if only multi-valued claims should be converted to arrays.
+     */
+    public boolean isHonorMultivaluedClaimMetadata() {
+
+        return honorMultivaluedClaimMetadata;
     }
 
     /**
@@ -1804,6 +1936,49 @@ public class OAuthServerConfiguration {
             }
         }
         return persistenceProcessor;
+    }
+
+    /**
+     * Return the persistence processor dedicated for client secret operations.
+     *
+     * <p>If {@code ClientSecretPersistenceProcessor} is configured in identity.xml, an instance of that class is
+     * returned (lazily created, cached). Otherwise this falls back to {@link #getPersistenceProcessor()} so existing
+     * deployments that only configure {@code TokenPersistenceProcessor} continue to behave exactly as before.
+     *
+     * @return The processor to use for client secret pre/post-processing.
+     * @throws IdentityOAuth2Exception If the fallback processor cannot be instantiated.
+     */
+    public TokenPersistenceProcessor getClientSecretPersistenceProcessor() throws IdentityOAuth2Exception {
+
+        if (StringUtils.isBlank(clientSecretPersistenceProcessorClassName)) {
+            return getPersistenceProcessor();
+        }
+        if (clientSecretPersistenceProcessor == null) {
+            synchronized (this) {
+                if (clientSecretPersistenceProcessor == null) {
+                    try {
+                        Class clazz =
+                                this.getClass().getClassLoader()
+                                        .loadClass(clientSecretPersistenceProcessorClassName);
+                        clientSecretPersistenceProcessor = (TokenPersistenceProcessor) clazz.newInstance();
+
+                        if (log.isDebugEnabled()) {
+                            log.debug("An instance of " + clientSecretPersistenceProcessorClassName +
+                                    " is created for client secret processing.");
+                        }
+
+                    } catch (Exception e) {
+                        String errorMsg =
+                                "Error when instantiating the ClientSecretPersistenceProcessor : " +
+                                        clientSecretPersistenceProcessorClassName +
+                                        ". Falling back to the shared TokenPersistenceProcessor.";
+                        log.error(errorMsg, e);
+                        return getPersistenceProcessor();
+                    }
+                }
+            }
+        }
+        return clientSecretPersistenceProcessor;
     }
 
     /**
@@ -2029,6 +2204,10 @@ public class OAuthServerConfiguration {
 
     public boolean isConvertOriginalClaimsFromAssertionsToOIDCDialect() {
         return convertOriginalClaimsFromAssertionsToOIDCDialect;
+    }
+
+    public boolean isRestrictAssertionClaimsToConfiguredAttributes() {
+        return restrictAssertionClaimsToConfiguredAttributes;
     }
 
     public boolean isReturnOnlyMappedLocalRoles() {
@@ -2363,6 +2542,14 @@ public class OAuthServerConfiguration {
             jarmResponseJwtValidityPeriodInSeconds = Long.parseLong(jarmResponseJwtTimeoutElem.getText());
         }
 
+        // set JARM and form_post error response enabled
+        OMElement jarmAndFormPostErrorResponseEnabledElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ENABLE_JARM_AND_FORM_POST_ERROR_RESPONSE));
+        if (jarmAndFormPostErrorResponseEnabledElem != null) {
+            jarmAndFormPostErrorResponseEnabled = Boolean.parseBoolean(
+                    jarmAndFormPostErrorResponseEnabledElem.getText());
+        }
+
         // set the application access token default timeout
         OMElement applicationAccessTokTimeoutElem = oauthConfigElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD));
@@ -2672,6 +2859,34 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseTokenPersistenceConfiguration(OMElement oauthConfigElem) {
+
+        OMElement tokenPersistenceElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.TOKEN_PERSISTENCE));
+        if (tokenPersistenceElem != null) {
+            OMElement persistAccessTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_ACCESS_TOKEN));
+            if (persistAccessTokenElem != null) {
+                isAccessTokenPersistenceEnabled = Boolean.parseBoolean(persistAccessTokenElem.getText());
+            }
+            OMElement persistRefreshTokenElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.PERSIST_REFRESH_TOKEN));
+            if (persistRefreshTokenElem != null) {
+                isRefreshTokenPersistenceEnabled = Boolean.parseBoolean(persistRefreshTokenElem.getText());
+            }
+            OMElement keepRevokedAccessTokensElem = tokenPersistenceElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.KEEP_REVOKED_ACCESS_TOKENS));
+            if (keepRevokedAccessTokensElem != null) {
+                isKeepRevokedTokenEnabled = Boolean.parseBoolean(keepRevokedAccessTokensElem.getText());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AccessTokenPersistence was set to : " + isAccessTokenPersistenceEnabled);
+            log.debug("RefreshTokenPersistence was set to : " + isRefreshTokenPersistenceEnabled);
+            log.debug("KeepRevokedTokens was set to : " + isKeepRevokedTokenEnabled);
+        }
+    }
+
     private void parseRefreshTokenGrantValidationConfiguration(OMElement oauthConfigElem) {
 
         OMElement validateAuthenticatedUserForRefreshGrantElem = oauthConfigElem.getFirstChildWithName(
@@ -2748,6 +2963,21 @@ public class OAuthServerConfiguration {
             log.debug("Token Persistence Processor was set to : " + tokenPersistenceProcessorClassName);
         }
 
+    }
+
+    private void parseClientSecretPersistenceProcessorConfig(OMElement oauthConfigElem) {
+
+        OMElement clientSecretProcessorElem =
+                oauthConfigElem
+                        .getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.CLIENT_SECRET_PERSISTENCE_PROCESSOR));
+        if (clientSecretProcessorElem != null && StringUtils.isNotBlank(clientSecretProcessorElem.getText())) {
+            clientSecretPersistenceProcessorClassName = clientSecretProcessorElem.getText().trim();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Client Secret Persistence Processor was set to : " + clientSecretPersistenceProcessorClassName);
+        }
     }
 
     /**
@@ -2838,6 +3068,39 @@ public class OAuthServerConfiguration {
         } else {
             tokenCleanupFeatureEnable = "false";
         }
+    }
+
+    private void parseGracefulRefreshTokenRotationConfig(OMElement oauthConfigElem) {
+
+        OMElement rootElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.GRACEFUL_REFRESH_TOKEN_ROTATION));
+        if (rootElem == null) {
+            return;
+        }
+        gracefulRefreshTokenRotationValidityPeriodMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_VALIDITY_PERIOD_MAX,
+                gracefulRefreshTokenRotationValidityPeriodMax);
+        gracefulRefreshTokenReuseLimitMax = parsePositiveIntChild(rootElem,
+                ConfigElements.GRACEFUL_REUSE_LIMIT_MAX,
+                gracefulRefreshTokenReuseLimitMax);
+    }
+
+    private int parsePositiveIntChild(OMElement parent, String childName, int fallback) {
+
+        OMElement child = parent.getFirstChildWithName(getQNameWithIdentityNS(childName));
+        if (child == null || !StringUtils.isNotBlank(child.getText())) {
+            return fallback;
+        }
+        try {
+            int value = Integer.parseInt(child.getText().trim());
+            if (value > 0) {
+                return value;
+            }
+            log.warn("Invalid value for " + childName + ": " + value + ". Using default: " + fallback);
+        } catch (NumberFormatException e) {
+            log.warn("Invalid value for " + childName + ": " + child.getText() + ". Using default: " + fallback);
+        }
+        return fallback;
     }
 
     private void tokenCleanupFeatureConfig(OMElement oauthCleanupConfigElem) {
@@ -2958,9 +3221,9 @@ public class OAuthServerConfiguration {
             defaultGrantTypes.put(GrantType.CLIENT_CREDENTIALS.toString(), CLIENT_CREDENTIALS_GRANT_HANDLER_CLASS);
             defaultGrantTypes.put(GrantType.PASSWORD.toString(), PASSWORD_GRANT_HANDLER_CLASS);
             defaultGrantTypes.put(GrantType.REFRESH_TOKEN.toString(), REFRESH_TOKEN_GRANT_HANDLER_CLASS);
-            defaultGrantTypes.put(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(),
+            defaultGrantTypes.put(GrantType.SAML20_BEARER.toString(),
                     SAML20_BEARER_GRANT_HANDLER_CLASS);
-            defaultGrantTypes.put(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(),
+            defaultGrantTypes.put(GrantType.IWA_NTLM.toString(),
                     IWA_NTLM_BEARER_GRANT_HANDLER_CLASS);
             supportedGrantTypeClassNames.putAll(defaultGrantTypes);
         }
@@ -3513,7 +3776,8 @@ public class OAuthServerConfiguration {
         if (oauthDeviceCodeGrantElement != null && oauthDeviceCodeGrantElement
                 .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)) != null) {
             deviceCodeKeySet = oauthDeviceCodeGrantElement
-                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText().trim();
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_CODE_KEY_SET)).getText()
+                    .trim();
         }
     }
 
@@ -3707,6 +3971,13 @@ public class OAuthServerConfiguration {
                         userInfoMultiValueSupportEnabledElem.getText().trim());
             }
 
+            OMElement honorMultivaluedClaimMetadataElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_HONOR_MULTIVALUED_CLAIM_METADATA));
+            if (honorMultivaluedClaimMetadataElem != null) {
+                honorMultivaluedClaimMetadata = Boolean.parseBoolean(
+                        honorMultivaluedClaimMetadataElem.getText().trim());
+            }
+
             OMElement userInfoResponseRemoveInternalPrefixFromRoles = openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES));
             if (userInfoResponseRemoveInternalPrefixFromRoles != null) {
@@ -3726,6 +3997,14 @@ public class OAuthServerConfiguration {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)).getText().trim());
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)) != null) {
+                useEntityIDAsIssuer = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER)).getText().
+                        trim());
+            }
+
             if (openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_CLAIMS)) != null) {
                 String supportedClaimStr = openIDConnectConfigElem
@@ -3754,6 +4033,14 @@ public class OAuthServerConfiguration {
             if (convertOriginalClaimsFromAssertionsToOIDCDialectElement != null) {
                 convertOriginalClaimsFromAssertionsToOIDCDialect = Boolean
                         .parseBoolean(convertOriginalClaimsFromAssertionsToOIDCDialectElement.getText().trim());
+            }
+
+            OMElement restrictAssertionClaimsToConfiguredAttributesElement = openIDConnectConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.OPENID_CONNECT_RESTRICT_ASSERTION_CLAIMS_TO_CONFIGURED_ATTRIBUTES));
+            if (restrictAssertionClaimsToConfiguredAttributesElement != null) {
+                restrictAssertionClaimsToConfiguredAttributes = Boolean
+                        .parseBoolean(restrictAssertionClaimsToConfiguredAttributesElement.getText().trim());
             }
             OMElement addUnmappedUserAttributesElement = openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_ADD_UN_MAPPED_USER_ATTRIBUTES));
@@ -3793,6 +4080,10 @@ public class OAuthServerConfiguration {
                     isFapiSecurity =
                             Boolean.parseBoolean(fapiElem.getFirstChildWithName(getQNameWithIdentityNS
                                     (ConfigElements.ENABLE_FAPI_SECURITY_PROFILE)).getText().trim());
+                }
+                if (fapiElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.FAPI_VERSION)) != null) {
+                    fapiVersion = fapiElem.getFirstChildWithName(getQNameWithIdentityNS(
+                            ConfigElements.FAPI_VERSION)).getText().trim();
                 }
             }
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
@@ -3894,6 +4185,57 @@ public class OAuthServerConfiguration {
             if (log.isDebugEnabled()) {
                 log.debug("Is client secret hashing enabled: " + isClientSecretHashEnabled);
             }
+        }
+
+        try {
+            clientSecretPersistenceProcessor = getClientSecretPersistenceProcessor();
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while getting an instance of Client Secret Persistence Processor.");
+        }
+
+        if (clientSecretPersistenceProcessor instanceof HashingPersistenceProcessor) {
+
+            OMElement clientSecretHashOnlyElement = oauthConfigElem
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.ENABLE_CLIENT_SECRET_HASH_ONLY));
+            if (clientSecretHashOnlyElement != null) {
+                isClientSecretHashOnlyEnabled = Boolean.parseBoolean(clientSecretHashOnlyElement.getText());
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Is client secret only hashing enabled: " + isClientSecretHashOnlyEnabled);
+            }
+        }
+    }
+
+    /**
+     * Parses the OAuth configuration to read the maximum number of client secrets allowed per application.
+     *
+     * @param oauthConfigElem The root {@link OMElement} representing the OAuth configuration.
+     */
+    private void parseMaxClientSecretCount(OMElement oauthConfigElem) {
+
+        OMElement multipleClientSecretsElement = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MULTIPLE_CLIENT_SECRETS));
+        if (multipleClientSecretsElement != null) {
+            OMElement maxSecretCountElement = multipleClientSecretsElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.MAX_SECRET_COUNT));
+            if (maxSecretCountElement != null && StringUtils.isNotBlank(maxSecretCountElement.getText())) {
+                String secretCountText = maxSecretCountElement.getText().trim();
+                try {
+                    clientSecretCount = Integer.parseInt(secretCountText);
+                    if (clientSecretCount <= 0) {
+                        clientSecretCount = DEFAULT_CLIENT_SECRET_COUNT;
+                        log.error("Invalid value for client secret count: '" + secretCountText +
+                                "'. Secret count should be a positive value. Using default client "
+                                + "secret count: " + DEFAULT_CLIENT_SECRET_COUNT);
+                    }
+                } catch (NumberFormatException e) {
+                    log.error("Invalid value for client secret count: '" + secretCountText +
+                            "'. Using default client secret count: " + DEFAULT_CLIENT_SECRET_COUNT, e);
+                }
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Client secret limit: " + clientSecretCount);
         }
     }
 
@@ -4255,6 +4597,17 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
+    /**
+     * This method returns the FAPI version configured in identity.xml. The configuration was used in IS 7.1 to
+     * enable FAPI 2.0 for the whole server, and is retained for deployments migrated from IS 7.1.
+     *
+     * @return The configured FAPI version.
+     */
+    public String getFapiVersion() {
+
+        return fapiVersion;
+    }
+
     public boolean isGlobalRbacScopeIssuerEnabled() {
 
         return globalRbacScopeIssuerEnabled;
@@ -4428,16 +4781,21 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
         public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
                 "UserInfoMultiValueSupportEnabled";
+        public static final String OPENID_CONNECT_HONOR_MULTIVALUED_CLAIM_METADATA =
+                "HonorMultivaluedClaimMetadata";
         public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
                 "UserInfoRemoveInternalPrefixFromRoles";
         private static final String OPENID_CONNECT_RETURN_APP_ROLES_IN_USERINFO =
                 "ReturnOnlyAppAssociatedRolesInUserInfo";
 
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
+        public static final String OPENID_CONNECT_USE_ENTITY_ID_AS_ISSUER = "UseEntityIdAsIssuer";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
         public static final String OPENID_CONNECT_CONVERT_ORIGINAL_CLAIMS_FROM_ASSERTIONS_TO_OIDCDIALECT =
                 "ConvertOriginalClaimsFromAssertionsToOIDCDialect";
+        public static final String OPENID_CONNECT_RESTRICT_ASSERTION_CLAIMS_TO_CONFIGURED_ATTRIBUTES =
+                "RestrictAssertionClaimsToConfiguredAttributes";
         // Property to decide whether to add tenant domain to id_token.
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
@@ -4498,6 +4856,7 @@ public class OAuthServerConfiguration {
 
         private static final String JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD =
                 "JARMResponseJwtValidityPeriodInSeconds";
+        private static final String ENABLE_JARM_AND_FORM_POST_ERROR_RESPONSE = "EnableJARMAndFormPostErrorResponse";
         private static final String APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD = "AccessTokenDefaultValidityPeriod";
         private static final String REFRESH_TOKEN_VALIDITY_PERIOD = "RefreshTokenValidityPeriod";
         // Enable/Disable cache
@@ -4509,8 +4868,15 @@ public class OAuthServerConfiguration {
                 "ValidateAuthenticatedUserForRefreshGrant";
         // Enable/Disable extend the lifetime of the new refresh token
         private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
+        // Token persistence config
+        private static final String TOKEN_PERSISTENCE = "TokenPersistence";
+        private static final String PERSIST_ACCESS_TOKEN = "PersistAccessToken";
+        private static final String PERSIST_REFRESH_TOKEN = "PersistRefreshToken";
+        private static final String KEEP_REVOKED_ACCESS_TOKENS = "KeepRevokedAccessTokens";
         // TokenPersistenceProcessor
         private static final String TOKEN_PERSISTENCE_PROCESSOR = "TokenPersistenceProcessor";
+        // Dedicated processor for client secrets (optional, falls back to TokenPersistenceProcessor).
+        private static final String CLIENT_SECRET_PERSISTENCE_PROCESSOR = "ClientSecretPersistenceProcessor";
         // Token issuer generator.
         private static final String OAUTH_TOKEN_GENERATOR = "OAuthTokenGenerator";
         private static final String IDENTITY_OAUTH_TOKEN_GENERATOR = "IdentityOAuthTokenGenerator";
@@ -4524,6 +4890,10 @@ public class OAuthServerConfiguration {
         private static final String TOKEN_CLEANUP_FEATURE = "EnableTokenCleanup";
         // Enable/Disable retain old access token
         private static final String RETAIN_OLD_ACCESS_TOKENS = "RetainOldAccessToken";
+        // Graceful refresh token rotation config
+        private static final String GRACEFUL_REFRESH_TOKEN_ROTATION = "GracefulRefreshTokenRotation";
+        private static final String GRACEFUL_VALIDITY_PERIOD_MAX = "ValidityPeriodMax";
+        private static final String GRACEFUL_REUSE_LIMIT_MAX = "ReuseLimitMax";
 
         // Supported Grant Types
         private static final String SUPPORTED_GRANT_TYPES = "SupportedGrantTypes";
@@ -4595,6 +4965,11 @@ public class OAuthServerConfiguration {
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
+        private static final String ENABLE_CLIENT_SECRET_HASH_ONLY = "HashClientSecretOnly";
+
+        // Multiple client secret configurations
+        private static final String MULTIPLE_CLIENT_SECRETS = "MultipleClientSecrets";
+        private static final String MAX_SECRET_COUNT = "MaxSecretCount";
 
         // Token introspection Configs
         private static final String INTROSPECTION_CONFIG = "Introspection";
@@ -4609,6 +4984,9 @@ public class OAuthServerConfiguration {
         // Enable Default Requested Scopes For Back Channel Grant Config.
         private static final String ENABLE_DEFAULT_REQUESTED_SCOPES_FOR_BACK_CHANNEL_GRANT =
                 "EnableDefaultRequestedScopesForBackChannelGrant";
+        // Use the application's authorized scopes as the default requested scopes when no scope is requested.
+        private static final String USE_APP_AUTHORIZED_SCOPES_AS_DEFAULT =
+                "UseAppAuthorizedScopesAsDefault";
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";
@@ -4642,6 +5020,7 @@ public class OAuthServerConfiguration {
 
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+        private static final String FAPI_VERSION = "FAPIVersion";
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";

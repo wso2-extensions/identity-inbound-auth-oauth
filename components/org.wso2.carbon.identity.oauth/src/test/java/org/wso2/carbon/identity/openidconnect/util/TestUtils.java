@@ -47,11 +47,14 @@ import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Connection;
@@ -462,5 +465,22 @@ public class TestUtils {
                         "algorithm NONE, signed and encrypted.", true, JWEAlgorithm.RSA_OAEP.toString(),
                         EncryptionMethod.A128GCM.toString()}
         };
+    }
+
+    /**
+     * Load the EC certificate from the test keystore and return its Base64 encoded content.
+     *
+     * @return Base64 encoded EC certificate content
+     * @throws Exception if loading or encoding fails
+     */
+    public static String getEcCertificateContentBase64() throws Exception {
+
+        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+        try (InputStream in = Files.newInputStream(
+                Paths.get("src/test/resources/keyStore/encryption/appKeystore.jks"))) {
+            ks.load(in, "wso2carbon".toCharArray());
+        }
+        Certificate cert = ks.getCertificate("wso2carbon_ec");
+        return java.util.Base64.getEncoder().encodeToString(cert.getEncoded());
     }
 }

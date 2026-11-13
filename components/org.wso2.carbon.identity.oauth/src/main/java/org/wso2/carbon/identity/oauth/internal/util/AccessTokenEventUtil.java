@@ -18,28 +18,42 @@
 
 package org.wso2.carbon.identity.oauth.internal.util;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,6 +66,12 @@ public class AccessTokenEventUtil {
 
     private static final Log LOG = LogFactory.getLog(AccessTokenEventUtil.class);
     private static final String APP_DAO = "OAuthAppDO";
+    /*
+     Name of the event property carrying the identifier of the user's profile in the organization it is accessing.
+     It is kept here so that only this bundle changes; it belongs in OAuthConstants.EventProperty next to the other
+     token event properties once this is upstreamed. The webhook event handlers read the same name.
+     */
+    private static final String SHARED_USER_ID = "SHARED_USER_ID";
 
     /**
      * Publishes a token revoke event for a particular user.
@@ -186,14 +206,31 @@ public class AccessTokenEventUtil {
 
         Map<String, Object> properties = new HashMap<>();
         if (user != null) {
+            String userId = null;
             try {
-                properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getUserId());
+                userId = user.getUserId();
+                properties.put(IdentityEventConstants.EventProperty.USER_ID, userId);
             } catch (UserIdNotFoundException e) {
                 LOG.debug("Error retrieving user Id for tenant: " + user.getTenantDomain(), e);
             }
             properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
             properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
             properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
+            /*
+             The organization the token belonged to and the organization the user resides in, stated the same way
+             as for a token issue so that a consumer of the event can tell the two apart: they differ for a user
+             shared into the organization the token was for, and the tenant the revocation is performed in says
+             nothing about either.
+             */
+            String accessingOrganizationId = StringUtils.isNotBlank(user.getAccessingOrganization())
+                    ? user.getAccessingOrganization() : StringUtils.EMPTY;
+            properties.put(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+            properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
+                    resolveUserResidentOrganizationId(user,
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain()));
+            properties.put(IdentityEventConstants.EventProperty.IS_FEDERATED_USER, user.isFederatedUser());
+            properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER, user.isOrganizationUser());
+            properties.put(SHARED_USER_ID, resolveSharedUserId(user, userId, accessingOrganizationId));
         }
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID,
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
@@ -239,6 +276,7 @@ public class AccessTokenEventUtil {
      *                                request.
      * @throws UserIdNotFoundException If the user ID cannot be found in the context.
      */
+    @Deprecated
     public static void publishTokenIssueEvent(OAuthTokenReqMessageContext tokReqMsgCtx,
                                               OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO)
             throws UserIdNotFoundException {
@@ -297,5 +335,289 @@ public class AccessTokenEventUtil {
         } catch (IdentityEventException e) {
             LOG.error("Error occurred publishing event " + IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, e);
         }
+    }
+
+    /**
+     * Publishes an event when a token is issued.
+     *
+     * @param tokReqMsgCtx            The token request message context containing information about the token request.
+     * @param tokenReqDTO The OAuth2 access token request DTO containing details about the access token request.
+     */
+    public static void publishTokenIssueEvent(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                              OAuth2AccessTokenReqDTO tokenReqDTO,
+                                              OAuth2AccessTokenRespDTO tokenRespDTO) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+
+        OauthTokenIssuer tokenIssuer = null;
+
+        try {
+            tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(tokenReqDTO.getClientId());
+        } catch (IdentityOAuth2Exception e) {
+            LOG.error("Error while retrieving the OAuth token issuer for client ID: " +
+                    tokenReqDTO.getClientId(), e);
+        } catch (InvalidOAuthClientException e) {
+            LOG.error("Invalid OAuth client with client ID: " + tokenReqDTO.getClientId(), e);
+        }
+        if (tokenIssuer != null) {
+            properties.put(IdentityEventConstants.EventProperty.TOKEN_TYPE, tokenIssuer.getAccessTokenType());
+        }
+
+        if (tokReqMsgCtx != null) {
+            String tenantDomain = tokenReqDTO.getTenantDomain();
+            String organizationId = StringUtils.EMPTY;
+            String rootOrgTenantDomain = StringUtils.EMPTY;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Retrieving organization details for tenant domain: " + tenantDomain);
+            }
+            try {
+                OrganizationManager organizationManager =
+                        OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+                if (organizationManager != null) {
+                    organizationId = organizationManager.resolveOrganizationId(tenantDomain);
+                }
+            } catch (OrganizationManagementException e) {
+                LOG.error("Error while retrieving the organization Id for tenant domain : " +
+                        tenantDomain, e);
+            }
+            properties.put(OAuthConstants.EventProperty.ISSUER_ORGANIZATION_ID,
+                    organizationId);
+            try {
+                if (tokenReqDTO.getTenantDomain() != null) {
+                    if (tokenReqDTO.getTenantDomain().equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                        rootOrgTenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+                    } else {
+                        rootOrgTenantDomain = OrganizationManagementUtil.getRootOrgTenantDomainBySubOrgTenantDomain(
+                                        tokenReqDTO.getTenantDomain());
+                    }
+                }
+            } catch (OrganizationManagementException e) {
+                LOG.error("Error while retrieving the root organization tenant domain for tenant domain : " +
+                        tenantDomain, e);
+            }
+            properties.put(OAuthConstants.EventProperty.ROOT_TENANT_DOMAIN,
+                    rootOrgTenantDomain);
+            String accessingOrganizationId = StringUtils.EMPTY;
+            if (tokReqMsgCtx.getAuthorizedUser() != null
+                    && tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
+                accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
+            }
+            properties.put(OAuthConstants.EventProperty.ACCESSING_ORGANIZATION_ID,
+                    accessingOrganizationId);
+            if (tokReqMsgCtx.getAuthorizedUser() != null) {
+                try {
+                    properties.put(IdentityEventConstants.EventProperty.USER_ID,
+                            tokReqMsgCtx.getAuthorizedUser().getUserId());
+                } catch (UserIdNotFoundException e) {
+                    LOG.error("Error retrieving user Id for tenant: " +
+                            tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), e);
+                    return;
+                }
+                properties.put(IdentityEventConstants.EventProperty.USER_NAME,
+                        tokReqMsgCtx.getAuthorizedUser().getUserName());
+                properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
+                        tokReqMsgCtx.getAuthorizedUser().getUserStoreDomain());
+                properties.put(IdentityEventConstants.EventProperty.IS_FEDERATED_USER,
+                        tokReqMsgCtx.getAuthorizedUser().isFederatedUser());
+                properties.put(IdentityEventConstants.EventProperty.IS_ORGANIZATION_USER,
+                        tokReqMsgCtx.getAuthorizedUser().isOrganizationUser());
+                properties.put(IdentityEventConstants.EventProperty.USER_RESIDENT_ORGANIZATION_ID,
+                        resolveUserResidentOrganizationId(tokReqMsgCtx.getAuthorizedUser(), tenantDomain));
+                properties.put(SHARED_USER_ID, resolveSharedUserId(tokReqMsgCtx.getAuthorizedUser(),
+                        String.valueOf(properties.get(IdentityEventConstants.EventProperty.USER_ID)),
+                        accessingOrganizationId));
+            }
+
+            properties.put(IdentityEventConstants.EventProperty.IAT, tokReqMsgCtx.getAccessTokenIssuedTime());
+            properties.put(IdentityEventConstants.EventProperty.JTI, tokReqMsgCtx.getJWTID());
+            properties.put(IdentityEventConstants.EventProperty.GRANT_TYPE, tokenReqDTO.getGrantType());
+            properties.put(OAuthConstants.EventProperty.CLIENT_ID,
+                    tokenReqDTO.getClientId());
+            properties.put(OAuthConstants.EventProperty.EXISTING_TOKEN_USED,
+                    existingTokenUsed(tokReqMsgCtx));
+
+            Object userTypeObj = tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE);
+            if (userTypeObj != null) {
+                properties.put(OAuthConstants.EventProperty.USER_TYPE, userTypeObj.toString());
+            } else {
+                properties.put(OAuthConstants.EventProperty.USER_TYPE, StringUtils.EMPTY);
+            }
+
+            if (tokReqMsgCtx.getProperty(APP_DAO) != null &&
+                    tokReqMsgCtx.getProperty(APP_DAO) instanceof OAuthAppDO) {
+                OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(APP_DAO);
+                properties.put(IdentityEventConstants.EventProperty.APPLICATION_ID, oAuthAppDO.getId());
+                properties.put(IdentityEventConstants.EventProperty.APPLICATION_NAME, oAuthAppDO.getApplicationName());
+                properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEY, oAuthAppDO.getOauthConsumerKey());
+            }
+            try {
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(
+                        tokenReqDTO.getClientId(), tenantDomain);
+                if (serviceProvider != null) {
+                    properties.put(OAuthConstants.EventProperty.SERVICE_PROVIDER,
+                            serviceProvider.getApplicationName());
+                }
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while retrieving the Service Provider for client ID: " +
+                        tokenReqDTO.getClientId(), e);
+            }
+
+            properties.put(OAuthConstants.EventProperty.REFRESH_TOKEN_VALIDITY_MILLIS,
+                    tokReqMsgCtx.getRefreshTokenvalidityPeriod());
+            // Resolve the client IP via IdentityUtil so X-Forwarded-For etc. are honoured when the
+            // server sits behind a proxy/load balancer — same source as the rest of the handlers.
+            if (tokenReqDTO.getHttpServletRequestWrapper() != null) {
+                properties.put(OAuthConstants.EventProperty.REMOTE_IP,
+                        IdentityUtil.getClientIpAddress(tokenReqDTO.getHttpServletRequestWrapper()));
+            }
+            properties.put(OAuthConstants.EventProperty.ACTOR,
+                    tokReqMsgCtx.getRequestedActor());
+        }
+
+        if (tokenRespDTO != null) {
+            properties.put(OAuthConstants.EventProperty.TOKEN_ID, tokenRespDTO.getTokenId());
+            properties.put(OAuthConstants.EventProperty.ACCESS_TOKEN_VALIDITY_MILLIS,
+                    tokenRespDTO.getExpiresInMillis());
+
+            String grantedScopes = tokenRespDTO.getAuthorizedScopes();
+            properties.put(OAuthConstants.EventProperty.AUTHORIZED_SCOPES,
+                    grantedScopes != null ? grantedScopes : StringUtils.EMPTY);
+
+            // Unauthorized scopes = requested scopes - granted scopes.
+            String unauthorizedScopes = StringUtils.EMPTY;
+            if (tokenReqDTO != null && tokenReqDTO.getScope() != null) {
+                List<String> requestedScopes = new LinkedList<>(Arrays.asList(tokenReqDTO.getScope()));
+                List<String> grantedScopeList = StringUtils.isNotBlank(grantedScopes)
+                        ? Arrays.asList(grantedScopes.split(" "))
+                        : Collections.emptyList();
+                requestedScopes.removeAll(grantedScopeList);
+                if (!requestedScopes.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String scope : requestedScopes) {
+                        sb.append(scope).append(" ");
+                    }
+                    unauthorizedScopes = sb.toString().trim();
+                }
+            }
+            properties.put(OAuthConstants.EventProperty.UNAUTHORIZED_SCOPES, unauthorizedScopes);
+
+            // Error code / message — null on success, populated when tokenRespDTO carries an error.
+            properties.put(IdentityEventConstants.EventProperty.ERROR_CODE,
+                    tokenRespDTO.getErrorCode() != null ? tokenRespDTO.getErrorCode() : StringUtils.EMPTY);
+            properties.put(IdentityEventConstants.EventProperty.ERROR_MESSAGE,
+                    tokenRespDTO.getErrorMsg() != null ? tokenRespDTO.getErrorMsg() : StringUtils.EMPTY);
+        }
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID,
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
+        properties.put(OAuthConstants.EventProperty.APP_RESIDENT_TENANT_ID,
+                IdentityTenantUtil.getLoginTenantId());
+
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, properties);
+
+        try {
+            OAuth2ServiceComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            LOG.error("Error occurred publishing event " + IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, e);
+        }
+    }
+
+    /**
+     * Organization the user the token was issued for resides in, when it is not the one the token was issued in.
+     * <p>
+     * The authenticated user rebuilt for a token request names that organization only on the flows that resolve it,
+     * such as the organization login flow. On the enhanced organization login flow the user authenticates against
+     * the organization it resides in while the token is issued in the organization owning the application, and the
+     * rebuilt user leaves the organization unnamed. The tenant the user resides in still names it, so the
+     * organization of that tenant is used when the user itself does not carry one.
+     *
+     * @param authorizedUser      User the token was issued for.
+     * @param issuingTenantDomain Tenant the token was issued in.
+     * @return Organization the user resides in, or an empty value when the user resides in the organization the
+     * token was issued in or when it cannot be told.
+     */
+    private static String resolveUserResidentOrganizationId(AuthenticatedUser authorizedUser,
+                                                            String issuingTenantDomain) {
+
+        String userResidentOrganizationId = authorizedUser.getUserResidentOrganization();
+        if (StringUtils.isNotBlank(userResidentOrganizationId)) {
+            return userResidentOrganizationId;
+        }
+        String userTenantDomain = authorizedUser.getTenantDomain();
+        if (StringUtils.isBlank(userTenantDomain) || StringUtils.equals(userTenantDomain, issuingTenantDomain)) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            OrganizationManager organizationManager =
+                    OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+            if (organizationManager != null) {
+                return organizationManager.resolveOrganizationId(userTenantDomain);
+            }
+        } catch (OrganizationManagementException e) {
+            LOG.debug("Error while resolving the organization of the tenant the user resides in: " +
+                    userTenantDomain, e);
+        }
+        return StringUtils.EMPTY;
+    }
+
+    /**
+     * Identifier of the user's profile in the organization it is accessing.
+     * <p>
+     * A user shared into an organization has a profile of its own there, apart from the one in the organization it
+     * resides in, and a consumer of the event needs it to address the user in the organization the token is for.
+     * The user carries that identifier only on the flows that resolve it, such as the ones issuing claims, so it
+     * is resolved from the user's association with the organization when the user itself does not carry it.
+     *
+     * @param authorizedUser           User the token was issued for.
+     * @param associatedUserId         Identifier of the user in the organization it resides in.
+     * @param accessingOrganizationId  Organization the user is accessing.
+     * @return Identifier of that profile, or an empty value for a user that is not shared or when it cannot be
+     * resolved.
+     */
+    private static String resolveSharedUserId(AuthenticatedUser authorizedUser, String associatedUserId,
+                                              String accessingOrganizationId) {
+
+        if (!authorizedUser.isSharedUser()) {
+            return StringUtils.EMPTY;
+        }
+        /*
+         The resolved profile is reused only when it belongs to the organization being accessed. The identifier
+         is set together with the organization it was resolved for, so one carried over from another organization
+         names a profile the subscriber of this event cannot resolve; the association is looked up instead.
+         */
+        if (StringUtils.isNotBlank(authorizedUser.getSharedUserId()) &&
+                StringUtils.equals(authorizedUser.getUserSharedOrganizationId(), accessingOrganizationId)) {
+            return authorizedUser.getSharedUserId();
+        }
+        if (StringUtils.isBlank(associatedUserId) || StringUtils.isBlank(accessingOrganizationId)) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService()
+                    .getUserAssociationOfAssociatedUserByOrgId(associatedUserId, accessingOrganizationId);
+            if (userAssociation != null) {
+                return userAssociation.getUserId();
+            }
+        } catch (OrganizationManagementException e) {
+            LOG.debug("Error while resolving the shared profile of user: " + associatedUserId +
+                    " in organization: " + accessingOrganizationId, e);
+        }
+        return StringUtils.EMPTY;
+    }
+
+    private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx == null) {
+            return false;
+        }
+        Object property = tokReqMsgCtx.getProperty(OAuthConstants.OIDCConfigProperties.EXISTING_TOKEN_USED);
+        if (!(property instanceof Boolean)) {
+            return false;
+        }
+        return (Boolean) property;
     }
 }

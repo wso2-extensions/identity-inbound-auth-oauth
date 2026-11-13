@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2023-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -40,13 +40,17 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -56,14 +60,13 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isFragmentApp;
 import static org.wso2.carbon.identity.organization.management.service.constant
         .OrganizationManagementConstants.DEFAULT_SUB_ORG_LEVEL;
 import static org.wso2.carbon.identity.organization.management.service.constant
@@ -193,11 +196,19 @@ public class JWTUtils {
             resourceIssuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
                     OIDC_IDP_ENTITY_ID).getValue();
         }
+
         // Compare JWT issuer with the resource issuer.
-        if (!jwtIssuer.equals(resourceIssuer)) {
+        if (!OAuth2Util.isResidentIdpIssuer(jwtIssuer, resourceIssuer, tenantDomain)) {
             // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
             if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)) &&
                     jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
+                return residentIdentityProvider;
+            }
+            // When the issuer is built with hostname (and tenant qualified URLs disabled), compare against the
+            // recomputed hostname based issuer instead of the stale entity ID stored in the database.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME)) &&
+                    !IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
+                    jwtIssuer.equals(OAuth2Util.getIssuerLocation(tenantDomain))) {
                 return residentIdentityProvider;
             }
             // Check for organization management enablement.
@@ -216,6 +227,145 @@ public class JWTUtils {
             }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+            /*
+             Server exception thrown since the token issuer's tenant domain could not be mapped to an organization,
+             which indicates inconsistent server side organization data.
+            */
+            if (jwtIssuerOrgId == null) {
+                throw new IdentityOAuth2Exception("Could not resolve an organization ID for the tenant domain: "
+                        + tenantDomain + " of the token with issuer name : " + jwtIssuer);
+            }
+            /*
+             Client exception thrown since the request was not resolved to an organization context, hence an
+             organization switched token cannot be validated against it.
+            */
+            if (resourceResidentOrgId == null) {
+                throw new IdentityOAuth2ClientException("No organization context found in the request to validate "
+                        + "the token with issuer name : " + jwtIssuer);
+            }
+            if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
+                    !resourceResidentOrgId.equals(switchedOrgId)) {
+                throw new IdentityOAuth2ClientException("No registered IDP found for the token with issuer name : "
+                        + jwtIssuer);
+            }
+        }
+        return residentIdentityProvider;
+    }
+
+    /**
+     * Retrieves the Identity Provider (IDP) for the specified JSON Web Token (JWT) issuer within the context
+     * of a given tenant and switched organization ID.
+     *
+     * @param jwtIssuer     The JWT issuer name for which the IDP needs to be retrieved.
+     * @param clientId      Client that needs to be used to get the application based token issuer configuration.
+     * @param tenantDomain  The domain of the tenant.
+     * @param switchedOrgId The ID of the switched organization.
+     * @return The Identity Provider associated with the given parameters.
+     * @throws IdentityOAuth2Exception         If an error occurs while processing OAuth2-related functionality.
+     * @throws OrganizationManagementException If an error occurs in the organization management functionality.
+     */
+    public static IdentityProvider getResidentIDPIssuer(String jwtIssuer, String clientId, String tenantDomain,
+                                                        String switchedOrgId) throws IdentityOAuth2Exception,
+            OrganizationManagementException {
+
+        String resourceIssuer = StringUtils.EMPTY;
+        IdentityProvider residentIdentityProvider;
+        try {
+            // Retrieve the resident Identity Provider for the specified tenant.
+            residentIdentityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            // Handle the exception when retrieving the resident Identity Provider.
+            String errorMsg =
+                    String.format("Error while getting Resident Identity Provider of '%s' tenant.", tenantDomain);
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+        // Retrieve federated authenticator configurations for the resident Identity Provider.
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = residentIdentityProvider.getFederatedAuthenticatorConfigs();
+        // Retrieve OAuth federated authenticator configuration.
+        FederatedAuthenticatorConfig oauthAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        // Extract the resource issuer from OAuth federated authenticator configuration.
+        if (oauthAuthenticatorConfig != null) {
+            resourceIssuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+                    OIDC_IDP_ENTITY_ID).getValue();
+        }
+
+        // Compare JWT issuer with the resource issuer.
+        if (!OAuth2Util.isResidentIdpIssuer(jwtIssuer, resourceIssuer, tenantDomain)) {
+            // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)) &&
+                    jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
+                return residentIdentityProvider;
+            }
+            // When the issuer is built with hostname (and tenant qualified URLs disabled), compare against the
+            // recomputed hostname based issuer instead of the stale entity ID stored in the database.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME)) &&
+                    !IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
+                    jwtIssuer.equals(OAuth2Util.getIssuerLocation(tenantDomain))) {
+                return residentIdentityProvider;
+            }
+            // Check for organization management enablement.
+            if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
+                throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "
+                        + jwtIssuer);
+            }
+
+            /*
+             Check the issuer location configured in the OAuth application if the JWT issuer does not match with
+             the resident IDP issuer.
+            */
+            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                try {
+                    OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+                    if (oAuthAppDO.getIssuerDetails() != null &&
+                            StringUtils.isNotEmpty(oAuthAppDO.getIssuerDetails().getIssuerTenantDomain())) {
+                        String resourceIssuerFromClient = OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(
+                                oAuthAppDO.getIssuerDetails().getIssuerTenantDomain());
+                        if (jwtIssuer.equals(resourceIssuerFromClient)) {
+                            return residentIdentityProvider;
+                        }
+                    }
+                } catch (InvalidOAuthClientException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving client for client id: " +
+                            clientId, e);
+                } catch (OAuth2OIDCConfigOrgUsageScopeMgtServerException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving issuer location for organization: " +
+                            switchedOrgId, e);
+                }
+            }
+
+            // Check the tenant relationship if the token is not issued for the same tenant.
+            OrganizationManager organizationManager =
+                    OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
+            String jwtIssuerOrgId = organizationManager.resolveOrganizationId(tenantDomain);
+            List<String> switchedOrgOrgAncestors = organizationManager.getAncestorOrganizationIds(switchedOrgId);
+            if (CollectionUtils.isEmpty(switchedOrgOrgAncestors)) {
+                // Client exception thrown since the organization ID (provided in JWT token) has empty ancestor list.
+                throw new IdentityOAuth2ClientException("No ancestors found for the organization ID: " + switchedOrgId);
+            }
+            int depthOfRootOrg = getSubOrgStartLevel() - 1;
+            if (switchedOrgOrgAncestors.size() <= depthOfRootOrg) {
+                throw new IdentityOAuth2ClientException(
+                        "Ancestor list size is insufficient for the organization ID: " + switchedOrgId);
+            }
+            String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+            /*
+             Server exception thrown since the token issuer's tenant domain could not be mapped to an organization,
+             which indicates inconsistent server side organization data.
+            */
+            if (jwtIssuerOrgId == null) {
+                throw new IdentityOAuth2Exception("Could not resolve an organization ID for the tenant domain: "
+                        + tenantDomain + " of the token with issuer name : " + jwtIssuer);
+            }
+            /*
+             Client exception thrown since the request was not resolved to an organization context, hence an
+             organization switched token cannot be validated against it.
+            */
+            if (resourceResidentOrgId == null) {
+                throw new IdentityOAuth2ClientException("No organization context found in the request to validate "
+                        + "the token with issuer name : " + jwtIssuer);
+            }
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
                     !resourceResidentOrgId.equals(switchedOrgId)) {
                 throw new IdentityOAuth2ClientException("No registered IDP found for the token with issuer name : "
@@ -242,6 +392,7 @@ public class JWTUtils {
             OrganizationManagementException {
 
         String switchedOrgId;
+        String clientId = null;
         try {
             // Attempt to retrieve the switched organization ID from JWT claims.
             switchedOrgId = claimsSet.getStringClaim(OAuthConstants.ORG_ID);
@@ -249,7 +400,17 @@ public class JWTUtils {
             // Handle the case when the organization switch information is not present or cannot be parsed.
             switchedOrgId = StringUtils.EMPTY;
         }
+
+        try {
+            clientId = claimsSet.getStringClaim(CLIENT_ID);
+        } catch (ParseException e) {
+            // Handle the case when the client ID information is not present or cannot be parsed.
+            clientId = StringUtils.EMPTY;
+        }
         // Delegate the retrieval of the resident IDP to the getIDPForIssuer method.
+        if (StringUtils.isNotEmpty(clientId)) {
+            return getResidentIDPIssuer(claimsSet.getIssuer(), clientId, tenantDomain, switchedOrgId);
+        }
         return getIDPForIssuer(claimsSet.getIssuer(), tenantDomain, switchedOrgId);
     }
 
@@ -284,18 +445,21 @@ public class JWTUtils {
     public static String getSigningTenantDomain(JWTClaimsSet claimsSet, AccessTokenDO accessTokenDO)
             throws ParseException, IdentityOAuth2Exception {
 
-        Map<String, String> realm = (HashMap) claimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        Map realm = getRealmClaim(claimsSet);
         if (MapUtils.isNotEmpty(realm)) {
-            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
+            String signingTenant = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            if (signingTenant != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from JWT's 'signing_tenant' claim.");
                 }
-                return realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
-            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
+                return signingTenant;
+            }
+            String tenant = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.TENANT);
+            if (tenant != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from JWT's 'tenant' claim.");
                 }
-                return realm.get(OAuthConstants.OIDCClaims.TENANT);
+                return tenant;
             }
         }
         if (accessTokenDO == null) {
@@ -309,18 +473,32 @@ public class JWTUtils {
                 }
                 /*
                  Check if the OAuth application is a fragment application. Based on that we can define what
-                 is the tenant that signed the JWT. In this case the signing tenant is the root organization.
+                 is the tenant that signed the JWT. In this case the signing tenant should be extracted from the
+                 application OIDC configurations. If that is not available, then the root organization will be used as
+                 the signing tenant domain.
                 */
-                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getAppResidentTenantId());
                 ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
                         accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
-                if (!isFragmentApp(serviceProviderProperties)) {
-                    return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                if (OrganizationManagementUtil.isOrganization(appTenantDomain) &&
+                        !isFragmentApp(serviceProviderProperties)) {
+                    OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                            appTenantDomain);
+                    String issuerOrg = oAuthAppDO.getIssuerOrg();
+                    if (StringUtils.isNotEmpty(issuerOrg)) {
+                        return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveTenantDomain(issuerOrg);
+                    } else {
+                        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                    }
                 }
                 return OAuth2Util.getTenantDomainOfOauthApp(accessTokenDO.getConsumerKey());
             } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with consumer key: "
-                        + accessTokenDO.getConsumerKey());
+                throw new IdentityOAuth2ClientException("Error while getting tenant domain from OAuth app with " +
+                        "consumer key: " + accessTokenDO.getConsumerKey(), e);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with " +
+                        "consumer key: " + accessTokenDO.getConsumerKey(), e);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -328,6 +506,37 @@ public class JWTUtils {
             }
             return accessTokenDO.getAuthzUser().getTenantDomain();
         }
+    }
+
+    /**
+     * Retrieves the 'realm' claim of the given JWT as a Map. The claim is returned only when it is a JSON object;
+     * a 'realm' claim of any other type is treated as absent.
+     *
+     * Note that the concrete Map implementation depends on the JSON parser behind Nimbus, so the value must only
+     * ever be handled through the Map interface and never cast to a concrete type such as HashMap.
+     *
+     * @param claimsSet The JWTClaimsSet to read the 'realm' claim from.
+     * @return The 'realm' claim as a Map, or null if it is missing or not a JSON object.
+     */
+    private static Map getRealmClaim(JWTClaimsSet claimsSet) {
+
+        Object realm = claimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        return realm instanceof Map ? (Map) realm : null;
+    }
+
+    /**
+     * Retrieves a claim nested within the 'realm' claim as a String value. A nested claim holding any other JSON
+     * type is treated as absent, so that a malformed token falls back to the other tenant resolution paths instead
+     * of failing the whole validation flow.
+     *
+     * @param realm     The 'realm' claim of the JWT.
+     * @param claimName The name of the claim within 'realm' to read.
+     * @return The nested claim value as a String, or null if it is missing or not a String.
+     */
+    private static String getClaimWithinRealmAsString(Map realm, String claimName) {
+
+        Object value = realm.get(claimName);
+        return value instanceof String ? (String) value : null;
     }
 
     /**
@@ -344,17 +553,6 @@ public class JWTUtils {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
-    }
-
-    private static boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
-
-        if (serviceProviderProperties == null) {
-            return false;
-        }
-
-        return Arrays.stream(serviceProviderProperties).
-                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
-                            Boolean.parseBoolean(property.getValue()));
     }
 
     /**
@@ -410,15 +608,13 @@ public class JWTUtils {
             throws IdentityOAuth2Exception {
 
         X509Certificate x509Certificate = null;
-        Map<String, String> realm = (HashMap) jwtClaimsSet.getClaim(OAuthConstants.OIDCClaims.REALM);
+        Map realm = getRealmClaim(jwtClaimsSet);
         // Get certificate from tenant if available in claims.
         if (MapUtils.isNotEmpty(realm)) {
-            String tenantDomain = null;
             // Get signed key tenant from JWT token or ID token based on claim key.
-            if (realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT) != null) {
-                tenantDomain = realm.get(OAuthConstants.OIDCClaims.SIGNING_TENANT);
-            } else if (realm.get(OAuthConstants.OIDCClaims.TENANT) != null) {
-                tenantDomain = realm.get(OAuthConstants.OIDCClaims.TENANT);
+            String tenantDomain = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.SIGNING_TENANT);
+            if (tenantDomain == null) {
+                tenantDomain = getClaimWithinRealmAsString(realm, OAuthConstants.OIDCClaims.TENANT);
             }
             if (tenantDomain != null) {
                 int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
 
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
+    private Long oauthConsumerSecretExpiryTime;
+    private Boolean multipleConsumerSecretsConfigured;
     private String applicationName;
     private String callbackUrl;
     private String oauthVersion;
@@ -79,9 +82,74 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
+    private String fapiProfile;
+    private Boolean jwtScopeAsArrayEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private boolean gracefulRefreshTokenRotationEnabled;
+    private int gracefulRefreshTokenRotationValidityPeriod;
+    private int gracefulRefreshTokenReuseLimit;
     private String[] accessTokenClaims;
+    private String cibaNotificationChannels;
+
+    public String getCibaNotificationChannels() {
+
+        return cibaNotificationChannels;
+    }
+
+    public void setCibaNotificationChannels(String cibaNotificationChannels) {
+
+        this.cibaNotificationChannels = cibaNotificationChannels;
+    }
+
+    private long cibaAuthReqExpiryTime;
+
+    public long getCibaAuthReqExpiryTime() {
+        return cibaAuthReqExpiryTime;
+    }
+
+    public void setCibaAuthReqExpiryTime(long cibaAuthReqExpiryTime) {
+        this.cibaAuthReqExpiryTime = cibaAuthReqExpiryTime;
+    }
+
+    private boolean cibaSkipUserValidation;
+
+    public boolean isCibaSkipUserValidation() {
+        return cibaSkipUserValidation;
+    }
+
+    public void setCibaSkipUserValidation(boolean cibaSkipUserValidation) {
+        this.cibaSkipUserValidation = cibaSkipUserValidation;
+    }
+
+    private boolean cibaAllowFederatedUsers;
+
+    public boolean isCibaAllowFederatedUsers() {
+        return cibaAllowFederatedUsers;
+    }
+
+    public void setCibaAllowFederatedUsers(boolean cibaAllowFederatedUsers) {
+        this.cibaAllowFederatedUsers = cibaAllowFederatedUsers;
+    }
+
+    private Boolean restrictScopeIssuanceForFederatedTokens;
+
+    public Boolean isRestrictScopeIssuanceForFederatedTokens() {
+
+        return restrictScopeIssuanceForFederatedTokens;
+    }
+
+    public void setRestrictScopeIssuanceForFederatedTokens(Boolean restrictScopeIssuanceForFederatedTokens) {
+
+        this.restrictScopeIssuanceForFederatedTokens = restrictScopeIssuanceForFederatedTokens;
+    }
+
+    private IssuerDetails issuerDetails;
+
+    // Fragment app flag. This will be used to identify whether the app is a fragment app or not.
+    @XmlTransient
+    @JsonIgnore
+    private boolean isFragmentApp;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -157,6 +225,31 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     public void setOauthConsumerSecret(String oauthConsumerSecret) {
         this.oauthConsumerSecret = oauthConsumerSecret;
+    }
+
+    /**
+     * Expiry time of the consumer secret as Unix epoch seconds. Zero denotes a never-expiring secret; null denotes
+     * not provided, or multiple client secrets support being disabled in responses.
+     */
+    public Long getOauthConsumerSecretExpiryTime() {
+        return oauthConsumerSecretExpiryTime;
+    }
+
+    public void setOauthConsumerSecretExpiryTime(Long oauthConsumerSecretExpiryTime) {
+        this.oauthConsumerSecretExpiryTime = oauthConsumerSecretExpiryTime;
+    }
+
+    /**
+     * Check whether the application has more than one consumer secret configured.
+     */
+    public Boolean getMultipleConsumerSecretsConfigured() {
+
+        return multipleConsumerSecretsConfigured;
+    }
+
+    public void setMultipleConsumerSecretsConfigured(Boolean multipleConsumerSecretsConfigured) {
+
+        this.multipleConsumerSecretsConfigured = multipleConsumerSecretsConfigured;
     }
 
     public String getOAuthVersion() {
@@ -495,6 +588,37 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         fapiConformanceEnabled = fapiConformant;
     }
 
+    /**
+     * Returns the FAPI security profile configured for this OAuth application.
+     * Meaningful only when {@link #isFapiConformanceEnabled()} is true.
+     *
+     * @return the FAPI profile string (e.g. "FAPI1_ADVANCED"), or null if not set.
+     */
+    public String getFapiProfile() {
+
+        return fapiProfile;
+    }
+
+    /**
+     * Sets the FAPI security profile for this OAuth application.
+     *
+     * @param fapiProfile the FAPI profile string (e.g. "FAPI1_ADVANCED").
+     */
+    public void setFapiProfile(String fapiProfile) {
+
+        this.fapiProfile = fapiProfile;
+    }
+
+    public Boolean isJwtScopeAsArrayEnabled() {
+
+        return jwtScopeAsArrayEnabled;
+    }
+
+    public void setJwtScopeAsArrayEnabled(Boolean jwtScopeAsArrayEnabled) {
+
+        this.jwtScopeAsArrayEnabled = jwtScopeAsArrayEnabled;
+    }
+
     @Override
     public String fetchProtocolName() {
 
@@ -541,6 +665,36 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
     }
 
+    public boolean isGracefulRefreshTokenRotationEnabled() {
+
+        return gracefulRefreshTokenRotationEnabled;
+    }
+
+    public void setGracefulRefreshTokenRotationEnabled(boolean gracefulRefreshTokenRotationEnabled) {
+
+        this.gracefulRefreshTokenRotationEnabled = gracefulRefreshTokenRotationEnabled;
+    }
+
+    public int getGracefulRefreshTokenRotationValidityPeriod() {
+
+        return gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public void setGracefulRefreshTokenRotationValidityPeriod(int gracefulRefreshTokenRotationValidityPeriod) {
+
+        this.gracefulRefreshTokenRotationValidityPeriod = gracefulRefreshTokenRotationValidityPeriod;
+    }
+
+    public int getGracefulRefreshTokenReuseLimit() {
+
+        return gracefulRefreshTokenReuseLimit;
+    }
+
+    public void setGracefulRefreshTokenReuseLimit(int gracefulRefreshTokenReuseLimit) {
+
+        this.gracefulRefreshTokenReuseLimit = gracefulRefreshTokenReuseLimit;
+    }
+
     public String[] getAccessTokenClaims() {
 
         return accessTokenClaims;
@@ -550,5 +704,28 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
         this.accessTokenClaims = accessTokenClaims;
     }
+
+    public IssuerDetails getIssuerDetails() {
+
+        return issuerDetails;
+    }
+
+    public void setIssuerDetails(IssuerDetails issuerDetails) {
+
+        this.issuerDetails = issuerDetails;
+    }
+
+    @XmlTransient
+    public boolean getIsFragmentApp() {
+
+        return isFragmentApp;
+    }
+
+    @XmlTransient
+    public void setIsFragmentApp(boolean isFragmentApp) {
+
+        this.isFragmentApp = isFragmentApp;
+    }
+
 }
 

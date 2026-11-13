@@ -98,6 +98,27 @@ public class DCRMUtilsTest {
         Assert.assertEquals(DCRMUtils.isBackchannelLogoutUriValid(url), response);
     }
 
+    @DataProvider(name = "BuildFrontchannelLogoutUri")
+    public Object[][] buildFrontchannelLogoutUri() {
+
+        return new Object[][]{
+                {"http://example.com/", true},
+                {"https://example.com/logout", true},
+                {"", true},
+                {"http://examp#le.com/", false},      // Contains fragment
+                {"http:\\example.com", false},        // Invalid format
+                {"example", false},                    // Not absolute URI
+                {"http://example.com/#fragment", false}, // Contains fragment
+                {"relative/path", false},              // Relative URI
+        };
+    }
+
+    @Test(dataProvider = "BuildFrontchannelLogoutUri")
+    public void frontChannelURIValidTest(String url, boolean response) {
+
+        Assert.assertEquals(DCRMUtils.isFrontchannelLogoutUriValid(url), response);
+    }
+
     @DataProvider(name = "applicationName")
     public Object[][] buildApplicationName() {
 

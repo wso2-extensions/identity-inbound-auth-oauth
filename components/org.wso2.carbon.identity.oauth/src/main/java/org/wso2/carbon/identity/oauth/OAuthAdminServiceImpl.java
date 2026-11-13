@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2019-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -29,7 +29,9 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.json.JSONObject;
+import org.osgi.annotation.bundle.Capability;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -47,6 +49,10 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -58,7 +64,10 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretDO;
+import org.wso2.carbon.identity.oauth.dao.OAuthConsumerSecretExpiryDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth.dto.OAuthClientSecretResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthIDTokenAlgorithmDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationRequestDTO;
@@ -70,6 +79,7 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -77,7 +87,14 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.services.OAuth2OIDCConfigOrgUsageScopeMgtService;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImpl;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -85,6 +102,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -96,6 +114,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,13 +127,21 @@ import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogC
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.Error.CLIENT_SECRET_LIMIT_REACHED;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_DELETE;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_SECRET_ID;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CALLBACK_URL_REGEXP_PREFIX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.NonPersistenceConstants.ENTITY_ID_TYPE_CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
@@ -128,6 +155,13 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
 /**
  * OAuth OSGi service implementation.
  */
+@Capability(
+        namespace = "osgi.service",
+        attribute = {
+                "objectClass=org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl",
+                "service.scope=singleton"
+        }
+)
 public class OAuthAdminServiceImpl {
 
     public static final String IMPLICIT = "implicit";
@@ -136,6 +170,7 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static final String BINDING_TYPE_NONE = "None";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String DPOP_TOKEN_BINDER = "DPoP";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
 
@@ -143,6 +178,9 @@ public class OAuthAdminServiceImpl {
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
+    private static final String ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS =
+            "OAuth.AllowIssuerSelectionForSubOrgApplications";
+
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -249,6 +287,14 @@ public class OAuthAdminServiceImpl {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
                 }
+                if (OAuth2Util.isClientSecretHashingEnabled()) {
+                    TokenPersistenceProcessor persistenceProcessor = OAuth2Util.getClientSecretPersistenceProcessor();
+                    if (persistenceProcessor != null) {
+                        if (!persistenceProcessor.isProcessed(app.getOauthConsumerSecret())) {
+                            AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+                        }
+                    }
+                }
             } else {
                 dto = new OAuthConsumerAppDTO();
             }
@@ -339,15 +385,56 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * Registers an imported OAuth application together with its non-latest client secrets, restoring it as exported.
+     * For internal use.
+     *
+     * @param application       Application information.
+     * @param additionalSecrets Non-latest client secrets to restore.
+     * @return Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information.
+     */
+    public OAuthConsumerAppDTO registerImportedOAuthApplicationData(OAuthConsumerAppDTO application,
+            List<OAuthConsumerSecretExpiryDO> additionalSecrets) throws IdentityOAuthAdminException {
+
+        if (application == null) {
+            throw handleClientError(INVALID_REQUEST, "No OAuth application details were provided for the import.");
+        }
+        validateClientSecretExpiryTime(application.getOauthConsumerSecretExpiryTime(), false);
+        validateAdditionalClientSecrets(additionalSecrets);
+        return registerAndRetrieveOAuthApplicationData(application, true, additionalSecrets);
+    }
+
+    /**
      * Same as {@link #registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO)} but with an option to disable
      * the audit logs. This is to avoid logging duplicate logs.
      *
-     * @param application    <code>OAuthConsumerAppDTO</code> with application information.
+     * @param application    Application information.
      * @param enableAuditing Enable auditing or not.
      * @return OAuthConsumerAppDTO Created OAuth application details.
      * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
      */
     OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
+
+        if (application != null) {
+            validateClientSecretExpiryTime(application.getOauthConsumerSecretExpiryTime(), true);
+        }
+        return registerAndRetrieveOAuthApplicationData(application, enableAuditing, null);
+    }
+
+    /**
+     * Register an OAuth consumer application and retrieve its details, optionally restoring imported non-latest
+     * client secrets. Client secret expiry is not validated here; callers requiring validation must validate before
+     * invoking this method.
+     *
+     * @param application       Application information.
+     * @param enableAuditing    Enable auditing or not.
+     * @param additionalSecrets Non-latest client secrets to restore with the application; null for a normal create.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
+     */
+    private OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application,
+            boolean enableAuditing, List<OAuthConsumerSecretExpiryDO> additionalSecrets)
             throws IdentityOAuthAdminException {
 
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -401,6 +488,8 @@ public class OAuthAdminServiceImpl {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
                     }
+                    app.setOauthConsumerSecretExpiryTime(
+                            getClientSecretExpiryTimeInMillis(application.getOauthConsumerSecretExpiryTime()));
 
                     AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                     app.setAppOwner(appOwner);
@@ -459,7 +548,8 @@ public class OAuthAdminServiceImpl {
                         app.setExtendRenewedRefreshTokenExpiryTime(
                                 application.getExtendRenewedRefreshTokenExpiryTime());
                         if (isFAPIConformanceEnabled) {
-                            validateFAPIBindingType(application.getTokenBindingType());
+                            validateFAPIBindingType(application.getTokenBindingType(),
+                                    application.getFapiProfile());
                         } else {
                             validateBindingType(application.getTokenBindingType());
                         }
@@ -565,13 +655,56 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
+                        if (isFAPIConformanceEnabled) {
+                            app.setFapiProfile(application.getFapiProfile());
+                        }
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        app.setGracefulRefreshTokenRotationEnabled(
+                                application.isGracefulRefreshTokenRotationEnabled());
+                        app.setGracefulRefreshTokenRotationValidityPeriod(
+                                application.getGracefulRefreshTokenRotationValidityPeriod());
+                        app.setGracefulRefreshTokenReuseLimit(
+                                application.getGracefulRefreshTokenReuseLimit());
+                        normalizeGracefulRotationValidityPeriod(app);
+                        normalizeGracefulReuseLimit(app);
+                        app.setJwtScopeAsArrayEnabled(application.isJwtScopeAsArrayEnabled());
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
                         }
+                        app.setCibaNotificationChannels(application.getCibaNotificationChannels());
+                        app.setCibaAuthReqExpiryTime(application.getCibaAuthReqExpiryTime());
+                        app.setCibaSkipUserValidation(application.isCibaSkipUserValidation());
+                        app.setCibaAllowFederatedUsers(application.isCibaAllowFederatedUsers());
+                        if (isCibaGrantTypeEnabled(app) && app.getCibaAuthReqExpiryTime() <= 0) {
+                            throw handleClientError(INVALID_REQUEST,
+                                    "CIBA authentication request expiry time must be greater than 0");
+                        }
+                        if (app.isCibaAllowFederatedUsers() && !app.isCibaSkipUserValidation()) {
+                            throw handleClientError(INVALID_REQUEST,
+                                    "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
+                        }
+                        app.setRestrictScopeIssuanceForFederatedTokens(
+                                application.isRestrictScopeIssuanceForFederatedTokens() != null ?
+                                        application.isRestrictScopeIssuanceForFederatedTokens() :
+                                        isRestrictScopeIssuanceEnabledByDefault(tenantDomain));
+                        boolean isSubOrg = OrganizationManagementUtil.isOrganization(tenantDomain);
+                        /*
+                         If the app is not registering under a primary organization, and it is not a fragment app,
+                         validate the issuer organization and set the issuer org of the app.
+                        */
+                        if (Boolean.parseBoolean(
+                                IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
+                            if (isSubOrg && !application.getIsFragmentApp()) {
+                                String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                        resolveOrganizationId(tenantDomain);
+                                resolveApplicationLevelTokenIssuerConfig(application, app, tenantDomain, orgId);
+                            }
+                        }
                     }
+                    // Non-latest secrets to restore with the app on import; null for a normal create.
+                    app.setAdditionalOauthConsumerSecrets(additionalSecrets);
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
                         String consoleCallBackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
@@ -579,8 +712,14 @@ public class OAuthAdminServiceImpl {
                             app.setCallbackUrl(consoleCallBackURL);
                         }
                     }
-                    if (StringUtils.isNotBlank(app.getCallbackUrl()) &&
-                            !app.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                    String callbackUrl = app.getCallbackUrl();
+                    boolean containsUnresolvedPlaceholder = StringUtils.isNotBlank(callbackUrl) &&
+                            callbackUrl.contains(BASE_URL_PLACEHOLDER);
+
+                    // For apps shared with sub-organizations, the callback URL may contain a base URL
+                    // placeholder that is resolved only after DB retrieval.
+                    // Avoid caching entries with unresolved placeholders on app creation.
+                    if (!containsUnresolvedPlaceholder) {
                         AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     }
                     if (LOG.isDebugEnabled()) {
@@ -623,12 +762,237 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityApplicationManagementException e) {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
+        } catch (OrganizationManagementException e) {
+            throw handleError("Error while resolving organization for tenant: " + tenantDomain, e);
+        } catch (OAuth2OIDCConfigOrgUsageScopeMgtException e) {
+            throw handleError("Error while retrieving allowed issuers for tenant: " + tenantDomain, e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
         return oAuthConsumerAppDTO;
     }
 
+    /**
+     * Create a new client secret for the given OAuth application.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param expiryTime   Optional absolute expiry time as Unix epoch seconds, where zero or null denotes a
+     *                     never-expiring secret.
+     * @return {@link OAuthClientSecretResponseDTO} containing the created client secret information.
+     * @throws IdentityOAuthAdminException if the operation is not supported or persistence fails.
+     */
+    public OAuthClientSecretResponseDTO createOAuthClientSecret(String consumerKey, String tenantDomain,
+            Long expiryTime) throws IdentityOAuthAdminException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Creating a new client secret for consumer key: " + consumerKey);
+        }
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        validateClientSecretExpiryTime(expiryTime, true);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        OAuthConsumerSecretDO consumerSecret = oAuthAppDAO.addOAuthConsumerSecret(oAuthAppDO.getId(),
+                getClientSecretExpiryTimeInMillis(expiryTime));
+        // The cached application entry carries the client secrets; evict it after the rotation.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+        Optional<String> initiatorId = getInitiatorId();
+        if (initiatorId.isPresent()) {
+            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                    initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                    OAuthConstants.LogConstants.CREATE_CLIENT_SECRET)
+                    .data(Map.of("secretId", consumerSecret.getSecretId()));
+            triggerAuditLogEvent(auditLogBuilder, true);
+        } else {
+            LOG.error("Error getting the logged in userId");
+        }
+        OAuthClientSecretResponseDTO clientSecretResponse = OAuthUtil.buildClientSecretResponseDTO(consumerSecret);
+        // As the most recently created, the new secret is the latest secret of the application.
+        clientSecretResponse.setLatest(true);
+        return clientSecretResponse;
+    }
+
+    /**
+     * Validate a client secret expiry time. A zero or null expiry time denotes a never-expiring secret and is
+     * always accepted.
+     *
+     * @param expiryTimeInSeconds Expiry time as Unix epoch seconds.
+     * @param rejectPastExpiry    Whether to reject an expiry time already in the past.
+     * @throws IdentityOAuthAdminException if multiple client secrets support is disabled, the expiry time is
+     *                                     negative, or it is in the past while past expiry is rejected.
+     */
+    private void validateClientSecretExpiryTime(Long expiryTimeInSeconds, boolean rejectPastExpiry)
+            throws IdentityOAuthAdminException {
+
+        if (expiryTimeInSeconds == null) {
+            return;
+        }
+        if (expiryTimeInSeconds < 0) {
+            throw handleClientError(INVALID_REQUEST, "The provided expiry time for the client secret is invalid.");
+        }
+        /* On import an already expired secret is restored as it is, so a past expiry time is not rejected. */
+        if (rejectPastExpiry && expiryTimeInSeconds != 0
+                && OAuth2Util.isExpiryTimeInPast(expiryTimeInSeconds * 1000L)) {
+            throw handleClientError(INVALID_REQUEST,
+                    "The provided expiry time for the client secret is in the past.");
+        }
+    }
+
+    /**
+     * Validate the expiry times of the non-latest client secrets restored during an application import. A malformed
+     * (negative) expiry is rejected; an already expired secret is allowed so it can be restored as it is.
+     *
+     * @param additionalSecrets Non-latest client secrets from the import.
+     * @throws IdentityOAuthAdminException if additional client secrets are not supported or an expiry time
+     *                                     is invalid.
+     */
+    private void validateAdditionalClientSecrets(List<OAuthConsumerSecretExpiryDO> additionalSecrets)
+            throws IdentityOAuthAdminException {
+
+        if (CollectionUtils.isEmpty(additionalSecrets)) {
+            return;
+        }
+        // The total secrets (the latest plus the additional secrets) must not exceed the configured maximum.
+        int maxClientSecretCount = OAuth2Util.getMaxClientSecretCount();
+        if (maxClientSecretCount > 0 && additionalSecrets.size() + 1 > maxClientSecretCount) {
+            throw handleClientError(CLIENT_SECRET_LIMIT_REACHED, String.format(
+                    "The imported client secrets exceed the maximum of %d secrets per application.",
+                    maxClientSecretCount));
+        }
+        // The expiry time is in milliseconds; a negative value is rejected while a past or absent one is allowed.
+        for (OAuthConsumerSecretExpiryDO additionalSecret : additionalSecrets) {
+            if (additionalSecret.getExpiryTime() != null && additionalSecret.getExpiryTime() < 0) {
+                throw handleClientError(INVALID_REQUEST,
+                        "The provided expiry time for the client secret is invalid.");
+            }
+        }
+    }
+
+    /**
+     * Convert a client secret expiry time from its Unix epoch seconds form to epoch milliseconds, where zero
+     * or null denotes a never-expiring secret.
+     *
+     * @param expiryTimeInSeconds Expiry time as Unix epoch seconds.
+     * @return Expiry time as epoch milliseconds; null for a never-expiring secret.
+     */
+    private static Long getClientSecretExpiryTimeInMillis(Long expiryTimeInSeconds) {
+
+        if (expiryTimeInSeconds == null || expiryTimeInSeconds == 0) {
+            return null;
+        }
+        return expiryTimeInSeconds * 1000L;
+    }
+
+    /**
+     * Remove a client secret, ensuring the latest (most recently added) secret is never deleted.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param secretId     ID of the client secret to remove.
+     * @throws IdentityOAuthAdminException if the secret is the latest secret, does not belong to the
+     *                                     given consumer key, or the operation is not supported.
+     */
+    public void removeOAuthClientSecret(String consumerKey, String tenantDomain, String secretId)
+            throws IdentityOAuthAdminException {
+
+        if (StringUtils.isBlank(secretId)) {
+            throw handleClientError(INVALID_SECRET_ID, "The client secret ID must not be blank.");
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Removing client secret with ID: " + secretId + " for consumer key: " + consumerKey);
+        }
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        String latestSecretId = oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId());
+        if (secretId.equals(latestSecretId)) {
+            throw handleClientError(INVALID_DELETE,
+                    "The requested client secret cannot be deleted as it is the latest secret.");
+        }
+        int rowsDeleted = oAuthAppDAO.deleteOAuthConsumerSecret(secretId, oAuthAppDO.getId());
+        if (rowsDeleted == 0) {
+            // No row matched: the secret does not exist for this application or was concurrently deleted.
+            throw handleClientError(INVALID_SECRET_ID,
+                    "The requested client secret does not exist for this application.");
+        }
+        // The cached application entry carries the client secrets; evict it after the deletion.
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey, tenantDomain);
+        Optional<String> initiatorId = getInitiatorId();
+        if (initiatorId.isPresent()) {
+            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                    initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                    OAuthConstants.LogConstants.DELETE_CLIENT_SECRET)
+                    .data(Map.of("secretId", secretId));
+            triggerAuditLogEvent(auditLogBuilder, true);
+        } else {
+            LOG.error("Error getting the logged in userId");
+        }
+    }
+
+    /**
+     * Retrieve all client secrets associated with a given consumer key.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @return List of {@link OAuthClientSecretResponseDTO} ordered by creation time descending.
+     * @throws IdentityOAuthAdminException if the operation is not supported or retrieval fails.
+     */
+    public List<OAuthClientSecretResponseDTO> getOAuthClientSecrets(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        List<OAuthClientSecretResponseDTO> clientSecrets = new ArrayList<>();
+        try {
+            for (OAuthConsumerSecretDO consumerSecret : oAuthAppDAO.getOAuthConsumerSecrets(oAuthAppDO.getId())) {
+                clientSecrets.add(OAuthUtil.buildClientSecretResponseDTO(consumerSecret));
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while retrieving the client secrets of the application with consumerKey: "
+                    + consumerKey, e);
+        }
+        // The list is ordered latest-first; the first entry is the latest (active) secret of the application.
+        if (!clientSecrets.isEmpty()) {
+            clientSecrets.get(0).setLatest(true);
+        }
+        return clientSecrets;
+    }
+
+    /**
+     * Retrieve a specific client secret by secret ID, validating ownership against the given consumer key.
+     *
+     * @param consumerKey  Consumer key (client ID) of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @param secretId     ID of the client secret.
+     * @return {@link OAuthClientSecretResponseDTO} containing the client secret information.
+     * @throws IdentityOAuthAdminException if the secret is not found, does not belong to the given
+     *                                     consumer key, or the operation is not supported.
+     */
+    public OAuthClientSecretResponseDTO getOAuthClientSecret(String consumerKey, String tenantDomain,
+            String secretId) throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO = validateOAuthAppExistence(consumerKey, tenantDomain);
+        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
+        /* The default secret id resolves only before migration; once the secrets table holds records for the
+           application, no secret carries it and the lookup below rejects it like any unknown id. */
+        if (OAuthConstants.DEFAULT_SECRET_ID.equals(secretId) && OAuthConstants.DEFAULT_SECRET_ID.equals(
+                oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId()))) {
+            OAuthConsumerSecretDO fallback = new OAuthConsumerSecretDO();
+            fallback.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+            fallback.setSecretValue(oAuthAppDO.getOauthConsumerSecret());
+            OAuthClientSecretResponseDTO fallbackResponse = OAuthUtil.buildClientSecretResponseDTO(fallback);
+            // Before on-demand migration the application has a single secret, which is the latest by definition.
+            fallbackResponse.setLatest(true);
+            return fallbackResponse;
+        }
+        OAuthConsumerSecretDO secret = oAuthAppDAO.getOAuthConsumerSecret(secretId, oAuthAppDO.getId());
+        if (secret == null) {
+            throw handleClientError(INVALID_SECRET_ID,
+                    "The requested client secret does not exist for this application.");
+        }
+        OAuthClientSecretResponseDTO clientSecretResponse = OAuthUtil.buildClientSecretResponseDTO(secret);
+        clientSecretResponse.setLatest(
+                secretId.equals(oAuthAppDAO.getLatestOAuthConsumerSecretId(oAuthAppDO.getId())));
+        return clientSecretResponse;
+    }
 
     private Optional<AuthenticatedUser> getLoggedInUser(String tenantDomain) {
 
@@ -646,8 +1010,9 @@ public class OAuthAdminServiceImpl {
         }
         Gson gson = new Gson();
         String oauthApp = maskSPData(app);
-        return gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
+        Map<String, Object> result = gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
         }.getType());
+        return result != null ? result : new HashMap<>();
     }
 
     private static String maskSPData(OAuthAppDO oAuthAppDO) {
@@ -681,11 +1046,21 @@ public class OAuthAdminServiceImpl {
 
     private static void maskClientSecret(JSONObject oauthApp) {
 
-        if (oauthApp.get("oauthConsumerSecret") == null) {
-            return;
+        if (oauthApp.get("oauthConsumerSecret") != null) {
+            oauthApp.put("oauthConsumerSecret",
+                    LoggerUtils.getMaskedContent(oauthApp.get("oauthConsumerSecret").toString()));
         }
-        String secret = oauthApp.get("oauthConsumerSecret").toString();
-        oauthApp.put("oauthConsumerSecret", LoggerUtils.getMaskedContent(secret));
+        // Mask the restored non-latest secret values so an application import audit log never carries a raw secret.
+        JSONArray additionalSecrets = oauthApp.optJSONArray("additionalOauthConsumerSecrets");
+        if (additionalSecrets != null) {
+            for (int i = 0; i < additionalSecrets.length(); i++) {
+                JSONObject additionalSecret = additionalSecrets.optJSONObject(i);
+                if (additionalSecret != null && additionalSecret.opt("secretValue") != null) {
+                    additionalSecret.put("secretValue",
+                            LoggerUtils.getMaskedContent(additionalSecret.opt("secretValue").toString()));
+                }
+            }
+        }
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -732,21 +1107,61 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * FAPI validation to restrict the token binding type to ensure MTLS sender constrained access tokens.
-     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
-     * @param bindingType Token binding type.
-     * @throws IdentityOAuthClientException if binding type is not 'certificate'.
+     * Validates whether the configured token binding type satisfies the
+     * Financial-grade API (FAPI) security requirements.
+     *
+     * <p>FAPI mandates sender-constrained access tokens. The allowed token binding
+     * mechanisms depend on the FAPI profile of the application:
+     *
+     * <ul>
+     *     <li><b>FAPI 2.0</b>: MTLS (RFC8705) or DPoP (RFC9449)</li>
+     *     <li><b>FAPI 1.0 Advanced</b>: MTLS only</li>
+     * </ul>
+     *
+     * <p>If {@code bindingType} is {@code null}, validation is skipped.
+     *
+     * @param bindingType token binding type configured for the application
+     * @param fapiProfile FAPI profile of the application. If it is not set, the default FAPI profile is used.
+     * @throws IdentityOAuthAdminException if the configured binding type is not permitted for the FAPI profile
      */
-    private void validateFAPIBindingType(String bindingType)
-            throws IdentityOAuthClientException {
+    private void validateFAPIBindingType(String bindingType, String fapiProfile)
+            throws IdentityOAuthAdminException {
 
-        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) || bindingType == null) {
-            return;
-        } else {
-            String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",
-                    bindingType);
-            throw handleClientError(INVALID_REQUEST, msg);
+        // Supported token binding types.
+        final boolean isMtls = OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType);
+        final boolean isDpop = DPOP_TOKEN_BINDER.equals(bindingType);
+
+        /*
+         * FAPI 2.0 Security Profile
+         * Spec: https://openid.net/specs/fapi-security-profile-2_0.html#section-5.3.2.1-2.5.1
+         *
+         * "shall use one of the following methods for sender-constrained access tokens:
+         *  * MTLS as described in [RFC8705],
+         *  * DPoP as described in [RFC9449];"
+         */
+        String resolvedFapiProfile = StringUtils.defaultIfBlank(fapiProfile,
+                FapiUtil.getDefaultFapiProfile(getAppTenantDomain()).value());
+        if (FapiProfileEnum.FAPI2_SECURITY.value().equals(resolvedFapiProfile)) {
+            if (isMtls || isDpop) {
+                return;
+            }
+            throw handleClientError(INVALID_REQUEST,
+                    String.format("Certificate bound or DPoP access tokens is required. '%s' binding type is found",
+                    bindingType));
         }
+
+        /*
+         * FAPI 1.0 Advanced Security Profile
+         * Spec: https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
+         *
+         * "shall support MTLS as mechanism for constraining the legitimate senders of access tokens;"
+         */
+        if (isMtls) {
+            return;
+        }
+
+        throw handleClientError(INVALID_REQUEST,
+                String.format("Certificate bound access tokens is required. '%s' binding type is found.", bindingType));
     }
 
     private IdentityOAuthClientException handleClientError(Error errorMessage, String msg) {
@@ -922,7 +1337,9 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
             oAuthAppDO.setExtendRenewedRefreshTokenExpiryTime(consumerAppDTO.getExtendRenewedRefreshTokenExpiryTime());
             if (isFAPIConformanceEnabled) {
-                validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
+                // When the update doesn't provide a FAPI profile, the stored profile is kept. Hence, it is validated.
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType(),
+                        StringUtils.defaultIfBlank(consumerAppDTO.getFapiProfile(), oAuthAppDO.getFapiProfile()));
             } else {
                 validateBindingType(consumerAppDTO.getTokenBindingType());
             }
@@ -1034,6 +1451,14 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            oAuthAppDO.setGracefulRefreshTokenRotationEnabled(
+                    consumerAppDTO.isGracefulRefreshTokenRotationEnabled());
+            oAuthAppDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    consumerAppDTO.getGracefulRefreshTokenRotationValidityPeriod());
+            oAuthAppDO.setGracefulRefreshTokenReuseLimit(consumerAppDTO.getGracefulRefreshTokenReuseLimit());
+            normalizeGracefulRotationValidityPeriod(oAuthAppDO);
+            normalizeGracefulReuseLimit(oAuthAppDO);
+            oAuthAppDO.setJwtScopeAsArrayEnabled(consumerAppDTO.isJwtScopeAsArrayEnabled());
 
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                 // We check if the AT claims separation enabled at server level and
@@ -1063,6 +1488,46 @@ public class OAuthAdminServiceImpl {
                             oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                 }
             }
+            oAuthAppDO.setCibaNotificationChannels(consumerAppDTO.getCibaNotificationChannels());
+            oAuthAppDO.setCibaAuthReqExpiryTime(consumerAppDTO.getCibaAuthReqExpiryTime());
+            oAuthAppDO.setCibaSkipUserValidation(consumerAppDTO.isCibaSkipUserValidation());
+            oAuthAppDO.setCibaAllowFederatedUsers(consumerAppDTO.isCibaAllowFederatedUsers());
+            if (isCibaGrantTypeEnabled(oAuthAppDO) && oAuthAppDO.getCibaAuthReqExpiryTime() <= 0) {
+                throw handleClientError(INVALID_REQUEST,
+                        "CIBA authentication request expiry time must be greater than 0");
+            }
+            if (oAuthAppDO.isCibaAllowFederatedUsers() && !oAuthAppDO.isCibaSkipUserValidation()) {
+                throw handleClientError(INVALID_REQUEST,
+                        "cibaAllowFederatedUsers requires cibaSkipUserValidation to be enabled");
+            }
+            if (consumerAppDTO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+                oAuthAppDO.setRestrictScopeIssuanceForFederatedTokens(
+                        consumerAppDTO.isRestrictScopeIssuanceForFederatedTokens());
+            }
+
+            if (isFAPIConformanceEnabled) {
+                oAuthAppDO.setFapiProfile(consumerAppDTO.getFapiProfile());
+            }
+
+            try {
+                boolean isSubOrg = OrganizationManagementUtil.isOrganization(tenantDomain);
+                /*
+                 If the app is not updating under a primary organization, and it is not a fragment app,
+                 validate the issuer organization and set the issuer org of the app.
+                */
+                if (Boolean.parseBoolean(
+                        IdentityUtil.getProperty(ISSUER_SELECTION_ENABLED_FOR_SUB_ORG_APPS))) {
+                    if (isSubOrg && !consumerAppDTO.getIsFragmentApp()) {
+                        String orgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                                resolveOrganizationId(tenantDomain);
+                        resolveApplicationLevelTokenIssuerConfig(consumerAppDTO, oAuthAppDO, tenantDomain, orgId);
+                    }
+                }
+            } catch (OrganizationManagementException e) {
+                throw handleError("Error while resolving organization for tenant: " + tenantDomain, e);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtException e) {
+                throw handleError("Error while retrieving allowed issuers for tenant: " + tenantDomain, e);
+            }
         }
         dao.updateConsumerApplication(oAuthAppDO);
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
@@ -1083,6 +1548,102 @@ public class OAuthAdminServiceImpl {
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
+            }
+        }
+    }
+
+    /**
+     * Resolves and validates the application-level token issuer configuration for OAuth applications
+     * in sub organizations.
+     *
+     * <p>This method handles three scenarios:
+     * <ol>
+     *   <li>If explicit issuer is provided: Validates against allowed issuers list</li>
+     *   <li>If single allowed issuer exists: Auto-selects if it matches app registration org</li>
+     *   <li>If multiple allowed issuers exist: Selects primary org issuer if available</li>
+     * </ol>
+     *
+     * @param consumerAppDTO OAuth consumer application DTO with potential issuer details
+     * @param oAuthAppDO OAuth application data object to be updated with issuer configuration
+     * @param tenantDomain Tenant domain of the application
+     * @param orgId Organization ID where the application is registered
+     * @throws OAuth2OIDCConfigOrgUsageScopeMgtException if unable to retrieve allowed issuers
+     * @throws OrganizationManagementException if unable to resolve organization details
+     * @throws IdentityOAuthClientException if issuer validation fails or issuer configuration is invalid
+     */
+    private void resolveApplicationLevelTokenIssuerConfig(OAuthConsumerAppDTO consumerAppDTO, OAuthAppDO oAuthAppDO, 
+                                                          String tenantDomain, String orgId)
+            throws OAuth2OIDCConfigOrgUsageScopeMgtException, OrganizationManagementException,
+            IdentityOAuthAdminException {
+
+        oAuthAppDO.setIssuerOrg(null);
+        oAuthAppDO.setIssuerDetails(null);
+        
+        OAuth2OIDCConfigOrgUsageScopeMgtService oAuth2OIDCConfigMgtService =
+                OAuth2ServiceComponentHolder.getInstance().getOAuth2OIDCConfigOrgUsageScopeMgtService();
+        List<IssuerDetails> allowedIssuers = oAuth2OIDCConfigMgtService.getAllowedIssuerDetails();
+
+        if (allowedIssuers == null || allowedIssuers.isEmpty()) {
+            String message = "No allowed issuers configured for organization: " + tenantDomain;
+            throw handleError(message, null);
+        }
+
+        if (consumerAppDTO.getIssuerDetails() != null) {
+            // Validate whether the issuer organization is allowed to use.
+            String issuerTenant = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(consumerAppDTO.getIssuerDetails().getIssuerOrgId());
+            String resolvedIssuerLocation = OAuth2OIDCConfigOrgUsageScopeUtils.
+                    getIssuerLocation(issuerTenant);
+            for (IssuerDetails issuerDetails : allowedIssuers) {
+                if (issuerDetails.getIssuer().equals(resolvedIssuerLocation) &&
+                        issuerDetails.getIssuerOrgId().equals(consumerAppDTO.getIssuerDetails().
+                                getIssuerOrgId())) {
+                    oAuthAppDO.setIssuerOrg(consumerAppDTO.getIssuerDetails().getIssuerOrgId());
+                    oAuthAppDO.setIssuerDetails(issuerDetails);
+                    break;
+                }
+            }
+            if (StringUtils.isEmpty(oAuthAppDO.getIssuerOrg())) {
+                String message = "Provided issuer organization: " +
+                        consumerAppDTO.getIssuerDetails().getIssuerOrgId() + " is not allowed for " +
+                        "organization: " + tenantDomain;
+                throw handleClientError(INVALID_REQUEST, message);
+            }
+        } else {
+            if (allowedIssuers.size() == 1) {
+                // If there is only one allowed issuer, set it as the issuer org of the app.
+                String onlyAllowedIssuerOrgId = allowedIssuers.get(0).getIssuerOrgId();
+                /*
+                 Validating whether the issuer is from the same organization as the app
+                 registration org.
+                */
+                if (StringUtils.equals(orgId, onlyAllowedIssuerOrgId)) {
+                    oAuthAppDO.setIssuerOrg(onlyAllowedIssuerOrgId);
+                    oAuthAppDO.setIssuerDetails(allowedIssuers.get(0));
+                } else {
+                    String message = "Issuer organization is not provided in the request " +
+                            "while the default issuer does not belong to tenant: " + tenantDomain;
+                    throw handleClientError(INVALID_REQUEST, message);
+                }
+            } else {
+                String primaryOrgId = OAuth2ServiceComponentHolder.getInstance().
+                        getOrganizationManager().getPrimaryOrganizationId(orgId);
+                /*
+                 Setting the primary organization issuer as the app issuer org if it is in
+                 the allowed issuers list.
+                */
+                for (IssuerDetails issuerDetails : allowedIssuers) {
+                    if (issuerDetails.getIssuerOrgId().equals(primaryOrgId)) {
+                        oAuthAppDO.setIssuerOrg(primaryOrgId);
+                        oAuthAppDO.setIssuerDetails(issuerDetails);
+                        break;
+                    }
+                }
+                if (StringUtils.isEmpty(oAuthAppDO.getIssuerOrg())) {
+                    String message = "Issuer organization is not provided in the request while primary organization " +
+                            "issuer is not available as an allowed issuer for tenant: " + tenantDomain;
+                    throw handleClientError(INVALID_REQUEST, message);
+                }
             }
         }
     }
@@ -1392,9 +1953,13 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
-            handleInternalTokenRevocation(consumerKey, properties);
+            try {
+                handleNonPersistentTokenRevocation(consumerKey);
+                handleInternalTokenRevocation(consumerKey, properties);
+            } finally {
+                AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            }
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -1448,32 +2013,34 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Regenerate consumer secret for the application and retrieve application details.
+     * Regenerate the client secret for an OAuth application and retrieve application details. In multi-secret mode
+     * this performs a hard rotation: all existing secrets in IDN_OAUTH_CONSUMER_SECRETS are revoked, associated
+     * tokens and authorization codes are revoked, and a new unnamed, non-expiring secret is added as the only entry.
      *
-     * @param consumerKey Consumer key for the application.
-     * @return OAuthConsumerAppDTO OAuth application details.
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthConsumerAppDTO OAuth application details with the new secret value set.
      * @throws IdentityOAuthAdminException Error while regenerating the consumer secret.
      */
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
-        Properties properties = new Properties();
         String newSecret = OAuthUtil.getRandomNumberSecure();
-        OAuthConsumerAppDTO oldAppDTO = null;
+        OAuthConsumerAppDTO oldAppDTO = getOAuthApplicationData(consumerKey);
 
-        oldAppDTO = getOAuthApplicationData(consumerKey);
+        Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
-        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
         handleInternalTokenRevocation(consumerKey, properties);
+        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
+        handleNonPersistentTokenRevocation(consumerKey);
         // This API is invoked when regenerating client secret and when activating the app.
         Optional<String> initiatorId = getInitiatorId();
         if (initiatorId.isPresent()) {
@@ -1500,7 +2067,7 @@ public class OAuthAdminServiceImpl {
         int countToken = 0;
         try {
             Set<AccessTokenDO> activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
             String[] accessTokens = new String[activeDetailedTokens.size()];
 
             for (AccessTokenDO detailToken : activeDetailedTokens) {
@@ -1566,11 +2133,13 @@ public class OAuthAdminServiceImpl {
         Set<AccessTokenDO> activeDetailedTokens;
         try {
             activeDetailedTokens = OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+                    .getInstance().getAccessTokenDAOImpl(consumerKey).getActiveAcessTokenDataByConsumerKey(consumerKey);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }
+        handleNonPersistentTokenRevocation(consumerKey);
+        handleInternalTokenRevocation(consumerKey, properties);
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -1611,7 +2180,6 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: "
                     + consumerKey);
         }
-        handleInternalTokenRevocation(consumerKey, properties);
         if (enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
@@ -1689,7 +2257,7 @@ public class OAuthAdminServiceImpl {
             Set<AccessTokenDO> accessTokenDOs;
             try {
                 accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                        .getAccessTokenDAO().getAccessTokens(
+                        .getAccessTokenDAOImpl(clientId).getAccessTokens(
                                 clientId, loggedInUser, userStoreDomain, true);
             } catch (IdentityOAuth2Exception e) {
                 String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1715,12 +2283,12 @@ public class OAuthAdminServiceImpl {
                         }
                         if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, tokenBindingReference, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, tokenBindingReference, true);
                         } else {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
-                                    getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                            scopeString, true);
+                                    getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
+                                            userStoreDomain, scopeString, true);
                         }
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
@@ -1798,7 +2366,7 @@ public class OAuthAdminServiceImpl {
                             // Retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this
                             // user
                             accessTokenDOs = OAuthTokenPersistenceFactory.getInstance()
-                                    .getAccessTokenDAO().getAccessTokens(
+                                    .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey()).getAccessTokens(
                                             appDTO.getOauthConsumerKey(), user, userStoreDomain, true);
                         } catch (IdentityOAuth2Exception e) {
                             String errorMsg = "Error occurred while retrieving access tokens issued for " +
@@ -1830,7 +2398,8 @@ public class OAuthAdminServiceImpl {
                             AccessTokenDO scopedToken;
                             try {
                                 if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -1843,7 +2412,8 @@ public class OAuthAdminServiceImpl {
                                      Retrieve latest access token for particular client, user and scope combination if
                                      its ACTIVE or EXPIRED.
                                     */
-                                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    scopedToken = OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .getLatestAccessToken(
                                                     appDTO.getOauthConsumerKey(), user,
                                                     userStoreDomain,
@@ -1862,7 +2432,8 @@ public class OAuthAdminServiceImpl {
                             if (scopedToken != null) {
                                 //Revoking token from database
                                 try {
-                                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                                    OAuthTokenPersistenceFactory.getInstance()
+                                            .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
                                             .revokeAccessTokens(new String[]{scopedToken
                                                     .getAccessToken()});
                                 } catch (IdentityOAuth2Exception e) {
@@ -1943,6 +2514,7 @@ public class OAuthAdminServiceImpl {
             revokeAccessTokens(accessTokens, consumerKey, tenantDomain);
             revokeOAuthConsentsForApplication(applicationName, tenantDomain);
         }
+        handleNonPersistentTokenRevocation(consumerKey);
         AccessTokenEventUtil.publishTokenRevokeEvent(application.getApplicationResourceId(), applicationName,
                 consumerKey, tenantDomain);
         triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
@@ -2118,7 +2690,8 @@ public class OAuthAdminServiceImpl {
         List<AccessTokenDO> accessTokenDOs;
         try {
             accessTokenDOs = new ArrayList<>(OAuthTokenPersistenceFactory
-                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey));
+                    .getInstance().getAccessTokenDAOImpl(consumerKey)
+                    .getActiveAcessTokenDataByConsumerKey(consumerKey));
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while retrieving access tokens issued for OAuth " +
                     "app with consumer key: %s.", consumerKey);
@@ -2131,7 +2704,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuthAdminException {
 
         try {
-            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(consumerKey)
                     .revokeAccessTokens(accessTokens, OAuth2Util.isHashEnabled());
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = String.format("Error occurred while revoking access tokens for OAuth app in " +
@@ -2477,7 +3050,7 @@ public class OAuthAdminServiceImpl {
      */
     public boolean isHashDisabled() {
 
-        return OAuth2Util.isHashDisabled();
+        return OAuth2Util.isClientSecretHashingDisabled();
     }
 
     AuthenticatedUser getAppOwner(OAuthConsumerAppDTO application,
@@ -2514,6 +3087,36 @@ public class OAuthAdminServiceImpl {
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
     }
 
+    /**
+     * Validate whether the OAuth application exists for the given consumer key in the given tenant domain.
+     *
+     * @param consumerKey  Consumer key of the OAuth application.
+     * @param tenantDomain Tenant domain of the application.
+     * @return OAuthAppDO OAuth application data object.
+     * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
+     */
+    private OAuthAppDO validateOAuthAppExistence(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getOAuthApp(consumerKey, tenantDomain);
+            if (oAuthAppDO == null) {
+                String msg = "OAuth application cannot be found for consumerKey: " + consumerKey;
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(msg);
+                }
+                throw handleClientError(INVALID_OAUTH_CLIENT, msg);
+            }
+        } catch (InvalidOAuthClientException e) {
+            String msg = "Cannot find a valid OAuth client for consumerKey: " + consumerKey;
+            throw handleClientError(INVALID_OAUTH_CLIENT, msg, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error while validating OAuth app existence for consumerKey: " + consumerKey, e);
+        }
+        return oAuthAppDO;
+    }
+
     OAuthAppDO getOAuthApp(String consumerKey, String tenantDomain) throws InvalidOAuthClientException,
             IdentityOAuth2Exception {
 
@@ -2533,7 +3136,7 @@ public class OAuthAdminServiceImpl {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
-            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp, tenantDomain);
+            AppInfoCache.getInstance().addToCacheOnRead(consumerKey, oauthApp, tenantDomain);
         }
         return oauthApp;
     }
@@ -2981,7 +3584,7 @@ public class OAuthAdminServiceImpl {
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
                 .getApplicationMgtService();
         try {
-            List<String> jwtAccessTokenClaims = new ArrayList<>();
+            Set<String> jwtAccessTokenClaims = new LinkedHashSet<>();
             ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
                     tenantDomain);
             if (serviceProvider != null) {
@@ -3052,5 +3655,105 @@ public class OAuthAdminServiceImpl {
             }
         }
         return tenantDomain;
+    }
+
+    private boolean isCibaGrantTypeEnabled(OAuthAppDO app) {
+
+        return app.getGrantTypes().contains("urn:openid:params:grant-type:ciba");
+    }
+
+    /**
+     * Handle revocation of non-persistent tokens when an OAuth application is updated.
+     *
+     * @param consumerKey The consumer key of the OAuth application.
+     * @throws IdentityOAuthAdminException If an error occurs while revoking tokens.
+     */
+    private void handleNonPersistentTokenRevocation(String consumerKey) throws IdentityOAuthAdminException {
+
+        if (OAuth2Util.isNonPersistentTokenEnabled(consumerKey)) {
+            long revocationTime = System.currentTimeMillis();
+            try {
+                String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(consumerKey);
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                OAuthTokenPersistenceFactory.getInstance().getRevokedTokenPersistenceDAO().
+                        revokeTokensBySubjectEvent(consumerKey, ENTITY_ID_TYPE_CLIENT_ID, revocationTime, tenantId);
+                new RefreshTokenDAOImpl().revokeTokensForApp(consumerKey);
+
+            } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+                throw new IdentityOAuthAdminException(
+                        "Error while recording non-persistent token revocation event for consumer key: "
+                                + consumerKey, e);
+            }
+        }
+    }
+
+    private void normalizeGracefulRotationValidityPeriod(OAuthAppDO appDO) {
+
+        int maxValidity = OAuthServerConfiguration.getInstance()
+                .getGracefulRefreshTokenRotationValidityPeriodMax();
+        int current = appDO.getGracefulRefreshTokenRotationValidityPeriod();
+        if (current <= 0) {
+            // Clamp default to the operator-configured ceiling so we never exceed it.
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(
+                    Math.min(DEFAULT_GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD_VALUE, maxValidity));
+        } else if (current > maxValidity) {
+            appDO.setGracefulRefreshTokenRotationValidityPeriod(maxValidity);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token rotation validity period configured for the application: " +
+                        appDO.getApplicationName() + " is greater than the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxValidity + " seconds.");
+            }
+        }
+    }
+
+    private void normalizeGracefulReuseLimit(OAuthAppDO appDO) {
+
+        int maxLimit = OAuthServerConfiguration.getInstance().getGracefulRefreshTokenReuseLimitMax();
+        int limit = appDO.getGracefulRefreshTokenReuseLimit();
+        if (limit < GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE) {
+            limit = GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT_MIN_VALUE;
+        } else if (limit > maxLimit) {
+            limit = maxLimit;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The graceful refresh token reuse limit configured for the application: " +
+                        appDO.getApplicationName() + " exceeds the maximum allowed value. " +
+                        "Hence, setting it to the maximum allowed value: " + maxLimit + ".");
+            }
+        }
+        appDO.setGracefulRefreshTokenReuseLimit(limit);
+    }
+
+    /**
+     * Check whether restricting scopes for federated subject tokens is enabled by default for the given tenant.
+     *
+     * @param tenantDomain Tenant domain of the application.
+     * @return true if the tenant default is enabled, false otherwise.
+     */
+    private boolean isRestrictScopeIssuanceEnabledByDefault(String tenantDomain) {
+
+        if (StringUtils.isBlank(tenantDomain)) {
+            return false;
+        }
+        CompatibilitySettingsService compatibilitySettingsService =
+                OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
+        if (compatibilitySettingsService == null) {
+            return false;
+        }
+        try {
+            CompatibilitySetting setting =
+                    compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                            TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP,
+                            DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY);
+            CompatibilitySettingGroup group =
+                    setting.getCompatibilitySetting(TOKEN_EXCHANGE_COMPATIBILITY_SETTING_GROUP);
+            return group != null && Boolean.parseBoolean(
+                    group.getSettingValue(DEFAULT_RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE_COMPATIBILITY_KEY));
+        } catch (CompatibilitySettingException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Could not evaluate compatibility setting for tenant: " + tenantDomain +
+                        ". Scopes for federated subject tokens will not be restricted.", e);
+            }
+            return false;
+        }
     }
 }

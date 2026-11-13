@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -48,6 +48,11 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
+import org.wso2.carbon.identity.oauth2.config.exceptions.OAuth2OIDCConfigOrgUsageScopeMgtServerException;
+import org.wso2.carbon.identity.oauth2.config.models.IssuerDetails;
+import org.wso2.carbon.identity.oauth2.config.utils.OAuth2OIDCConfigOrgUsageScopeUtils;
+import org.wso2.carbon.identity.oauth2.fapi.models.FapiProfileEnum;
+import org.wso2.carbon.identity.oauth2.fapi.utils.FapiUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -67,18 +72,29 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GracefulRefreshTokenRotation.IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_ALLOW_FEDERATED_USERS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_AUTH_REQ_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_NOTIFICATION_CHANNELS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.CIBA_SKIP_USER_VALIDATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_JWT_SCOPE_AS_ARRAY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FAPI_PROFILE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
@@ -86,6 +102,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ISSUER_ORGANIZATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -95,6 +112,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SECTOR_IDENTIFIER_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
@@ -141,12 +159,12 @@ public class OAuthAppDAO {
     private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     private TokenPersistenceProcessor persistenceProcessor;
-    private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private boolean isHashDisabled = OAuth2Util.isClientSecretHashingDisabled();
 
     public OAuthAppDAO() {
 
         try {
-            persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            persistenceProcessor = OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
@@ -228,6 +246,32 @@ public class OAuthAppDAO {
                     addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
+                    
+                    /* Store the client secrets in the IDN_OAUTH_CONSUMER_SECRETS table. The additional secrets stay
+                       on the application so the instance cached on creation is complete for authentication. */
+                    if (StringUtils.isNotBlank(consumerAppDO.getOauthConsumerSecret())) {
+                        long latestSecretCreatedTime = System.currentTimeMillis();
+
+                        // Store the latest secret, reusing the value already processed for the application record.
+                        OAuthConsumerSecretDO latestConsumerSecretDO = buildConsumerSecretDO(appId,
+                                consumerAppDO.getOauthConsumerSecret(),
+                                consumerAppDO.getOauthConsumerSecretExpiryTime());
+                        latestConsumerSecretDO.setSecretValue(processedClientSecret);
+                        latestConsumerSecretDO.setCreatedTime(latestSecretCreatedTime);
+                        insertOAuthConsumerSecretToSecretsTable(connection, latestConsumerSecretDO);
+
+                        /* On import only, store the additional secrets, each stamped just below the latest so the
+                           latest stays newest by CREATED_TIME. */
+                        if (CollectionUtils.isNotEmpty(consumerAppDO.getAdditionalOauthConsumerSecrets())) {
+                            for (OAuthConsumerSecretExpiryDO additionalSecret :
+                                    consumerAppDO.getAdditionalOauthConsumerSecrets()) {
+                                OAuthConsumerSecretDO additionalSecretDO = buildConsumerSecretDO(appId,
+                                        additionalSecret.getSecretValue(), additionalSecret.getExpiryTime());
+                                additionalSecretDO.setCreatedTime(latestSecretCreatedTime - 1);
+                                insertOAuthConsumerSecretToSecretsTable(connection, additionalSecretDO);
+                            }
+                        }
+                    }
                     IdentityDatabaseUtil.commitTransaction(connection);
                 } catch (SQLException e1) {
                     IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -243,7 +287,7 @@ public class OAuthAppDAO {
                         consumerAppDO.getApplicationName(), appOwner.getTenantDomain()), e);
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error occurred while processing the client id and client secret by " +
-                        "TokenPersistenceProcessor", null);
+                        "TokenPersistenceProcessor", e);
             } catch (InvalidOAuthClientException e) {
                 throw handleError("Error occurred while processing client id", e);
             } catch (URLBuilderException e) {
@@ -344,11 +388,21 @@ public class OAuthAppDAO {
                                     (1));
 
                             oauthApp.setOauthConsumerKey(preprocessedClientId);
-                            oauthApp.setOauthConsumerKey(persistenceProcessor.getPreprocessedClientId(rSet.getString
-                                    (1)));
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString(2)));
+                            List<OAuthConsumerSecretDO> consumerSecrets =
+                                    getOAuthConsumerSecretsFromSecretsTable(connection, rSet.getInt(7));
+                            if (CollectionUtils.isNotEmpty(consumerSecrets)) {
+                                oauthApp.setAdditionalOauthConsumerSecrets(
+                                        buildAdditionalConsumerSecrets(
+                                                consumerSecrets.subList(1, consumerSecrets.size())));
+                                OAuthConsumerSecretDO latestSecret = consumerSecrets.get(0);
+                                if (isHashDisabled) {
+                                    oauthApp.setOauthConsumerSecret(
+                                            getPreprocessedSecretValue(latestSecret.getSecretValue()));
+                                }
+                                oauthApp.setOauthConsumerSecretExpiryTime(latestSecret.getExpiryTime());
+                            } else if (isHashDisabled) {
+                                /* Unmigrated application: serve the secret of IDN_OAUTH_CONSUMER_APPS. */
+                                oauthApp.setOauthConsumerSecret(getPreprocessedSecretValue(rSet.getString(2)));
                             }
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
@@ -406,6 +460,25 @@ public class OAuthAppDAO {
     }
 
     /**
+     * Builds a list of additional client secrets containing their preprocessed values and expiry times.
+     *
+     * @param additionalSecrets A list of the application's additional (non-latest) client secrets.
+     * @return A list of {@link OAuthConsumerSecretExpiryDO} objects representing the additional secrets.
+     * @throws IdentityOAuth2Exception If an error occurs while preprocessing the secret values.
+     */
+    private List<OAuthConsumerSecretExpiryDO> buildAdditionalConsumerSecrets(
+            List<OAuthConsumerSecretDO> additionalSecrets) throws IdentityOAuth2Exception {
+
+        List<OAuthConsumerSecretExpiryDO> expiryDOList = new ArrayList<>();
+        for (OAuthConsumerSecretDO consumerSecret : additionalSecrets) {
+            expiryDOList.add(new OAuthConsumerSecretExpiryDO(
+                    getPreprocessedSecretValue(consumerSecret.getSecretValue()),
+                    consumerSecret.getExpiryTime()));
+        }
+        return expiryDOList;
+    }
+
+    /**
      * Get the OAuth consumer application for the given consumer key. Internally it uses the
      * tenant present in the carbon context.
      * This method is deprecated as it uses the tenant present in the thread local to retrieve the consumer app.
@@ -459,11 +532,19 @@ public class OAuthAppDAO {
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
                             oauthApp = new OAuthAppDO();
                             oauthApp.setOauthConsumerKey(consumerKey);
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString(1)));
+                            List<OAuthConsumerSecretDO> consumerSecrets =
+                                    getOAuthConsumerSecretsFromSecretsTable(connection, rSet.getInt(9));
+                            if (CollectionUtils.isNotEmpty(consumerSecrets)) {
+                                oauthApp.setAdditionalOauthConsumerSecrets(
+                                        buildAdditionalConsumerSecrets(
+                                                consumerSecrets.subList(1, consumerSecrets.size())));
+                                OAuthConsumerSecretDO latestSecret = consumerSecrets.get(0);
+                                oauthApp.setOauthConsumerSecret(
+                                        getPreprocessedSecretValue(latestSecret.getSecretValue()));
+                                oauthApp.setOauthConsumerSecretExpiryTime(latestSecret.getExpiryTime());
                             } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
+                                /* Unmigrated application: serve the secret of IDN_OAUTH_CONSUMER_APPS. */
+                                oauthApp.setOauthConsumerSecret(getPreprocessedSecretValue(rSet.getString(1)));
                             }
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                             authenticatedUser.setUserName(rSet.getString(2));
@@ -558,11 +639,20 @@ public class OAuthAppDAO {
                     if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
                         oauthApp = new OAuthAppDO();
                         oauthApp.setOauthConsumerKey(consumerKey);
-                        if (isHashDisabled) {
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                    .getString(CONSUMER_SECRET)));
+                        List<OAuthConsumerSecretDO> consumerSecrets =
+                                getOAuthConsumerSecretsFromSecretsTable(connection, rSet.getInt(ID));
+                        if (CollectionUtils.isNotEmpty(consumerSecrets)) {
+                            oauthApp.setAdditionalOauthConsumerSecrets(
+                                    buildAdditionalConsumerSecrets(
+                                            consumerSecrets.subList(1, consumerSecrets.size())));
+                            OAuthConsumerSecretDO latestSecret = consumerSecrets.get(0);
+                            oauthApp.setOauthConsumerSecret(
+                                    getPreprocessedSecretValue(latestSecret.getSecretValue()));
+                            oauthApp.setOauthConsumerSecretExpiryTime(latestSecret.getExpiryTime());
                         } else {
-                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
+                            /* Unmigrated application: serve the secret of IDN_OAUTH_CONSUMER_APPS. */
+                            oauthApp.setOauthConsumerSecret(
+                                    getPreprocessedSecretValue(rSet.getString(CONSUMER_SECRET)));
                         }
                         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                         authenticatedUser.setUserName(rSet.getString(USERNAME));
@@ -603,6 +693,7 @@ public class OAuthAppDAO {
                         handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
                                 spTenantDomain, oauthApp);
                         oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                        oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
                     }
                 }
 
@@ -643,11 +734,20 @@ public class OAuthAppDAO {
                     if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
                         OAuthAppDO oauthApp = new OAuthAppDO();
                         oauthApp.setOauthConsumerKey(consumerKey);
-                        if (isHashDisabled) {
-                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
-                                    rSet.getString(CONSUMER_SECRET)));
+                        List<OAuthConsumerSecretDO> consumerSecrets =
+                                getOAuthConsumerSecretsFromSecretsTable(connection, rSet.getInt(ID));
+                        if (CollectionUtils.isNotEmpty(consumerSecrets)) {
+                            oauthApp.setAdditionalOauthConsumerSecrets(
+                                    buildAdditionalConsumerSecrets(
+                                            consumerSecrets.subList(1, consumerSecrets.size())));
+                            OAuthConsumerSecretDO latestSecret = consumerSecrets.get(0);
+                            oauthApp.setOauthConsumerSecret(
+                                    getPreprocessedSecretValue(latestSecret.getSecretValue()));
+                            oauthApp.setOauthConsumerSecretExpiryTime(latestSecret.getExpiryTime());
                         } else {
-                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
+                            /* Unmigrated application: serve the secret of IDN_OAUTH_CONSUMER_APPS. */
+                            oauthApp.setOauthConsumerSecret(
+                                    getPreprocessedSecretValue(rSet.getString(CONSUMER_SECRET)));
                         }
                         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
                         authenticatedUser.setUserName(rSet.getString(USERNAME));
@@ -687,6 +787,7 @@ public class OAuthAppDAO {
                         String spTenantDomain = authenticatedUser.getTenantDomain();
                         handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                         oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                        oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
 
                         oauthAppList.add(oauthApp);
                     }
@@ -752,11 +853,19 @@ public class OAuthAppDAO {
                         // There is at least one application associated with a given key
                         appExists = true;
                         if (rSet.getString(4) != null && rSet.getString(4).length() > 0) {
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString(1)));
+                            List<OAuthConsumerSecretDO> consumerSecrets =
+                                    getOAuthConsumerSecretsFromSecretsTable(connection, rSet.getInt(8));
+                            if (CollectionUtils.isNotEmpty(consumerSecrets)) {
+                                oauthApp.setAdditionalOauthConsumerSecrets(
+                                        buildAdditionalConsumerSecrets(
+                                                consumerSecrets.subList(1, consumerSecrets.size())));
+                                OAuthConsumerSecretDO latestSecret = consumerSecrets.get(0);
+                                oauthApp.setOauthConsumerSecret(
+                                        getPreprocessedSecretValue(latestSecret.getSecretValue()));
+                                oauthApp.setOauthConsumerSecretExpiryTime(latestSecret.getExpiryTime());
                             } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString(1));
+                                /* Unmigrated application: serve the secret of IDN_OAUTH_CONSUMER_APPS. */
+                                oauthApp.setOauthConsumerSecret(getPreprocessedSecretValue(rSet.getString(1)));
                             }
                             user.setUserName(rSet.getString(2));
                             user.setUserStoreDomain(rSet.getString(3));
@@ -795,6 +904,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = user.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
                         }
                     }
 
@@ -1116,12 +1226,72 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED,
+                String.valueOf(oauthAppDO.isGracefulRefreshTokenRotationEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD,
+                String.valueOf(oauthAppDO.getGracefulRefreshTokenRotationValidityPeriod()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT,
+                String.valueOf(oauthAppDO.getGracefulRefreshTokenReuseLimit()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(oauthAppDO.isJwtScopeAsArrayEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         if (oauthAppDO.isHybridFlowEnabled()) {
             addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                     HYBRID_FLOW_RESPONSE_TYPE, oauthAppDO.getHybridFlowResponseType(),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_NOTIFICATION_CHANNELS, oauthAppDO.getCibaNotificationChannels(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_AUTH_REQ_EXPIRY_TIME, String.valueOf(oauthAppDO.getCibaAuthReqExpiryTime()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_SKIP_USER_VALIDATION, String.valueOf(oauthAppDO.isCibaSkipUserValidation()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                CIBA_ALLOW_FEDERATED_USERS, String.valueOf(oauthAppDO.isCibaAllowFederatedUsers()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        if (oauthAppDO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE,
+                    String.valueOf(oauthAppDO.isRestrictScopeIssuanceForFederatedTokens()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
+        if (StringUtils.isNotEmpty(oauthAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    ISSUER_ORGANIZATION, String.valueOf(oauthAppDO.getIssuerOrg()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
+        if (oauthAppDO.isFapiConformanceEnabled()) {
+            // Keep the stored FAPI profile when the update doesn't provide one.
+            if (StringUtils.isBlank(oauthAppDO.getFapiProfile())) {
+                oauthAppDO.setFapiProfile(StringUtils.defaultIfBlank(
+                        getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE),
+                        FapiUtil.getDefaultFapiProfile(spTenantDomain).value()));
+            }
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    FAPI_PROFILE, oauthAppDO.getFapiProfile(),
                     prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
         }
 
@@ -1703,11 +1873,17 @@ public class OAuthAppDAO {
     private int getAppIdByClientId(Connection connection, String clientId)
             throws SQLException, InvalidOAuthClientException, IdentityOAuth2Exception {
 
+        return getAppIdByClientId(connection, clientId, IdentityTenantUtil.getLoginTenantId());
+    }
+
+    private int getAppIdByClientId(Connection connection, String clientId, int tenantId)
+            throws SQLException, InvalidOAuthClientException, IdentityOAuth2Exception {
+
         int appId = 0;
         try (PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
                 .GET_APP_ID_BY_CONSUMER_KEY)) {
             prepStmt.setString(1, persistenceProcessor.getProcessedClientId(clientId));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            prepStmt.setInt(2, tenantId);
             try (ResultSet rSet = prepStmt.executeQuery()) {
                 boolean rSetHasRows = false;
                 while (rSet.next()) {
@@ -1730,7 +1906,7 @@ public class OAuthAppDAO {
     private void addServiceProviderOIDCProperties(Connection connection,
                                                   OAuthAppDO consumerAppDO,
                                                   String processedClientId,
-                                                  int spTenantId) throws SQLException {
+                                                  int spTenantId) throws SQLException, IdentityOAuth2Exception {
 
         try (PreparedStatement prepStmtAddOIDCProperty =
                      connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_SP_OIDC_PROPERTY)) {
@@ -1837,6 +2013,21 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
+            if (consumerAppDO.isFapiConformanceEnabled()) {
+                // Set the resolved FAPI profile on the application, so that the cached application has it too.
+                if (StringUtils.isBlank(consumerAppDO.getFapiProfile())) {
+                    consumerAppDO.setFapiProfile(
+                            FapiUtil.getDefaultFapiProfile(IdentityTenantUtil.getTenantDomain(spTenantId)).value());
+                }
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, FAPI_PROFILE,
+                        consumerAppDO.getFapiProfile());
+            }
+
+            if (consumerAppDO.isJwtScopeAsArrayEnabled() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ENABLE_JWT_SCOPE_AS_ARRAY, String.valueOf(consumerAppDO.isJwtScopeAsArrayEnabled()));
+            }
+
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_SUBJECT_TOKEN_ENABLED, String.valueOf(consumerAppDO.isSubjectTokenEnabled()));
 
@@ -1847,12 +2038,54 @@ public class OAuthAppDAO {
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED,
+                    String.valueOf(consumerAppDO.isGracefulRefreshTokenRotationEnabled()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD,
+                    String.valueOf(consumerAppDO.getGracefulRefreshTokenRotationValidityPeriod()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT,
+                    String.valueOf(consumerAppDO.getGracefulRefreshTokenReuseLimit()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     HYBRID_FLOW_ENABLED,
                     String.valueOf(consumerAppDO.isHybridFlowEnabled()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
                     String.valueOf(consumerAppDO.getHybridFlowResponseType()));
+
+            // CIBA Notification Channels Configuration.
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_NOTIFICATION_CHANNELS, consumerAppDO.getCibaNotificationChannels());
+
+            // CIBA Auth Request Expiry Time Configuration - 0 means use default (3600 seconds).
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_AUTH_REQ_EXPIRY_TIME,
+                    String.valueOf(consumerAppDO.getCibaAuthReqExpiryTime()));
+
+            // CIBA Skip User Validation Configuration.
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_SKIP_USER_VALIDATION,
+                    String.valueOf(consumerAppDO.isCibaSkipUserValidation()));
+
+            // CIBA Allow Federated Users Configuration.
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    CIBA_ALLOW_FEDERATED_USERS,
+                    String.valueOf(consumerAppDO.isCibaAllowFederatedUsers()));
+
+            if (consumerAppDO.isRestrictScopeIssuanceForFederatedTokens() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE,
+                        String.valueOf(consumerAppDO.isRestrictScopeIssuanceForFederatedTokens()));
+            }
+
+            if (StringUtils.isNotEmpty(consumerAppDO.getIssuerOrg()) && !isRootOrganization(spTenantId)) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        ISSUER_ORGANIZATION, String.valueOf(consumerAppDO.getIssuerOrg()));
+            }
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -2025,6 +2258,18 @@ public class OAuthAppDAO {
         if (isFAPI != null) {
             oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
         }
+        // Read back the FAPI security profile. This value is non-null only for applications
+        // where a profile was explicitly configured via the management API.
+        String fapiProfile = getFirstPropertyValue(spOIDCProperties, FAPI_PROFILE);
+        if (Boolean.parseBoolean(isFAPI)) {
+            oauthApp.setFapiProfile(StringUtils.isBlank(fapiProfile) ?
+                    getDefaultFapiProfile(oauthApp).value() : fapiProfile);
+        }
+
+        String isJwtScopeAsArray = getFirstPropertyValue(spOIDCProperties, ENABLE_JWT_SCOPE_AS_ARRAY);
+        if (isJwtScopeAsArray != null && !isJwtScopeAsArray.equals("null")) {
+            oauthApp.setJwtScopeAsArrayEnabled(Boolean.parseBoolean(isJwtScopeAsArray));
+        }
 
         String isSubjectTokenEnabled = getFirstPropertyValue(spOIDCProperties, IS_SUBJECT_TOKEN_ENABLED);
         if (isSubjectTokenEnabled != null) {
@@ -2033,6 +2278,24 @@ public class OAuthAppDAO {
         String subjectTokenExpiryTime = getFirstPropertyValue(spOIDCProperties, SUBJECT_TOKEN_EXPIRY_TIME);
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
+        }
+
+        String isGracefulRefreshTokenRotationEnabled = getFirstPropertyValue(spOIDCProperties,
+                IS_GRACEFUL_REFRESH_TOKEN_ROTATION_ENABLED);
+        if (isGracefulRefreshTokenRotationEnabled != null) {
+            oauthApp.setGracefulRefreshTokenRotationEnabled(
+                    Boolean.parseBoolean(isGracefulRefreshTokenRotationEnabled));
+        }
+        String gracefulRefreshTokenRotationValidityPeriod = getFirstPropertyValue(spOIDCProperties,
+                GRACEFUL_REFRESH_TOKEN_ROTATION_VALIDITY_PERIOD);
+        if (gracefulRefreshTokenRotationValidityPeriod != null) {
+            oauthApp.setGracefulRefreshTokenRotationValidityPeriod(
+                    Integer.parseInt(gracefulRefreshTokenRotationValidityPeriod));
+        }
+        String gracefulRefreshTokenReuseLimit = getFirstPropertyValue(spOIDCProperties,
+                GRACEFUL_REFRESH_TOKEN_REUSE_LIMIT);
+        if (gracefulRefreshTokenReuseLimit != null) {
+            oauthApp.setGracefulRefreshTokenReuseLimit(Integer.parseInt(gracefulRefreshTokenReuseLimit));
         }
 
         String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);
@@ -2070,6 +2333,67 @@ public class OAuthAppDAO {
             // Configure the hybrid flow response type (null if not explicitly set)
             oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
         }
+
+        // CIBA Notification Channels Configuration.
+        String cibaNotificationChannels = getFirstPropertyValue(spOIDCProperties, CIBA_NOTIFICATION_CHANNELS);
+        if (cibaNotificationChannels != null) {
+            oauthApp.setCibaNotificationChannels(cibaNotificationChannels);
+        }
+
+        // CIBA Auth Request Expiry Time Configuration.
+        String cibaAuthReqExpiryTime = getFirstPropertyValue(spOIDCProperties, CIBA_AUTH_REQ_EXPIRY_TIME);
+        if (cibaAuthReqExpiryTime != null) {
+            oauthApp.setCibaAuthReqExpiryTime(Long.parseLong(cibaAuthReqExpiryTime));
+        }
+
+        // CIBA Skip User Validation Configuration.
+        String cibaSkipUserValidation = getFirstPropertyValue(spOIDCProperties, CIBA_SKIP_USER_VALIDATION);
+        if (cibaSkipUserValidation != null) {
+            oauthApp.setCibaSkipUserValidation(Boolean.parseBoolean(cibaSkipUserValidation));
+        }
+
+        // CIBA Allow Federated Users Configuration.
+        String cibaAllowFederatedUsers = getFirstPropertyValue(spOIDCProperties, CIBA_ALLOW_FEDERATED_USERS);
+        if (cibaAllowFederatedUsers != null) {
+            oauthApp.setCibaAllowFederatedUsers(Boolean.parseBoolean(cibaAllowFederatedUsers));
+        }
+
+        String restrictScopeIssuanceForFederatedTokens = getFirstPropertyValue(spOIDCProperties,
+                RESTRICT_FEDERATED_TOKEN_SCOPE_ISSUANCE);
+        if (restrictScopeIssuanceForFederatedTokens != null
+                && !restrictScopeIssuanceForFederatedTokens.equals("null")) {
+            oauthApp.setRestrictScopeIssuanceForFederatedTokens(
+                    Boolean.parseBoolean(restrictScopeIssuanceForFederatedTokens));
+        }
+
+        // Set issuer details if the issuer organization is available in the OIDC properties
+        String issuerOrg = getFirstPropertyValue(spOIDCProperties, ISSUER_ORGANIZATION);
+        if (StringUtils.isNotEmpty(issuerOrg)) {
+            try {
+                IssuerDetails issuerDetails = new IssuerDetails();
+                issuerDetails.setIssuerOrgId(issuerOrg);
+                String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(issuerOrg);
+                issuerDetails.setIssuerTenantDomain(tenantDomain);
+                issuerDetails.setIssuer(OAuth2OIDCConfigOrgUsageScopeUtils.getIssuerLocation(tenantDomain));
+                oauthApp.setIssuerDetails(issuerDetails);
+            } catch (OAuth2OIDCConfigOrgUsageScopeMgtServerException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while retrieving issuer details for the " +
+                        "organization: " + issuerOrg, e);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2ServerException("Error occurred while resolving tenant domain for the " +
+                        "organization: " + issuerOrg, e);
+            }
+            oauthApp.setIssuerOrg(issuerOrg);
+        }
+    }
+
+    private FapiProfileEnum getDefaultFapiProfile(OAuthAppDO oauthApp) {
+
+        if (oauthApp.getUser() != null && StringUtils.isNotBlank(oauthApp.getUser().getTenantDomain())) {
+            return FapiUtil.getDefaultFapiProfile(oauthApp.getUser().getTenantDomain());
+        }
+        return FapiUtil.getDefaultFapiProfile();
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
@@ -2175,4 +2499,470 @@ public class OAuthAppDAO {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
+
+    /**
+     * Add a newly generated client secret to the given application and update it as the latest secret in
+     * IDN_OAUTH_CONSUMER_APPS. Before adding, the client secret limit is enforced, and for an application not yet
+     * migrated to the consumer secrets table, the existing secret of IDN_OAUTH_CONSUMER_APPS is seeded into it.
+     * Callers must gate this operation behind the multiple client secrets configuration.
+     *
+     * @param consumerKeyId       Integer ID of the OAuth consumer application.
+     * @param newSecretExpiryTime Expiry time of the new secret in epoch milliseconds, or null if it does not expire.
+     * @return {@link OAuthConsumerSecretDO} of the newly created secret.
+     * @throws IdentityOAuthAdminException if an error occurs while adding the consumer secret.
+     */
+    public OAuthConsumerSecretDO addOAuthConsumerSecret(int consumerKeyId, Long newSecretExpiryTime)
+            throws IdentityOAuthAdminException {
+
+        Connection connection = null;
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection(true);
+            int secretsCount = getOAuthConsumerSecretsCountFromSecretsTable(connection, consumerKeyId);
+
+            // 1. Migrate the existing secret of IDN_OAUTH_CONSUMER_APPS into the secrets table, if not yet migrated.
+            if (secretsCount == 0) {
+                /* Before on-demand migration the existing secret lives only in IDN_OAUTH_CONSUMER_APPS; migrate
+                   it into the secrets table where it becomes the single existing secret. */
+                String unmigratedConsumerSecret = getPreprocessedSecretValue(
+                        getOAuthConsumerSecretFromConsumerAppsTable(connection, consumerKeyId));
+                if (unmigratedConsumerSecret != null) {
+                    migrateConsumerSecretToSecretsTable(connection, consumerKeyId, unmigratedConsumerSecret);
+                    secretsCount = 1;
+                }
+            }
+            if (isConsumerSecretLimitReached(secretsCount)) {
+                int clientSecretLimit = OAuth2Util.getMaxClientSecretCount();
+                throw new IdentityOAuthClientException(Error.CLIENT_SECRET_LIMIT_REACHED.getErrorCode(),
+                        String.format("Maximum number of client secrets reached. Clients cannot have more "
+                                + "than %d secrets.", clientSecretLimit));
+            }
+
+            // 2. Insert the newly generated secret into the new secrets table.
+            String newSecret = OAuthUtil.getRandomNumberSecure();
+            OAuthConsumerSecretDO newSecretDO = buildConsumerSecretDO(consumerKeyId, newSecret, newSecretExpiryTime);
+            insertOAuthConsumerSecretToSecretsTable(connection, newSecretDO);
+
+            // 3. Update IDN_OAUTH_CONSUMER_APPS with the new secret as the latest.
+            updateConsumerSecretInConsumerAppsTable(connection, consumerKeyId, newSecretDO.getSecretValue());
+            
+            IdentityDatabaseUtil.commitTransaction(connection);
+            /* The caller receives the plaintext of the new secret; the stored form was only for persistence.
+               With hashing enabled this is the only time the plaintext is disclosed: later retrievals return
+               the stored hash. */
+            newSecretDO.setSecretValue(newSecret);
+            return newSecretDO;
+        } catch (IdentityOAuthAdminException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw e;
+        } catch (SQLException | IdentityOAuth2Exception e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw handleError("Error occurred while adding the OAuth consumer secret for consumer key id : "
+                    + consumerKeyId, e);
+        } finally {
+            IdentityDatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Remove all existing client secrets from IDN_OAUTH_CONSUMER_SECRETS for the given consumer and add the new
+     * secret as the only entry, within the caller's transaction. The caller owns the connection and performs the
+     * commit and rollback.
+     *
+     * @param connection  Active DB transaction to use.
+     * @param consumerKey Consumer key of the application.
+     * @param tenantId    Tenant id under which the application is registered.
+     * @param newSecret   Plaintext of the new client secret.
+     * @throws SQLException            if a database access error occurs.
+     * @throws IdentityOAuth2Exception if the secret cannot be processed or the application cannot be resolved.
+     */
+    public void replaceOAuthConsumerSecretsInSecretsTable(Connection connection, String consumerKey, int tenantId,
+                                                          String newSecret)
+            throws SQLException, IdentityOAuth2Exception {
+
+        try {
+            int consumerKeyId = getAppIdByClientId(connection, consumerKey, tenantId);
+
+            // 1. Remove all existing secrets of the application.
+            try (PreparedStatement deleteStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.DELETE_ALL_OAUTH_CONSUMER_SECRETS)) {
+                deleteStmt.setInt(1, consumerKeyId);
+                deleteStmt.executeUpdate();
+            }
+
+            // 2. Add the new secret as the only entry; the regenerated secret never expires.
+            OAuthConsumerSecretDO newSecretDO = buildConsumerSecretDO(consumerKeyId, newSecret, null);
+            insertOAuthConsumerSecretToSecretsTable(connection, newSecretDO);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while rotating the client secrets of application: " + consumerKey, e);
+        }
+    }
+
+    /**
+     * Retrieve all consumer secrets of the given application, with the secret values preprocessed for the
+     * persistence mode. The secrets are read latest first from IDN_OAUTH_CONSUMER_SECRETS; when the application
+     * is not migrated to the consumer secrets table, a single non-expiring entry with
+     * {@link OAuthConstants#DEFAULT_SECRET_ID} is built from the consumer secret of IDN_OAUTH_CONSUMER_APPS.
+     * Throws {@link IdentityOAuth2Exception} rather than the admin exception so that the OAuth2 side consumers,
+     * such as the application export flow, can consume it directly.
+     *
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return List of {@link OAuthConsumerSecretDO} ordered by creation time descending.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving the consumer secrets.
+     */
+    public List<OAuthConsumerSecretDO> getOAuthConsumerSecrets(int consumerKeyId) throws IdentityOAuth2Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            List<OAuthConsumerSecretDO> consumerSecrets =
+                    getOAuthConsumerSecretsFromSecretsTable(connection, consumerKeyId);
+            if (consumerSecrets.isEmpty()) {
+                OAuthConsumerSecretDO consumerSecret = new OAuthConsumerSecretDO();
+                consumerSecret.setSecretId(OAuthConstants.DEFAULT_SECRET_ID);
+                consumerSecret.setSecretValue(getPreprocessedSecretValue(
+                        getOAuthConsumerSecretFromConsumerAppsTable(connection, consumerKeyId)));
+                return Collections.singletonList(consumerSecret);
+            }
+            for (OAuthConsumerSecretDO consumerSecret : consumerSecrets) {
+                consumerSecret.setSecretValue(getPreprocessedSecretValue(consumerSecret.getSecretValue()));
+            }
+            return consumerSecrets;
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth consumer secrets for consumer "
+                    + "key id : " + consumerKeyId, e);
+        }
+    }
+
+    /**
+     * Retrieve a specific OAuth consumer secret of the given application by secret ID. The lookup is scoped to
+     * the application, so a secret of another application is never returned.
+     *
+     * @param secretId      The ID of the secret to be retrieved.
+     * @param consumerKeyId Integer ID of the OAuth consumer application owning the secret.
+     * @return An OAuthConsumerSecretDO representing the consumer secret, or null if no matching secret exists.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the consumer secret.
+     */
+    public OAuthConsumerSecretDO getOAuthConsumerSecret(String secretId, int consumerKeyId)
+            throws IdentityOAuthAdminException {
+
+        OAuthConsumerSecretDO secret = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRET_OF_CLIENT_BY_SECRET_ID)) {
+                prepStmt.setString(1, secretId);
+                prepStmt.setInt(2, consumerKeyId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        secret = buildOAuthConsumerSecretDO(resultSet);
+                        secret.setSecretValue(getPreprocessedSecretValue(secret.getSecretValue()));
+                    }
+                }
+            }
+        } catch (SQLException | IdentityOAuth2Exception e) {
+            throw handleError("Error occurred while retrieving the provided OAuth consumer secret "
+                    + "for secret id : " + secretId, e);
+        }
+        return secret;
+    }
+
+    /**
+     * Retrieve the ID of the latest client secret for the given consumer application. Before on-demand
+     * migration the secrets table is empty and the latest secret still resides in IDN_OAUTH_CONSUMER_APPS,
+     * in which case {@link OAuthConstants#DEFAULT_SECRET_ID} is returned.
+     *
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return Secret ID of the latest secret; {@link OAuthConstants#DEFAULT_SECRET_ID} before migration.
+     * @throws IdentityOAuthAdminException on database errors.
+     */
+    public String getLatestOAuthConsumerSecretId(int consumerKeyId) throws IdentityOAuthAdminException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_LATEST_OAUTH_CONSUMER_SECRET_ID_OF_CLIENT)) {
+                prepStmt.setMaxRows(1);
+                prepStmt.setInt(1, consumerKeyId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getString(1);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw handleError("Error occurred while retrieving the latest OAuth consumer secret for consumer "
+                    + "key id : " + consumerKeyId, e);
+        }
+        // Pre-migration: no rows in IDN_OAUTH_CONSUMER_SECRETS; the latest secret is in IDN_OAUTH_CONSUMER_APPS.
+        return OAuthConstants.DEFAULT_SECRET_ID;
+    }
+
+    /**
+     * Delete the given OAuth consumer secret.
+     *
+     * @param secretId      Secret ID to be removed.
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return Number of rows deleted (0 if the secret no longer exists).
+     * @throws IdentityOAuthAdminException on database errors.
+     */
+    public int deleteOAuthConsumerSecret(String secretId, int consumerKeyId) throws IdentityOAuthAdminException {
+
+        Connection connection = null;
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection(true);
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.DELETE_OAUTH_CONSUMER_SECRET)) {
+                prepStmt.setString(1, secretId);
+                prepStmt.setInt(2, consumerKeyId);
+                int rowsDeleted = prepStmt.executeUpdate();
+                IdentityDatabaseUtil.commitTransaction(connection);
+                return rowsDeleted;
+            }
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw handleError("Error occurred while removing OAuth consumer secret for secret id : "
+                    + secretId, e);
+        } finally {
+            IdentityDatabaseUtil.closeConnection(connection);
+        }
+    }
+
+    /**
+     * Return the number of client secrets in IDN_OAUTH_CONSUMER_SECRETS for the given application.
+     *
+     * @param connection    DB connection to be used.
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return Number of client secrets of the application.
+     * @throws SQLException if a database access error occurs.
+     */
+    private int getOAuthConsumerSecretsCountFromSecretsTable(Connection connection, int consumerKeyId)
+            throws SQLException {
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_COUNT_OF_CLIENT)) {
+            prepStmt.setInt(1, consumerKeyId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * Checks whether the consumer secret max limit has been reached for a given OAuth consumer.
+     *
+     * @param secretsCount Number of existing secrets of the application.
+     * @return {@code true} if the client secret limit is greater than zero and the given number
+     *         of secrets is greater than or equal to the limit, {@code false} otherwise
+     */
+    private boolean isConsumerSecretLimitReached(int secretsCount) {
+
+        int clientSecretLimit = OAuth2Util.getMaxClientSecretCount();
+        return clientSecretLimit > 0 && secretsCount >= clientSecretLimit;
+    }
+
+    /**
+     * Build a consumer secret record from the given plaintext secret: a fresh secret id is generated, the stored
+     * value and hash are derived under the configured persistence processors, and the current time is stamped as
+     * the creation time.
+     *
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @param secret        Plaintext of the consumer secret.
+     * @param expiryTime    Expiry time in epoch milliseconds, or null if the secret does not expire.
+     * @return {@link OAuthConsumerSecretDO} populated with the stored form of the secret value.
+     * @throws IdentityOAuth2Exception if the secret cannot be processed.
+     */
+    private OAuthConsumerSecretDO buildConsumerSecretDO(int consumerKeyId, String secret, Long expiryTime)
+            throws IdentityOAuth2Exception {
+
+        OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
+        consumerSecretDO.setSecretId(UUID.randomUUID().toString());
+        consumerSecretDO.setConsumerKeyId(consumerKeyId);
+        consumerSecretDO.setSecretValue(persistenceProcessor.getProcessedClientSecret(secret));
+        consumerSecretDO.setExpiryTime(expiryTime);
+        consumerSecretDO.setCreatedTime(System.currentTimeMillis());
+        return consumerSecretDO;
+    }
+
+    /**
+     * Seed the pre-migration secret of IDN_OAUTH_CONSUMER_APPS into IDN_OAUTH_CONSUMER_SECRETS as its first
+     * record, within an existing DB transaction. Its creation time is left null and it is considered as never
+     * expiring, since the original creation time is unknown.
+     *
+     * @param connection               Active DB transaction to use.
+     * @param consumerKeyId            Integer ID of the OAuth consumer application.
+     * @param unmigratedConsumerSecret Preprocessed secret currently held only in IDN_OAUTH_CONSUMER_APPS.
+     * @throws SQLException            if a database access error occurs.
+     * @throws IdentityOAuth2Exception if the secret cannot be processed.
+     */
+    private void migrateConsumerSecretToSecretsTable(Connection connection, int consumerKeyId,
+                                                     String unmigratedConsumerSecret)
+            throws SQLException, IdentityOAuth2Exception {
+
+        OAuthConsumerSecretDO consumerSecretDO = new OAuthConsumerSecretDO();
+        consumerSecretDO.setSecretId(UUID.randomUUID().toString());
+        consumerSecretDO.setConsumerKeyId(consumerKeyId);
+        if (isHashDisabled) {
+            consumerSecretDO.setSecretValue(persistenceProcessor.getProcessedClientSecret(unmigratedConsumerSecret));
+        } else {
+            /* With hashing enabled the plaintext is unrecoverable, so the stored hash held in
+               IDN_OAUTH_CONSUMER_APPS is carried over as the secret value of the migrated secret. */
+            consumerSecretDO.setSecretValue(unmigratedConsumerSecret);
+        }
+        insertOAuthConsumerSecretToSecretsTable(connection, consumerSecretDO);
+    }
+
+    /**
+     * Insert a new OAuth consumer secret into the IDN_OAUTH_CONSUMER_SECRETS table within an existing DB transaction.
+     * CREATED_TIME is stored exactly as carried by the given secret: the caller stamps the current time on a newly
+     * created secret, or leaves it null for a migrated legacy secret so that it sorts oldest. When the added secret
+     * is the latest, the caller must also invoke {@link #updateConsumerSecretInConsumerAppsTable} to reflect it in
+     * IDN_OAUTH_CONSUMER_APPS.
+     *
+     * @param connection       DB connection to be used.
+     * @param consumerSecretDO Consumer secret to be added, fully populated with the stored form of the secret
+     *                         value, which is written exactly as given, without any processing.
+     * @throws SQLException            if a database access error occurs.
+     * @throws IdentityOAuth2Exception if the consumer secret is not fully populated.
+     */
+    private void insertOAuthConsumerSecretToSecretsTable(Connection connection, OAuthConsumerSecretDO consumerSecretDO)
+            throws SQLException, IdentityOAuth2Exception {
+
+        if (consumerSecretDO.getSecretId() == null || consumerSecretDO.getConsumerKeyId() <= 0
+                || consumerSecretDO.getSecretValue() == null) {
+            throw new IdentityOAuth2Exception("The consumer secret to be added must be fully populated with the "
+                    + "secret id, consumer key id, and the stored form of the secret value.");
+        }
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_CONSUMER_SECRET)) {
+            prepStmt.setString(1, consumerSecretDO.getSecretId());
+            prepStmt.setInt(2, consumerSecretDO.getConsumerKeyId());
+            prepStmt.setString(3, consumerSecretDO.getSecretValue());
+            /* Persist the creation time as provided. A null time (a legacy secret migrated from
+               IDN_OAUTH_CONSUMER_APPS, whose original creation time is unknown) is stored as NULL. */
+            if (consumerSecretDO.getCreatedTime() != null) {
+                prepStmt.setLong(4, consumerSecretDO.getCreatedTime());
+            } else {
+                prepStmt.setNull(4, java.sql.Types.BIGINT);
+            }
+            if (consumerSecretDO.getExpiryTime() != null) {
+                prepStmt.setLong(5, consumerSecretDO.getExpiryTime());
+            } else {
+                prepStmt.setNull(5, java.sql.Types.BIGINT);
+            }
+            prepStmt.execute();
+        }
+    }
+
+    /**
+     * Retrieve all OAuth consumer secrets for the given consumer key ID, with the secret values exactly as stored.
+     *
+     * @param connection    DB connection to be used.
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return List of {@link OAuthConsumerSecretDO} ordered by creation time descending.
+     * @throws SQLException if a database access error occurs.
+     */
+    private List<OAuthConsumerSecretDO> getOAuthConsumerSecretsFromSecretsTable(Connection connection,
+                                                                                int consumerKeyId)
+            throws SQLException {
+
+        List<OAuthConsumerSecretDO> consumerSecrets = new ArrayList<>();
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_OAUTH_CONSUMER_SECRETS_OF_CLIENT)) {
+            prepStmt.setInt(1, consumerKeyId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    consumerSecrets.add(buildOAuthConsumerSecretDO(resultSet));
+                }
+            }
+        }
+        return consumerSecrets;
+    }
+
+    /**
+     * Retrieve the consumer secret of the application from IDN_OAUTH_CONSUMER_APPS, exactly as stored. This is
+     * the single non-expiring secret of an application that is not migrated to the consumer secrets table.
+     *
+     * @param connection    DB connection to be used.
+     * @param consumerKeyId Integer ID of the OAuth consumer application.
+     * @return Consumer secret of the application exactly as stored, or null if there is none.
+     * @throws SQLException if a database access error occurs.
+     */
+    private String getOAuthConsumerSecretFromConsumerAppsTable(Connection connection, int consumerKeyId)
+            throws SQLException {
+
+        try (PreparedStatement prepStmt = connection.prepareStatement(
+                SQLQueries.OAuthAppDAOSQLQueries.GET_CONSUMER_SECRET_BY_APP_ID)) {
+            prepStmt.setInt(1, consumerKeyId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString(1);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Update the consumer apps table (IDN_OAUTH_CONSUMER_APPS) with the latest client secret for an existing
+     * application.
+     *
+     * @param connection            DB connection to be used.
+     * @param consumerKeyId         ID of the OAuth application whose secret is to be updated.
+     * @param processedClientSecret Processed client secret.
+     * @throws IdentityOAuthAdminException if the update does not affect exactly one application record.
+     */
+    private void updateConsumerSecretInConsumerAppsTable(Connection connection, int consumerKeyId,
+                                                         String processedClientSecret)
+            throws SQLException, IdentityOAuthAdminException {
+
+        try (PreparedStatement prepStmt = connection
+                .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.UPDATE_CONSUMER_SECRET_IN_APPS_STORE)) {
+            prepStmt.setString(1, processedClientSecret);
+            prepStmt.setInt(2, consumerKeyId);
+            int updatedRows = prepStmt.executeUpdate();
+            if (updatedRows != 1) {
+                throw handleError("Failed to update the client secret in IDN_OAUTH_CONSUMER_APPS for application " +
+                        "id: " + consumerKeyId + ". Expected to update 1 record but updated " + updatedRows + ".",
+                        null);
+            }
+        }
+    }
+
+    /**
+     * Preprocess a stored secret value for the persistence mode.
+     *
+     * @param storedSecretValue Secret value exactly as stored.
+     * @return Preprocessed secret value when hashing is disabled, otherwise the stored value.
+     * @throws IdentityOAuth2Exception if the stored secret value cannot be processed.
+     */
+    private String getPreprocessedSecretValue(String storedSecretValue) throws IdentityOAuth2Exception {
+
+        if (isHashDisabled) {
+            return persistenceProcessor.getPreprocessedClientSecret(storedSecretValue);
+        }
+        return storedSecretValue;
+    }
+
+    /**
+     * Build an OAuthConsumerSecretDO from the current row of an IDN_OAUTH_CONSUMER_SECRETS result set, with the
+     * secret value exactly as stored.
+     *
+     * @param resultSet Result set positioned on the row to read.
+     * @return OAuthConsumerSecretDO populated from the current row.
+     * @throws SQLException if a database access error occurs.
+     */
+    private OAuthConsumerSecretDO buildOAuthConsumerSecretDO(ResultSet resultSet) throws SQLException {
+
+        OAuthConsumerSecretDO secret = new OAuthConsumerSecretDO();
+        secret.setSecretId(resultSet.getString(1));
+        secret.setSecretValue(resultSet.getString(2));
+        long createdTime = resultSet.getLong(3);
+        if (!resultSet.wasNull()) {
+            secret.setCreatedTime(createdTime);
+        }
+        long expiryTime = resultSet.getLong(4);
+        /* getLong() returns 0 for SQL NULL; wasNull() is the only way to detect a true NULL. */
+        if (!resultSet.wasNull()) {
+            secret.setExpiryTime(expiryTime);
+        }
+        return secret;
+    }
+
 }

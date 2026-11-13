@@ -48,7 +48,8 @@ public class TokenPersistenceTask implements Runnable {
                 if (accessContextTokenDO != null) {
                     accessToken = accessContextTokenDO.getAccessToken();
                     log.debug("Access Token Data persisting Task is started to run");
-                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    OAuthTokenPersistenceFactory.getInstance()
+                            .getAccessTokenDAOImpl(accessContextTokenDO.getConsumerKey())
                             .insertAccessToken(accessToken, accessContextTokenDO.getConsumerKey(),
                                     accessContextTokenDO.getNewAccessTokenDO(),
                                     accessContextTokenDO.getExistingAccessTokenDO(),

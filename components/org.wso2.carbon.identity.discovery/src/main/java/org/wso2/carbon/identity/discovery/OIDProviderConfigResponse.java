@@ -79,6 +79,8 @@ public class OIDProviderConfigResponse {
     private String endSessionEndpoint;
     private Boolean backchannelLogoutSupported;
     private Boolean backchannelLogoutSessionSupported;
+    private Boolean frontchannelLogoutSupported;
+    private Boolean frontchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
     private String webFingerEndpoint;
@@ -86,6 +88,9 @@ public class OIDProviderConfigResponse {
     private String mtlsTokenEndpoint;
     private String mtlsPushedAuthorizationRequestEndpoint;
     private String[] authorizationDetailsTypesSupported;
+    private String backchannelAuthenticationEndpoint;
+    private Boolean authorizationResponseIssParameterSupported;
+    private Boolean clientIdMetadataDocumentSupported;
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
@@ -436,6 +441,15 @@ public class OIDProviderConfigResponse {
         this.backchannelLogoutSessionSupported = backchannelLogoutSessionSupported;
     }
 
+    public void setFrontchannelLogoutSupported(Boolean frontchannelLogoutSupported) {
+        this.frontchannelLogoutSupported = frontchannelLogoutSupported;
+    }
+
+    public void setFrontchannelLogoutSessionSupported(Boolean frontchannelLogoutSessionSupported) {
+        this.frontchannelLogoutSessionSupported = frontchannelLogoutSessionSupported;
+    }
+
+
     public String getIntrospectionEndpoint() {
 
         return introspectionEndpoint;
@@ -541,6 +555,36 @@ public class OIDProviderConfigResponse {
         this.authorizationDetailsTypesSupported = authorizationDetailsTypesSupported;
     }
 
+    public String getBackchannelAuthenticationEndpoint() {
+
+        return backchannelAuthenticationEndpoint;
+    }
+
+    public void setBackchannelAuthenticationEndpoint(String backchannelAuthenticationEndpoint) {
+
+        this.backchannelAuthenticationEndpoint = backchannelAuthenticationEndpoint;
+    }
+
+    public Boolean getAuthorizationResponseIssParameterSupported() {
+
+        return authorizationResponseIssParameterSupported;
+    }
+
+    public void setAuthorizationResponseIssParameterSupported(Boolean authorizationResponseIssParameterSupported) {
+
+        this.authorizationResponseIssParameterSupported = authorizationResponseIssParameterSupported;
+    }
+
+    public Boolean getClientIdMetadataDocumentSupported() {
+
+        return clientIdMetadataDocumentSupported;
+    }
+
+    public void setClientIdMetadataDocumentSupported(Boolean clientIdMetadataDocumentSupported) {
+
+        this.clientIdMetadataDocumentSupported = clientIdMetadataDocumentSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -603,6 +647,9 @@ public class OIDProviderConfigResponse {
                 .userinfoSigningAlgValuesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
+        configMap.put(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SUPPORTED, this.frontchannelLogoutSupported);
+        configMap.put(DiscoveryConstants.FRONTCHANNEL_LOGOUT_SESSION_SUPPORTED,
+                this.frontchannelLogoutSessionSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
@@ -617,6 +664,12 @@ public class OIDProviderConfigResponse {
         }
         configMap.put(DiscoveryConstants.AUTHORIZATION_DETAILS_TYPES_SUPPORTED,
                 this.authorizationDetailsTypesSupported);
+        configMap.put(DiscoveryConstants.BACKCHANNEL_AUTHENTICATION_ENDPOINT,
+                this.backchannelAuthenticationEndpoint);
+        configMap.put(DiscoveryConstants.AUTHORIZATION_RESPONSE_ISS_PARAMETER_SUPPORTED,
+                this.authorizationResponseIssParameterSupported);
+        configMap.put(DiscoveryConstants.CLIENT_ID_METADATA_DOCUMENT_SUPPORTED,
+                this.clientIdMetadataDocumentSupported);
         return configMap;
     }
 }

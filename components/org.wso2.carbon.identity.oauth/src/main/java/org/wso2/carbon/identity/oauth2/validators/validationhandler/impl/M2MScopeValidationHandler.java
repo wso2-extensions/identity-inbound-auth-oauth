@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
@@ -46,8 +48,12 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
                                        ScopeValidationContext scopeValidationContext)
             throws ScopeValidationHandlerException {
 
-        if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(scopeValidationContext.getGrantType()) &&
-                OAuthConstants.UserType.APPLICATION.equals(scopeValidationContext.getUserType())) {
+        boolean isOrgSwitchRequest =
+                OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(scopeValidationContext.getGrantType()) &&
+                OAuthConstants.UserType.APPLICATION.equals(scopeValidationContext.getUserType());
+        boolean isOrganizationAccess = StringUtils.isNotBlank(
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId());
+        if (isOrgSwitchRequest || isOrganizationAccess) {
            List<String> internalOrgScopes = appAuthorizedScopes.stream()
                    .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
                    .collect(Collectors.toList());

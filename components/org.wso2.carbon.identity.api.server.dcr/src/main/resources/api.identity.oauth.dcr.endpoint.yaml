@@ -50,8 +50,9 @@ paths:
         "Content-Type: application/json" -d '{
          "client_name": "application_test",
          "grant_types": ["password"], 
-         "ext_param_client_id":"provided_client_id0001", 
-         "ext_param_client_secret":"provided_client_secret0001" }' 
+         "ext_param_client_id":"provided_client_id0001",
+         "ext_param_client_secret":"provided_client_secret0001",
+         "ext_param_client_secret_expires_at":1761568483 }'
         "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
         "HTTP/1.1 201 Created"
@@ -282,6 +283,10 @@ definitions:
         type: string
       ext_param_client_secret:
         type: string
+      ext_param_client_secret_expires_at:
+        type: integer
+        format: int64
+        description: The expiration time of the client secret, expressed in Unix epoch seconds.
       contacts:
         type: array
         items:
@@ -300,6 +305,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      frontchannel_logout_uri:
+        type: string
       ext_application_display_name:
         type: string
       token_type_extension:
@@ -382,6 +389,8 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      frontchannel_logout_uri:
+        type: string
       ext_application_display_name:
         type: string
       token_type_extension:
@@ -494,6 +503,8 @@ definitions:
       token_type_extension:
         type: string
       jwks_uri:
+        type: string
+      frontchannel_logout_uri:
         type: string
       token_endpoint_auth_method:
         type: string
