@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -78,7 +79,6 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
@@ -1045,9 +1045,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      */
     private boolean isOrganizationSSOUser(AuthenticatedUser authenticatedUser) {
 
-        return authenticatedUser.isFederatedUser()
-                && authenticatedUser.getUserResidentOrganization() != null
-                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName());
+        return OrganizationUserUtil.isOrganizationSsoUser(authenticatedUser);
     }
 
     /**
