@@ -64,6 +64,7 @@ import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -76,13 +77,19 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -652,6 +659,182 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+
+    @Test
+    public void testRemoveConsumerApplicationRemovesTokensAndCodesInChunks() throws Exception {
+
+        int tokenCount = 450;
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            try (Connection connection = getConnection(DB_NAME)) {
+                int appId = insertAppWithTokensAndCodes(connection, CONSUMER_KEY, TENANT_ID, tokenCount);
+                int otherAppId = insertAppWithTokensAndCodes(connection, "other-" + CONSUMER_KEY, TENANT_ID, 1);
+                Connection spiedConnection = spy(connection);
+                doNothing().when(spiedConnection).close();
+                // The chunked removal only runs on SQL Server.
+                DatabaseMetaData sqlServerMetaData = spy(connection.getMetaData());
+                doReturn("Microsoft SQL Server").when(sqlServerMetaData).getDatabaseProductName();
+                doReturn(sqlServerMetaData).when(spiedConnection).getMetaData();
+                identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(spiedConnection);
+                identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                        .thenReturn(spiedConnection);
+                // Record the order of executed chunk deletes and commits.
+                List<String> events = new ArrayList<>();
+                identityDatabaseUtil.when(() -> IdentityDatabaseUtil.commitTransaction(any(Connection.class)))
+                        .thenAnswer(invocation -> events.add("commit"));
+                for (String deleteSql : new String[]{
+                        SQLQueries.OAuthAppDAOSQLQueries.DELETE_REQUEST_OBJECT_REFERENCES_BY_IDS,
+                        SQLQueries.OAuthAppDAOSQLQueries.DELETE_ACCESS_TOKENS_BY_IDS,
+                        SQLQueries.OAuthAppDAOSQLQueries.DELETE_AUTHORIZATION_CODES_BY_IDS}) {
+                    doAnswer(invocation -> {
+                        PreparedStatement statement = spy((PreparedStatement) invocation.callRealMethod());
+                        doAnswer(execution -> {
+                            Object updated = execution.callRealMethod();
+                            events.add("delete");
+                            return updated;
+                        }).when(statement).executeUpdate();
+                        return statement;
+                    }).when(spiedConnection).prepareStatement(startsWith(deleteSql));
+                }
+
+                new OAuthAppDAO().removeConsumerApplication(CONSUMER_KEY);
+
+                assertEquals(countRows(connection, "IDN_OAUTH_CONSUMER_APPS", "ID", appId), 0);
+                assertEquals(countRows(connection, "IDN_OAUTH2_ACCESS_TOKEN", "CONSUMER_KEY_ID", appId), 0);
+                assertEquals(countRows(connection, "IDN_OAUTH2_AUTHORIZATION_CODE", "CONSUMER_KEY_ID", appId), 0);
+                assertEquals(countRows(connection, "IDN_OIDC_REQ_OBJECT_REFERENCE", "CONSUMER_KEY_ID", appId), 0);
+                // Tokens of another application are not touched.
+                assertEquals(countRows(connection, "IDN_OAUTH2_ACCESS_TOKEN", "CONSUMER_KEY_ID", otherAppId), 1);
+                // 450 tokens and codes are removed in 9 chunks of 50 each.
+                verify(spiedConnection, times(9)).prepareStatement(
+                        startsWith(SQLQueries.OAuthAppDAOSQLQueries.DELETE_ACCESS_TOKENS_BY_IDS));
+                verify(spiedConnection, times(9)).prepareStatement(
+                        startsWith(SQLQueries.OAuthAppDAOSQLQueries.DELETE_AUTHORIZATION_CODES_BY_IDS));
+                // Each chunk is committed before the next one starts, so its locks are released in between: 9 chunks
+                // each of request object references, tokens and codes.
+                assertEquals(events.stream().filter("delete"::equals).count(), 27);
+                for (int i = 0; i < events.size(); i++) {
+                    if ("delete".equals(events.get(i))) {
+                        assertTrue(i + 1 < events.size() && "commit".equals(events.get(i + 1)),
+                                "Chunk delete at position " + i + " was not committed before the next statement.");
+                    }
+                }
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    @Test
+    public void testRemoveConsumerApplicationSkipsChunkedRemovalOnOtherDatabases() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
+            try (Connection connection = getConnection(DB_NAME)) {
+                int appId = insertAppWithTokensAndCodes(connection, CONSUMER_KEY, TENANT_ID, 60);
+                Connection spiedConnection = spy(connection);
+                doNothing().when(spiedConnection).close();
+                identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(spiedConnection);
+                identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                        .thenReturn(spiedConnection);
+
+                new OAuthAppDAO().removeConsumerApplication(CONSUMER_KEY);
+
+                // On other databases the application is removed with a single cascading delete.
+                verify(spiedConnection, never()).prepareStatement(
+                        startsWith(SQLQueries.OAuthAppDAOSQLQueries.DELETE_ACCESS_TOKENS_BY_IDS));
+                verify(spiedConnection, never()).prepareStatement(
+                        startsWith(SQLQueries.OAuthAppDAOSQLQueries.DELETE_AUTHORIZATION_CODES_BY_IDS));
+                assertEquals(countRows(connection, "IDN_OAUTH_CONSUMER_APPS", "ID", appId), 0);
+                assertEquals(countRows(connection, "IDN_OAUTH2_ACCESS_TOKEN", "CONSUMER_KEY_ID", appId), 0);
+                assertEquals(countRows(connection, "IDN_OAUTH2_AUTHORIZATION_CODE", "CONSUMER_KEY_ID", appId), 0);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    private int insertAppWithTokensAndCodes(Connection connection, String consumerKey, int tenantId, int count)
+            throws SQLException {
+
+        try (PreparedStatement ps = connection.prepareStatement("INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
+                "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION) " +
+                "VALUES (?, 'secret', 'user', ?, 'PRIMARY', ?, 'OAuth-2.0')")) {
+            ps.setString(1, consumerKey);
+            ps.setInt(2, tenantId);
+            ps.setString(3, consumerKey);
+            ps.execute();
+        }
+        int appId;
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=? AND TENANT_ID=?")) {
+            ps.setString(1, consumerKey);
+            ps.setInt(2, tenantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                appId = rs.getInt(1);
+            }
+        }
+        try (PreparedStatement token = connection.prepareStatement("INSERT INTO IDN_OAUTH2_ACCESS_TOKEN " +
+                "(TOKEN_ID, ACCESS_TOKEN, CONSUMER_KEY_ID, AUTHZ_USER, TENANT_ID, USER_DOMAIN, TOKEN_STATE, " +
+                "TIME_CREATED, REFRESH_TOKEN_TIME_CREATED) VALUES (?, ?, ?, ?, ?, 'PRIMARY', 'ACTIVE', " +
+                "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+             PreparedStatement code = connection.prepareStatement("INSERT INTO IDN_OAUTH2_AUTHORIZATION_CODE " +
+                     "(CODE_ID, AUTHORIZATION_CODE, CONSUMER_KEY_ID, TENANT_ID, STATE, TIME_CREATED) " +
+                     "VALUES (?, ?, ?, ?, 'ACTIVE', CURRENT_TIMESTAMP)");
+             PreparedStatement reqObject = connection.prepareStatement("INSERT INTO IDN_OIDC_REQ_OBJECT_REFERENCE " +
+                     "(CONSUMER_KEY_ID, CODE_ID, TOKEN_ID) VALUES (?, ?, ?)")) {
+            for (int i = 0; i < count; i++) {
+                String tokenId = UUID.randomUUID().toString();
+                String codeId = UUID.randomUUID().toString();
+                token.setString(1, tokenId);
+                token.setString(2, UUID.randomUUID().toString());
+                token.setInt(3, appId);
+                token.setString(4, "user" + i);
+                token.setInt(5, tenantId);
+                token.addBatch();
+                code.setString(1, codeId);
+                code.setString(2, UUID.randomUUID().toString());
+                code.setInt(3, appId);
+                code.setInt(4, tenantId);
+                code.addBatch();
+                reqObject.setInt(1, appId);
+                reqObject.setString(2, codeId);
+                reqObject.setString(3, tokenId);
+                reqObject.addBatch();
+            }
+            token.executeBatch();
+            code.executeBatch();
+            reqObject.executeBatch();
+        }
+        return appId;
+    }
+
+    private int countRows(Connection connection, String table, String column, int value) throws SQLException {
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT COUNT(*) FROM " + table + " WHERE " + column + "=?")) {
+            ps.setInt(1, value);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        }
+    }
 
     @Test(expectedExceptions = IdentityOAuthAdminException.class)
     public void testRemoveConsumerApplicationWithExceptions() throws Exception {

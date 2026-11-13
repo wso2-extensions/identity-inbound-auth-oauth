@@ -126,6 +126,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
+import static org.wso2.carbon.identity.oauth2.util.JdbcUtils.isMSSqlDB;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getConsoleCallbackFromServerConfig;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getMyAccountCallbackFromServerConfig;
@@ -1361,6 +1362,10 @@ public class OAuthAppDAO {
     public void removeConsumerApplication(String consumerKey) throws IdentityOAuthAdminException {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            if (isMSSqlDB(connection)) {
+                removeTokensAndAuthzCodesInChunks(connection, consumerKey,
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
+            }
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
                 prepStmt.setString(1, consumerKey);
@@ -2963,6 +2968,97 @@ public class OAuthAppDAO {
             secret.setExpiryTime(expiryTime);
         }
         return secret;
+    }
+
+    /**
+     * Removes the access tokens and authorization codes of an application in small, separately committed chunks.
+     * <p>
+     * Used on SQL Server, which escalates the row locks of a large delete to table locks. Deleting the application row
+     * cascades to all of its tokens and authorization codes in a single statement, which would then lock the token
+     * tables shared by all applications until it commits. Removing the data in chunks first leaves the cascade little
+     * to do.
+     * <p>
+     * This is best effort: if a chunk fails it is rolled back and the remaining data is removed by the cascade, as
+     * before.
+     *
+     * @param connection  Database connection.
+     * @param consumerKey Consumer key of the application being removed.
+     * @param tenantId    Tenant id of the application.
+     */
+    private void removeTokensAndAuthzCodesInChunks(Connection connection, String consumerKey, int tenantId) {
+
+        try {
+            Integer appId = null;
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_APP_ID_BY_CONSUMER_KEY)) {
+                prepStmt.setString(1, consumerKey);
+                prepStmt.setInt(2, tenantId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    if (resultSet.next()) {
+                        appId = resultSet.getInt(1);
+                    }
+                }
+            }
+            if (appId == null) {
+                return;
+            }
+            // Request object references refer to tokens and codes without cascading, so remove them first.
+            deleteInChunks(connection, appId,
+                    SQLQueries.OAuthAppDAOSQLQueries.GET_REQUEST_OBJECT_REFERENCE_IDS_BY_APP_ID,
+                    SQLQueries.OAuthAppDAOSQLQueries.DELETE_REQUEST_OBJECT_REFERENCES_BY_IDS);
+            deleteInChunks(connection, appId, SQLQueries.OAuthAppDAOSQLQueries.GET_ACCESS_TOKEN_IDS_BY_APP_ID,
+                    SQLQueries.OAuthAppDAOSQLQueries.DELETE_ACCESS_TOKENS_BY_IDS);
+            deleteInChunks(connection, appId, SQLQueries.OAuthAppDAOSQLQueries.GET_AUTHORIZATION_CODE_IDS_BY_APP_ID,
+                    SQLQueries.OAuthAppDAOSQLQueries.DELETE_AUTHORIZATION_CODES_BY_IDS);
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            LOG.warn("Error while removing the tokens and authorization codes of the application with consumer key: " +
+                    consumerKey + " in chunks. They will be removed along with the application.", e);
+        }
+    }
+
+    private void deleteInChunks(Connection connection, int appId, String selectIdsSql, String deleteByIdsSqlPrefix)
+            throws SQLException {
+
+        // Rows deleted per statement, kept small so that each delete holds row locks only.
+        final int deleteChunkSize = 50;
+        // Ids read per query, so that the ids of a large application are not loaded at once.
+        final int idReadBatchSize = 10000;
+        // Upper bound on reads, so that removal ends even if new rows keep being added. Remaining rows are removed by
+        // the cascade when the application row is deleted.
+        final int maxIdReadBatches = 100;
+
+        for (int batch = 1; batch <= maxIdReadBatches; batch++) {
+            List<Object> ids = new ArrayList<>();
+            try (PreparedStatement prepStmt = connection.prepareStatement(selectIdsSql)) {
+                prepStmt.setMaxRows(idReadBatchSize);
+                prepStmt.setInt(1, appId);
+                try (ResultSet resultSet = prepStmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        ids.add(resultSet.getObject(1));
+                    }
+                }
+            }
+            IdentityDatabaseUtil.commitTransaction(connection);
+            if (ids.isEmpty()) {
+                return;
+            }
+            int deleted = 0;
+            for (int from = 0; from < ids.size(); from += deleteChunkSize) {
+                List<Object> chunk = ids.subList(from, Math.min(from + deleteChunkSize, ids.size()));
+                try (PreparedStatement prepStmt = connection.prepareStatement(deleteByIdsSqlPrefix +
+                        String.join(",", Collections.nCopies(chunk.size(), "?")) + ")")) {
+                    for (int i = 0; i < chunk.size(); i++) {
+                        prepStmt.setObject(i + 1, chunk.get(i));
+                    }
+                    deleted += prepStmt.executeUpdate();
+                }
+                IdentityDatabaseUtil.commitTransaction(connection);
+            }
+            if (deleted == 0 || ids.size() < idReadBatchSize) {
+                return;
+            }
+        }
     }
 
 }

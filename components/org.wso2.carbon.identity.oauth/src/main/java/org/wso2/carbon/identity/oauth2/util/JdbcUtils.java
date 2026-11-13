@@ -82,6 +82,20 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB of the given connection is MSSql.
+     *
+     * @param connection Database connection.
+     * @return true if DB is MSSql, false otherwise.
+     * @throws SQLException if error occurred while checking the DB metadata.
+     */
+    public static boolean isMSSqlDB(Connection connection) throws SQLException {
+
+        String databaseProductName = connection.getMetaData().getDatabaseProductName();
+        return databaseProductName != null &&
+                (databaseProductName.contains(MICROSOFT) || databaseProductName.contains(S_MICROSOFT));
+    }
+
+    /**
      * Check if the DB is Informix.
      *
      * @return true if DB is Informix, false otherwise.

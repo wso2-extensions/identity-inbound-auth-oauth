@@ -235,6 +235,24 @@ public class SQLQueries {
         public static final String GET_APP_ID_BY_CONSUMER_KEY = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS " +
                 "WHERE CONSUMER_KEY=? AND TENANT_ID=?";
 
+        public static final String GET_REQUEST_OBJECT_REFERENCE_IDS_BY_APP_ID = "SELECT ID FROM " +
+                "IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CONSUMER_KEY_ID=?";
+
+        public static final String DELETE_REQUEST_OBJECT_REFERENCES_BY_IDS = "DELETE FROM " +
+                "IDN_OIDC_REQ_OBJECT_REFERENCE WHERE ID IN (";
+
+        public static final String GET_ACCESS_TOKEN_IDS_BY_APP_ID = "SELECT TOKEN_ID FROM IDN_OAUTH2_ACCESS_TOKEN " +
+                "WHERE CONSUMER_KEY_ID=?";
+
+        public static final String DELETE_ACCESS_TOKENS_BY_IDS = "DELETE FROM IDN_OAUTH2_ACCESS_TOKEN WHERE " +
+                "TOKEN_ID IN (";
+
+        public static final String GET_AUTHORIZATION_CODE_IDS_BY_APP_ID = "SELECT CODE_ID FROM " +
+                "IDN_OAUTH2_AUTHORIZATION_CODE WHERE CONSUMER_KEY_ID=?";
+
+        public static final String DELETE_AUTHORIZATION_CODES_BY_IDS = "DELETE FROM IDN_OAUTH2_AUTHORIZATION_CODE " +
+                "WHERE CODE_ID IN (";
+
         public static final String ADD_APP_SCOPE_VALIDATOR = "INSERT INTO IDN_OAUTH2_SCOPE_VALIDATORS " +
                 "(APP_ID, SCOPE_VALIDATOR) VALUES (?,?) ";
 
