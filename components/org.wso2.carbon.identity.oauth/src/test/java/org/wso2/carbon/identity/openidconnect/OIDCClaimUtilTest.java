@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import org.apache.commons.logging.Log;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
@@ -25,15 +27,22 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -67,6 +76,29 @@ public class OIDCClaimUtilTest {
             assertEquals(roles.length, 2);
             assertTrue(roles[0].equals("role1") && roles[1].equals("role2"));
         }
+    }
+
+    @Test
+    public void testLogClaimRetrievalErrorDoesNotLeakUsername() {
+
+        String username = "john.doe@example.com";
+        AuthenticatedUser user = mock(AuthenticatedUser.class);
+        when(user.toString()).thenReturn(username);
+        UserStoreException exception = new UserStoreException(
+                "30007 - UserNotFound: User " + username + " does not exist in: PRIMARY");
+        Log logger = mock(Log.class);
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+            loggerUtils.when(() -> LoggerUtils.getMaskedContent(username)).thenReturn("j***m");
+            LoggerUtils.isLogMaskingEnable = true;
+            OIDCClaimUtil.logClaimRetrievalError(logger, user, exception);
+        }
+
+        ArgumentCaptor<Object> message = ArgumentCaptor.forClass(Object.class);
+        verify(logger).error(message.capture());
+        verify(logger, never()).error(any(), any(Throwable.class));
+        assertFalse(message.getValue().toString().contains(username));
+        assertTrue(message.getValue().toString().contains("UserStoreException"));
     }
 
     private static final String SEPARATOR = ",";

@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -759,6 +760,28 @@ public class OIDCClaimUtil {
         }
 
         return userClaimsInOidcDialect;
+    }
+
+    /**
+     * Log a failure to retrieve the claims of a user without leaking the user identifier. The identifier is
+     * masked when log masking is enabled, and the exception is logged without its cause chain at error level,
+     * since user store exception messages embed the raw username. The full exception is kept at debug level.
+     *
+     * @param logger Logger of the calling class.
+     * @param user   User whose claims could not be retrieved.
+     * @param e      Exception thrown while retrieving the claims.
+     */
+    public static void logClaimRetrievalError(Log logger, AuthenticatedUser user, Exception e) {
+
+        String userIdentifier = String.valueOf(user);
+        if (LoggerUtils.isLogMaskingEnable && user != null) {
+            userIdentifier = LoggerUtils.getMaskedContent(userIdentifier);
+        }
+        logger.error("Error occurred while getting claims for user: " + userIdentifier + " from userstore. " +
+                "Error: " + e.getClass().getSimpleName() + ". Enable debug logs for the full stack trace.");
+        if (logger.isDebugEnabled()) {
+            logger.debug("Claim retrieval failure details.", e);
+        }
     }
 
     /**
