@@ -1082,8 +1082,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         if (tokenReqMessageContext.isPreIssueIDTokenActionsExecuted()) {
             IDTokenDTO idTokenDTO = tokenReqMessageContext.getPreIssueIDTokenActionDTO();
-            idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
-            return idTokenDTO;
+            if (idTokenDTO != null) {
+                idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
+                return idTokenDTO;
+            }
+            log.warn("Pre issue ID token actions were marked as executed but the IDTokenDTO is null. " +
+                    "Falling back to a new IDTokenDTO; ID token customizations will be lost for client_id: " +
+                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
         }
         IDTokenDTO idTokenDTO = new IDTokenDTO();
         idTokenDTO.setIdTokenClaimsSet(idTokenJwtClaimSetBuilder.build());
