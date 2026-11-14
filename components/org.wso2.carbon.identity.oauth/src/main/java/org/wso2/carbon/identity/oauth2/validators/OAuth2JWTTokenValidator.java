@@ -202,7 +202,15 @@ public class OAuth2JWTTokenValidator extends DefaultOAuth2TokenValidator {
         JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
         // Get certificate from tenant if available in claims.
         Optional<X509Certificate> certificate = JWTUtils.getCertificateFromClaims(jwtClaimsSet);
-        if (certificate.isPresent()) {
+        X509Certificate kidCertificate = null;
+        if (OAuth2Util.isResolveSigningKeyByKIDEnabled()) {
+            // Verify with the key entry of the signing tenant's keystore matching the 'kid', so that tokens signed
+            // with a previous key stay valid after a key rotation. Fall back to the default resolution otherwise.
+            kidCertificate = (X509Certificate) OAuth2Util.resolveSigningCertificateByKID(header, tenantDomain, null);
+        }
+        if (kidCertificate != null) {
+            x509Certificate = kidCertificate;
+        } else if (certificate.isPresent()) {
             x509Certificate = certificate.get();
         } else {
             try {

@@ -82,6 +82,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Enumeration;
@@ -464,6 +465,15 @@ public class OIDCLogoutServlet extends HttpServlet {
                     .getCertificate(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)
                     .getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
+            if (OAuth2Util.isResolveSigningKeyByKIDEnabled()) {
+                // Verify with the key matching the 'kid', if the ID token was signed with a previous key of the
+                // tenant.
+                Certificate signingCertificate = OAuth2Util.resolveSigningCertificateByKID(signedJWT.getHeader(),
+                        tenantDomain, null);
+                if (signingCertificate != null) {
+                    publicKey = (RSAPublicKey) signingCertificate.getPublicKey();
+                }
+            }
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
             if (log.isDebugEnabled()) {
                 log.debug("Validating the id token signature with the tenant domain: " + tenantDomain);
