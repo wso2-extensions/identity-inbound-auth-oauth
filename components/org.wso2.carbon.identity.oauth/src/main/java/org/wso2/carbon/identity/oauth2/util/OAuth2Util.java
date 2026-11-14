@@ -202,6 +202,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -219,6 +220,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -280,6 +282,7 @@ public class OAuth2Util {
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
+    public static final String RESOLVE_SIGNING_KEY_BY_KID = "OAuth.ResolveSigningKeyByKID";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
@@ -3202,6 +3205,15 @@ public class OAuth2Util {
             RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
                     IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
+            if (isResolveSigningKeyByKIDEnabled()) {
+                // Verify with the key matching the 'kid', if the ID token was signed with a previous key of the
+                // tenant.
+                Certificate signingCertificate =
+                        resolveSigningCertificateByKID(signedJWT.getHeader(), tenantDomain, null);
+                if (signingCertificate != null) {
+                    publicKey = (RSAPublicKey) signingCertificate.getPublicKey();
+                }
+            }
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
             return signedJWT.verify(verifier);
@@ -4012,6 +4024,97 @@ public class OAuth2Util {
                             alias, tenantDomain);
             throw new IdentityOAuth2Exception(error, e);
         }
+    }
+
+    /**
+     * Check whether the key to verify the signature of a JWT signed by this server should be selected using the
+     * 'kid' in the JWT header.
+     *
+     * @return True if the 'OAuth.ResolveSigningKeyByKID' configuration is enabled. False by default.
+     */
+    public static boolean isResolveSigningKeyByKIDEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(RESOLVE_SIGNING_KEY_BY_KID));
+    }
+
+    /**
+     * Resolve the certificate to verify a JWT signed by this server, using the 'kid' in the JWT header, so that JWTs
+     * signed with a previous key of the signing tenant's keystore stay valid after a key rotation. The key entries
+     * are read from the same keystore that the JWKS endpoint publishes (the primary, tenant or OAuth custom keystore).
+     * Callers should use this only when {@link #isResolveSigningKeyByKIDEnabled()} is true.
+     *
+     * @param header             JWT header.
+     * @param tenantDomain       Signing tenant domain.
+     * @param defaultCertificate Certificate to return when no key entry matches the 'kid'. Can be null.
+     * @return Certificate of the key entry matching the 'kid', or the default certificate otherwise.
+     */
+    public static Certificate resolveSigningCertificateByKID(JWSHeader header, String tenantDomain,
+                                                             Certificate defaultCertificate) {
+
+        String kid = header.getKeyID();
+        if (StringUtils.isEmpty(kid) || StringUtils.isEmpty(tenantDomain)) {
+            return defaultCertificate;
+        }
+        try {
+            Certificate certificate = getKeyEntryCertificateByKID(tenantDomain, kid, header.getAlgorithm());
+            if (certificate != null) {
+                return certificate;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("No key entry matches the kid of the JWT in the keystore of tenant: " + tenantDomain +
+                        ". Using the default certificate.");
+            }
+        } catch (IdentityOAuth2Exception e) {
+            log.warn("Error while resolving the signing certificate by kid for tenant: " + tenantDomain +
+                    ". Using the default certificate.", e);
+        }
+        return defaultCertificate;
+    }
+
+    /**
+     * Get the RSA key entry certificate of the signing tenant's keystore whose 'kid' for the given algorithm matches
+     * the given 'kid'. Trusted certificate entries are never used.
+     *
+     * @param tenantDomain Signing tenant domain.
+     * @param kid          'kid' in the JWT header.
+     * @param algorithm    Signature algorithm of the JWT.
+     * @return Certificate of the matching key entry, or null if no key entry matches.
+     * @throws IdentityOAuth2Exception If the keystore cannot be loaded or read.
+     */
+    private static Certificate getKeyEntryCertificateByKID(String tenantDomain, String kid, JWSAlgorithm algorithm)
+            throws IdentityOAuth2Exception {
+
+        try {
+            KeyStore keyStore = IdentityKeyStoreResolver.getInstance().getKeyStore(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+            Enumeration<String> aliases = keyStore.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                if (!keyStore.isKeyEntry(alias)) {
+                    continue;
+                }
+                Certificate certificate = keyStore.getCertificate(alias);
+                // Only RSA keys can verify the signature of a JWT signed with an RSA algorithm.
+                if (certificate == null || !(certificate.getPublicKey() instanceof RSAPublicKey)) {
+                    continue;
+                }
+                try {
+                    if (kid.equals(getKID(certificate, algorithm, tenantDomain))) {
+                        return certificate;
+                    }
+                } catch (IdentityOAuth2Exception e) {
+                    // Skip the entry so that the other key entries can still be resolved.
+                    if (log.isDebugEnabled()) {
+                        log.debug("Skipping the key entry: " + alias + " of the keystore of tenant: " +
+                                tenantDomain + " while resolving the signing certificate by kid.", e);
+                    }
+                }
+            }
+        } catch (IdentityKeyStoreResolverException | KeyStoreException e) {
+            throw new IdentityOAuth2Exception("Error occurred while reading the key entries of the keystore of " +
+                    "tenant: " + tenantDomain, e);
+        }
+        return null;
     }
 
     /**
