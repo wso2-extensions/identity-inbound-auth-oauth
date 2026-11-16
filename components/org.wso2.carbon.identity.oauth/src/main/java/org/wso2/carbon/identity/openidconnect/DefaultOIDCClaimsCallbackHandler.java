@@ -468,8 +468,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
-                log.error("Error occurred while getting claims for user: " + requestMsgCtx.getAuthorizedUser() +
-                        " from userstore.", e);
+                OIDCClaimUtil.logClaimRetrievalError(log, requestMsgCtx.getAuthorizedUser(), e);
             } else {
                 throw new IdentityOAuth2Exception("Error occurred while getting claims for user: " +
                         requestMsgCtx.getAuthorizedUser() + " from userstore.", e);
@@ -626,8 +625,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
-                log.error("Error occurred while getting claims for user " +
-                        authzReqMessageContext.getAuthorizationReqDTO().getUser(), e);
+                OIDCClaimUtil.logClaimRetrievalError(log, authzReqMessageContext.getAuthorizationReqDTO().getUser(),
+                        e);
             } else {
                 throw new IdentityOAuth2Exception("Error occurred while getting claims for user " +
                         authzReqMessageContext.getAuthorizationReqDTO().getUser(), e);

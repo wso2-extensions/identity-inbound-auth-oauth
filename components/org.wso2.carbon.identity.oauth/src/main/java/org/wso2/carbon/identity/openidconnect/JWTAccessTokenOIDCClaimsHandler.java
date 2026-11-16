@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -277,12 +276,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
-                try {
-                    log.error("Error occurred while getting claims for user: " + authenticatedUser.getUserId() +
-                            " from userstore.", e);
-                } catch (UserIdNotFoundException ex) {
-                    throw new RuntimeException(ex);
-                }
+                OIDCClaimUtil.logClaimRetrievalError(log, authenticatedUser, e);
             } else {
                 throw new IdentityOAuth2Exception("Error occurred while getting claims for user: " +
                        authenticatedUser + " from userstore.", e);
@@ -602,8 +596,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         } catch (UserStoreException | IdentityApplicationManagementException | IdentityException |
                  OrganizationManagementException e) {
             if (FrameworkUtils.isContinueOnClaimHandlingErrorAllowed()) {
-                log.error("Error occurred while getting claims for user " +
-                        authzReqMessageContext.getAuthorizationReqDTO().getUser(), e);
+                OIDCClaimUtil.logClaimRetrievalError(log, authzReqMessageContext.getAuthorizationReqDTO().getUser(),
+                        e);
             } else {
                 throw new IdentityOAuth2Exception("Error occurred while getting claims for user " +
                         authzReqMessageContext.getAuthorizationReqDTO().getUser(), e);
