@@ -31,8 +31,10 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
+import org.wso2.carbon.identity.oauth.ciba.handlers.AgentCibaUserValidator;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserResolver;
+import org.wso2.carbon.identity.oauth.ciba.handlers.CibaUserValidator;
 import org.wso2.carbon.identity.oauth.ciba.handlers.DefaultCibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaEmailNotificationChannel;
 import org.wso2.carbon.identity.oauth.ciba.notifications.CibaNotificationChannel;
@@ -77,7 +79,11 @@ public class CibaServiceComponent {
                     new CibaResponseTypeRequestValidator(), null);
             context.getBundleContext().registerService(CibaUserResolver.class.getName(),
                     DefaultCibaUserResolver.getInstance(), null);
-            
+
+            // Register the agent CIBA user validator (owner binding for the agent OBO flow).
+            context.getBundleContext().registerService(CibaUserValidator.class.getName(),
+                    new AgentCibaUserValidator(), null);
+
             if (log.isDebugEnabled()) {
                 log.debug("CIBA component bundle is activated. Registered default notification channels.");
             }
@@ -201,6 +207,31 @@ public class CibaServiceComponent {
         CibaServiceComponentHolder.getInstance().setCibaUserResolver(null);
         if (log.isDebugEnabled()) {
             log.debug("CibaUserResolver unset in CIBA component.");
+        }
+    }
+
+    @Reference(
+            name = "ciba.user.validator",
+            service = CibaUserValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCibaUserValidator"
+    )
+    protected void setCibaUserValidator(CibaUserValidator cibaUserValidator) {
+
+        CibaServiceComponentHolder.getInstance().addCibaUserValidator(cibaUserValidator);
+        if (log.isDebugEnabled()) {
+            log.debug("CibaUserValidator registered in CIBA component: " +
+                    cibaUserValidator.getClass().getName());
+        }
+    }
+
+    protected void unsetCibaUserValidator(CibaUserValidator cibaUserValidator) {
+
+        CibaServiceComponentHolder.getInstance().removeCibaUserValidator(cibaUserValidator);
+        if (log.isDebugEnabled()) {
+            log.debug("CibaUserValidator unregistered in CIBA component: " +
+                    cibaUserValidator.getClass().getName());
         }
     }
 }

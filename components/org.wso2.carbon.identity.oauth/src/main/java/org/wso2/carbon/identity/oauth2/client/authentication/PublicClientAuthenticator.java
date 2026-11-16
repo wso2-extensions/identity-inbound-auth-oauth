@@ -50,6 +50,11 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
     private static final String GRANT_TYPE = "grant_type";
     private static final String RESPONSE_MODE = "response_mode";
+    private static final String CLIENT_ASSERTION_TYPE = "client_assertion_type";
+
+    // Client assertion type of the agent JWT client authenticator
+    private static final String AGENT_JWT_ASSERTION_TYPE =
+            "urn:wso2:params:oauth:client-assertion-type:agent-jwt-bearer";
 
     /**
      * Returns the execution order of this authenticator.
@@ -89,6 +94,14 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             context) {
+
+        // An agent JWT client assertion is a credential in its own right, so this authenticator must stand aside.
+        if (isAgentJWTAssertionRequest(bodyParams)) {
+            if (log.isDebugEnabled()) {
+                log.debug("An agent JWT client assertion is present. The public client authenticator does not engage.");
+            }
+            return false;
+        }
 
         List<String> publicClientSupportedGrantTypes = OAuthServerConfiguration.getInstance().
                 getPublicClientSupportedGrantTypesList();
@@ -155,6 +168,23 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public String getName() {
 
         return PUBLIC_CLIENT_AUTHENTICATOR;
+    }
+
+    /**
+     * Returns whether the request carries the agent JWT client assertion type, which is owned by the agent JWT client
+     * authenticator in a separate bundle.
+     *
+     * @param bodyParams Body parameter map of the incoming request.
+     * @return true if an agent JWT client assertion is present.
+     */
+    private boolean isAgentJWTAssertionRequest(Map<String, List> bodyParams) {
+
+        if (bodyParams == null) {
+            return false;
+        }
+        List assertionTypes = bodyParams.get(CLIENT_ASSERTION_TYPE);
+        return assertionTypes != null && !assertionTypes.isEmpty()
+                && AGENT_JWT_ASSERTION_TYPE.equals(String.valueOf(assertionTypes.getFirst()));
     }
 
     /**
