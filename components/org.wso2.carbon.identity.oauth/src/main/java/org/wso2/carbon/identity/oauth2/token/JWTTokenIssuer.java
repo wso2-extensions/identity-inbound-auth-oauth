@@ -63,8 +63,8 @@ import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.security.Key;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -696,11 +696,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
+            PrivateKey signingKey = OAuth2Util.asPrivateKey(privateKey, tenantDomain);
+            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
+            JWSSigner signer = OAuth2Util.createJWSSigner(signingKey,
+                    OAuth2Util.getSigningKeyStoreProvider(tenantDomain, privateKey), certificate);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             String certThumbPrint;
 
-            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
             if (OAuth2Util.isJWTX5tHexifyingRequired()) {
                 // Handle x5t.
                 if (IdentityUtil.getProperty(JWT_X5T_ENABLED) == null) {
@@ -732,8 +734,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
 
-            headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
-                    (JWSAlgorithm) signatureAlgorithm, tenantDomain));
+            headerBuilder.keyID(OAuth2Util.getKID(certificate, (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
             if (isRefreshToken) {
                 // Set the required "typ" header "rt+jwt" for refresh tokens issued by the issuer

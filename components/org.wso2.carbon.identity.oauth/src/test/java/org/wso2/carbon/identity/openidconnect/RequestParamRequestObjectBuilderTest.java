@@ -18,6 +18,13 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -37,14 +44,19 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OpaqueRSAKeyTestProvider;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.Security;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.Map;
 
@@ -56,6 +68,8 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.expectThrows;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 
@@ -132,6 +146,7 @@ public class RequestParamRequestObjectBuilderTest {
                 rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
                 oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+                oAuth2Util.when(() -> OAuth2Util.asPrivateKey(any(), anyString())).thenCallRealMethod();
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
@@ -171,5 +186,89 @@ public class RequestParamRequestObjectBuilderTest {
                 }
             }
         }
+    }
+
+    @DataProvider(name = "jweAlgorithms")
+    public Object[][] jweAlgorithms() {
+
+        return new Object[][]{{JWEAlgorithm.RSA1_5}, {JWEAlgorithm.RSA_OAEP}, {JWEAlgorithm.RSA_OAEP_256},
+                {JWEAlgorithm.RSA_OAEP_512}};
+    }
+
+    @Test(dataProvider = "jweAlgorithms")
+    public void testDecryptWithOpaqueKey(JWEAlgorithm algorithm) throws Exception {
+
+        // A key held in an HSM: like SunPKCS11 together with the server's PKCS11 OAEP provider, registered after the
+        // JDK providers. JCA selects that provider because the decrypter names none.
+        OpaqueRSAKeyTestProvider token = new OpaqueRSAKeyTestProvider(2048, true);
+        Security.addProvider(token);
+        try {
+            String requestObject = signedRequestObject();
+            String jwe = encrypt(requestObject, algorithm, (RSAPublicKey) token.getPublicKey());
+
+            assertEquals(decrypt(jwe, algorithm, token.getPrivateKey()), requestObject);
+        } finally {
+            Security.removeProvider(token.getName());
+        }
+    }
+
+    @Test
+    public void testOpaqueKeyRSAOAEPNeedsProviderSupport() throws Exception {
+
+        // SunPKCS11 alone offers PKCS#1 v1.5 only: RSA1_5 decrypts, RSA-OAEP needs the server's PKCS11 OAEP provider.
+        OpaqueRSAKeyTestProvider token = new OpaqueRSAKeyTestProvider(2048, false);
+        Security.addProvider(token);
+        try {
+            String requestObject = signedRequestObject();
+            RSAPublicKey publicKey = (RSAPublicKey) token.getPublicKey();
+            String oaep = encrypt(requestObject, JWEAlgorithm.RSA_OAEP_256, publicKey);
+
+            expectThrows(RequestObjectException.class,
+                    () -> decrypt(oaep, JWEAlgorithm.RSA_OAEP_256, token.getPrivateKey()));
+            assertEquals(decrypt(encrypt(requestObject, JWEAlgorithm.RSA1_5, publicKey), JWEAlgorithm.RSA1_5,
+                    token.getPrivateKey()), requestObject);
+        } finally {
+            Security.removeProvider(token.getName());
+        }
+    }
+
+    private String decrypt(String jwe, JWEAlgorithm algorithm, PrivateKey decryptionKey) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mock(OAuthServerConfiguration.class));
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+                OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                oAuthAppDO.setRequestObjectEncryptionAlgorithm(algorithm.getName());
+                oAuthAppDO.setRequestObjectEncryptionMethod(EncryptionMethod.A256GCM.getName());
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(oAuthAppDO);
+                oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
+                oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(decryptionKey);
+                oAuth2Util.when(() -> OAuth2Util.asPrivateKey(any(), anyString())).thenCallRealMethod();
+
+                OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+                oAuth2Parameters.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
+                return new RequestParamRequestObjectBuilder().decrypt(jwe, oAuth2Parameters);
+            }
+        }
+    }
+
+    private String signedRequestObject() throws Exception {
+
+        JWTClaimsSet claims = new JWTClaimsSet.Builder().issuer(TEST_CLIENT_ID_1).audience(SOME_SERVER_URL)
+                .claim("client_id", TEST_CLIENT_ID_1).claim("scope", "openid").build();
+        return TestUtils.signJWTWithRSA(claims, clientKeyStore.getKey("wso2carbon", "wso2carbon".toCharArray()));
+    }
+
+    private static String encrypt(String requestObject, JWEAlgorithm algorithm, RSAPublicKey publicKey)
+            throws Exception {
+
+        JWEObject jwe = new JWEObject(new JWEHeader.Builder(algorithm, EncryptionMethod.A256GCM).contentType("JWT")
+                .build(), new Payload(requestObject));
+        jwe.encrypt(new RSAEncrypter(publicKey));
+        return jwe.serialize();
     }
 }
