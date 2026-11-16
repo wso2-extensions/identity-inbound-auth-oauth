@@ -375,6 +375,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             String impersonator = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                     .getAccessTokenExtendedAttributes().getParameters()
                     .get(OAuthConstants.IMPERSONATING_ACTOR);
+            String delegatedActor = tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getAccessTokenExtendedAttributes().getParameters().get(OAuthConstants.DELEGATED_ACTOR);
+            if (StringUtils.isNotBlank(delegatedActor)) {
+                tokenReqMessageContext.setRequestedActor(delegatedActor);
+            }
             if (StringUtils.isNotBlank(impersonator)) {
                 tokenReqMessageContext.setImpersonationRequest(true);
                 tokenReqMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, impersonator);

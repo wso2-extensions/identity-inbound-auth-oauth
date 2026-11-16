@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -72,6 +73,7 @@ import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -568,5 +570,37 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {
 
+    }
+
+    @DataProvider(name = "delegatedActorReuseProvider")
+    public Object[][] delegatedActorReuseProvider() {
+
+        return new Object[][]{
+                // {existing token actor, requested actor, refresh token reusable}
+                {null, null, true},
+                {"agent-a", "agent-a", true},
+                {"agent-a", "agent-b", false},
+                {"agent-a", null, false},
+                {null, "agent-b", false},
+        };
+    }
+
+    @Test(dataProvider = "delegatedActorReuseProvider")
+    public void testRefreshTokenReuseIsBoundToDelegatedActor(String existingActor, String requestedActor,
+                                                             boolean reusable) throws Exception {
+
+        AccessTokenDO existingToken = new AccessTokenDO();
+        if (existingActor != null) {
+            Map<String, String> params = new HashMap<>();
+            params.put(OAuthConstants.DELEGATED_ACTOR, existingActor);
+            existingToken.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(params));
+        }
+        OAuthTokenReqMessageContext ctx = new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
+        ctx.setRequestedActor(requestedActor);
+
+        Method method = AbstractAuthorizationGrantHandler.class.getDeclaredMethod("isSameDelegatedActor",
+                AccessTokenDO.class, OAuthTokenReqMessageContext.class);
+        method.setAccessible(true);
+        assertEquals(method.invoke(new PasswordGrantHandler(), existingToken, ctx), reusable);
     }
 }

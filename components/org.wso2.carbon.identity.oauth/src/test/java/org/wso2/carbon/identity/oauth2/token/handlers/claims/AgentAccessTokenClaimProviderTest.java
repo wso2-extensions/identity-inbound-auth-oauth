@@ -129,6 +129,9 @@ public class AgentAccessTokenClaimProviderTest {
                 // {grantType, requestedActor, expectActClaim}
                 {GrantType.AUTHORIZATION_CODE.toString(), "actor-sub", true},
                 {CIBA_GRANT_TYPE, "actor-sub", true},
+                // The delegation context must survive a refresh.
+                {GrantType.REFRESH_TOKEN.toString(), "actor-sub", true},
+                {GrantType.REFRESH_TOKEN.toString(), null, false},
                 {GrantType.AUTHORIZATION_CODE.toString(), null, false},
                 {"password", "actor-sub", false},
                 {"client_credentials", "actor-sub", false},

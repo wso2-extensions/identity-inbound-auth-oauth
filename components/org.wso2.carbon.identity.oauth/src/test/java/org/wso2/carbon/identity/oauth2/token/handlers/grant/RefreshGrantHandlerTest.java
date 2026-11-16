@@ -62,6 +62,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
@@ -76,8 +77,11 @@ import org.wso2.carbon.identity.user.profile.mgt.association.federation.exceptio
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -841,5 +845,22 @@ public class RefreshGrantHandlerTest {
             assertEquals(oAuth2AccessTokenRespDTO.getAccessToken(), "token");
 
         }
+    }
+
+    @Test
+    public void testDelegatedActorIsRestoredFromExtendedAttributesOnRefresh() throws Exception {
+
+        Map<String, String> params = new HashMap<>();
+        params.put(OAuthConstants.DELEGATED_ACTOR, "agent-sub");
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(params));
+        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        Method propagate = RefreshGrantHandler.class.getDeclaredMethod("propagateImpersonationInfo",
+                OAuthTokenReqMessageContext.class);
+        propagate.setAccessible(true);
+        propagate.invoke(new RefreshGrantHandler(), tokenReqMessageContext);
+
+        assertEquals(tokenReqMessageContext.getRequestedActor(), "agent-sub");
     }
 }
