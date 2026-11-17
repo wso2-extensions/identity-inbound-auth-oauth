@@ -212,6 +212,103 @@ public class PreIssueAccessTokenRequestBuilderTest {
         }
     }
 
+    @Test
+    public void testBuildActionExecutionRequestSetsLocalUserType() throws Exception {
+
+        PreIssueAccessTokenEvent event = buildEvent(getMockTokenMessageContext());
+
+        Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
+        Assert.assertEquals(event.getUser().getUserType(), "LOCAL");
+        Assert.assertNull(event.getUser().getFederatedIdP());
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestSetsFederatedUserType() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        // The user id is kept for backward compatibility.
+        Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
+        Assert.assertEquals(event.getUser().getUserType(), "FEDERATED");
+        Assert.assertEquals(event.getUser().getFederatedIdP(), "ext-issuer");
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestKeepsSSOUserTypeUnset() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("SSO");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertNull(event.getUser().getUserType());
+        Assert.assertNull(event.getUser().getFederatedIdP());
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestAddsActClaimForImpersonation() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.setImpersonationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, "impersonator-id");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertEquals(event.getAccessToken().getClaim("act").getValue(),
+                Collections.singletonMap("sub", "impersonator-id"));
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestAddsActClaimForDelegation() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.setDelegationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
+        tokenMessageContext.addProperty(OAuthConstants.EXISTING_ACT_CLAIM,
+                Collections.singletonMap("sub", "agent-1"));
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Map<String, Object> expectedActClaim = new HashMap<>();
+        expectedActClaim.put("sub", "agent-2");
+        expectedActClaim.put("act", Collections.singletonMap("sub", "agent-1"));
+        Assert.assertEquals(event.getAccessToken().getClaim("act").getValue(), expectedActClaim);
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestWithoutActor() throws Exception {
+
+        PreIssueAccessTokenEvent event = buildEvent(getMockTokenMessageContext());
+
+        Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    private PreIssueAccessTokenEvent buildEvent(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
+                    buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+            return (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+        }
+    }
+
     /**
      * Verifies that when the token request scope contains "openid", the "id_token" response parameter is
      * included in the event's response manifest, and the external service is allowed to suppress it via a

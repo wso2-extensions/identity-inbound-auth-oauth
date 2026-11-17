@@ -57,6 +57,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.AgentAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -91,6 +94,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String PARAM_REFRESH_TOKEN = "refresh_token";
     private static final String PARAM_ID_TOKEN = "id_token";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
+    private static final String FEDERATED_USER = "FEDERATED";
+    private static final String LOCAL_USER = "LOCAL";
+    private static final String SSO_FEDERATED_IDP = "SSO";
 
     @Override
     public ActionType getSupportedActionType() {
@@ -249,11 +255,17 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             }
             Organization organization = buildOrganization(organizationId, tenantDomain);
 
-            User user = new User.Builder(authenticatedUser.getUserId())
-                    .organization(organization)
-                    .build();
+            User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId())
+                    .organization(organization);
+            if (!authenticatedUser.isFederatedUser()) {
+                userBuilder.userType(LOCAL_USER);
+            } else if (!SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
+                // The user id is kept as is for backward compatibility.
+                userBuilder.userType(FEDERATED_USER)
+                        .federatedIdP(authenticatedUser.getFederatedIdPName());
+            }
 
-            eventBuilder.user(user);
+            eventBuilder.user(userBuilder.build());
         } catch (UserIdNotFoundException e) {
             if (LOG.isDebugEnabled()) {
                 // todo: fall back to a different identifier like username.
@@ -318,6 +330,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             handleStandardClaims(tokenMessageContext, tokenType, issuer, audience, accessTokenBuilder);
             handleSubjectClaim(tokenMessageContext.getAuthorizedUser(), oAuthAppDO, accessTokenBuilder);
             handleTokenBindingClaims(tokenMessageContext, accessTokenBuilder);
+            handleActorClaim(tokenMessageContext, accessTokenBuilder);
             claimsToAdd.forEach(accessTokenBuilder::addClaim);
             return accessTokenBuilder.build();
         } catch (IdentityOAuth2Exception e) {
@@ -325,6 +338,28 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     "Failed to generate pre issue access token action request for application: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
+        }
+    }
+
+    /**
+     * Add the act claim of an impersonation or delegation request, as the token issuer will add it, so the
+     * extension knows who is acting for the subject.
+     */
+    private void handleActorClaim(OAuthTokenReqMessageContext tokenMessageContext,
+                                  AccessToken.Builder accessTokenBuilder) throws IdentityOAuth2Exception {
+
+        if (tokenMessageContext.getAuthorizedUser() == null) {
+            return;
+        }
+        JWTAccessTokenClaimProvider[] actClaimProviders = {
+                new ImpersonatedAccessTokenClaimProvider(), new AgentAccessTokenClaimProvider()};
+        for (JWTAccessTokenClaimProvider claimProvider : actClaimProviders) {
+            Map<String, Object> claims = claimProvider.getAdditionalClaims(tokenMessageContext);
+            if (claims != null && claims.get(AccessToken.ClaimNames.ACT.getName()) != null) {
+                accessTokenBuilder.addClaim(AccessToken.ClaimNames.ACT.getName(),
+                        claims.get(AccessToken.ClaimNames.ACT.getName()));
+                return;
+            }
         }
     }
 

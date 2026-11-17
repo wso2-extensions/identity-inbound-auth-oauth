@@ -200,6 +200,7 @@ public abstract class AbstractToken {
         TOKEN_BINDING_REF("binding_ref"),
         TOKEN_BINDING_TYPE("binding_type"),
         SUBJECT_TYPE("subject_type"),
+        ACT("act"),
 
         IAT("iat");
 

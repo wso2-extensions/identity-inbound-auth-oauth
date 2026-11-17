@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -187,6 +188,22 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
+    }
+
+    @Test
+    void testProcessSuccessResponseAddActClaimIsNotIssued() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("act", Collections.singletonMap("sub", "attacker"))));
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("backend_tier", "gold")));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+
+        // act is a token issuer claim: an extension can't add it to the issued token.
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("act"));
+        assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("backend_tier"), "gold");
     }
 
     @Test
