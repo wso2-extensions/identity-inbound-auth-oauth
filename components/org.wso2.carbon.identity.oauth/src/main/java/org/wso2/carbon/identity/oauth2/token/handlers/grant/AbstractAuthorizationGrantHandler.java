@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.compatibility.settings.core.service.Compatibilit
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -111,9 +112,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected OAuthCache oauthCache;
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
-    private static final String PRE_ISSUE_ACCESS_TOKEN_ACTION_COMPATIBILITY_SETTING_GROUP =
-            "preIssueAccessTokenAction";
-    private static final String ENABLE_FOR_TOKEN_EXCHANGE_GRANT_COMPATIBILITY_KEY = "enableForTokenExchangeGrant";
+    private static final String PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP = "preIssueAccessTokenAction";
+    private static final String ENABLE_FOR_TOKEN_EXCHANGE_SETTING = "enableForTokenExchangeGrant";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     protected AuthorizationDetailsService authorizationDetailsService;
 
@@ -560,11 +560,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                 resolveTenantDomain(oAuthAppDO.getIssuerOrg());
                     }
                 }
-                // Token exchange triggers the action only in organizations that have it enabled.
                 if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
-                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType()) &&
-                        !isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain)) {
-                    return null;
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType())) {
+                    // Token exchange triggers the action only in organizations that have enabled it, and its event
+                    // also carries the user type and the act claim.
+                    if (!isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain)) {
+                        return null;
+                    }
+                    tokenReqMessageContext.addProperty(
+                            PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
                 }
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                         .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext, tenantDomain);
@@ -605,18 +609,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private boolean isPreIssueAccessTokenActionEnabledForTokenExchange(String tenantDomain) {
 
-        CompatibilitySettingsService compatibilitySettingsService =
+        CompatibilitySettingsService settingsService =
                 OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
-        if (compatibilitySettingsService == null) {
+        if (settingsService == null) {
             return false;
         }
         try {
-            CompatibilitySettingGroup group = compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(
-                    tenantDomain, PRE_ISSUE_ACCESS_TOKEN_ACTION_COMPATIBILITY_SETTING_GROUP,
-                    ENABLE_FOR_TOKEN_EXCHANGE_GRANT_COMPATIBILITY_KEY)
-                    .getCompatibilitySetting(PRE_ISSUE_ACCESS_TOKEN_ACTION_COMPATIBILITY_SETTING_GROUP);
-            return group != null && Boolean.parseBoolean(
-                    group.getSettingValue(ENABLE_FOR_TOKEN_EXCHANGE_GRANT_COMPATIBILITY_KEY));
+            CompatibilitySettingGroup group = settingsService.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                    PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP, ENABLE_FOR_TOKEN_EXCHANGE_SETTING)
+                    .getCompatibilitySetting(PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP);
+            return group != null && Boolean.parseBoolean(group.getSettingValue(ENABLE_FOR_TOKEN_EXCHANGE_SETTING));
         } catch (CompatibilitySettingException e) {
             log.debug("Error while evaluating the compatibility setting for tenant: " + tenantDomain +
                     ". Pre issue access token action will not be executed for token exchange.", e);

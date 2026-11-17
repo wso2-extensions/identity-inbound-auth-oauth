@@ -215,7 +215,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestSetsLocalUserType() throws Exception {
 
-        PreIssueAccessTokenEvent event = buildEvent(getMockTokenMessageContext());
+        PreIssueAccessTokenEvent event = buildEvent(enableActorAndUserType(getMockTokenMessageContext()));
 
         Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
         Assert.assertEquals(event.getUser().getUserType(), "LOCAL");
@@ -225,7 +225,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestSetsFederatedUserType() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
         tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
         tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
 
@@ -240,7 +240,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestKeepsSSOUserTypeUnset() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
         tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
         tokenMessageContext.getAuthorizedUser().setFederatedIdPName("SSO");
 
@@ -253,7 +253,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestAddsActClaimForImpersonation() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
         tokenMessageContext.setImpersonationRequest(true);
         tokenMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, "impersonator-id");
 
@@ -266,7 +266,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestAddsActClaimForDelegation() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
         tokenMessageContext.setDelegationRequest(true);
         tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
         tokenMessageContext.addProperty(OAuthConstants.EXISTING_ACT_CLAIM,
@@ -283,9 +283,32 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestWithoutActor() throws Exception {
 
-        PreIssueAccessTokenEvent event = buildEvent(getMockTokenMessageContext());
+        PreIssueAccessTokenEvent event = buildEvent(enableActorAndUserType(getMockTokenMessageContext()));
 
         Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestOmitsUserTypeAndActWhenNotEnabled() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
+        tokenMessageContext.setDelegationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        // Grants other than token exchange keep the event they had before.
+        Assert.assertNull(event.getUser().getUserType());
+        Assert.assertNull(event.getUser().getFederatedIdP());
+        Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    private OAuthTokenReqMessageContext enableActorAndUserType(OAuthTokenReqMessageContext tokenMessageContext) {
+
+        tokenMessageContext.addProperty(PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
+        return tokenMessageContext;
     }
 
     private PreIssueAccessTokenEvent buildEvent(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {

@@ -73,6 +73,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenResponseProcessor.class);
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
+    private static final String ACT_CLAIM = "act";
     private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     private static final String RESPONSE_PARAMETERS_PATH_PREFIX = "/response/parameters/";
@@ -292,9 +293,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     tokenMessageContext.setAudiences(audienceList);
                 });
 
+        // When the event carries the act claim, the token issuer owns it and an extension can't set it.
+        boolean actIssuedByServer = PreIssueAccessTokenRequestBuilder.isActorAndUserTypeEnabled(tokenMessageContext);
         Map<String, Object> customClaims = new HashMap<>();
         for (AccessToken.Claim claim : responseAccessToken.getClaims()) {
-            if (!AccessToken.ClaimNames.contains(claim.getName())) {
+            if (!AccessToken.ClaimNames.contains(claim.getName()) &&
+                    !(actIssuedByServer && ACT_CLAIM.equals(claim.getName()))) {
                 customClaims.put(claim.getName(), claim.getValue());
             }
         }

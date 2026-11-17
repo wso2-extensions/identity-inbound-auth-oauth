@@ -97,6 +97,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String FEDERATED_USER = "FEDERATED";
     private static final String LOCAL_USER = "LOCAL";
     private static final String SSO_FEDERATED_IDP = "SSO";
+    private static final String ACT_CLAIM = "act";
+
+    /**
+     * Token request property the grant handler sets when the event should carry the user type and the act claim.
+     * Set only for token exchange, so the events of other grants stay unchanged.
+     */
+    public static final String ACTOR_AND_USER_TYPE_ENABLED = "preIssueAccessTokenActorAndUserTypeEnabled";
 
     @Override
     public ActionType getSupportedActionType() {
@@ -140,7 +147,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
-            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
+            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType(),
+                    isActorAndUserTypeEnabled(tokenMessageContext));
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
         eventBuilder.organization(buildAccessTokenIssuedOrganization());
@@ -236,7 +244,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder,
-                                        AuthenticatedUser authenticatedUser, String clientID, String grantType) {
+                                        AuthenticatedUser authenticatedUser, String clientID, String grantType,
+                                        boolean includeUserType) {
 
         try {
             String organizationId;
@@ -257,12 +266,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
             User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId())
                     .organization(organization);
-            if (!authenticatedUser.isFederatedUser()) {
-                userBuilder.userType(LOCAL_USER);
-            } else if (!SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
-                // The user id is kept as is for backward compatibility.
-                userBuilder.userType(FEDERATED_USER)
-                        .federatedIdP(authenticatedUser.getFederatedIdPName());
+            if (includeUserType) {
+                setUserType(userBuilder, authenticatedUser);
             }
 
             eventBuilder.user(userBuilder.build());
@@ -341,23 +346,36 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
+    static boolean isActorAndUserTypeEnabled(OAuthTokenReqMessageContext tokenMessageContext) {
+
+        return Boolean.TRUE.equals(tokenMessageContext.getProperty(ACTOR_AND_USER_TYPE_ENABLED));
+    }
+
+    private void setUserType(User.Builder userBuilder, AuthenticatedUser authenticatedUser) {
+
+        if (!authenticatedUser.isFederatedUser()) {
+            userBuilder.userType(LOCAL_USER);
+        } else if (!SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
+            // The user id is kept as is for backward compatibility.
+            userBuilder.userType(FEDERATED_USER).federatedIdP(authenticatedUser.getFederatedIdPName());
+        }
+    }
+
     /**
-     * Add the act claim of an impersonation or delegation request, as the token issuer will add it, so the
-     * extension knows who is acting for the subject.
+     * Add the act claim the token issuer will add for an impersonation or delegation request, so the extension
+     * knows who is acting for the subject.
      */
     private void handleActorClaim(OAuthTokenReqMessageContext tokenMessageContext,
                                   AccessToken.Builder accessTokenBuilder) throws IdentityOAuth2Exception {
 
-        if (tokenMessageContext.getAuthorizedUser() == null) {
+        if (!isActorAndUserTypeEnabled(tokenMessageContext) || tokenMessageContext.getAuthorizedUser() == null) {
             return;
         }
-        JWTAccessTokenClaimProvider[] actClaimProviders = {
-                new ImpersonatedAccessTokenClaimProvider(), new AgentAccessTokenClaimProvider()};
-        for (JWTAccessTokenClaimProvider claimProvider : actClaimProviders) {
+        for (JWTAccessTokenClaimProvider claimProvider : new JWTAccessTokenClaimProvider[]{
+                new ImpersonatedAccessTokenClaimProvider(), new AgentAccessTokenClaimProvider()}) {
             Map<String, Object> claims = claimProvider.getAdditionalClaims(tokenMessageContext);
-            if (claims != null && claims.get(AccessToken.ClaimNames.ACT.getName()) != null) {
-                accessTokenBuilder.addClaim(AccessToken.ClaimNames.ACT.getName(),
-                        claims.get(AccessToken.ClaimNames.ACT.getName()));
+            if (claims != null && claims.get(ACT_CLAIM) != null) {
+                accessTokenBuilder.addClaim(ACT_CLAIM, claims.get(ACT_CLAIM));
                 return;
             }
         }
