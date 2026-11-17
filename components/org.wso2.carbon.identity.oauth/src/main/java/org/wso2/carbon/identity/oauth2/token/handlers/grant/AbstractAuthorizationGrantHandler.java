@@ -607,7 +607,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
-    private boolean isPreIssueAccessTokenActionEnabledForTokenExchange(String tenantDomain) {
+    /**
+     * Check whether the organization has enabled the pre issue access token action for the token exchange grant.
+     *
+     * @param tenantDomain Tenant domain the action is executed in.
+     * @return true if the compatibility setting is enabled for the tenant.
+     */
+    protected boolean isPreIssueAccessTokenActionEnabledForTokenExchange(String tenantDomain) {
 
         CompatibilitySettingsService settingsService =
                 OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();

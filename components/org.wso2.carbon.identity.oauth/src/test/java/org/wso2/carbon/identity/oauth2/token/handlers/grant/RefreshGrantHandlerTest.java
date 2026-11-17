@@ -28,6 +28,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
@@ -35,6 +36,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
@@ -76,6 +80,7 @@ import org.wso2.carbon.identity.user.profile.mgt.association.federation.exceptio
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
@@ -717,6 +722,74 @@ public class RefreshGrantHandlerTest {
             assertTrue(diagnosticLog.getResultMessage().contains("no longer active"),
                     "The log should state that the access token behind the refresh token is no longer active.");
             assertEquals(diagnosticLog.getInput().get(OAuthConstants.LogConstants.InputKeys.TOKEN_ID), "token-id-1");
+        }
+    }
+
+    @DataProvider(name = "preIssueAccessTokenActionRefreshGrantTypeDataProvider")
+    public Object[][] preIssueAccessTokenActionRefreshGrantTypeDataProvider() {
+
+        // Grant type of the token being refreshed, the organization's token exchange setting, expected result.
+        return new Object[][]{
+                {OAuthConstants.GrantTypes.AUTHORIZATION_CODE, "false", true},
+                {OAuthConstants.GrantTypes.PASSWORD, "false", true},
+                {OAuthConstants.GrantTypes.REFRESH_TOKEN, "false", true},
+                {OAuthConstants.GrantTypes.TOKEN_EXCHANGE, "true", true},
+                {OAuthConstants.GrantTypes.TOKEN_EXCHANGE, "false", false},
+                {OAuthConstants.GrantTypes.ORGANIZATION_SWITCH, "true", false}
+        };
+    }
+
+    @Test(dataProvider = "preIssueAccessTokenActionRefreshGrantTypeDataProvider")
+    public void testCheckExecutePreIssueAccessTokenActionsForRefreshedGrantType(String grantType,
+                                                                               String tokenExchangeSetting,
+                                                                               boolean expected) throws Exception {
+
+        CompatibilitySettingGroup group = new CompatibilitySettingGroup();
+        group.setSettingGroup("preIssueAccessTokenAction");
+        group.addSetting("enableForTokenExchangeGrant", tokenExchangeSetting);
+        CompatibilitySetting setting = new CompatibilitySetting();
+        setting.addCompatibilitySetting(group);
+        CompatibilitySettingsService compatibilitySettingsService = mock(CompatibilitySettingsService.class);
+        when(compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(
+                "carbon.super", "preIssueAccessTokenAction", "enableForTokenExchangeGrant")).thenReturn(setting);
+
+        OAuthComponentServiceHolder serviceHolder = OAuthComponentServiceHolder.getInstance();
+        ActionExecutorService existingActionExecutorService = serviceHolder.getActionExecutorService();
+        CompatibilitySettingsService existingCompatibilitySettingsService =
+                serviceHolder.getCompatibilitySettingsService();
+        serviceHolder.setActionExecutorService(mockActionExecutorService);
+        serviceHolder.setCompatibilitySettingsService(compatibilitySettingsService);
+        when(mockActionExecutorService.isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN)).thenReturn(true);
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class)) {
+            OAuthAppDO jwtApp = new OAuthAppDO();
+            jwtApp.setTokenType("JWT");
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAppInformationByClientId("client-id", "carbon.super"))
+                    .thenReturn(jwtApp);
+            identityTenantUtilMockedStatic.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
+            identityTenantUtilMockedStatic.when(() -> IdentityTenantUtil.getTenantDomain(-1234))
+                    .thenReturn("carbon.super");
+
+            OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+            tokenReqDTO.setClientId("client-id");
+            tokenReqDTO.setTenantDomain("carbon.super");
+            tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.REFRESH_TOKEN);
+            RefreshTokenValidationDataDO validationDataDO = new RefreshTokenValidationDataDO();
+            validationDataDO.setGrantType(grantType);
+
+            Method method = RefreshGrantHandler.class.getDeclaredMethod("checkExecutePreIssueAccessTokensActions",
+                    RefreshTokenValidationDataDO.class, OAuthTokenReqMessageContext.class);
+            method.setAccessible(true);
+            assertEquals(method.invoke(new RefreshGrantHandler(), validationDataDO,
+                    new OAuthTokenReqMessageContext(tokenReqDTO)), expected);
+            if (!OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
+                verify(compatibilitySettingsService, never())
+                        .getCompatibilitySettingsByGroupAndSetting(anyString(), anyString(), anyString());
+            }
+        } finally {
+            serviceHolder.setActionExecutorService(existingActionExecutorService);
+            serviceHolder.setCompatibilitySettingsService(existingCompatibilitySettingsService);
         }
     }
 
