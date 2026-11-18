@@ -97,7 +97,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String FEDERATED_USER = "FEDERATED";
     private static final String LOCAL_USER = "LOCAL";
     private static final String SSO_FEDERATED_IDP = "SSO";
-    private static final String ACT_CLAIM = "act";
+    private static final String ACT_CLAIM = AccessToken.ClaimNames.ACT.getName();
 
     /**
      * Token request property the grant handler sets when the event should carry the user type and the act claim.

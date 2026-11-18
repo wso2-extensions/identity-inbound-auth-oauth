@@ -192,16 +192,19 @@ public class PreIssueAccessTokenResponseProcessorTest {
     @DataProvider(name = "actClaimDataProvider")
     public Object[][] actClaimDataProvider() {
 
-        return new Object[][]{{true, null}, {false, "attacker"}};
+        // Whether the request is a token exchange request that carries act in the event.
+        return new Object[][]{{true}, {false}};
     }
 
     @Test(dataProvider = "actClaimDataProvider")
-    void testProcessSuccessResponseAddActClaim(boolean actorAndUserTypeEnabled, Object expectedActClaim)
+    void testProcessSuccessResponseAddActClaim(boolean actorAndUserTypeEnabled)
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
                 TAIL_CHARACTER, new AccessToken.Claim("act", "attacker")));
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("may_act", "attacker")));
         operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
                 TAIL_CHARACTER, new AccessToken.Claim("backend_tier", "gold")));
         OAuthTokenReqMessageContext tokenMessageContext =
@@ -213,8 +216,9 @@ public class PreIssueAccessTokenResponseProcessorTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
                 executeProcessSuccessResponse(operationsToPerform, tokenMessageContext);
 
-        // For token exchange the token issuer owns act; other grants keep their current behaviour.
-        assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("act"), expectedActClaim);
+        // act and may_act are set by the token issuer only, so an extension can't add them for any grant.
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("act"));
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("may_act"));
         assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("backend_tier"), "gold");
     }
 
