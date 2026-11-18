@@ -567,11 +567,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             }
                             // Token exchange didn't run the action before, so it isn't failed for an organization
                             // whose setting can't be read: the token is issued without the action.
-                            log.warn("Could not resolve the tenant of the application's issuer organization for " +
-                                    "client id: " + tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId() +
-                                    ". The pre issue access token action is not executed for token exchange.");
                             if (log.isDebugEnabled()) {
-                                log.debug("Error while resolving the issuer organization's tenant.", e);
+                                log.debug("Could not resolve the tenant of the application's issuer organization " +
+                                        "for client id: " + tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                                        .getClientId() + ". The pre issue access token action is not executed for " +
+                                        "token exchange.", e);
                             }
                             return null;
                         }
