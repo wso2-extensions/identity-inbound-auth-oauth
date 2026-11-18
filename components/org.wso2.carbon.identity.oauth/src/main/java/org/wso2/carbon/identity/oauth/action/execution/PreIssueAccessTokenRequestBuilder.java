@@ -419,9 +419,11 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
         // Token exchange narrows the audiences to the requested one before the action runs. Send those, as the token
         // issuer uses them and the response processor writes this value back. Other requests are unchanged.
-        List<String> audiences = tokenMessageContext.getAudiences();
-        if (isActorAndUserTypeEnabled(tokenMessageContext) && audiences != null) {
-            return audiences;
+        if (isActorAndUserTypeEnabled(tokenMessageContext)) {
+            List<String> audiences = tokenMessageContext.getAudiences();
+            if (audiences != null) {
+                return audiences;
+            }
         }
         return OAuth2Util.getOIDCAudience(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
     }
