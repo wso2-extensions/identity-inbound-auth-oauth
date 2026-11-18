@@ -122,6 +122,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
 
         Map<String, Object> additionalClaimsToAddToToken = getAdditionalClaimsToAddToToken(tokenMessageContext);
+        if (isActorAndUserTypeEnabled(tokenMessageContext) && additionalClaimsToAddToToken != null &&
+                additionalClaimsToAddToToken.containsKey(ACT_CLAIM)) {
+            // The token issuer sets act for these requests (see handleActorClaim), so a custom claim with the same
+            // name is left out of the event and of the claims the extension can edit.
+            additionalClaimsToAddToToken = new HashMap<>(additionalClaimsToAddToToken);
+            additionalClaimsToAddToToken.remove(ACT_CLAIM);
+        }
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());

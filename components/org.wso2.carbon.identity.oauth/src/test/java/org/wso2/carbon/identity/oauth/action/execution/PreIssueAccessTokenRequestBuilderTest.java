@@ -25,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
@@ -306,6 +307,54 @@ public class PreIssueAccessTokenRequestBuilderTest {
         Assert.assertNull(event.getAccessToken().getClaim("act"));
     }
 
+    @DataProvider(name = "customActClaimDataProvider")
+    public Object[][] customActClaimDataProvider() {
+
+        // Whether the request is a token exchange request whose event carries the issuer's act.
+        return new Object[][]{{true}, {false}};
+    }
+
+    @Test(dataProvider = "customActClaimDataProvider")
+    public void testBuildActionExecutionRequestWithCustomActClaim(boolean actorAndUserTypeEnabled) throws Exception {
+
+        // A custom claims callback can return a claim named act alongside other custom claims.
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
+        Map<String, Object> customClaims = new HashMap<>();
+        customClaims.put("act", "custom-act");
+        customClaims.put("email", "alice@example.com");
+        tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
+        if (actorAndUserTypeEnabled) {
+            enableActorAndUserType(tokenMessageContext);
+            tokenMessageContext.setDelegationRequest(true);
+            tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-1");
+        }
+
+        ActionExecutionRequest request = buildRequest(tokenMessageContext);
+        PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) request.getEvent();
+
+        List<Object> actValues = new ArrayList<>();
+        event.getAccessToken().getClaims().stream()
+                .filter(claim -> "act".equals(claim.getName()))
+                .forEach(claim -> actValues.add(claim.getValue()));
+        boolean actEditable = request.getAllowedOperations().stream()
+                .anyMatch(operation -> operation.getPaths().contains("/accessToken/claims/act"));
+        if (actorAndUserTypeEnabled) {
+            // The issuer's act is the only one, and the extension can't edit it.
+            Assert.assertEquals(actValues, Collections.singletonList(Collections.singletonMap("sub", "agent-1")));
+            Assert.assertFalse(actEditable);
+        } else {
+            // Other requests are unchanged.
+            Assert.assertEquals(actValues, Collections.singletonList("custom-act"));
+            Assert.assertTrue(actEditable);
+        }
+        Assert.assertEquals(event.getAccessToken().getClaim("email").getValue(), "alice@example.com");
+        Assert.assertTrue(request.getAllowedOperations().stream()
+                .anyMatch(operation -> operation.getPaths().contains("/accessToken/claims/email")));
+        // The callback's claims in the context are left as they are.
+        Assert.assertEquals(customClaims.get("act"), "custom-act");
+    }
+
     @Test
     public void testBuildActionExecutionRequestUsesResolvedAudiences() throws Exception {
 
@@ -355,6 +404,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     private PreIssueAccessTokenEvent buildEvent(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
 
+        return (PreIssueAccessTokenEvent) buildRequest(tokenMessageContext).getEvent();
+    }
+
+    private ActionExecutionRequest buildRequest(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
+
         MinimalOrganization minimalOrganization =
                 new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
                         .depth(ORG_DEPTH).build();
@@ -367,10 +421,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
             when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
                     .thenReturn(minimalOrganization);
 
-            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
-                    buildActionExecutionRequest(
-                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
-            return (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
+            return preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
+                    FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
         }
     }
 
