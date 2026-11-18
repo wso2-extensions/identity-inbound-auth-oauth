@@ -307,6 +307,19 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     @Test
+    public void testBuildActionExecutionRequestUsesResolvedAudiences() throws Exception {
+
+        // A grant can narrow the audiences before the action runs, as token exchange does for the audience
+        // parameter. The event must carry them, since the response processor writes the event's aud back.
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.setAudiences(Collections.singletonList("api-a"));
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertEquals(event.getAccessToken().getClaim("aud").getValue(), Collections.singletonList("api-a"));
+    }
+
+    @Test
     public void testTokenExchangeRequestDoesNotForwardSubjectOrActorToken() throws Exception {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
