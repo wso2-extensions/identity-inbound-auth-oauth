@@ -421,10 +421,10 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
     private List<String> getAudience(OAuthTokenReqMessageContext tokenMessageContext, OAuthAppDO oAuthAppDO) {
 
-        // Use the audiences resolved for this token, as the token issuer does. A grant can narrow them (token
-        // exchange limits them to the requested audience), and the response processor writes this value back.
+        // Token exchange narrows the audiences to the requested one before the action runs. Send those, as the token
+        // issuer uses them and the response processor writes this value back. Other requests are unchanged.
         List<String> audiences = tokenMessageContext.getAudiences();
-        if (audiences != null) {
+        if (isActorAndUserTypeEnabled(tokenMessageContext) && audiences != null) {
             return audiences;
         }
         return OAuth2Util.getOIDCAudience(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);

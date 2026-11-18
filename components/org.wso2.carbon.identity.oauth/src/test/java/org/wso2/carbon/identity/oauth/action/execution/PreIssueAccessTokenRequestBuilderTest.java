@@ -355,17 +355,33 @@ public class PreIssueAccessTokenRequestBuilderTest {
         Assert.assertEquals(customClaims.get("act"), "custom-act");
     }
 
-    @Test
-    public void testBuildActionExecutionRequestUsesResolvedAudiences() throws Exception {
+    @DataProvider(name = "resolvedAudiencesDataProvider")
+    public Object[][] resolvedAudiencesDataProvider() {
 
-        // A grant can narrow the audiences before the action runs, as token exchange does for the audience
-        // parameter. The event must carry them, since the response processor writes the event's aud back.
+        // Whether the request is a token exchange request with the action enabled, and the event's expected aud.
+        return new Object[][]{
+                {true, Collections.singletonList("api-a")},
+                {false, Collections.singletonList(AUDIENCE_TEST)}
+        };
+    }
+
+    @Test(dataProvider = "resolvedAudiencesDataProvider")
+    public void testBuildActionExecutionRequestUsesResolvedAudiences(boolean actorAndUserTypeEnabled,
+                                                                     List<String> expectedAudiences)
+            throws Exception {
+
+        // Token exchange narrows the audiences for the audience parameter before the action runs. Its event must
+        // carry them, since the response processor writes the event's aud back. Other requests (such as a refresh
+        // that restored audiences from the grant cache) keep the application's audiences.
         OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
         tokenMessageContext.setAudiences(Collections.singletonList("api-a"));
+        if (actorAndUserTypeEnabled) {
+            enableActorAndUserType(tokenMessageContext);
+        }
 
         PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
 
-        Assert.assertEquals(event.getAccessToken().getClaim("aud").getValue(), Collections.singletonList("api-a"));
+        Assert.assertEquals(event.getAccessToken().getClaim("aud").getValue(), expectedAudiences);
     }
 
     @Test
