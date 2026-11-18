@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -303,6 +304,34 @@ public class PreIssueAccessTokenRequestBuilderTest {
         Assert.assertNull(event.getUser().getUserType());
         Assert.assertNull(event.getUser().getFederatedIdP());
         Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    @Test
+    public void testTokenExchangeRequestDoesNotForwardSubjectOrActorToken() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(CLIENT_ID_TEST);
+        tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
+        tokenReqDTO.setScope(new String[0]);
+        tokenReqDTO.setRequestParameters(new RequestParameter[]{
+                new RequestParameter("grant_type", OAuthConstants.GrantTypes.TOKEN_EXCHANGE),
+                new RequestParameter(OAuthConstants.SUBJECT_TOKEN, "subject.jwt.value"),
+                new RequestParameter("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
+                new RequestParameter(OAuthConstants.ACTOR_TOKEN, "actor.jwt.value"),
+                new RequestParameter("actor_token_type", "urn:ietf:params:oauth:token-type:jwt"),
+                new RequestParameter("requested_token_type", "urn:ietf:params:oauth:token-type:access_token")
+        });
+
+        Method getRequest = PreIssueAccessTokenRequestBuilder.class.getDeclaredMethod("getRequest",
+                OAuth2AccessTokenReqDTO.class);
+        getRequest.setAccessible(true);
+        TokenRequest request = (TokenRequest) getRequest.invoke(preIssueAccessTokenRequestBuilder, tokenReqDTO);
+
+        List<String> forwardedParams = new ArrayList<>();
+        request.getAdditionalParams().forEach(param -> forwardedParams.add(param.getName()));
+        // The tokens are bearer credentials; their types and the other parameters are still forwarded.
+        Assert.assertEquals(forwardedParams, Arrays.asList("grant_type", "subject_token_type", "actor_token_type",
+                "requested_token_type"));
     }
 
     private OAuthTokenReqMessageContext enableActorAndUserType(OAuthTokenReqMessageContext tokenMessageContext) {

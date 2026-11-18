@@ -98,6 +98,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String LOCAL_USER = "LOCAL";
     private static final String SSO_FEDERATED_IDP = "SSO";
     private static final String ACT_CLAIM = AccessToken.ClaimNames.ACT.getName();
+    private static final List<String> TOKEN_EXCHANGE_CREDENTIAL_PARAMS =
+            Arrays.asList(OAuthConstants.SUBJECT_TOKEN, OAuthConstants.ACTOR_TOKEN);
 
     /**
      * Token request property the grant handler sets when the event should carry the user type and the act claim.
@@ -298,7 +300,14 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         RequestParameter[] requestParameters = tokenRequestDTO.getRequestParameters();
         if (requestParameters != null) {
+            boolean isTokenExchange =
+                    OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(tokenRequestDTO.getGrantType());
             for (RequestParameter parameter : requestParameters) {
+                // The subject and actor tokens are bearer credentials, so they never go to the extension, even if
+                // the action allows them. The event carries the user and the act claim resolved from them.
+                if (isTokenExchange && TOKEN_EXCHANGE_CREDENTIAL_PARAMS.contains(parameter.getKey())) {
+                    continue;
+                }
                 tokenRequestBuilder.addAdditionalParam(parameter.getKey(), parameter.getValue());
             }
         }
