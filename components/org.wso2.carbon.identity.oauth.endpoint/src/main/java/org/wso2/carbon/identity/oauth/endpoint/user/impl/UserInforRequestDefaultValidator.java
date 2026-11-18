@@ -29,6 +29,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Enumeration;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.HttpMethod;
@@ -50,6 +51,11 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
     @Override
     public String validateRequest(HttpServletRequest request) throws UserInfoEndpointException {
+
+        if (hasMultipleAuthorizationHeaders(request)) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Multiple Authorization headers are not allowed");
+        }
 
         String authzHeaders = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authzHeaders == null) {
@@ -124,6 +130,27 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                     OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
             );
         }
+    }
+
+    /**
+     * The Authorization header is defined as a single value by RFC 9110 (Section 11.6.1), so a
+     * request that carries it more than once is malformed. This detects that case so the caller can
+     * reject the request instead of silently honoring the first value and ignoring the rest.
+     */
+    private boolean hasMultipleAuthorizationHeaders(HttpServletRequest request) {
+
+        Enumeration<String> authorizationHeaders = request.getHeaders(HttpHeaders.AUTHORIZATION);
+        if (authorizationHeaders == null) {
+            return false;
+        }
+        int count = 0;
+        while (authorizationHeaders.hasMoreElements()) {
+            authorizationHeaders.nextElement();
+            if (++count > 1) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isPureAscii(String requestBody) {
