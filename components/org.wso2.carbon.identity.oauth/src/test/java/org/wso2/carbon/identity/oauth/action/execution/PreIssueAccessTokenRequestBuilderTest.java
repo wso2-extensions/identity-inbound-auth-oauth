@@ -307,74 +307,33 @@ public class PreIssueAccessTokenRequestBuilderTest {
         Assert.assertNull(event.getAccessToken().getClaim("act"));
     }
 
-    @DataProvider(name = "customActClaimDataProvider")
-    public Object[][] customActClaimDataProvider() {
-
-        // Whether the request is a token exchange request whose event carries the issuer's act.
-        return new Object[][]{{true}, {false}};
-    }
-
-    @Test(dataProvider = "customActClaimDataProvider")
-    public void testBuildActionExecutionRequestWithCustomActClaim(boolean actorAndUserTypeEnabled) throws Exception {
-
-        // A custom claims callback can return a claim named act alongside other custom claims.
-        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
-        tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
-        Map<String, Object> customClaims = new HashMap<>();
-        customClaims.put("act", "custom-act");
-        customClaims.put("email", "alice@example.com");
-        tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
-        if (actorAndUserTypeEnabled) {
-            enableActorAndUserType(tokenMessageContext);
-            tokenMessageContext.setDelegationRequest(true);
-            tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-1");
-        }
-
-        ActionExecutionRequest request = buildRequest(tokenMessageContext);
-        PreIssueAccessTokenEvent event = (PreIssueAccessTokenEvent) request.getEvent();
-
-        List<Object> actValues = new ArrayList<>();
-        event.getAccessToken().getClaims().stream()
-                .filter(claim -> "act".equals(claim.getName()))
-                .forEach(claim -> actValues.add(claim.getValue()));
-        boolean actEditable = request.getAllowedOperations().stream()
-                .anyMatch(operation -> operation.getPaths().contains("/accessToken/claims/act"));
-        if (actorAndUserTypeEnabled) {
-            // The issuer's act is the only one, and the extension can't edit it.
-            Assert.assertEquals(actValues, Collections.singletonList(Collections.singletonMap("sub", "agent-1")));
-            Assert.assertFalse(actEditable);
-        } else {
-            // Other requests are unchanged.
-            Assert.assertEquals(actValues, Collections.singletonList("custom-act"));
-            Assert.assertTrue(actEditable);
-        }
-        Assert.assertEquals(event.getAccessToken().getClaim("email").getValue(), "alice@example.com");
-        Assert.assertTrue(request.getAllowedOperations().stream()
-                .anyMatch(operation -> operation.getPaths().contains("/accessToken/claims/email")));
-        // The callback's claims in the context are left as they are.
-        Assert.assertEquals(customClaims.get("act"), "custom-act");
-    }
-
     @DataProvider(name = "resolvedAudiencesDataProvider")
     public Object[][] resolvedAudiencesDataProvider() {
 
-        // Whether the request is a token exchange request with the action enabled, and the event's expected aud.
+        // Whether the request is a token exchange request with the action enabled, whether an action already ran for
+        // the token (a refresh restores its audiences from the grant cache), and the event's expected aud.
         return new Object[][]{
-                {true, Collections.singletonList("api-a")},
-                {false, Collections.singletonList(AUDIENCE_TEST)}
+                {true, false, Collections.singletonList("api-a")},
+                {false, true, Collections.singletonList("api-a")},
+                {false, false, Collections.singletonList(AUDIENCE_TEST)}
         };
     }
 
     @Test(dataProvider = "resolvedAudiencesDataProvider")
     public void testBuildActionExecutionRequestUsesResolvedAudiences(boolean actorAndUserTypeEnabled,
+                                                                     boolean actionsExecuted,
                                                                      List<String> expectedAudiences)
             throws Exception {
 
-        // Token exchange narrows the audiences for the audience parameter before the action runs. Its event must
-        // carry them, since the response processor writes the event's aud back. Other requests (such as a refresh
-        // that restored audiences from the grant cache) keep the application's audiences.
+        // Token exchange narrows the audiences for the audience parameter before the action runs, and a refresh
+        // restores the audiences an earlier action set. The event must carry them, since the response processor
+        // writes the event's aud back. Other requests keep the application's audiences.
         OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
         tokenMessageContext.setAudiences(Collections.singletonList("api-a"));
+        if (actionsExecuted) {
+            tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
+            tokenMessageContext.setAdditionalAccessTokenClaims(new HashMap<>());
+        }
         if (actorAndUserTypeEnabled) {
             enableActorAndUserType(tokenMessageContext);
         }
@@ -420,11 +379,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     private PreIssueAccessTokenEvent buildEvent(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
 
-        return (PreIssueAccessTokenEvent) buildRequest(tokenMessageContext).getEvent();
-    }
-
-    private ActionExecutionRequest buildRequest(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
-
         MinimalOrganization minimalOrganization =
                 new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
                         .depth(ORG_DEPTH).build();
@@ -437,8 +391,10 @@ public class PreIssueAccessTokenRequestBuilderTest {
             when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
                     .thenReturn(minimalOrganization);
 
-            return preIssueAccessTokenRequestBuilder.buildActionExecutionRequest(
-                    FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
+                    buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+            return (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
         }
     }
 

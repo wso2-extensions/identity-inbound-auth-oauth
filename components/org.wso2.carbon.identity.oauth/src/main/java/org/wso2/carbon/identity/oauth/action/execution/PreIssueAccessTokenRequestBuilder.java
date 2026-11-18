@@ -122,13 +122,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
 
         Map<String, Object> additionalClaimsToAddToToken = getAdditionalClaimsToAddToToken(tokenMessageContext);
-        if (isActorAndUserTypeEnabled(tokenMessageContext) && additionalClaimsToAddToToken != null &&
-                additionalClaimsToAddToToken.containsKey(ACT_CLAIM)) {
-            // The token issuer sets act for these requests (see handleActorClaim), so a custom claim with the same
-            // name is left out of the event and of the claims the extension can edit.
-            additionalClaimsToAddToToken = new HashMap<>(additionalClaimsToAddToToken);
-            additionalClaimsToAddToToken.remove(ACT_CLAIM);
-        }
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());
@@ -421,6 +414,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
     private List<String> getAudience(OAuthTokenReqMessageContext tokenMessageContext, OAuthAppDO oAuthAppDO) {
 
+        if (tokenMessageContext.isPreIssueAccessTokenActionsExecuted()) {
+            return tokenMessageContext.getAudiences();
+        }
         // Token exchange narrows the audiences to the requested one before the action runs. Send those, as the token
         // issuer uses them and the response processor writes this value back. Other requests are unchanged.
         List<String> audiences = tokenMessageContext.getAudiences();
