@@ -233,7 +233,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
         PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
 
-        // The user id is kept for backward compatibility.
         Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
         Assert.assertEquals(event.getUser().getUserType(), "FEDERATED");
         Assert.assertEquals(event.getUser().getFederatedIdP(), "ext-issuer");
@@ -301,7 +300,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
         PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
 
-        // Grants other than token exchange keep the event they had before.
         Assert.assertNull(event.getUser().getUserType());
         Assert.assertNull(event.getUser().getFederatedIdP());
         Assert.assertNull(event.getAccessToken().getClaim("act"));
@@ -310,8 +308,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @DataProvider(name = "resolvedAudiencesDataProvider")
     public Object[][] resolvedAudiencesDataProvider() {
 
-        // Whether the request is a token exchange request with the action enabled, whether an action already ran for
-        // the token (a refresh restores its audiences from the grant cache), and the event's expected aud.
+        // Token exchange with the action enabled, whether an action already ran for the token, expected aud.
         return new Object[][]{
                 {true, false, Collections.singletonList("api-a")},
                 {false, true, Collections.singletonList("api-a")},
@@ -325,9 +322,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
                                                                      List<String> expectedAudiences)
             throws Exception {
 
-        // Token exchange narrows the audiences for the audience parameter before the action runs, and a refresh
-        // restores the audiences an earlier action set. The event must carry them, since the response processor
-        // writes the event's aud back. Other requests keep the application's audiences.
         OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
         tokenMessageContext.setAudiences(Collections.singletonList("api-a"));
         if (actionsExecuted) {
@@ -366,7 +360,6 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
         List<String> forwardedParams = new ArrayList<>();
         request.getAdditionalParams().forEach(param -> forwardedParams.add(param.getName()));
-        // The tokens are bearer credentials; their types and the other parameters are still forwarded.
         Assert.assertEquals(forwardedParams, Arrays.asList("grant_type", "subject_token_type", "actor_token_type",
                 "requested_token_type"));
     }

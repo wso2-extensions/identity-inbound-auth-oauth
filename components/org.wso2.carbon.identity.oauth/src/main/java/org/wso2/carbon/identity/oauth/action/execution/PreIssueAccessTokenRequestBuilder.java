@@ -303,8 +303,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             boolean isTokenExchange =
                     OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(tokenRequestDTO.getGrantType());
             for (RequestParameter parameter : requestParameters) {
-                // The subject and actor tokens are bearer credentials, so they never go to the extension, even if
-                // the action allows them. The event carries the user and the act claim resolved from them.
+                // Subject and actor tokens are bearer credentials, so they are never sent to the extension.
                 if (isTokenExchange && TOKEN_EXCHANGE_CREDENTIAL_PARAMS.contains(parameter.getKey())) {
                     continue;
                 }
@@ -365,7 +364,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         if (!authenticatedUser.isFederatedUser()) {
             userBuilder.userType(LOCAL_USER);
         } else if (!SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
-            // The user id is kept as is for backward compatibility.
             userBuilder.userType(FEDERATED_USER).federatedIdP(authenticatedUser.getFederatedIdPName());
         }
     }
@@ -417,8 +415,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         if (tokenMessageContext.isPreIssueAccessTokenActionsExecuted()) {
             return tokenMessageContext.getAudiences();
         }
-        // Token exchange narrows the audiences to the requested one before the action runs. Send those, as the token
-        // issuer uses them and the response processor writes this value back. Other requests are unchanged.
+        // Token exchange narrows the audiences to the requested audience before the action runs.
         if (isActorAndUserTypeEnabled(tokenMessageContext)) {
             List<String> audiences = tokenMessageContext.getAudiences();
             if (audiences != null) {

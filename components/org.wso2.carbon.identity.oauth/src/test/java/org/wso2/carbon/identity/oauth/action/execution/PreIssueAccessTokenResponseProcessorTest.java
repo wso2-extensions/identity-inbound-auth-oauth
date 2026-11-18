@@ -216,7 +216,6 @@ public class PreIssueAccessTokenResponseProcessorTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
                 executeProcessSuccessResponse(operationsToPerform, tokenMessageContext);
 
-        // act and may_act are set by the token issuer only, so an extension can't add them for any grant.
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("act"));
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("may_act"));
         assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("backend_tier"), "gold");

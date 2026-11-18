@@ -565,8 +565,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             if (!isTokenExchange) {
                                 throw e;
                             }
-                            // Token exchange didn't run the action before, so it isn't failed for an organization
-                            // whose setting can't be read: the token is issued without the action.
                             if (log.isDebugEnabled()) {
                                 log.debug("Could not resolve the tenant of the application's issuer organization " +
                                         "for client id: " + tokenReqMessageContext.getOauth2AccessTokenReqDTO()
@@ -578,8 +576,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     }
                 }
                 if (isTokenExchange) {
-                    // Token exchange triggers the action only in organizations that have enabled it, and its event
-                    // also carries the user type and the act claim.
                     if (!isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain)) {
                         return null;
                     }

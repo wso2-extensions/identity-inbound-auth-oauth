@@ -647,11 +647,9 @@ public class AbstractAuthorizationGrantHandlerTest {
                     .thenReturn(sharedApp);
             try {
                 Object executionStatus = method.invoke(handler, new OAuthTokenReqMessageContext(tokenReqDTO));
-                // Token exchange is issued without the action, as before this grant could run it.
                 assertFalse(expectFailure, "Expected the request to fail for grant type: " + grantType);
                 assertNull(executionStatus);
             } catch (InvocationTargetException e) {
-                // Other grants keep failing the request.
                 assertTrue(expectFailure, "Unexpected failure for grant type: " + grantType);
                 assertTrue(e.getCause() instanceof IdentityOAuth2Exception);
             }
