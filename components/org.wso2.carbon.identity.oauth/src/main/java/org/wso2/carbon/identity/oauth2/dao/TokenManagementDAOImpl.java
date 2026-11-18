@@ -599,11 +599,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                 updateStateStatement.execute();
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
-                TokenPersistenceProcessor tokenPersistenceProcessor = getPersistenceProcessor();
-                if (OAuthServerConfiguration.getInstance().isClientSecretHashOnlyEnabled()) {
-                    tokenPersistenceProcessor = OAuthServerConfiguration.getInstance()
-                            .getClientSecretPersistenceProcessor();
-                }
+                TokenPersistenceProcessor tokenPersistenceProcessor =
+                        OAuthServerConfiguration.getInstance().getClientSecretPersistenceProcessor();
                 String newSecretKey;
                 if (properties.containsKey(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY)) {
                     newSecretKey = properties.getProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY);
