@@ -657,8 +657,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     .getCompatibilitySetting(PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP);
             return group != null && Boolean.parseBoolean(group.getSettingValue(ENABLE_FOR_TOKEN_EXCHANGE_SETTING));
         } catch (CompatibilitySettingException e) {
-            log.debug("Error while evaluating the compatibility setting for tenant: " + tenantDomain +
-                    ". Pre issue access token action will not be executed for token exchange.", e);
+            if (log.isDebugEnabled()) {
+                log.debug("Error while evaluating the compatibility setting for tenant: " + tenantDomain +
+                        ". Pre issue access token action will not be executed for token exchange.", e);
+            }
             return false;
         }
     }
