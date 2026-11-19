@@ -97,19 +97,36 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             }
         }
 
-        String[] authzHeaderInfo = authzHeaders.trim().split(" ");
-
-        if (authzHeaderInfo.length < 2) {
+        if (Character.isWhitespace(authzHeaders.charAt(0))) {
             throw new UserInfoEndpointException(
                     OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
             );
         }
 
-        String authScheme = authzHeaderInfo[0];
+        String authScheme;
+        String token;
+
+        if (authzHeaders.length() >= 7 && authzHeaders.substring(0, 7).equalsIgnoreCase(BEARER + " ")) {
+            authScheme = BEARER;
+            token = authzHeaders.substring(7);
+        } else if (authzHeaders.length() >= 5 && authzHeaders.substring(0, 5).equals(DPOP + " ")) {
+            authScheme = DPOP;
+            token = authzHeaders.substring(5);
+        } else {
+            throw new UserInfoEndpointException(
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+            );
+        }
+
+        if (StringUtils.isBlank(token) || token.startsWith(" ") || token.endsWith(" ") || token.contains(" ")) {
+            throw new UserInfoEndpointException(
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
+            );
+        }
 
         if (BEARER.equalsIgnoreCase(authScheme)) {
             // Bearer token. For a Bearer token no additional DPoP header is expected.
-            return authzHeaderInfo[1];
+            return token;
         } else if (DPOP.equals(authScheme)) {
             // DPoP token: the request MUST include a DPoP header
             String dpopHeader = request.getHeader(DPOP);
@@ -118,7 +135,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                         OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP header is required with DPoP tokens"
                 );
             }
-            return authzHeaderInfo[1];
+            return token;
         } else {
             throw new UserInfoEndpointException(
                     OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
