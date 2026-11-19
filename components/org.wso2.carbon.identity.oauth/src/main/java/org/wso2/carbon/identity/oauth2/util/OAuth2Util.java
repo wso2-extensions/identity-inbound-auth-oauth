@@ -427,6 +427,8 @@ public class OAuth2Util {
 
     public static final String ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE = "Invalid Access Token. Access token is " +
             "not ACTIVE.";
+    public static final String ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE =
+            "Invalid Access Token. ACTIVE access token is not found.";
     public static final String IS_EXTENDED_TOKEN = "isExtendedToken";
     public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData";
     public static final String ACCESS_TOKEN_JS_OBJECT = "access_token";
@@ -5391,9 +5393,9 @@ public class OAuth2Util {
                 includeExpired);
 
         // If the lookup is only for tokens in 'ACTIVE' state, APIs calling this method expect an
-        // IllegalArgumentException to be thrown to identify inactive/invalid tokens.
+        // IllegalArgumentException with this message to be thrown to identify inactive/invalid tokens.
         if (accessTokenDO == null && !includeExpired) {
-            throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
+            throw new IllegalArgumentException(ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE);
         }
         return accessTokenDO;
     }

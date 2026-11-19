@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoRequestValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -87,13 +88,18 @@ public class OpenIDConnectUserEndpoint {
         } catch (UserInfoEndpointException e) {
             return handleError(e);
         } catch (IllegalArgumentException e) {
-            // Translate race-window token-state IAE to invalid_token (HTTP 401) instead of uncaught 500.
-            String message = e.getMessage();
-            if (message != null && message.startsWith("Invalid Access Token")) {
-                return handleError(new UserInfoEndpointException(
-                        OAuthError.ResourceResponse.INVALID_TOKEN, "Access token validation failed"));
+            // Token revoked mid-request -> any lookup here returns invalid_token (401) instead of a 500.
+            if (OAuth2Util.ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE.equals(e.getMessage())
+                    || OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE.equals(e.getMessage())) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Access token became inactive during the request. Returning invalid_token.");
+                }
+                return handleError(new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_TOKEN,
+                        "Access token validation failed"));
             }
-            throw e;
+            // Unexpected error; log and rethrow as a declared OAuthSystemException, preserving the cause.
+            log.error("UserInfoEndpoint Failed", e);
+            throw new OAuthSystemException("UserInfoEndpoint Failed", e);
         } catch (OAuthSystemException e) {
             log.error("UserInfoEndpoint Failed", e);
             throw new OAuthSystemException("UserInfoEndpoint Failed");
