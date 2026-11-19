@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OrganizationUserUtil;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
@@ -256,9 +257,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return false;
         }
 
-        if (!authenticatedUser.isSharedUser() &&
-                !(authenticatedUser.isFederatedUser() && FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME.equals(
-                                authenticatedUser.getFederatedIdPName()))) {
+        if (!authenticatedUser.isSharedUser() && !OrganizationUserUtil.isOrganizationLoginUser(authenticatedUser)) {
             return false;
         }
 
