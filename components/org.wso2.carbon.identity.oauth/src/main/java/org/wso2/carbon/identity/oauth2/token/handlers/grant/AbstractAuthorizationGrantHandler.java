@@ -43,7 +43,6 @@ import org.wso2.carbon.identity.compatibility.settings.core.service.Compatibilit
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -560,8 +559,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         return null;
                     }
                     tenantDomain = tokenExchangeTenantDomain.get();
-                    tokenReqMessageContext.addProperty(
-                            PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
                 } else {
                     tenantDomain = resolveActionTenantDomain(oAuthAppDO);
                 }

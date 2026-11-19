@@ -163,6 +163,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         when(authorizationGrantHandler.isOfTypeApplicationUser(any())).thenReturn(true);
         Map<String, AuthorizationGrantHandler> mockGrantTypesMap = new HashMap<>();
         mockGrantTypesMap.put(GRANT_TYPE_TEST, authorizationGrantHandler);
+        mockGrantTypesMap.put(OAuthConstants.GrantTypes.TOKEN_EXCHANGE, authorizationGrantHandler);
         oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getSupportedGrantTypes()).
                 thenReturn(mockGrantTypesMap);
 
@@ -217,7 +218,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestSetsLocalUserType() throws Exception {
 
-        PreIssueAccessTokenEvent event = buildEvent(enableActorAndUserType(getMockTokenMessageContext()));
+        PreIssueAccessTokenEvent event = buildEvent(asTokenExchange(getMockTokenMessageContext()));
 
         Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
         Assert.assertEquals(event.getUser().getUserType(), "LOCAL");
@@ -227,7 +228,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestSetsFederatedUserType() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
         tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
         tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
 
@@ -241,7 +242,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestKeepsSSOUserTypeUnset() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
         tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
         tokenMessageContext.getAuthorizedUser().setFederatedIdPName("SSO");
 
@@ -254,7 +255,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestAddsActClaimForImpersonation() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
         tokenMessageContext.setImpersonationRequest(true);
         tokenMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, "impersonator-id");
 
@@ -267,7 +268,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestAddsActClaimForDelegation() throws Exception {
 
-        OAuthTokenReqMessageContext tokenMessageContext = enableActorAndUserType(getMockTokenMessageContext());
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
         tokenMessageContext.setDelegationRequest(true);
         tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
         tokenMessageContext.addProperty(OAuthConstants.EXISTING_ACT_CLAIM,
@@ -284,7 +285,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     @Test
     public void testBuildActionExecutionRequestWithoutActor() throws Exception {
 
-        PreIssueAccessTokenEvent event = buildEvent(enableActorAndUserType(getMockTokenMessageContext()));
+        PreIssueAccessTokenEvent event = buildEvent(asTokenExchange(getMockTokenMessageContext()));
 
         Assert.assertNull(event.getAccessToken().getClaim("act"));
     }
@@ -317,7 +318,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     }
 
     @Test(dataProvider = "resolvedAudiencesDataProvider")
-    public void testBuildActionExecutionRequestUsesResolvedAudiences(boolean actorAndUserTypeEnabled,
+    public void testBuildActionExecutionRequestUsesResolvedAudiences(boolean tokenExchange,
                                                                      boolean actionsExecuted,
                                                                      List<String> expectedAudiences)
             throws Exception {
@@ -328,8 +329,8 @@ public class PreIssueAccessTokenRequestBuilderTest {
             tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
             tokenMessageContext.setAdditionalAccessTokenClaims(new HashMap<>());
         }
-        if (actorAndUserTypeEnabled) {
-            enableActorAndUserType(tokenMessageContext);
+        if (tokenExchange) {
+            asTokenExchange(tokenMessageContext);
         }
 
         PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
@@ -364,9 +365,9 @@ public class PreIssueAccessTokenRequestBuilderTest {
                 "requested_token_type"));
     }
 
-    private OAuthTokenReqMessageContext enableActorAndUserType(OAuthTokenReqMessageContext tokenMessageContext) {
+    private OAuthTokenReqMessageContext asTokenExchange(OAuthTokenReqMessageContext tokenMessageContext) {
 
-        tokenMessageContext.addProperty(PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
+        tokenMessageContext.getOauth2AccessTokenReqDTO().setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
         return tokenMessageContext;
     }
 

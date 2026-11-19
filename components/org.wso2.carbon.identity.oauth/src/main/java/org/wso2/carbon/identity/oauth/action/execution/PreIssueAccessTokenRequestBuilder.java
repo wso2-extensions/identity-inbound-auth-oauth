@@ -99,12 +99,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final List<String> TOKEN_EXCHANGE_CREDENTIAL_PARAMS =
             Arrays.asList(OAuthConstants.SUBJECT_TOKEN, OAuthConstants.ACTOR_TOKEN);
 
-    /**
-     * Token request property the grant handler sets when the event should carry the user type and the act claim.
-     * Set only for token exchange, so the events of other grants stay unchanged.
-     */
-    public static final String ACTOR_AND_USER_TYPE_ENABLED = "preIssueAccessTokenActorAndUserTypeEnabled";
-
     @Override
     public ActionType getSupportedActionType() {
 
@@ -148,7 +142,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType(),
-                    isActorAndUserTypeEnabled(tokenMessageContext));
+                    isTokenExchange(tokenMessageContext));
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
         eventBuilder.organization(buildAccessTokenIssuedOrganization());
@@ -352,9 +346,17 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    static boolean isActorAndUserTypeEnabled(OAuthTokenReqMessageContext tokenMessageContext) {
+    /**
+     * Check whether the request is a token exchange request. The grant handler runs the action for token exchange
+     * only when the organization has enabled it.
+     *
+     * @param tokenMessageContext Token request message context.
+     * @return true for a token exchange request.
+     */
+    static boolean isTokenExchange(OAuthTokenReqMessageContext tokenMessageContext) {
 
-        return Boolean.TRUE.equals(tokenMessageContext.getProperty(ACTOR_AND_USER_TYPE_ENABLED));
+        return OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
+                tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType());
     }
 
     private void setUserType(User.Builder userBuilder, AuthenticatedUser authenticatedUser) {
@@ -374,7 +376,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private void handleActorClaim(OAuthTokenReqMessageContext tokenMessageContext,
                                   AccessToken.Builder accessTokenBuilder) throws IdentityOAuth2Exception {
 
-        if (!isActorAndUserTypeEnabled(tokenMessageContext) || tokenMessageContext.getAuthorizedUser() == null) {
+        if (!isTokenExchange(tokenMessageContext) || tokenMessageContext.getAuthorizedUser() == null) {
             return;
         }
         for (JWTAccessTokenClaimProvider claimProvider : new JWTAccessTokenClaimProvider[]{
@@ -415,7 +417,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             return tokenMessageContext.getAudiences();
         }
         // Token exchange narrows the audiences to the requested audience before the action runs.
-        if (isActorAndUserTypeEnabled(tokenMessageContext)) {
+        if (isTokenExchange(tokenMessageContext)) {
             List<String> audiences = tokenMessageContext.getAudiences();
             if (audiences != null) {
                 return audiences;

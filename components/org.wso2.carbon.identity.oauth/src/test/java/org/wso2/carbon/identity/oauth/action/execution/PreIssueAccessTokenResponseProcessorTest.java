@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.ResponseParam;
 import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -197,7 +198,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test(dataProvider = "actClaimDataProvider")
-    void testProcessSuccessResponseAddActClaim(boolean actorAndUserTypeEnabled, String expectedValue)
+    void testProcessSuccessResponseAddActClaim(boolean tokenExchange, String expectedValue)
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
@@ -207,11 +208,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
                 TAIL_CHARACTER, new AccessToken.Claim("may_act", "extension")));
         operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
                 TAIL_CHARACTER, new AccessToken.Claim("backend_tier", "gold")));
-        OAuthTokenReqMessageContext tokenMessageContext =
-                new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO());
-        if (actorAndUserTypeEnabled) {
-            tokenMessageContext.addProperty(PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        if (tokenExchange) {
+            tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
         }
+        OAuthTokenReqMessageContext tokenMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
                 executeProcessSuccessResponse(operationsToPerform, tokenMessageContext);

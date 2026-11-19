@@ -294,7 +294,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 });
 
         // For token exchange, act and may_act are set by the token issuer only.
-        boolean isTokenExchange = PreIssueAccessTokenRequestBuilder.isActorAndUserTypeEnabled(tokenMessageContext);
+        boolean isTokenExchange = PreIssueAccessTokenRequestBuilder.isTokenExchange(tokenMessageContext);
         Map<String, Object> customClaims = new HashMap<>();
         for (AccessToken.Claim claim : responseAccessToken.getClaims()) {
             if (AccessToken.ClaimNames.contains(claim.getName()) || (isTokenExchange &&
