@@ -97,7 +97,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String FEDERATED_USER = "FEDERATED";
     private static final String LOCAL_USER = "LOCAL";
     private static final String SSO_FEDERATED_IDP = "SSO";
-    private static final String ACT_CLAIM = AccessToken.ClaimNames.ACT.getName();
     private static final List<String> TOKEN_EXCHANGE_CREDENTIAL_PARAMS =
             Arrays.asList(OAuthConstants.SUBJECT_TOKEN, OAuthConstants.ACTOR_TOKEN);
 
@@ -381,8 +380,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         for (JWTAccessTokenClaimProvider claimProvider : new JWTAccessTokenClaimProvider[]{
                 new ImpersonatedAccessTokenClaimProvider(), new AgentAccessTokenClaimProvider()}) {
             Map<String, Object> claims = claimProvider.getAdditionalClaims(tokenMessageContext);
-            if (claims != null && claims.get(ACT_CLAIM) != null) {
-                accessTokenBuilder.addClaim(ACT_CLAIM, claims.get(ACT_CLAIM));
+            if (claims != null && claims.get(OAuthConstants.ACT) != null) {
+                accessTokenBuilder.addClaim(OAuthConstants.ACT, claims.get(OAuthConstants.ACT));
                 return;
             }
         }

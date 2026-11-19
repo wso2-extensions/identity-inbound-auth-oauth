@@ -200,9 +200,6 @@ public abstract class AbstractToken {
         TOKEN_BINDING_REF("binding_ref"),
         TOKEN_BINDING_TYPE("binding_type"),
         SUBJECT_TYPE("subject_type"),
-        // Delegation and impersonation claims are set by the token issuer only.
-        ACT("act"),
-        MAY_ACT("may_act"),
 
         IAT("iat");
 
