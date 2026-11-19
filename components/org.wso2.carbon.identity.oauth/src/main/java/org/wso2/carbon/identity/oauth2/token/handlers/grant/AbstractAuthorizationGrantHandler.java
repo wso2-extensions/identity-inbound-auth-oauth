@@ -550,37 +550,20 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
-            boolean isTokenExchange = OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
-                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType());
             try {
-                String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
-                // Selecting the action execution tenant domain based on the application's issuer organization.
-                if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                        getApplicationResidentOrganizationId())) {
-                    if (StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
-                        try {
-                            tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                    resolveTenantDomain(oAuthAppDO.getIssuerOrg());
-                        } catch (OrganizationManagementException e) {
-                            if (!isTokenExchange) {
-                                throw e;
-                            }
-                            if (log.isDebugEnabled()) {
-                                log.debug("Could not resolve the tenant of the application's issuer organization " +
-                                        "for client id: " + tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-                                        .getClientId() + ". The pre issue access token action is not executed for " +
-                                        "token exchange.", e);
-                            }
-                            return null;
-                        }
-                    }
-                }
-                if (isTokenExchange) {
-                    if (!isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain)) {
+                String tenantDomain;
+                if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType())) {
+                    Optional<String> tokenExchangeTenantDomain =
+                            getTokenExchangeActionTenantDomain(tokenReqMessageContext, oAuthAppDO);
+                    if (!tokenExchangeTenantDomain.isPresent()) {
                         return null;
                     }
+                    tenantDomain = tokenExchangeTenantDomain.get();
                     tokenReqMessageContext.addProperty(
                             PreIssueAccessTokenRequestBuilder.ACTOR_AND_USER_TYPE_ENABLED, true);
+                } else {
+                    tenantDomain = resolveActionTenantDomain(oAuthAppDO);
                 }
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                         .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext, tenantDomain);
@@ -600,6 +583,45 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         }
         return executionStatus;
+    }
+
+    private String resolveActionTenantDomain(OAuthAppDO oAuthAppDO) throws OrganizationManagementException {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+        // Selecting the action execution tenant domain based on the application's issuer organization.
+        if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId()) && StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
+            tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(oAuthAppDO.getIssuerOrg());
+        }
+        return tenantDomain;
+    }
+
+    /**
+     * Get the tenant domain to execute the pre issue access token action in for a token exchange request, if the
+     * organization has enabled the action for token exchange. A failure to resolve the tenant domain is treated as
+     * not enabled, so that token exchange doesn't fail for organizations that haven't enabled the action.
+     *
+     * @param tokenReqMessageContext Token request message context.
+     * @param oAuthAppDO             OAuth application of the request.
+     * @return Tenant domain, or empty if the action is not executed for the request.
+     */
+    private Optional<String> getTokenExchangeActionTenantDomain(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                                OAuthAppDO oAuthAppDO) {
+
+        String tenantDomain;
+        try {
+            tenantDomain = resolveActionTenantDomain(oAuthAppDO);
+        } catch (OrganizationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not resolve the tenant of the application's issuer organization for client id: " +
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId() +
+                        ". The pre issue access token action is not executed for token exchange.", e);
+            }
+            return Optional.empty();
+        }
+        return isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain) ? Optional.of(tenantDomain) :
+                Optional.empty();
     }
 
     private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext,
