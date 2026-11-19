@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
@@ -95,8 +96,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String PARAM_ID_TOKEN = "id_token";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
     private static final String FEDERATED_USER = "FEDERATED";
-    private static final String LOCAL_USER = "LOCAL";
-    private static final String SSO_FEDERATED_IDP = "SSO";
     private static final List<String> TOKEN_EXCHANGE_CREDENTIAL_PARAMS =
             Arrays.asList(OAuthConstants.SUBJECT_TOKEN, OAuthConstants.ACTOR_TOKEN);
 
@@ -361,8 +360,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private void setUserType(User.Builder userBuilder, AuthenticatedUser authenticatedUser) {
 
         if (!authenticatedUser.isFederatedUser()) {
-            userBuilder.userType(LOCAL_USER);
-        } else if (!SSO_FEDERATED_IDP.equalsIgnoreCase(authenticatedUser.getFederatedIdPName())) {
+            userBuilder.userType(OAuthConstants.UserType.LOCAL_USER_TYPE);
+        } else if (!FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME.equalsIgnoreCase(
+                authenticatedUser.getFederatedIdPName())) {
             userBuilder.userType(FEDERATED_USER).federatedIdP(authenticatedUser.getFederatedIdPName());
         }
     }
