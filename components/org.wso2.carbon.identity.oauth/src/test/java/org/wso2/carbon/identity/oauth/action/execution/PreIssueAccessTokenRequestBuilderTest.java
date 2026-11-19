@@ -25,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
@@ -61,6 +62,7 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -161,6 +163,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         when(authorizationGrantHandler.isOfTypeApplicationUser(any())).thenReturn(true);
         Map<String, AuthorizationGrantHandler> mockGrantTypesMap = new HashMap<>();
         mockGrantTypesMap.put(GRANT_TYPE_TEST, authorizationGrantHandler);
+        mockGrantTypesMap.put(OAuthConstants.GrantTypes.TOKEN_EXCHANGE, authorizationGrantHandler);
         oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getSupportedGrantTypes()).
                 thenReturn(mockGrantTypesMap);
 
@@ -209,6 +212,183 @@ public class PreIssueAccessTokenRequestBuilderTest {
             Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
             assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
             assertAllowedOperations(actionExecutionRequest.getAllowedOperations(), getExpectedAllowedOperations());
+        }
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestSetsLocalUserType() throws Exception {
+
+        PreIssueAccessTokenEvent event = buildEvent(asTokenExchange(getMockTokenMessageContext()));
+
+        Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
+        Assert.assertEquals(event.getUser().getUserType(), "LOCAL");
+        Assert.assertNull(event.getUser().getFederatedIdP());
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestSetsFederatedUserType() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertEquals(event.getUser().getId(), USER_ID_TEST);
+        Assert.assertEquals(event.getUser().getUserType(), "FEDERATED");
+        Assert.assertEquals(event.getUser().getFederatedIdP(), "ext-issuer");
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestKeepsSSOUserTypeUnset() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("SSO");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertNull(event.getUser().getUserType());
+        Assert.assertNull(event.getUser().getFederatedIdP());
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestAddsActClaimForImpersonation() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
+        tokenMessageContext.setImpersonationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.IMPERSONATING_ACTOR, "impersonator-id");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertEquals(event.getAccessToken().getClaim("act").getValue(),
+                Collections.singletonMap("sub", "impersonator-id"));
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestAddsActClaimForDelegation() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = asTokenExchange(getMockTokenMessageContext());
+        tokenMessageContext.setDelegationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
+        tokenMessageContext.addProperty(OAuthConstants.EXISTING_ACT_CLAIM,
+                Collections.singletonMap("sub", "agent-1"));
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Map<String, Object> expectedActClaim = new HashMap<>();
+        expectedActClaim.put("sub", "agent-2");
+        expectedActClaim.put("act", Collections.singletonMap("sub", "agent-1"));
+        Assert.assertEquals(event.getAccessToken().getClaim("act").getValue(), expectedActClaim);
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestWithoutActor() throws Exception {
+
+        PreIssueAccessTokenEvent event = buildEvent(asTokenExchange(getMockTokenMessageContext()));
+
+        Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    @Test
+    public void testBuildActionExecutionRequestOmitsUserTypeAndActWhenNotEnabled() throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.getAuthorizedUser().setFederatedUser(true);
+        tokenMessageContext.getAuthorizedUser().setFederatedIdPName("ext-issuer");
+        tokenMessageContext.setDelegationRequest(true);
+        tokenMessageContext.addProperty(OAuthConstants.ACTOR_SUBJECT, "agent-2");
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertNull(event.getUser().getUserType());
+        Assert.assertNull(event.getUser().getFederatedIdP());
+        Assert.assertNull(event.getAccessToken().getClaim("act"));
+    }
+
+    @DataProvider(name = "resolvedAudiencesDataProvider")
+    public Object[][] resolvedAudiencesDataProvider() {
+
+        // Token exchange with the action enabled, whether an action already ran for the token, expected aud.
+        return new Object[][]{
+                {true, false, Collections.singletonList("api-a")},
+                {false, true, Collections.singletonList("api-a")},
+                {false, false, Collections.singletonList(AUDIENCE_TEST)}
+        };
+    }
+
+    @Test(dataProvider = "resolvedAudiencesDataProvider")
+    public void testBuildActionExecutionRequestUsesResolvedAudiences(boolean tokenExchange,
+                                                                     boolean actionsExecuted,
+                                                                     List<String> expectedAudiences)
+            throws Exception {
+
+        OAuthTokenReqMessageContext tokenMessageContext = getMockTokenMessageContext();
+        tokenMessageContext.setAudiences(Collections.singletonList("api-a"));
+        if (actionsExecuted) {
+            tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
+            tokenMessageContext.setAdditionalAccessTokenClaims(new HashMap<>());
+        }
+        if (tokenExchange) {
+            asTokenExchange(tokenMessageContext);
+        }
+
+        PreIssueAccessTokenEvent event = buildEvent(tokenMessageContext);
+
+        Assert.assertEquals(event.getAccessToken().getClaim("aud").getValue(), expectedAudiences);
+    }
+
+    @Test
+    public void testTokenExchangeRequestDoesNotForwardSubjectOrActorToken() throws Exception {
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(CLIENT_ID_TEST);
+        tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
+        tokenReqDTO.setScope(new String[0]);
+        tokenReqDTO.setRequestParameters(new RequestParameter[]{
+                new RequestParameter("grant_type", OAuthConstants.GrantTypes.TOKEN_EXCHANGE),
+                new RequestParameter(OAuthConstants.SUBJECT_TOKEN, "subject.jwt.value"),
+                new RequestParameter("subject_token_type", "urn:ietf:params:oauth:token-type:jwt"),
+                new RequestParameter(OAuthConstants.ACTOR_TOKEN, "actor.jwt.value"),
+                new RequestParameter("actor_token_type", "urn:ietf:params:oauth:token-type:jwt"),
+                new RequestParameter("requested_token_type", "urn:ietf:params:oauth:token-type:access_token")
+        });
+
+        Method getRequest = PreIssueAccessTokenRequestBuilder.class.getDeclaredMethod("getRequest",
+                OAuth2AccessTokenReqDTO.class);
+        getRequest.setAccessible(true);
+        TokenRequest request = (TokenRequest) getRequest.invoke(preIssueAccessTokenRequestBuilder, tokenReqDTO);
+
+        List<String> forwardedParams = new ArrayList<>();
+        request.getAdditionalParams().forEach(param -> forwardedParams.add(param.getName()));
+        Assert.assertEquals(forwardedParams, Arrays.asList("grant_type", "subject_token_type", "actor_token_type",
+                "requested_token_type"));
+    }
+
+    private OAuthTokenReqMessageContext asTokenExchange(OAuthTokenReqMessageContext tokenMessageContext) {
+
+        tokenMessageContext.getOauth2AccessTokenReqDTO().setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
+        return tokenMessageContext;
+    }
+
+    private PreIssueAccessTokenEvent buildEvent(OAuthTokenReqMessageContext tokenMessageContext) throws Exception {
+
+        MinimalOrganization minimalOrganization =
+                new MinimalOrganization.Builder().id(ORG_ID).name(ORG_NAME).organizationHandle(ORG_HANDLE)
+                        .depth(ORG_DEPTH).build();
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getMinimalOrganization(anyString(), nullable(String.class)))
+                    .thenReturn(minimalOrganization);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
+                    buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", tokenMessageContext), null);
+            return (PreIssueAccessTokenEvent) actionExecutionRequest.getEvent();
         }
     }
 

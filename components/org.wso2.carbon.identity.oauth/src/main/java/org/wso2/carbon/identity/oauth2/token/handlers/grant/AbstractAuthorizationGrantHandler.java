@@ -37,6 +37,9 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -108,6 +111,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected OAuthCache oauthCache;
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
+    private static final String PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP = "preIssueAccessTokenAction";
+    private static final String ENABLE_FOR_TOKEN_EXCHANGE_SETTING = "enableForTokenExchangeGrant";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     protected AuthorizationDetailsService authorizationDetailsService;
 
@@ -545,14 +550,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
             try {
-                String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
-                // Selecting the action execution tenant domain based on the application's issuer organization.
-                if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                        getApplicationResidentOrganizationId())) {
-                    if (StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
-                        tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
-                                resolveTenantDomain(oAuthAppDO.getIssuerOrg());
+                String tenantDomain;
+                if (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType())) {
+                    Optional<String> tokenExchangeTenantDomain =
+                            getTokenExchangeActionTenantDomain(tokenReqMessageContext, oAuthAppDO);
+                    if (!tokenExchangeTenantDomain.isPresent()) {
+                        return null;
                     }
+                    tenantDomain = tokenExchangeTenantDomain.get();
+                } else {
+                    tenantDomain = resolveActionTenantDomain(oAuthAppDO);
                 }
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                         .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext, tenantDomain);
@@ -574,6 +582,45 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return executionStatus;
     }
 
+    private String resolveActionTenantDomain(OAuthAppDO oAuthAppDO) throws OrganizationManagementException {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+        // Selecting the action execution tenant domain based on the application's issuer organization.
+        if (StringUtils.isNotEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId()) && StringUtils.isNotEmpty(oAuthAppDO.getIssuerOrg())) {
+            tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                    resolveTenantDomain(oAuthAppDO.getIssuerOrg());
+        }
+        return tenantDomain;
+    }
+
+    /**
+     * Get the tenant domain to execute the pre issue access token action in for a token exchange request, if the
+     * organization has enabled the action for token exchange. A failure to resolve the tenant domain is treated as
+     * not enabled, so that token exchange doesn't fail for organizations that haven't enabled the action.
+     *
+     * @param tokenReqMessageContext Token request message context.
+     * @param oAuthAppDO             OAuth application of the request.
+     * @return Tenant domain, or empty if the action is not executed for the request.
+     */
+    private Optional<String> getTokenExchangeActionTenantDomain(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                                                OAuthAppDO oAuthAppDO) {
+
+        String tenantDomain;
+        try {
+            tenantDomain = resolveActionTenantDomain(oAuthAppDO);
+        } catch (OrganizationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not resolve the tenant of the application's issuer organization for client id: " +
+                        tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId() +
+                        ". The pre issue access token action is not executed for token exchange.", e);
+            }
+            return Optional.empty();
+        }
+        return isPreIssueAccessTokenActionEnabledForTokenExchange(tenantDomain) ? Optional.of(tenantDomain) :
+                Optional.empty();
+    }
+
     private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext,
                                                             OAuthAppDO oAuthAppBean) throws IdentityOAuth2Exception {
 
@@ -586,8 +633,36 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                         OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
                         OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
+                        OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
+    }
+
+    /**
+     * Check whether the organization has enabled the pre issue access token action for the token exchange grant.
+     *
+     * @param tenantDomain Tenant domain the action is executed in.
+     * @return true if the compatibility setting is enabled for the tenant.
+     */
+    protected boolean isPreIssueAccessTokenActionEnabledForTokenExchange(String tenantDomain) {
+
+        CompatibilitySettingsService settingsService =
+                OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
+        if (settingsService == null) {
+            return false;
+        }
+        try {
+            CompatibilitySettingGroup group = settingsService.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                    PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP, ENABLE_FOR_TOKEN_EXCHANGE_SETTING)
+                    .getCompatibilitySetting(PRE_ISSUE_ACCESS_TOKEN_ACTION_SETTING_GROUP);
+            return group != null && Boolean.parseBoolean(group.getSettingValue(ENABLE_FOR_TOKEN_EXCHANGE_SETTING));
+        } catch (CompatibilitySettingException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while evaluating the compatibility setting for tenant: " + tenantDomain +
+                        ". Pre issue access token action will not be executed for token exchange.", e);
+            }
+            return false;
+        }
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {

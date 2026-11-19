@@ -1036,10 +1036,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // for JWT access tokens if pre issue access token action invocation is enabled at server level.
         return OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                 .isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN) &&
+                JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType()) &&
                 (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                         OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
-                JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType) ||
+                        (OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType) &&
+                                isPreIssueAccessTokenActionEnabledForTokenExchange(
+                                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()))));
     }
 
     /**
