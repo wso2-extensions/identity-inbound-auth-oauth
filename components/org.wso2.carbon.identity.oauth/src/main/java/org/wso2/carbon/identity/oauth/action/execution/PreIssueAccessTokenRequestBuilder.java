@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
@@ -57,6 +58,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.AgentAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -91,6 +95,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     private static final String PARAM_REFRESH_TOKEN = "refresh_token";
     private static final String PARAM_ID_TOKEN = "id_token";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
+    private static final String FEDERATED_USER = "FEDERATED";
+    private static final List<String> TOKEN_EXCHANGE_CREDENTIAL_PARAMS =
+            Arrays.asList(OAuthConstants.SUBJECT_TOKEN, OAuthConstants.ACTOR_TOKEN);
 
     @Override
     public ActionType getSupportedActionType() {
@@ -134,7 +141,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
-            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
+            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType(),
+                    isTokenExchange(tokenMessageContext));
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
         eventBuilder.organization(buildAccessTokenIssuedOrganization());
@@ -230,7 +238,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder,
-                                        AuthenticatedUser authenticatedUser, String clientID, String grantType) {
+                                        AuthenticatedUser authenticatedUser, String clientID, String grantType,
+                                        boolean includeUserType) {
 
         try {
             String organizationId;
@@ -249,11 +258,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             }
             Organization organization = buildOrganization(organizationId, tenantDomain);
 
-            User user = new User.Builder(authenticatedUser.getUserId())
-                    .organization(organization)
-                    .build();
+            User.Builder userBuilder = new User.Builder(authenticatedUser.getUserId())
+                    .organization(organization);
+            if (includeUserType) {
+                setUserType(userBuilder, authenticatedUser);
+            }
 
-            eventBuilder.user(user);
+            eventBuilder.user(userBuilder.build());
         } catch (UserIdNotFoundException e) {
             if (LOG.isDebugEnabled()) {
                 // todo: fall back to a different identifier like username.
@@ -281,7 +292,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         RequestParameter[] requestParameters = tokenRequestDTO.getRequestParameters();
         if (requestParameters != null) {
+            boolean isTokenExchange =
+                    OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(tokenRequestDTO.getGrantType());
             for (RequestParameter parameter : requestParameters) {
+                // Subject and actor tokens are bearer credentials, so they are never sent to the extension.
+                if (isTokenExchange && TOKEN_EXCHANGE_CREDENTIAL_PARAMS.contains(parameter.getKey())) {
+                    continue;
+                }
                 tokenRequestBuilder.addAdditionalParam(parameter.getKey(), parameter.getValue());
             }
         }
@@ -318,6 +335,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             handleStandardClaims(tokenMessageContext, tokenType, issuer, audience, accessTokenBuilder);
             handleSubjectClaim(tokenMessageContext.getAuthorizedUser(), oAuthAppDO, accessTokenBuilder);
             handleTokenBindingClaims(tokenMessageContext, accessTokenBuilder);
+            handleActorClaim(tokenMessageContext, accessTokenBuilder);
             claimsToAdd.forEach(accessTokenBuilder::addClaim);
             return accessTokenBuilder.build();
         } catch (IdentityOAuth2Exception e) {
@@ -325,6 +343,49 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     "Failed to generate pre issue access token action request for application: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
+        }
+    }
+
+    /**
+     * Check whether the request is a token exchange request. The grant handler runs the action for token exchange
+     * only when the organization has enabled it.
+     *
+     * @param tokenMessageContext Token request message context.
+     * @return true for a token exchange request.
+     */
+    static boolean isTokenExchange(OAuthTokenReqMessageContext tokenMessageContext) {
+
+        return OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(
+                tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType());
+    }
+
+    private void setUserType(User.Builder userBuilder, AuthenticatedUser authenticatedUser) {
+
+        if (!authenticatedUser.isFederatedUser()) {
+            userBuilder.userType(OAuthConstants.UserType.LOCAL_USER_TYPE);
+        } else if (!FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME.equalsIgnoreCase(
+                authenticatedUser.getFederatedIdPName())) {
+            userBuilder.userType(FEDERATED_USER).federatedIdP(authenticatedUser.getFederatedIdPName());
+        }
+    }
+
+    /**
+     * Add the act claim the token issuer will add for an impersonation or delegation request, so the extension
+     * knows who is acting for the subject.
+     */
+    private void handleActorClaim(OAuthTokenReqMessageContext tokenMessageContext,
+                                  AccessToken.Builder accessTokenBuilder) throws IdentityOAuth2Exception {
+
+        if (!isTokenExchange(tokenMessageContext) || tokenMessageContext.getAuthorizedUser() == null) {
+            return;
+        }
+        for (JWTAccessTokenClaimProvider claimProvider : new JWTAccessTokenClaimProvider[]{
+                new ImpersonatedAccessTokenClaimProvider(), new AgentAccessTokenClaimProvider()}) {
+            Map<String, Object> claims = claimProvider.getAdditionalClaims(tokenMessageContext);
+            if (claims != null && claims.get(OAuthConstants.ACT) != null) {
+                accessTokenBuilder.addClaim(OAuthConstants.ACT, claims.get(OAuthConstants.ACT));
+                return;
+            }
         }
     }
 
@@ -354,9 +415,15 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         if (tokenMessageContext.isPreIssueAccessTokenActionsExecuted()) {
             return tokenMessageContext.getAudiences();
-        } else {
-            return OAuth2Util.getOIDCAudience(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
         }
+        // Token exchange narrows the audiences to the requested audience before the action runs.
+        if (isTokenExchange(tokenMessageContext)) {
+            List<String> audiences = tokenMessageContext.getAudiences();
+            if (audiences != null) {
+                return audiences;
+            }
+        }
+        return OAuth2Util.getOIDCAudience(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
     }
 
     private void handleStandardClaims(OAuthTokenReqMessageContext tokenMessageContext, String tokenType,

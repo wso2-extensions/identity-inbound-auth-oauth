@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.ResponseParam;
 import org.wso2.carbon.identity.oauth.action.model.TokenResponse;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -187,6 +188,38 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
+    }
+
+    @DataProvider(name = "actClaimDataProvider")
+    public Object[][] actClaimDataProvider() {
+
+        // Whether the request is a token exchange request, and the act and may_act values expected in the token.
+        return new Object[][]{{true, null}, {false, "extension"}};
+    }
+
+    @Test(dataProvider = "actClaimDataProvider")
+    void testProcessSuccessResponseAddActClaim(boolean tokenExchange, String expectedValue)
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("act", "extension")));
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("may_act", "extension")));
+        operationsToPerform.add(createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX +
+                TAIL_CHARACTER, new AccessToken.Claim("backend_tier", "gold")));
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        if (tokenExchange) {
+            tokenReqDTO.setGrantType(OAuthConstants.GrantTypes.TOKEN_EXCHANGE);
+        }
+        OAuthTokenReqMessageContext tokenMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
+                executeProcessSuccessResponse(operationsToPerform, tokenMessageContext);
+
+        assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("act"), expectedValue);
+        assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("may_act"), expectedValue);
+        assertEquals(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("backend_tier"), "gold");
     }
 
     @Test
@@ -534,6 +567,14 @@ public class PreIssueAccessTokenResponseProcessorTest {
     private OAuthTokenReqMessageContext executeProcessSuccessResponse(List<PerformableOperation> operationsToPerform)
             throws ActionExecutionResponseProcessorException {
 
+        return executeProcessSuccessResponse(operationsToPerform,
+                new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO()));
+    }
+
+    private OAuthTokenReqMessageContext executeProcessSuccessResponse(List<PerformableOperation> operationsToPerform,
+                                                                      OAuthTokenReqMessageContext tokenMessageContext)
+            throws ActionExecutionResponseProcessorException {
+
         ActionInvocationSuccessResponse successResponse = new ActionInvocationSuccessResponse.Builder()
                 .actionStatus(ActionInvocationResponse.Status.SUCCESS)
                 .operations(operationsToPerform)
@@ -550,7 +591,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         PreIssueAccessTokenResponseProcessor processor = new PreIssueAccessTokenResponseProcessor();
         FlowContext flowContext = FlowContext.create();
-        flowContext.add("tokenMessageContext", new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO()));
+        flowContext.add("tokenMessageContext", tokenMessageContext);
 
         ActionExecutionStatus<Success> result = processor.processSuccessResponse(flowContext, responseContext);
         assertNotNull(result);

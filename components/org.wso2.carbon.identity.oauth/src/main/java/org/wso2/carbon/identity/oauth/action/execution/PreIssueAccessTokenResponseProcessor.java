@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
 import org.wso2.carbon.identity.oauth.action.model.ResponseParam;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -292,11 +293,15 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     tokenMessageContext.setAudiences(audienceList);
                 });
 
+        // For token exchange, act and may_act are set by the token issuer only.
+        boolean isTokenExchange = PreIssueAccessTokenRequestBuilder.isTokenExchange(tokenMessageContext);
         Map<String, Object> customClaims = new HashMap<>();
         for (AccessToken.Claim claim : responseAccessToken.getClaims()) {
-            if (!AccessToken.ClaimNames.contains(claim.getName())) {
-                customClaims.put(claim.getName(), claim.getValue());
+            if (AccessToken.ClaimNames.contains(claim.getName()) || (isTokenExchange &&
+                    (OAuthConstants.ACT.equals(claim.getName()) || OAuthConstants.MAY_ACT.equals(claim.getName())))) {
+                continue;
             }
+            customClaims.put(claim.getName(), claim.getValue());
         }
         tokenMessageContext.setAdditionalAccessTokenClaims(customClaims);
 

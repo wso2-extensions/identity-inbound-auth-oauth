@@ -39,6 +39,10 @@ import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceCom
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingServerException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySettingGroup;
+import org.wso2.carbon.identity.compatibility.settings.core.service.CompatibilitySettingsService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -71,7 +75,11 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -85,10 +93,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
@@ -563,6 +574,140 @@ public class AbstractAuthorizationGrantHandlerTest {
             OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
             assertNotNull(tokenRespDTO.getAccessToken());
             assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
+        }
+    }
+
+    @DataProvider(name = "PreIssueAccessTokenActionGrantTypeDataProvider")
+    public Object[][] preIssueAccessTokenActionGrantTypeDataProvider() {
+
+        return new Object[][]{
+                {OAuthConstants.GrantTypes.AUTHORIZATION_CODE, true},
+                {OAuthConstants.GrantTypes.CLIENT_CREDENTIALS, true},
+                {OAuthConstants.GrantTypes.PASSWORD, true},
+                {OAuthConstants.GrantTypes.REFRESH_TOKEN, true},
+                {OAuthConstants.GrantTypes.TOKEN_EXCHANGE, true},
+                {OAuthConstants.GrantTypes.ORGANIZATION_SWITCH, false}
+        };
+    }
+
+    @Test(dataProvider = "PreIssueAccessTokenActionGrantTypeDataProvider")
+    public void testCheckExecutePreIssueAccessTokenActionsForGrantType(String grantType, boolean expected)
+            throws Exception {
+
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+        when(mockActionExecutionService.isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN)).thenReturn(true);
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setGrantType(grantType);
+        OAuthAppDO jwtApp = new OAuthAppDO();
+        jwtApp.setTokenType("JWT");
+
+        Method method = AbstractAuthorizationGrantHandler.class.getDeclaredMethod(
+                "checkExecutePreIssueAccessTokensActions", OAuthTokenReqMessageContext.class, OAuthAppDO.class);
+        method.setAccessible(true);
+        assertEquals(method.invoke(handler, new OAuthTokenReqMessageContext(tokenReqDTO), jwtApp), expected);
+    }
+
+    @DataProvider(name = "IssuerOrganizationTenantFailureDataProvider")
+    public Object[][] issuerOrganizationTenantFailureDataProvider() {
+
+        // Grant type, whether the request fails.
+        return new Object[][]{{OAuthConstants.GrantTypes.TOKEN_EXCHANGE, false}, {PASSWORD_GRANT, true}};
+    }
+
+    @Test(dataProvider = "IssuerOrganizationTenantFailureDataProvider")
+    public void testExecutePreIssueAccessTokenActionsWhenIssuerOrganizationTenantFails(String grantType,
+                                                                                       boolean expectFailure)
+            throws Exception {
+
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+        when(mockActionExecutionService.isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN)).thenReturn(true);
+        OAuthAppDO sharedApp = new OAuthAppDO();
+        sharedApp.setTokenType("JWT");
+        sharedApp.setIssuerOrg("issuer-org-id");
+        OrganizationManager organizationManager = mock(OrganizationManager.class);
+        when(organizationManager.resolveTenantDomain("issuer-org-id"))
+                .thenThrow(new OrganizationManagementException("error"));
+        OrganizationManager existingOrganizationManager =
+                OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManager);
+
+        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
+        tokenReqDTO.setClientId(clientId);
+        tokenReqDTO.setGrantType(grantType);
+        Method method = AbstractAuthorizationGrantHandler.class.getDeclaredMethod(
+                "executePreIssueAccessTokenActions", OAuthTokenReqMessageContext.class);
+        method.setAccessible(true);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId("sub-org-id");
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationFromOrgHierarchy(anyString(), anyString()))
+                    .thenReturn(sharedApp);
+            try {
+                Object executionStatus = method.invoke(handler, new OAuthTokenReqMessageContext(tokenReqDTO));
+                assertFalse(expectFailure, "Expected the request to fail for grant type: " + grantType);
+                assertNull(executionStatus);
+            } catch (InvocationTargetException e) {
+                assertTrue(expectFailure, "Unexpected failure for grant type: " + grantType);
+                assertTrue(e.getCause() instanceof IdentityOAuth2Exception);
+            }
+            verify(mockActionExecutionService, never()).execute(any(ActionType.class), any(), any());
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+            OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(existingOrganizationManager);
+        }
+    }
+
+    @DataProvider(name = "TokenExchangeCompatibilitySettingDataProvider")
+    public Object[][] tokenExchangeCompatibilitySettingDataProvider() {
+
+        return new Object[][]{{"true", true}, {"false", false}, {null, false}};
+    }
+
+    @Test(dataProvider = "TokenExchangeCompatibilitySettingDataProvider")
+    public void testIsPreIssueAccessTokenActionEnabledForTokenExchange(String settingValue, boolean expected)
+            throws Exception {
+
+        CompatibilitySettingsService compatibilitySettingsService = mock(CompatibilitySettingsService.class);
+        CompatibilitySettingGroup group = new CompatibilitySettingGroup();
+        group.setSettingGroup("preIssueAccessTokenAction");
+        if (settingValue != null) {
+            group.addSetting("enableForTokenExchangeGrant", settingValue);
+        }
+        CompatibilitySetting setting = new CompatibilitySetting();
+        setting.addCompatibilitySetting(group);
+        when(compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(
+                "carbon.super", "preIssueAccessTokenAction", "enableForTokenExchangeGrant")).thenReturn(setting);
+
+        assertEquals(invokeIsEnabledForTokenExchange(compatibilitySettingsService), expected);
+    }
+
+    @Test
+    public void testIsPreIssueAccessTokenActionEnabledForTokenExchangeOnError() throws Exception {
+
+        CompatibilitySettingsService compatibilitySettingsService = mock(CompatibilitySettingsService.class);
+        when(compatibilitySettingsService.getCompatibilitySettingsByGroupAndSetting(anyString(), anyString(),
+                anyString())).thenThrow(new CompatibilitySettingServerException("error"));
+
+        assertFalse(invokeIsEnabledForTokenExchange(compatibilitySettingsService));
+        assertFalse(invokeIsEnabledForTokenExchange(null));
+    }
+
+    private boolean invokeIsEnabledForTokenExchange(CompatibilitySettingsService compatibilitySettingsService)
+            throws Exception {
+
+        CompatibilitySettingsService existing =
+                OAuthComponentServiceHolder.getInstance().getCompatibilitySettingsService();
+        OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(compatibilitySettingsService);
+        try {
+            Method method = AbstractAuthorizationGrantHandler.class.getDeclaredMethod(
+                    "isPreIssueAccessTokenActionEnabledForTokenExchange", String.class);
+            method.setAccessible(true);
+            return (boolean) method.invoke(handler, "carbon.super");
+        } finally {
+            OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(existing);
         }
     }
 
