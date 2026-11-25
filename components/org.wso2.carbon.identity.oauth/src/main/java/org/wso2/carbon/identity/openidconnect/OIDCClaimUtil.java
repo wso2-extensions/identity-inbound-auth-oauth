@@ -451,6 +451,7 @@ public class OIDCClaimUtil {
         String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
         String userTenantDomain = authenticatedUser.getTenantDomain();
         String userResidentTenantDomain = userTenantDomain;
+        AuthenticatedUser userForRoleResolution = authenticatedUser;
         if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
             userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                     .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
@@ -469,6 +470,12 @@ public class OIDCClaimUtil {
             userTenantDomain = userResidentTenantDomain;
             fullQualifiedUsername = userStoreManager.getUser(userId, null)
                     .getFullQualifiedUsername();
+            /* An organization SSO user is a federated user in the application's organization, but a local user of
+            the resident organization. Resolve the roles against the resident organization. */
+            if (authenticatedUser.isFederatedUser() && StringUtils.isEmpty(authenticatedUser.getSharedUserId())) {
+                userForRoleResolution = buildResidentOrgLocalUser(userId, fullQualifiedUsername,
+                        userResidentTenantDomain);
+            }
         }
 
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
@@ -513,7 +520,7 @@ public class OIDCClaimUtil {
         }
 
         if (roleClaimRequested || appRoleClaimRequested) {
-            String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
+            String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(userForRoleResolution,
                     serviceProvider.getApplicationResourceId(), serviceProvider.getTenantDomain());
             if (roleClaimRequested) {
                 setRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
@@ -566,6 +573,26 @@ public class OIDCClaimUtil {
 
         String userName = MultitenantUtils.getTenantAwareUsername(authenticatedUser.getUserName());
         return UserCoreUtil.removeDomainFromName(userName);
+    }
+
+    /**
+     * Build the local user of the resident organization for an organization SSO user.
+     *
+     * @param userId                   User id in the resident organization.
+     * @param fullQualifiedUsername    Fully qualified username in the resident organization.
+     * @param userResidentTenantDomain Tenant domain of the resident organization.
+     * @return Local user of the resident organization.
+     */
+    private static AuthenticatedUser buildResidentOrgLocalUser(String userId, String fullQualifiedUsername,
+                                                               String userResidentTenantDomain) {
+
+        AuthenticatedUser residentOrgUser = new AuthenticatedUser();
+        residentOrgUser.setUserId(userId);
+        residentOrgUser.setUserName(UserCoreUtil.removeDomainFromName(
+                MultitenantUtils.getTenantAwareUsername(fullQualifiedUsername)));
+        residentOrgUser.setUserStoreDomain(UserCoreUtil.extractDomainFromName(fullQualifiedUsername));
+        residentOrgUser.setTenantDomain(userResidentTenantDomain);
+        return residentOrgUser;
     }
 
     private static Map<String, String> getUserClaimsInLocalDialect(String username, UserRealm realm,
