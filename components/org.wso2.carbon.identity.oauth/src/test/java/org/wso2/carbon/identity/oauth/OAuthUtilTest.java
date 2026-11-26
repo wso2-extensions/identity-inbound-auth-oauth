@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -89,6 +89,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -382,6 +383,8 @@ public class OAuthUtilTest {
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any(), any())).thenReturn("someCacheKey");
 
         idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
                 .thenReturn(false);
@@ -396,6 +399,147 @@ public class OAuthUtilTest {
             verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
             assertTrue(result, "Token revocation failed.");
         }
+    }
+
+    @Test
+    public void testRevokeTokensRevokesLatestTokenOfEachUserType() throws Exception {
+
+        String username = "testUser";
+        String roleId = "testRoleId";
+        String appId = "testAppId";
+        String clientId = "testClientId";
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        when(userStoreManager.getTenantId()).thenReturn(-1234);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(mock(RealmConfiguration.class));
+        when(userStoreManager.getRealmConfiguration().getUserStoreProperty(anyString())).thenReturn("PRIMARY");
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
+        // The latest token of each scope is revoked only when the token hashing is disabled.
+        when(OAuth2Util.isHashDisabled()).thenReturn(true);
+        when(OAuth2Util.buildScopeString(any(String[].class))).thenCallRealMethod();
+
+        RoleBasicInfo roleBasicInfo = new RoleBasicInfo();
+        roleBasicInfo.setId(roleId);
+        roleBasicInfo.setAudience(RoleConstants.APPLICATION);
+        roleBasicInfo.setAudienceId(appId);
+        roleBasicInfo.setName("testRole");
+        when(roleManagementService.getRoleBasicInfoById(roleId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(roleBasicInfo);
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
+        InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig =
+                new InboundAuthenticationRequestConfig();
+        inboundAuthenticationRequestConfig.setInboundAuthKey(clientId);
+        inboundAuthenticationRequestConfig.setInboundAuthType(ApplicationConstants.StandardInboundProtocols.OAUTH2);
+        inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(
+                new InboundAuthenticationRequestConfig[]{inboundAuthenticationRequestConfig});
+        serviceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
+        when(applicationManagementService.getApplicationByResourceId(
+                appId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(serviceProvider);
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId("testUserId");
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setTenantDomain("carbon.super");
+
+        // The user holds a token of each user type for the same client and scope.
+        AccessTokenDO applicationToken = buildAccessTokenDO("applicationToken", clientId, authenticatedUser,
+                OAuthConstants.UserType.APPLICATION);
+        AccessTokenDO applicationUserToken = buildAccessTokenDO("applicationUserToken", clientId,
+                authenticatedUser, OAuthConstants.UserType.APPLICATION_USER);
+
+        OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
+        when(mockAccessTokenDAO.getAccessTokens(anyString(), anyString(), any(AuthenticatedUser.class),
+                nullable(String.class), anyBoolean()))
+                .thenReturn(new HashSet<>(Arrays.asList(applicationToken, applicationUserToken)));
+        when(mockAccessTokenDAO.getLatestAccessToken(eq(clientId), anyString(), any(AuthenticatedUser.class),
+                nullable(String.class), eq("default"), eq(OAuthConstants.TokenBindings.NONE), eq(true),
+                eq(OAuthConstants.UserType.APPLICATION))).thenReturn(applicationToken);
+        when(mockAccessTokenDAO.getLatestAccessToken(eq(clientId), anyString(), any(AuthenticatedUser.class),
+                nullable(String.class), eq("default"), eq(OAuthConstants.TokenBindings.NONE), eq(true),
+                eq(OAuthConstants.UserType.APPLICATION_USER))).thenReturn(applicationUserToken);
+
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any())).thenReturn("someCacheKey");
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any(), any())).thenReturn("someCacheKey");
+        idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
+                .thenReturn(false);
+
+        try (MockedStatic<AccessTokenEventUtil> mockedEventUtil = mockStatic(AccessTokenEventUtil.class)) {
+            mockedEventUtil
+                    .when(() -> AccessTokenEventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
+                    .thenAnswer(invocation -> null);
+
+            assertTrue(OAuthUtil.revokeTokens(username, userStoreManager, roleId), "Token revocation failed.");
+            verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(
+                    eq(new String[]{applicationToken.getAccessToken()}), anyBoolean());
+            verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(
+                    eq(new String[]{applicationUserToken.getAccessToken()}), anyBoolean());
+        }
+    }
+
+    @Test
+    public void testClearOAuthCacheClearsTokensOfAllUserTypes() {
+
+        String consumerKey = "consumer-key";
+        String scope = "scope";
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId("user-id");
+        authenticatedUser.setUserName("user");
+        authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setTenantDomain(CARBON_TENANT_DOMAIN);
+
+        oAuth2Util.when(() -> OAuth2Util.getAuthenticatedIDP(any(AuthenticatedUser.class))).thenReturn(LOCAL_IDP);
+        oAuth2Util.when(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(),
+                any(), any())).thenCallRealMethod();
+        oAuth2Util.when(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(),
+                any(), any(), any())).thenCallRealMethod();
+
+        List<OAuthCacheKey> cacheKeys = new ArrayList<>();
+        for (String userType : new String[]{null, OAuthConstants.UserType.APPLICATION,
+                OAuthConstants.UserType.APPLICATION_USER}) {
+            cacheKeys.add(new OAuthCacheKey(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope,
+                    "user-id", LOCAL_IDP, OAuthConstants.TokenBindings.NONE,
+                    OAuthConstants.AuthorizedOrganization.NONE, userType)));
+        }
+        OAuthCache oAuthCache = OAuthCache.getInstance();
+        try {
+            for (OAuthCacheKey cacheKey : cacheKeys) {
+                getOAuthCache(cacheKey);
+                assertNotNull(oAuthCache.getValueFromCache(cacheKey),
+                        "Should give the cached value before cleaning it.");
+            }
+
+            OAuthUtil.clearOAuthCache(consumerKey, authenticatedUser, scope, OAuthConstants.TokenBindings.NONE);
+
+            for (OAuthCacheKey cacheKey : cacheKeys) {
+                assertNull(oAuthCache.getValueFromCache(cacheKey),
+                        "Should clear the cached value against the cache key: " + cacheKey.getCacheKeyString());
+            }
+        } finally {
+            oAuthCache.clear(-1234);
+        }
+    }
+
+    private AccessTokenDO buildAccessTokenDO(String accessToken, String clientId, AuthenticatedUser user,
+                                             String userType) {
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAccessToken(accessToken);
+        accessTokenDO.setTokenId(accessToken + "-id");
+        accessTokenDO.setConsumerKey(clientId);
+        accessTokenDO.setScope(new String[]{"default"});
+        accessTokenDO.setAuthzUser(user);
+        accessTokenDO.setTokenType(userType);
+        return accessTokenDO;
     }
 
     @Test
@@ -468,6 +612,8 @@ public class OAuthUtilTest {
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any(), any())).thenReturn("someCacheKey");
 
         idpManagementUtil.when(() -> IdPManagementUtil.getPreserveCurrentSessionAtPasswordUpdate(anyString()))
                 .thenReturn(false);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2015-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -129,7 +129,7 @@ public class TenantCreationEventListener implements TenantMgtListener {
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String keyString = accessTokenDO.getConsumerKey() + ":" + accessTokenDO.getAuthzUser() + ":" +
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":"
-                        + accessTokenDO.getAuthzUser().getFederatedIdPName();
+                        + accessTokenDO.getAuthzUser().getFederatedIdPName() + ":" + accessTokenDO.getTokenType();
                 AccessTokenDO accessTokenDOFromMap = latestAccessTokens.get(keyString);
                 if (accessTokenDOFromMap != null) {
                     if (accessTokenDOFromMap.getIssuedTime().before(accessTokenDO.getIssuedTime())) {

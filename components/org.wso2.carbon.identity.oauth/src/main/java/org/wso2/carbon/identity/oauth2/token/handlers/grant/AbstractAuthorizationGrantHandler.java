@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -224,7 +224,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
                         getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
-                                tokenBindingReference, authorizedOrganization));
+                                tokenBindingReference, authorizedOrganization, getTokenType(tokReqMsgCtx)));
             }
 
             if (existingTokenBean != null) {
@@ -1012,7 +1012,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
                 String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
                 OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId,
-                        authenticatedIDP, getTokenBindingReference(tokenToCache), authorizedOrganization);
+                        authenticatedIDP, getTokenBindingReference(tokenToCache), authorizedOrganization,
+                        tokenToCache.getTokenType());
                 oauthCache.addToCache(cacheKey, tokenToCache);
                 if (log.isDebugEnabled()) {
                     log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
@@ -1232,10 +1233,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUserId,
                                            String authenticatedIDP, String tokenBindingType,
-                                           String authorizedOrganization) {
+                                           String authorizedOrganization, String userType) {
 
+        // A user can hold a token of each user type for the same client and scope, hence the user type is part of
+        // the key.
         String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope,
-                authorizedUserId, authenticatedIDP, tokenBindingType, authorizedOrganization);
+                authorizedUserId, authenticatedIDP, tokenBindingType, authorizedOrganization, userType);
         return new OAuthCacheKey(cacheKeyString);
     }
 
@@ -1408,7 +1411,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 .getAccessTokenDAOImpl(tokenReq.getClientId())
                 .getLatestAccessToken(tokenReq.getClientId(), tokenMsgCtx.getAuthorizedUser(),
                         getUserStoreDomain(tokenMsgCtx.getAuthorizedUser()), scope,
-                        getTokenBindingReference(tokenMsgCtx), false);
+                        getTokenBindingReference(tokenMsgCtx), false, getTokenType(tokenMsgCtx));
         if (existingToken != null) {
             if (log.isDebugEnabled()) {
                 if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {

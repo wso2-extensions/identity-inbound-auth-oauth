@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+  ~ Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
   ~
   ~ WSO2 LLC. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
@@ -116,6 +116,7 @@
             <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImplUserTypeTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.RefreshTokenDAOImplTest"/>
@@ -126,6 +127,7 @@
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthUserStoreConfigListenerImplTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListenerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.internal.TokenRevocationListenerUserTypeTest"/>
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.OAuth2TokenValidationServiceTest"/>
@@ -229,6 +231,7 @@
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthTenantMgtListenerImplTest"/>-->
             <!--<class name="org.wso2.carbon.identity.oauth2.internal.OAuthUserStoreConfigListenerImplTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListenerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.internal.TokenRevocationListenerUserTypeTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ScopeServiceTest"/>
             <class name="org.wso2.carbon.identity.oauth2.OAuth2ServiceTest"/>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -603,8 +603,19 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
             String cacheKeyString = buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope, userId,
                     authenticatedIDP, oldAccessToken.getTokenBindingReference(), accessingOrganization);
-            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
-            OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenBean.getAuthzUser().getTenantDomain());
+            OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(cacheKeyString),
+                    accessTokenBean.getAuthzUser().getTenantDomain());
+            // Tokens of different user types are cached against separate keys. The user type of the old access token
+            // is not known here, hence the entries of both user types are removed.
+            for (String userType : new String[]{OAuthConstants.UserType.APPLICATION,
+                    OAuthConstants.UserType.APPLICATION_USER}) {
+                OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(buildCacheKeyStringForTokenWithUserIdOrgId(
+                        clientId, scope, userId, authenticatedIDP, oldAccessToken.getTokenBindingReference(),
+                        accessingOrganization, userType)), accessTokenBean.getAuthzUser().getTenantDomain());
+            }
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope,
+                    userId, authenticatedIDP, oldAccessToken.getTokenBindingReference(), accessingOrganization,
+                    accessTokenBean.getTokenType()));
 
             // Remove old access token from the AccessTokenCache
             if (oldAccessToken.getAccessToken() != null) {

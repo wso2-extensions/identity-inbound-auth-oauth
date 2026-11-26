@@ -1067,6 +1067,35 @@ public class OAuth2Util {
     }
 
     /**
+     * Build the cache key string when storing token info of the given user type in cache. A user can hold an active
+     * token of each user type (APPLICATION and APPLICATION_USER) for the same client, scope and user, hence the
+     * tokens of these user types are cached against separate keys.
+     *
+     * @param clientId               ClientId of the App.
+     * @param scope                  Scopes used.
+     * @param authorizedUserId       Authorised user.
+     * @param authenticatedIDP       Authenticated IdP.
+     * @param tokenBindingReference  Token binding reference.
+     * @param authorizedOrganization Authorized organization.
+     * @param userType               User type of the token. The user type is added to the key only if it is
+     *                               APPLICATION or APPLICATION_USER.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserIdOrgId(String clientId, String scope,
+                                                                    String authorizedUserId, String authenticatedIDP,
+                                                                    String tokenBindingReference,
+                                                                    String authorizedOrganization, String userType) {
+
+        String oauthCacheKey = buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope, authorizedUserId,
+                authenticatedIDP, tokenBindingReference, authorizedOrganization);
+        if (!OAuthConstants.UserType.APPLICATION.equals(userType) &&
+                !OAuthConstants.UserType.APPLICATION_USER.equals(userType)) {
+            return oauthCacheKey;
+        }
+        return oauthCacheKey + ":" + userType;
+    }
+
+    /**
      * Build the cache key string when storing token info in cache.
      *
      * @param clientId         ClientId of the App.
