@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth.ciba.model;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Captures the authentication request validated parameters.
@@ -41,6 +43,29 @@ public class CibaAuthCodeRequest {
     private String transactionContext;
     private String notificationChannel;
     private String requestedActor;
+    private boolean authenticatedWithAgentJWT;
+    private Map<String, String> actorTokenClaims = new HashMap<>();
+
+    /**
+     * Returns the claims carried in the actor token sent with the CIBA authentication request.
+     * The map is keyed by the claim name as it appears in the actor token.
+     *
+     * @return Map of actor token claims. Never {@code null}.
+     */
+    public Map<String, String> getActorTokenClaims() {
+
+        return actorTokenClaims;
+    }
+
+    /**
+     * Sets the claims carried in the actor token sent with the CIBA authentication request.
+     *
+     * @param actorTokenClaims Map of actor token claims.
+     */
+    public void setActorTokenClaims(Map<String, String> actorTokenClaims) {
+
+        this.actorTokenClaims = actorTokenClaims != null ? actorTokenClaims : new HashMap<>();
+    }
 
     public String getRequestedActor() {
 
@@ -206,5 +231,20 @@ public class CibaAuthCodeRequest {
     public void setNotificationChannel(String notificationChannel) {
 
         this.notificationChannel = notificationChannel;
+    }
+
+    /**
+     * Whether the agent JWT client authenticator authenticated this request.
+     *
+     * @return true if the agent JWT client authentication method authenticated the request.
+     */
+    public boolean isAuthenticatedWithAgentJWT() {
+
+        return authenticatedWithAgentJWT;
+    }
+
+    public void setAuthenticatedWithAgentJWT(boolean authenticatedWithAgentJWT) {
+
+        this.authenticatedWithAgentJWT = authenticatedWithAgentJWT;
     }
 }
