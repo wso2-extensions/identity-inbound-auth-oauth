@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -947,6 +947,33 @@ public class OAuth2UtilTest {
 
         assertEquals(OAuth2Util.buildCacheKeyStringForTokenWithUserId(clientId, scope, authorizedUser,
                 authenticatedIDP, tokenBindingReference), expected);
+    }
+
+    @DataProvider(name = "cacheKeyUserTypeProvider")
+    public Object[][] cacheKeyUserTypeProvider() {
+
+        return new Object[][]{
+                {OAuthConstants.UserType.APPLICATION, ":" + OAuthConstants.UserType.APPLICATION},
+                {OAuthConstants.UserType.APPLICATION_USER, ":" + OAuthConstants.UserType.APPLICATION_USER},
+                // Other user types share the key without the user type, as before.
+                {"CUSTOM_USER_TYPE", ""},
+                {null, ""}
+        };
+    }
+
+    @Test(dataProvider = "cacheKeyUserTypeProvider")
+    public void testBuildCacheKeyStringForTokenWithUserIdOrgIdAndUserType(String userType, String expectedSuffix) {
+
+        String userId = "testUserId";
+        String scope = "testScope";
+        String authenticatedIDP = "testAuthenticatedIDP";
+        String tokenBindingReference = "testTokenBindingReference";
+        String authorizedOrganization = "testOrganization";
+        String keyWithoutUserType = OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope, userId,
+                authenticatedIDP, tokenBindingReference, authorizedOrganization);
+
+        assertEquals(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope, userId, authenticatedIDP,
+                tokenBindingReference, authorizedOrganization, userType), keyWithoutUserType + expectedSuffix);
     }
 
     @Test

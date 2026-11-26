@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -82,6 +82,51 @@ public interface AccessTokenDAO {
 
         return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, tokenBindingReference,
                 includeExpiredTokens);
+    }
+
+    /**
+     * Get the latest access token of the given user type. A user can hold a token of each user type (APPLICATION
+     * and APPLICATION_USER) for the same client and scope.
+     *
+     * @param consumerKey           Consumer key.
+     * @param authzUser             Authorized user.
+     * @param userStoreDomain       User store domain.
+     * @param scope                 Scope.
+     * @param tokenBindingReference Token binding reference.
+     * @param includeExpiredTokens  Include expired tokens.
+     * @param tokenUserType         User type of the token. If blank, tokens of any user type are considered.
+     * @return Latest access token.
+     * @throws IdentityOAuth2Exception If any error occurred while getting latest access token.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+            String scope, String tokenBindingReference, boolean includeExpiredTokens, String tokenUserType)
+            throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, tokenBindingReference,
+                includeExpiredTokens);
+    }
+
+    /**
+     * Get the latest access token of the given user type. A user can hold a token of each user type (APPLICATION
+     * and APPLICATION_USER) for the same client and scope.
+     *
+     * @param consumerKey           Consumer key.
+     * @param appTenantDomain       Application tenant domain.
+     * @param authzUser             Authorized user.
+     * @param userStoreDomain       User store domain.
+     * @param scope                 Scope.
+     * @param tokenBindingReference Token binding reference.
+     * @param includeExpiredTokens  Include expired tokens.
+     * @param tokenUserType         User type of the token. If blank, tokens of any user type are considered.
+     * @return Latest access token.
+     * @throws IdentityOAuth2Exception If any error occurred while getting latest access token.
+     */
+    default AccessTokenDO getLatestAccessToken(String consumerKey, String appTenantDomain, AuthenticatedUser authzUser,
+            String userStoreDomain, String scope, String tokenBindingReference, boolean includeExpiredTokens,
+            String tokenUserType) throws IdentityOAuth2Exception {
+
+        return getLatestAccessToken(consumerKey, appTenantDomain, authzUser, userStoreDomain, scope,
+                tokenBindingReference, includeExpiredTokens);
     }
 
     /**

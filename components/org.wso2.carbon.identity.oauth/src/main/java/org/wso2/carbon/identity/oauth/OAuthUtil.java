@@ -91,6 +91,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +125,9 @@ public final class OAuthUtil {
     private static final String ALGORITHM_SHA1 = "HmacSHA1";
     private static final String ALGORITHM_SHA256 = "HmacSHA256";
     private static final String managedOrgClaim = "http://wso2.org/claims/identity/managedOrg";
+    // User types of the tokens. A user can hold a token of each user type for the same client and scope.
+    private static final List<String> TOKEN_USER_TYPES = Collections.unmodifiableList(Arrays.asList(
+            OAuthConstants.UserType.APPLICATION, OAuthConstants.UserType.APPLICATION_USER));
 
     private OAuthUtil() {
 
@@ -371,6 +375,11 @@ public final class OAuthUtil {
         }
         clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
                 authenticatedIDP, tokenBindingReference, authorizedOrganization), tenantDomain);
+        // Tokens of the APPLICATION and APPLICATION_USER user types are cached against separate keys.
+        for (String userType : TOKEN_USER_TYPES) {
+            clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
+                    authenticatedIDP, tokenBindingReference, authorizedOrganization, userType), tenantDomain);
+        }
     }
 
 
@@ -1011,7 +1020,8 @@ public final class OAuthUtil {
                     }
                 }
 
-                Set<String> scopes = new HashSet<>();
+                // User types of the tokens of each scope, so that the latest token of each user type is revoked.
+                Map<String, Set<String>> scopeUserTypes = new HashMap<>();
                 List<AccessTokenDO> accessTokens = new ArrayList<>();
                 boolean tokenBindingEnabled = false;
                 boolean isOrganizationUserTokenRevocation = StringUtils.isNotEmpty(
@@ -1047,7 +1057,8 @@ public final class OAuthUtil {
                     OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                     OAuthUtil.clearOAuthCache(accessTokenDO);
                     // Get unique scopes list
-                    scopes.add(OAuth2Util.buildScopeString(accessTokenDO.getScope()));
+                    scopeUserTypes.computeIfAbsent(OAuth2Util.buildScopeString(accessTokenDO.getScope()),
+                            scope -> new HashSet<>()).add(accessTokenDO.getTokenType());
                     accessTokens.add(accessTokenDO);
                 }
 
@@ -1058,7 +1069,7 @@ public final class OAuthUtil {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Revoke latest tokens with scopes for the clientId: " + clientId);
                     }
-                    revokeLatestTokensWithScopes(scopes, clientId, appTenantDomain, authenticatedUser);
+                    revokeLatestTokensWithScopes(scopeUserTypes, clientId, appTenantDomain, authenticatedUser);
                 } else {
                     // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
                     // Also, if token binding is enabled, there can be multiple active tokens for the same user, scope
@@ -1351,39 +1362,56 @@ public final class OAuthUtil {
         }
     }
 
-    private static void revokeLatestTokensWithScopes(Set<String> scopes, String clientId, String appTenantDomain,
-                                                        AuthenticatedUser authenticatedUser) throws
-            UserStoreException {
+    /**
+     * Revoke the latest token of each of the given scopes and user types.
+     *
+     * @param scopeUserTypes    User types of the tokens of each scope. A user can hold a token of each user type for
+     *                          the same client and scope.
+     * @param clientId          Client id.
+     * @param appTenantDomain   Tenant domain of the application.
+     * @param authenticatedUser User of the tokens.
+     * @throws UserStoreException If an error occurs while revoking the tokens.
+     */
+    private static void revokeLatestTokensWithScopes(Map<String, Set<String>> scopeUserTypes, String clientId,
+                                                     String appTenantDomain, AuthenticatedUser authenticatedUser)
+            throws UserStoreException {
 
-        for (String scope : scopes) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Revoking tokens for the scope: " + scope);
-            }
-            AccessTokenDO scopedToken = null;
-            try {
-                // Retrieve latest access token for particular client, user and scope combination
-                // if its ACTIVE or EXPIRED.
-                scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
-                        .getLatestAccessToken(clientId, appTenantDomain, authenticatedUser,
-                                authenticatedUser.getUserStoreDomain(), scope, NONE, true);
-            } catch (IdentityOAuth2Exception e) {
-                String errorMsg = "Error occurred while retrieving latest access token issued for Client ID : " +
-                        clientId + ", User ID : " + authenticatedUser + " and Scope : " + scope;
-                LOG.error(errorMsg, e);
-                throw new UserStoreException(e);
-            }
-            if (scopedToken != null) {
+        // A DAO that does not filter by user type returns the same token for every user type. Track the revoked
+        // tokens so that such a token is not revoked twice.
+        Set<String> revokedTokens = new HashSet<>();
+        for (Map.Entry<String, Set<String>> scopeUserType : scopeUserTypes.entrySet()) {
+            String scope = scopeUserType.getKey();
+            for (String userType : scopeUserType.getValue()) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Revoking tokens for the scope: " + scope + " and user type: " + userType);
+                }
+                AccessTokenDO scopedToken = null;
                 try {
-                    // Revoking token from database
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Revoking latest scoped token from database");
-                    }
-                    revokeTokens(Collections.singletonList(scopedToken));
+                    // Retrieve latest access token for particular client, user, scope and user type combination
+                    // if its ACTIVE or EXPIRED.
+                    scopedToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAOImpl(clientId)
+                            .getLatestAccessToken(clientId, appTenantDomain, authenticatedUser,
+                                    authenticatedUser.getUserStoreDomain(), scope, NONE, true, userType);
                 } catch (IdentityOAuth2Exception e) {
-                    String errorMsg = "Error occurred while revoking " + "Access Token : "
-                            + scopedToken.getAccessToken() + " for user " + authenticatedUser;
+                    String errorMsg = "Error occurred while retrieving latest access token issued for Client ID : " +
+                            clientId + ", User ID : " + authenticatedUser + ", Scope : " + scope + " and User Type : "
+                            + userType;
                     LOG.error(errorMsg, e);
                     throw new UserStoreException(e);
+                }
+                if (scopedToken != null && revokedTokens.add(scopedToken.getAccessToken())) {
+                    try {
+                        // Revoking token from database
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Revoking latest scoped token from database");
+                        }
+                        revokeTokens(Collections.singletonList(scopedToken));
+                    } catch (IdentityOAuth2Exception e) {
+                        String errorMsg = "Error occurred while revoking " + "Access Token : "
+                                + scopedToken.getAccessToken() + " for user " + authenticatedUser;
+                        LOG.error(errorMsg, e);
+                        throw new UserStoreException(e);
+                    }
                 }
             }
         }

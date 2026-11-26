@@ -92,6 +92,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     private static final String OAUTH_TOKEN_PERSISTENCE_RETRY_COUNT = "OAuth.TokenPersistence.RetryCount";
     private static final int DEFAULT_TOKEN_PERSIST_RETRY_COUNT = 5;
     private static final String IDN_OAUTH2_ACCESS_TOKEN = "IDN_OAUTH2_ACCESS_TOKEN";
+    private static final String TOKEN_SCOPE_HASH_FILTER = "TOKEN_SCOPE_HASH=?";
+    private static final String USER_TYPE_FILTER = " AND USER_TYPE=?";
     private static final String CONSENTED_TOKEN_COLUMN_NAME = "CONSENTED_TOKEN";
     private boolean isTokenCleanupFeatureEnabled = OAuthServerConfiguration.getInstance().isTokenCleanupEnabled();
     private static final String DEFAULT_TOKEN_TO_SESSION_MAPPING = "DEFAULT";
@@ -446,9 +448,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                               String scope, String tokenBindingReference, boolean includeExpiredTokens)
             throws IdentityOAuth2Exception {
 
+        return getLatestAccessToken(consumerKey, authzUser, userStoreDomain, scope, tokenBindingReference,
+                includeExpiredTokens, null);
+    }
+
+    @Override
+    public AccessTokenDO getLatestAccessToken(String consumerKey, AuthenticatedUser authzUser, String userStoreDomain,
+                                              String scope, String tokenBindingReference, boolean includeExpiredTokens,
+                                              String tokenUserType) throws IdentityOAuth2Exception {
+
         String appTenantDomain = getAppTenantDomain(consumerKey);
         return getLatestAccessToken(consumerKey, appTenantDomain, authzUser, userStoreDomain, scope,
-                tokenBindingReference, includeExpiredTokens);
+                tokenBindingReference, includeExpiredTokens, tokenUserType);
     }
 
     @Override
@@ -457,9 +468,19 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                               boolean includeExpiredTokens)
             throws IdentityOAuth2Exception {
 
+        return getLatestAccessToken(consumerKey, appTenantDomain, authzUser, userStoreDomain, scope,
+                tokenBindingReference, includeExpiredTokens, null);
+    }
+
+    @Override
+    public AccessTokenDO getLatestAccessToken(String consumerKey, String appTenantDomain, AuthenticatedUser authzUser,
+                                              String userStoreDomain, String scope, String tokenBindingReference,
+                                              boolean includeExpiredTokens, String tokenUserType)
+            throws IdentityOAuth2Exception {
+
         if (log.isDebugEnabled()) {
             log.debug("Retrieving latest access token for client: " + consumerKey + " user: "
-                    + authzUser.getLoggableUserId() + " scope: " + scope);
+                    + authzUser.getLoggableUserId() + " scope: " + scope + " user type: " + tokenUserType);
         }
         String tenantDomain = getUserResidentTenantDomain(authzUser);
         String authorizedOrganization = authzUser.getAccessingOrganization();
@@ -481,7 +502,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             String sql = getLatestAccessTokenQuerySQL(connection);
 
             if (!includeExpiredTokens) {
-                sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH=? AND TOKEN_STATE='ACTIVE'");
+                sql = sql.replace(TOKEN_SCOPE_HASH_FILTER, TOKEN_SCOPE_HASH_FILTER + " AND TOKEN_STATE='ACTIVE'");
             }
 
             sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userDomain);
@@ -490,9 +511,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 sql = sql.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
 
+            boolean filterByUserType = StringUtils.isNotBlank(tokenUserType);
+            if (filterByUserType) {
+                sql = sql.replace(TOKEN_SCOPE_HASH_FILTER, TOKEN_SCOPE_HASH_FILTER + USER_TYPE_FILTER);
+            }
+
             String hashedScope = OAuth2Util.hashScopes(scope);
             if (hashedScope == null) {
-                sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH IS NULL");
+                sql = sql.replace(TOKEN_SCOPE_HASH_FILTER, "TOKEN_SCOPE_HASH IS NULL");
             }
 
             prepStmt = connection.prepareStatement(sql);
@@ -507,17 +533,21 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setInt(4, tenantId);
             prepStmt.setString(5, userDomain);
 
+            int paramIndex = 6;
             if (hashedScope != null) {
-                prepStmt.setString(6, hashedScope);
+                prepStmt.setString(paramIndex++, hashedScope);
+            }
+            if (filterByUserType) {
+                prepStmt.setString(paramIndex++, tokenUserType);
             }
 
-            prepStmt.setString(7, tokenBindingReference);
-            prepStmt.setString(8, authorizedOrganization);
+            prepStmt.setString(paramIndex++, tokenBindingReference);
+            prepStmt.setString(paramIndex++, authorizedOrganization);
 
-            prepStmt.setString(9, authenticatedIDP);
+            prepStmt.setString(paramIndex++, authenticatedIDP);
 
             int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authzUser);
-            prepStmt.setInt(10, idpTenantId);
+            prepStmt.setInt(paramIndex, idpTenantId);
 
 
             resultSet = prepStmt.executeQuery();
@@ -669,12 +699,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
     private AccessTokenDO getLatestAccessTokenByState(Connection connection, String consumerKey,
                                                       AuthenticatedUser authzUser, String userStoreDomain, String scope,
-                                                      boolean active)
+                                                      String tokenUserType, boolean active)
             throws IdentityOAuth2Exception, SQLException {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving latest " + (active ? " active" : " non active") + " access token for user: " +
-                    authzUser.getLoggableUserId() + " client: " + consumerKey + " scope: " + scope);
+                    authzUser.getLoggableUserId() + " client: " + consumerKey + " scope: " + scope + " user type: " +
+                    tokenUserType);
         }
         String tenantDomain = getUserResidentTenantDomain(authzUser);
 
@@ -749,9 +780,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 sql = sql.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
             }
 
+            boolean filterByUserType = StringUtils.isNotBlank(tokenUserType);
+            if (filterByUserType) {
+                sql = sql.replace(TOKEN_SCOPE_HASH_FILTER, TOKEN_SCOPE_HASH_FILTER + USER_TYPE_FILTER);
+            }
+
             String hashedScope = OAuth2Util.hashScopes(scope);
             if (hashedScope == null) {
-                sql = sql.replace("TOKEN_SCOPE_HASH=?", "TOKEN_SCOPE_HASH IS NULL");
+                sql = sql.replace(TOKEN_SCOPE_HASH_FILTER, "TOKEN_SCOPE_HASH IS NULL");
             }
 
             prepStmt = connection.prepareStatement(sql);
@@ -766,16 +802,20 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt.setInt(4, tenantId);
             prepStmt.setString(5, userDomain);
 
+            int paramIndex = 6;
             if (hashedScope != null) {
-                prepStmt.setString(6, hashedScope);
+                prepStmt.setString(paramIndex++, hashedScope);
+            }
+            if (filterByUserType) {
+                prepStmt.setString(paramIndex++, tokenUserType);
             }
 
-            prepStmt.setString(7, authorizedOrganization);
+            prepStmt.setString(paramIndex++, authorizedOrganization);
 
-            prepStmt.setString(8, authenticatedIDP);
+            prepStmt.setString(paramIndex++, authenticatedIDP);
 
             int idpTenantId = OAuth2Util.getIdpTenantId(authenticatedIDP, appTenantId, authzUser);
-            prepStmt.setInt(9, idpTenantId);
+            prepStmt.setInt(paramIndex, idpTenantId);
 
 
             resultSet = prepStmt.executeQuery();
@@ -2833,13 +2873,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     "consumer key : " + consumerKey);
             log.warn("Retry attempt to recover 'CON_APP_KEY' constraint violation : " + retryAttemptCounter);
 
+            // The user type is part of the 'CON_APP_KEY' constraint, hence only a token of the same user type can
+            // violate it. Look up only the tokens of that user type.
+            String userType = accessTokenDO.getTokenType();
             AccessTokenDO latestNonActiveToken = getLatestAccessTokenByState(connection, consumerKey,
                     accessTokenDO.getAuthzUser(), userStoreDomain,
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), false);
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), userType, false);
 
             AccessTokenDO latestActiveToken = getLatestAccessTokenByState(connection, consumerKey,
                     accessTokenDO.getAuthzUser(), userStoreDomain,
-                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), true);
+                    OAuth2Util.buildScopeString(accessTokenDO.getScope()), userType, true);
             OauthTokenIssuer oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
 
             if (latestActiveToken != null) {

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,13 +11,14 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -90,6 +91,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -569,11 +571,97 @@ public class AbstractAuthorizationGrantHandlerTest {
                     eq(null),
                     eq("scope1 scope2"),
                     eq("NONE"),
-                    eq(false))).thenReturn(existingAccessTokenDO);
+                    eq(false),
+                    eq(OAuthConstants.UserType.APPLICATION_USER))).thenReturn(existingAccessTokenDO);
 
             OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
             assertNotNull(tokenRespDTO.getAccessToken());
             assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
+        }
+    }
+
+    @DataProvider(name = "tokenUserTypeProvider")
+    public Object[][] tokenUserTypeProvider() {
+
+        return new Object[][]{{true, OAuthConstants.UserType.APPLICATION_USER},
+                {false, OAuthConstants.UserType.APPLICATION}};
+    }
+
+    @Test(dataProvider = "tokenUserTypeProvider")
+    public void testIssueLooksUpAndCachesExistingTokenOfSameUserType(boolean isOfTypeApplicationUser,
+                                                                     String userType) throws Exception {
+
+        // A user can hold a token of each user type for the same client and scope, for example the application
+        // owner's client credentials (APPLICATION) and password (APPLICATION_USER) tokens. The existing token is
+        // looked up and cached for the user type of the grant only.
+        AbstractAuthorizationGrantHandler userTypeHandler = new MockAuthzGrantHandler() {
+
+            @Override
+            public boolean isOfTypeApplicationUser() {
+
+                return isOfTypeApplicationUser;
+            }
+        };
+        userTypeHandler.init();
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(PASSWORD_GRANT);
+
+        AccessTokenDO existingAccessTokenDO = new AccessTokenDO();
+        existingAccessTokenDO.setAuthzUser(authenticatedUser);
+        existingAccessTokenDO.setScope(new String[]{"scope1", "scope2"});
+        existingAccessTokenDO.setAccessToken("existingAccessToken");
+        existingAccessTokenDO.setTokenState(TOKEN_STATE_ACTIVE);
+        existingAccessTokenDO.setConsumerKey(clientId);
+        existingAccessTokenDO.setTokenType(userType);
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthTokenPersistenceFactory> factoryMock = mockStatic(OAuthTokenPersistenceFactory.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(anyString())).thenReturn(Boolean.TRUE.toString());
+            identityUtil.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenCallRealMethod();
+
+            OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuerImpl.class);
+            when(oauthTokenIssuer.getAccessTokenType()).thenReturn(OAuth2Constants.TokenTypes.OPAQUE);
+            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(eq(clientId))).thenReturn(oauthTokenIssuer);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId))).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId), any())).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenCallRealMethod();
+            oauth2Util.when(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(),
+                    any(), any())).thenCallRealMethod();
+            oauth2Util.when(() -> OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(),
+                    any(), any(), any())).thenCallRealMethod();
+            oauth2Util.when(() -> OAuth2Util.getTokenExpireTimeMillis(eq(existingAccessTokenDO), eq(false)))
+                    .thenReturn(3600L);
+            oauth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(eq(existingAccessTokenDO), eq(false)))
+                    .thenReturn(3600L);
+
+            OAuthCache mockOAuthCache = mock(OAuthCache.class);
+            userTypeHandler.oauthCache = mockOAuthCache;
+
+            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+            factoryMock.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
+            when(mockFactory.getAccessTokenDAOImpl(anyString())).thenReturn(mockAccessTokenDAO);
+            when(mockAccessTokenDAO.getLatestAccessToken(eq(clientId), eq(authenticatedUser), eq(null),
+                    eq("scope1 scope2"), eq("NONE"), eq(false), eq(userType))).thenReturn(existingAccessTokenDO);
+
+            OAuth2AccessTokenRespDTO tokenRespDTO = userTypeHandler.issue(tokReqMsgCtx);
+            assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
+
+            // The token read from the database is cached against the key of its user type.
+            ArgumentCaptor<OAuthCacheKey> cacheKeyCaptor = ArgumentCaptor.forClass(OAuthCacheKey.class);
+            verify(mockOAuthCache, atLeastOnce()).addToCacheOnRead(cacheKeyCaptor.capture(),
+                    eq(existingAccessTokenDO));
+            assertTrue(cacheKeyCaptor.getAllValues().stream()
+                            .anyMatch(cacheKey -> cacheKey.getCacheKeyString().endsWith(":" + userType)),
+                    "The token should be cached against the key of the user type: " + userType);
         }
     }
 

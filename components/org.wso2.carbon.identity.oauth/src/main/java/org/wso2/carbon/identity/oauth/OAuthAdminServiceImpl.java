@@ -2281,14 +2281,17 @@ public class OAuthAdminServiceImpl {
                                 tokenBindingReference = tokenBinding.getBindingReference();
                             }
                         }
+                        // Look up the latest token of the same user type, as a user can hold a token of each user
+                        // type for the same client and scope.
                         if (REQUEST_BINDING_TYPE.equalsIgnoreCase(tokenBindingType)) {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
                                     getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
-                                            userStoreDomain, scopeString, tokenBindingReference, true);
+                                            userStoreDomain, scopeString, tokenBindingReference, true,
+                                            accessTokenDO.getTokenType());
                         } else {
                             scopedToken = OAuthTokenPersistenceFactory.getInstance().
                                     getAccessTokenDAOImpl(clientId).getLatestAccessToken(clientId, loggedInUser,
-                                            userStoreDomain, scopeString, true);
+                                            userStoreDomain, scopeString, NONE, true, accessTokenDO.getTokenType());
                         }
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
@@ -2406,11 +2409,11 @@ public class OAuthAdminServiceImpl {
                                                     buildScopeString(
                                                             accessTokenDO.getScope()),
                                                     tokenBindingReference,
-                                                    true);
+                                                    true, accessTokenDO.getTokenType());
                                 } else {
                                     /*
-                                     Retrieve latest access token for particular client, user and scope combination if
-                                     its ACTIVE or EXPIRED.
+                                     Retrieve latest access token for particular client, user, scope and user type
+                                     combination if its ACTIVE or EXPIRED.
                                     */
                                     scopedToken = OAuthTokenPersistenceFactory.getInstance()
                                             .getAccessTokenDAOImpl(appDTO.getOauthConsumerKey())
@@ -2419,7 +2422,7 @@ public class OAuthAdminServiceImpl {
                                                     userStoreDomain,
                                                     buildScopeString(
                                                             accessTokenDO.getScope()),
-                                                    true);
+                                                    NONE, true, accessTokenDO.getTokenType());
 
                                 }
                             } catch (IdentityOAuth2Exception e) {
