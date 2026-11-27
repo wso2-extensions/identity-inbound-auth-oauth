@@ -196,31 +196,31 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
-            AccessTokenDO existingTokenBean = null;
+        AccessTokenDO existingTokenBean = null;
 
-            OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
-            String tokenType = oauthTokenIssuer.getAccessTokenType();
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
+        String tokenType = oauthTokenIssuer.getAccessTokenType();
 
+        /*
+        Check if the token type is JWT and renew without revoking existing tokens is enabled.
+        Additionally, ensure that the grant type used for the token request is allowed to renew without revoke,
+        based on the config.
+        */
+        if (JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
+                OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                        .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
             /*
-            Check if the token type is JWT and renew without revoking existing tokens is enabled.
-            Additionally, ensure that the grant type used for the token request is allowed to renew without revoke,
-            based on the config.
+            If the application does not have a token binding type (i.e., no specific binding type is set),
+            binding reference will be randomly generated UUID, in that case we can generate a new access token
+            without looking up the existing tokens in the token table.
             */
-            if (JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
-                    OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
-                            .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
-                /*
-                If the application does not have a token binding type (i.e., no specific binding type is set),
-                binding reference will be randomly generated UUID, in that case we can generate a new access token
-                without looking up the existing tokens in the token table.
-                */
-                if (oAuthAppDO.getTokenBindingType() == null) {
-                    return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
-                            false, oauthTokenIssuer);
-                }
+            if (oAuthAppDO.getTokenBindingType() == null) {
+                return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
+                        false, oauthTokenIssuer);
             }
+        }
 
+        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
                         getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,

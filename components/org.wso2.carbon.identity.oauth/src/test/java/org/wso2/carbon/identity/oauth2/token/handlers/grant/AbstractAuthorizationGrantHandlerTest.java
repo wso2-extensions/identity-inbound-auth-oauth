@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -78,6 +79,8 @@ import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -86,6 +89,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -236,6 +242,112 @@ public class AbstractAuthorizationGrantHandlerTest {
                     Collections.singletonList("password")); // This allows PASSWORD_GRANT
 
             OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @DataProvider(name = "RenewWithoutRevokeLockDataProvider")
+    public Object[][] renewWithoutRevokeLockDataProvider() {
+
+        return new Object[][]{
+                // App has no binding type: the lock key is unique to the request, so no lock is taken.
+                {null, false},
+                // App has a binding type: the existing token is looked up under the lock.
+                {"cookie", true}
+        };
+    }
+
+    @Test(dataProvider = "RenewWithoutRevokeLockDataProvider", timeOut = 60000)
+    public void testTokenIssuanceLockForRenewWithoutRevokeFlow(String appBindingType, boolean expectLockWait)
+            throws Exception {
+
+        String bindingReference = "fixed-binding-reference";
+        AbstractAuthorizationGrantHandler fixedBindingRefHandler = new MockAuthzGrantHandler() {
+
+            @Override
+            protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+                return bindingReference;
+            }
+        };
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(PASSWORD_GRANT);
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+        OAuthAppDO app = new OAuthAppDO();
+        app.setTokenBindingType(appBindingType);
+        tokReqMsgCtx.addProperty(OAUTH_APP_PROPERTY, app);
+
+        /*
+        Hold the token issuance lock of this request from another thread. The holder keeps the lock until either the
+        issuing thread is blocked on this exact lock object, or issuance returns without blocking on it.
+        */
+        String lockKey = (clientId + ":" + authenticatedUser.getUserId() + ":scope1 scope2:" + bindingReference)
+                .intern();
+        Thread issuingThread = Thread.currentThread();
+        CountDownLatch lockAcquired = new CountDownLatch(1);
+        AtomicBoolean issueReturned = new AtomicBoolean(false);
+        AtomicBoolean issueBlockedOnLock = new AtomicBoolean(false);
+        Thread lockHolder = new Thread(() -> {
+            synchronized (lockKey) {
+                lockAcquired.countDown();
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+                while (!issueReturned.get() && System.nanoTime() < deadline) {
+                    if (isBlockedOnLock(issuingThread, lockKey)) {
+                        issueBlockedOnLock.set(true);
+                        break;
+                    }
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        });
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(anyString())).thenReturn(Boolean.TRUE.toString());
+            OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+
+            OauthTokenIssuer oauthTokenIssuer = mock(JWTTokenIssuer.class);
+            when(oauthTokenIssuer.getAccessTokenType()).thenReturn("jwt");
+            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId)).thenReturn(oauthTokenIssuer);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId), anyString()))
+                    .thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenCallRealMethod();
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
+            OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
+                    Collections.singletonList(PASSWORD_GRANT));
+
+            lockHolder.start();
+            assertTrue(lockAcquired.await(10, TimeUnit.SECONDS));
+            Exception issueError = null;
+            try {
+                fixedBindingRefHandler.issue(tokReqMsgCtx);
+            } catch (Exception e) {
+                // Token generation and lookup are not fully mocked. Only whether the lock was taken matters here.
+                issueError = e;
+            }
+            issueReturned.set(true);
+            lockHolder.join();
+
+            assertEquals(issueBlockedOnLock.get(), expectLockWait,
+                    expectLockWait ? "Token was issued while another request held the lock." :
+                            "Token issuance waited for a lock whose key is unique to the request." +
+                    (issueError == null ? "" : " Issue failed with: " + ExceptionUtils.getStackTrace(issueError)));
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -709,6 +821,16 @@ public class AbstractAuthorizationGrantHandlerTest {
         } finally {
             OAuthComponentServiceHolder.getInstance().setCompatibilitySettingsService(existing);
         }
+    }
+
+    private static boolean isBlockedOnLock(Thread thread, Object lock) {
+
+        ThreadInfo threadInfo = ManagementFactory.getThreadMXBean().getThreadInfo(thread.threadId());
+        if (threadInfo == null || threadInfo.getThreadState() != Thread.State.BLOCKED ||
+                threadInfo.getLockInfo() == null) {
+            return false;
+        }
+        return threadInfo.getLockInfo().getIdentityHashCode() == System.identityHashCode(lock);
     }
 
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {
