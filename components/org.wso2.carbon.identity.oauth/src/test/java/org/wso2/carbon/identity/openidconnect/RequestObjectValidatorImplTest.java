@@ -265,6 +265,7 @@ public class RequestObjectValidatorImplTest {
 
                 oAuth2Util.when(() -> OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
                 oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+                oAuth2Util.when(() -> OAuth2Util.asPrivateKey(any(), anyString())).thenCallRealMethod();
 
                 // Mock OAuth2Util returning public cert of the service provider
                 oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))

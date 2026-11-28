@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.authcontext;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.OpaqueRSAKeyTestProvider;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -62,6 +64,9 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Random;
@@ -70,6 +75,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
@@ -275,6 +281,36 @@ public class JWTTokenGeneratorTest {
         );
         signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, null, 0);
         assertNotNull(signedJWT.getSignature());
+    }
+
+    @Test(description = "signJWTWithRSA signs with a key held in an HSM, bound to the key store provider.")
+    public void testSignJWTWithRSAUsingOpaqueKey() throws Exception {
+
+        String tenantDomain = "hsm.com";
+        OpaqueRSAKeyTestProvider token = new OpaqueRSAKeyTestProvider(2048);
+        X509Certificate certificate = mock(X509Certificate.class);
+        when(certificate.getPublicKey()).thenReturn(token.getPublicKey());
+        KeyStore keyStore = mock(KeyStore.class);
+        when(keyStore.getProvider()).thenReturn(token);
+        IdentityKeyStoreResolver resolver = mock(IdentityKeyStoreResolver.class);
+        when(resolver.getPrivateKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
+                .thenReturn(token.getPrivateKey());
+        when(resolver.getCertificate(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
+                .thenReturn(certificate);
+        when(resolver.getKeyStore(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
+                .thenReturn(keyStore);
+        IdentityKeyStoreResolver original = IdentityKeyStoreResolver.getInstance();
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance).thenReturn(resolver);
+        try {
+            SignedJWT signedJWT = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
+                    .build(), new JWTClaimsSet.Builder().subject("testUser").build());
+
+            signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, tenantDomain, 1);
+
+            assertTrue(signedJWT.verify(new RSASSAVerifier((RSAPublicKey) token.getPublicKey())));
+        } finally {
+            identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance).thenReturn(original);
+        }
     }
 
     private void addSampleOauth2Application() throws IdentityOAuthAdminException {
