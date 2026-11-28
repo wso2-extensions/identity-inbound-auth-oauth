@@ -36,11 +36,14 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,6 +52,7 @@ import javax.ws.rs.core.Response;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -180,6 +184,65 @@ public class OAuth2IntrospectionEndpointTest {
         }
     }
 
+    @Test(dataProvider = "nonActiveTokenMessages")
+    public void testIntrospectTokenRevokedMidRequest(String inactiveMessage) throws Exception {
+
+        String token = "TOKEN";
+        OAuth2TokenValidationService mockedTokenService = mock(OAuth2TokenValidationService.class);
+        IntrospectionDataProvider throwingProvider = mock(IntrospectionDataProvider.class);
+        // A data provider's second token lookup throws when the token is revoked mid-request.
+        when(throwingProvider.getIntrospectionData(any(), any())).thenThrow(
+                new IllegalArgumentException(inactiveMessage));
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+                     mockStatic(PrivilegedCarbonContext.class)) {
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            privilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(any())).thenReturn(mockedTokenService);
+            when(mockedPrivilegedCarbonContext.getOSGiServices(eq(IntrospectionDataProvider.class), any()))
+                    .thenReturn(Collections.singletonList((Object) throwingProvider));
+            when(mockedTokenService.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))
+                    .thenReturn(mockedIntrospectionResponse);
+            when(mockedIntrospectionResponse.getError()).thenReturn(null);
+
+            Response response = oAuth2IntrospectionEndpoint.introspect(token, BEARER_TOKEN_TYPE_HINT, null);
+
+            assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
+            assertEquals(response.getEntity(), "{\"active\":false}");
+        }
+    }
+
+    @Test
+    public void testIntrospectProviderUnrelatedIllegalArgument() throws Exception {
+
+        String token = "TOKEN";
+        OAuth2TokenValidationService mockedTokenService = mock(OAuth2TokenValidationService.class);
+        IntrospectionDataProvider throwingProvider = mock(IntrospectionDataProvider.class);
+        // An unrelated IllegalArgumentException must surface as a 500 error body, not active:false.
+        when(throwingProvider.getIntrospectionData(any(), any())).thenThrow(
+                new IllegalArgumentException("Unrelated provider error"));
+
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+                     mockStatic(PrivilegedCarbonContext.class)) {
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            privilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(any())).thenReturn(mockedTokenService);
+            when(mockedPrivilegedCarbonContext.getOSGiServices(eq(IntrospectionDataProvider.class), any()))
+                    .thenReturn(Collections.singletonList((Object) throwingProvider));
+            when(mockedTokenService.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))
+                    .thenReturn(mockedIntrospectionResponse);
+            when(mockedIntrospectionResponse.getError()).thenReturn(null);
+
+            Response response = oAuth2IntrospectionEndpoint.introspect(token, BEARER_TOKEN_TYPE_HINT, null);
+
+            assertEquals(response.getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        }
+    }
+
     private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
             throws Exception {
 
@@ -198,6 +261,15 @@ public class OAuth2IntrospectionEndpointTest {
         return new Object[][]{
                 {BEARER_TOKEN_TYPE_HINT, OPAQUE_TOKEN_TYPE},
                 {BEARER_TOKEN_TYPE_HINT, JWT_TOKEN_TYPE}
+        };
+    }
+
+    @DataProvider(name = "nonActiveTokenMessages")
+    public Object[][] nonActiveTokenMessages() {
+
+        return new Object[][]{
+                {OAuth2Util.ACTIVE_ACCESS_TOKEN_NOT_FOUND_ERROR_MESSAGE},
+                {OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE}
         };
     }
 }
